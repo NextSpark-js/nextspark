@@ -1,17 +1,17 @@
 {
   "title": "Team-Berechtigungen",
   "description": "Sehen und verwalten Sie, was jede Teamrolle tun kann",
-  "rolesOverview": "Rollenuebersicht",
+  "rolesOverview": "Rollenübersicht",
   "rolesOverviewDescription": "Jedes Teammitglied hat eine Rolle, die bestimmt, worauf es zugreifen und was es tun kann",
   "allPermissions": "Alle Berechtigungen",
   "permission": "Berechtigung",
-  "dangerousAction": "Dies ist eine potenziell gefaehrliche Aktion",
+  "dangerousAction": "Dies ist eine potenziell gefährliche Aktion",
   "roleChanged": "Berechtigung aktualisiert",
-  "roleChangedDescription": "Ihre Berechtigungen wurden aktualisiert. Die Seite wird aktualisiert, um die Aenderungen widerzuspiegeln.",
+  "roleChangedDescription": "Ihre Berechtigungen wurden aktualisiert. Die Seite wird aktualisiert, um die Änderungen widerzuspiegeln.",
   "roles": {
     "owner": {
-      "title": "Eigentuemer",
-      "description": "Vollstaendiger Zugriff auf alle Teamfunktionen und -einstellungen"
+      "title": "Eigentümer",
+      "description": "Vollständiger Zugriff auf alle Teamfunktionen und -einstellungen"
     },
     "admin": {
       "title": "Administrator",
@@ -19,7 +19,7 @@
     },
     "member": {
       "title": "Mitglied",
-      "description": "Kann Inhalte erstellen und bearbeiten, eingeschraenkter Zugriff auf Einstellungen"
+      "description": "Kann Inhalte erstellen und bearbeiten, eingeschränkter Zugriff auf Einstellungen"
     },
     "viewer": {
       "title": "Betrachter",

@@ -1,16 +1,16 @@
 {
   "hero": {
     "badge": "Preise",
-    "title": "Tarife fuer jedes",
+    "title": "Tarife für jedes",
     "titleAccent": "Team",
-    "description": "Starten Sie kostenlos und skalieren Sie, wenn Ihr Team waechst. Alle Tarife beinhalten unsere Kernfunktionen."
+    "description": "Starten Sie kostenlos und skalieren Sie, wenn Ihr Team wächst. Alle Tarife beinhalten unsere Kernfunktionen."
   },
   "plans": {
     "free": {
       "name": "Kostenlos",
       "description": "Perfekt zum Starten",
       "price": "0",
-      "period": "fuer immer",
+      "period": "für immer",
       "cta": "Kostenlos starten",
       "features": {
         "users": "1 Benutzer",
@@ -19,13 +19,13 @@
         "support": "Basis-Support",
         "api": "API-Zugang",
         "analytics": "Erweiterte Analysen",
-        "prioritySupport": "Prioritaets-Support",
+        "prioritySupport": "Prioritäts-Support",
         "integrations": "Benutzerdefinierte Integrationen"
       }
     },
     "pro": {
       "name": "Pro",
-      "description": "Ideal fuer wachsende Teams",
+      "description": "Ideal für wachsende Teams",
       "price": "29",
       "period": "Monat",
       "badge": "Am beliebtesten",
@@ -34,7 +34,7 @@
         "users": "10 Benutzer",
         "projects": "Unbegrenzte Projekte",
         "storage": "100GB Speicher",
-        "support": "Prioritaets-Support",
+        "support": "Prioritäts-Support",
         "api": "API-Zugang",
         "analytics": "Erweiterte Analysen",
         "integrations": "Benutzerdefinierte Integrationen",
@@ -43,7 +43,7 @@
     },
     "enterprise": {
       "name": "Enterprise",
-      "description": "Fuer grosse Organisationen",
+      "description": "Für große Organisationen",
       "price": "99",
       "period": "Monat",
       "cta": "Vertrieb kontaktieren",
@@ -64,38 +64,38 @@
     "description": "Sehen Sie alle in jedem Tarif enthaltenen Funktionen, um die beste Entscheidung zu treffen.",
     "collaboration": {
       "title": "Zusammenarbeit",
-      "description": "Werkzeuge fuer effiziente Teamarbeit mit granularen Berechtigungen."
+      "description": "Werkzeuge für effiziente Teamarbeit mit granulären Berechtigungen."
     },
     "storage": {
       "title": "Speicher",
-      "description": "Sicherer, skalierbarer Speicher fuer alle Ihre Projekte und Dateien."
+      "description": "Sicherer, skalierbarer Speicher für alle Ihre Projekte und Dateien."
     },
     "security": {
       "title": "Sicherheit",
-      "description": "Ende-zu-Ende-Verschluesselung und Einhaltung von Sicherheitsstandards."
+      "description": "Ende-zu-Ende-Verschlüsselung und Einhaltung von Sicherheitsstandards."
     },
     "support": {
       "title": "Support",
-      "description": "Spezialisierter technischer Support zur Loesung von Fragen oder Problemen."
+      "description": "Spezialisierter technischer Support zur Lösung von Fragen oder Problemen."
     }
   },
   "faq": {
-    "title": "Haeufig gestellte Fragen",
-    "description": "Wir beantworten die haeufigsten Fragen zu unseren Tarifen und Preisen.",
+    "title": "Häufig gestellte Fragen",
+    "description": "Wir beantworten die häufigsten Fragen zu unseren Tarifen und Preisen.",
     "questions": {
       "changePlan": "Kann ich jederzeit den Tarif wechseln?",
-      "changePlanAnswer": "Ja, Sie koennen Ihren Tarif jederzeit ueber Ihr Dashboard wechseln. Aenderungen werden sofort angewendet.",
+      "changePlanAnswer": "Ja, Sie können Ihren Tarif jederzeit über Ihr Dashboard wechseln. Änderungen werden sofort angewendet.",
       "setupCost": "Gibt es Einrichtungskosten?",
-      "setupCostAnswer": "Nein, alle unsere Tarife beinhalten kostenlose Einrichtung und Support waehrend der Implementierung.",
+      "setupCostAnswer": "Nein, alle unsere Tarife beinhalten kostenlose Einrichtung und Support während der Implementierung.",
       "paymentMethods": "Welche Zahlungsmethoden akzeptieren Sie?",
-      "paymentMethodsAnswer": "Wir akzeptieren alle gaengigen Kreditkarten, PayPal und Bankueberweisungen fuer Enterprise-Tarife.",
-      "annualDiscount": "Gibt es Rabatte bei jaehrlicher Zahlung?",
-      "annualDiscountAnswer": "Ja, wir bieten 2 Monate gratis bei jaehrlicher Zahlung fuer Pro- und Enterprise-Tarife."
+      "paymentMethodsAnswer": "Wir akzeptieren alle gängigen Kreditkarten, PayPal und Banküberweisungen für Enterprise-Tarife.",
+      "annualDiscount": "Gibt es Rabatte bei jährlicher Zahlung?",
+      "annualDiscountAnswer": "Ja, wir bieten 2 Monate gratis bei jährlicher Zahlung für Pro- und Enterprise-Tarife."
     }
   },
   "cta": {
     "title": "Bereit loszulegen?",
-    "description": "Schliessen Sie sich Tausenden von Teams an, die bereits unserer Plattform fuer ihre Projekte vertrauen.",
+    "description": "Schließen Sie sich Tausenden von Teams an, die bereits unserer Plattform für ihre Projekte vertrauen.",
     "startFree": "Kostenlos starten",
     "contactSales": "Vertrieb kontaktieren"
   }

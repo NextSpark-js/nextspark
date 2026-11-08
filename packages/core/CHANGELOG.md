@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The German and Portuguese catalogs outside `auth` are written with their diacritics, and the German ones address the user as "Sie" throughout.** Core, the starter project and the dev app said "fuer", "Zurueck" and "Aenderungen", "Configuracoes", "Documentacao" and "nao", and the sign-up, password and invitation emails spoke to the user as "du". Only the values changed, not the keys. A test now reads every German and Portuguese catalog of those three and fails on a value written without its diacritics. (#411)
+
 ## [0.1.0-beta.201] - 2026-11-06
 
 ### Upgrading from 0.1.0-beta.200

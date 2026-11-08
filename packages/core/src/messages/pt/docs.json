@@ -1,29 +1,29 @@
 {
-  "title": "Documentacao",
+  "title": "Documentação",
   "description": "Aprenda a usar nossa plataforma",
   "search": {
-    "placeholder": "Buscar na documentacao...",
+    "placeholder": "Buscar na documentação...",
     "clear": "Limpar busca",
     "noResults": "Nenhum resultado encontrado para \"{query}\""
   },
   "categories": {
     "getting-started": "Primeiros Passos",
     "guides": "Guias",
-    "api": "Referencia API",
+    "api": "Referência API",
     "plugins": "Plugins",
     "core": "Core",
     "theme": "Tema"
   },
   "breadcrumbs": {
-    "home": "Inicio"
+    "home": "Início"
   },
   "sidebar": {
     "close": "Fechar menu lateral",
     "open": "Abrir menu lateral",
-    "label": "Navegacao da documentacao"
+    "label": "Navegação da documentação"
   },
   "notFound": {
-    "title": "Pagina Nao Encontrada",
-    "description": "A pagina de documentacao que voce procura nao existe."
+    "title": "Página Não Encontrada",
+    "description": "A página de documentação que você procura não existe."
   }
 }

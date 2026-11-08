@@ -5,9 +5,9 @@
   "settings": "Einstellungen",
   "more": "Mehr",
   "moreOptions": "Weitere Optionen",
-  "moreOptionsDescription": "Zugriff auf Einstellungen und zusaetzliche Funktionen",
+  "moreOptionsDescription": "Zugriff auf Einstellungen und zusätzliche Funktionen",
   "quickCreateDescription": "Neues Element erstellen",
-  "noEntitiesAvailable": "Keine Elemente zum Erstellen verfuegbar",
+  "noEntitiesAvailable": "Keine Elemente zum Erstellen verfügbar",
   "createNew": "Neu erstellen",
   "greeting": "Hallo, {name}"
 }

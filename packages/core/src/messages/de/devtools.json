@@ -2,30 +2,30 @@
   "title": "DevTools",
   "subtitle": "Entwicklungswerkzeuge",
   "nav": {
-    "home": "Uebersicht",
-    "homeDescription": "DevTools-Uebersicht und Schnelllinks",
+    "home": "Übersicht",
+    "homeDescription": "DevTools-Übersicht und Schnelllinks",
     "styleGallery": "Stil-Galerie",
     "styleGalleryDescription": "Komponenten- und Stilreferenz",
-    "testCases": "Testfaelle",
+    "testCases": "Testfälle",
     "testCasesDescription": "Entwicklungstestszenarien",
     "features": "Funktionen",
     "featuresDescription": "Funktionsregister und Testabdeckung",
-    "flows": "Ablaeufe",
-    "flowsDescription": "Benutzerablaeufe",
-    "blocks": "Bloecke",
+    "flows": "Abläufe",
+    "flowsDescription": "Benutzerabläufe",
+    "blocks": "Blöcke",
     "blocksDescription": "Page-Builder-Blockregister",
     "tags": "Tags",
-    "tagsDescription": "Test-Tag-Uebersicht und Filterung",
+    "tagsDescription": "Test-Tag-Übersicht und Filterung",
     "config": "Konfigurationsanzeige",
-    "configDescription": "Theme- und Entitaetskonfiguration",
+    "configDescription": "Theme- und Entitätskonfiguration",
     "api": "API-Explorer",
     "apiDescription": "Alle API-Endpunkte durchsuchen",
     "expandSidebar": "Seitenleiste erweitern",
     "collapseSidebar": "Seitenleiste einklappen"
   },
   "exitToDashboard": "DevTools verlassen",
-  "exitToDashboardDescription": "Zurueck zur Hauptuebersicht",
-  "returnToDashboard": "Zurueck zur Uebersicht",
+  "exitToDashboardDescription": "Zurück zur Hauptübersicht",
+  "returnToDashboard": "Zurück zur Übersicht",
   "goToSuperadmin": "Super-Admin-Bereich",
   "goToSuperadminDescription": "Zum Super-Administrator-Bereich gehen",
   "superAdminArea": "Super-Administrator-Bereich",
@@ -33,51 +33,51 @@
   "developerAccessOnly": "Nur Entwicklerzugang",
   "config": {
     "title": "Konfigurationsanzeige",
-    "description": "Theme- und Entitaetskonfiguration erkunden",
+    "description": "Theme- und Entitätskonfiguration erkunden",
     "error": "Fehler beim Laden der Konfiguration",
     "tabs": {
       "theme": "Theme-Konfiguration",
-      "entities": "Entitaeten"
+      "entities": "Entitäten"
     },
     "themeTitle": "Theme-Konfiguration",
-    "themeDescription": "Aktive Theme-Konfiguration und Ueberschreibungen",
-    "entitiesTitle": "Entitaetsregister",
-    "entitiesDescription": "{count} registrierte Entitaeten",
+    "themeDescription": "Aktive Theme-Konfiguration und Überschreibungen",
+    "entitiesTitle": "Entitätsregister",
+    "entitiesDescription": "{count} registrierte Entitäten",
     "copied": "Kopiert!",
     "copy": "Kopieren"
   },
   "tests": {
-    "title": "Testfaelle",
+    "title": "Testfälle",
     "description": "Testdokumentation durchsuchen und anzeigen",
     "searchPlaceholder": "Tests suchen...",
     "collapseAll": "Alle einklappen",
     "expandAll": "Alle ausklappen",
     "noMatchingTests": "Kein Test entspricht Ihrer Suche",
-    "noTests": "Keine Tests verfuegbar",
+    "noTests": "Keine Tests verfügbar",
     "fileTree": "Testdateien",
     "fileTreeDescription": "Testdokumentation durchsuchen",
     "fileNotFound": "Datei nicht gefunden",
     "fileNotFoundDescription": "Die Datei '{path}' existiert nicht",
-    "backToList": "Zurueck zur Liste",
-    "selectFile": "Datei auswaehlen",
-    "selectFileDescription": "Waehlen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
+    "backToList": "Zurück zur Liste",
+    "selectFile": "Datei auswählen",
+    "selectFileDescription": "Wählen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
     "error": "Fehler beim Laden der Datei",
     "dashboard": {
       "title": "Test-Abdeckungs-Dashboard",
       "features": "Features",
-      "flows": "Ablaeufe",
+      "flows": "Abläufe",
       "testFiles": "Testdateien",
       "tags": "Tags",
       "coverage": "Abdeckung",
-      "gaps": "Abdeckungsluecken",
-      "noGaps": "Alle Features und Ablaeufe haben Tests!",
+      "gaps": "Abdeckungslücken",
+      "noGaps": "Alle Features und Abläufe haben Tests!",
       "criticalPath": "Kritischer Pfad",
       "backToDashboard": "Dashboard",
       "withTests": "mit Tests",
       "withoutTests": "ohne Tests",
       "categories": {
         "core": "Kern",
-        "entities": "Entitaeten",
+        "entities": "Entitäten",
         "content": "Inhalt",
         "settings": "Einstellungen",
         "admin": "Admin"
@@ -86,20 +86,20 @@
   },
   "api": {
     "title": "API-Explorer",
-    "endpointsAvailable": "verfuegbare Endpunkte",
+    "endpointsAvailable": "verfügbare Endpunkte",
     "endpointsInCategory": "Endpunkte in dieser Kategorie",
     "noRoutesInCategory": "Keine Routen in dieser Kategorie",
-    "noRoutesMessage": "Fuer diese Kategorie wurden keine benutzerdefinierten Routen registriert.",
+    "noRoutesMessage": "Für diese Kategorie wurden keine benutzerdefinierten Routen registriert.",
     "generatedAt": "Register erstellt am"
   },
   "apiTester": {
-    "backToList": "Zurueck zu Endpunkten",
+    "backToList": "Zurück zu Endpunkten",
     "method": "HTTP-Methode",
     "urlPreview": "URL-Vorschau",
     "pathParams": "Pfadparameter",
     "queryParams": "Query-Parameter",
     "headers": "Benutzerdefinierte Header",
-    "headersInfo": "Content-Type wird automatisch gesetzt. Fuegen Sie unten benutzerdefinierte Header hinzu.",
+    "headersInfo": "Content-Type wird automatisch gesetzt. Fügen Sie unten benutzerdefinierte Header hinzu.",
     "authentication": "Authentifizierung",
     "requestBody": "Request-Body (JSON)",
     "sendRequest": "Request senden",
@@ -111,15 +111,15 @@
     "noResponse": "Senden Sie einen Request, um die Antwort zu sehen",
     "auth": {
       "useSession": "Aktuelle Sitzung verwenden",
-      "useApiKey": "API-Schluessel verwenden",
-      "apiKeyPlaceholder": "Geben Sie Ihren API-Schluessel ein...",
-      "adminBypass": "Team-uebergreifender Zugriff",
+      "useApiKey": "API-Schlüssel verwenden",
+      "apiKeyPlaceholder": "Geben Sie Ihren API-Schlüssel ein...",
+      "adminBypass": "Team-übergreifender Zugriff",
       "adminBypassTooltip": "Aktivieren Sie den Zugriff auf Daten aller Teams. Erfordert NextSpark-Team-Mitgliedschaft."
     },
     "editor": {
-      "keyPlaceholder": "Schluessel",
+      "keyPlaceholder": "Schlüssel",
       "valuePlaceholder": "Wert",
-      "addButton": "Hinzufuegen"
+      "addButton": "Hinzufügen"
     },
     "pathParam": {
       "required": "erforderlich",
@@ -155,7 +155,7 @@
     },
     "categories": {
       "core": "Core",
-      "entities": "Entitaeten",
+      "entities": "Entitäten",
       "content": "Inhalt",
       "settings": "Einstellungen",
       "admin": "Admin"
@@ -163,17 +163,17 @@
   },
   "flows": {
     "title": "Ablaufregister",
-    "description": "Benutzerablaeufe mit Testabdeckung",
-    "search": "Ablaeufe suchen...",
+    "description": "Benutzerabläufe mit Testabdeckung",
+    "search": "Abläufe suchen...",
     "tests": "Tests",
     "covered": "Abgedeckt",
     "uncovered": "Ohne Tests",
-    "showing": "Zeige {count} von {total} Ablaeufen",
-    "noResults": "Keine Ablaeufe gefunden",
+    "showing": "Zeige {count} von {total} Abläufen",
+    "noResults": "Keine Abläufe gefunden",
     "noResultsHint": "Versuchen Sie, die Filter oder die Suche anzupassen",
     "criticalPath": "Kritischer Pfad",
     "stats": {
-      "total": "Ablaeufe gesamt",
+      "total": "Abläufe gesamt",
       "covered": "Mit Tests",
       "uncovered": "Ohne Tests",
       "critical": "Kritische Pfade"
@@ -194,19 +194,19 @@
   },
   "blocks": {
     "title": "Blockregister",
-    "description": "Page-Builder-Bloecke mit Felddefinitionen",
-    "search": "Bloecke suchen...",
+    "description": "Page-Builder-Blöcke mit Felddefinitionen",
+    "search": "Blöcke suchen...",
     "tests": "Tests",
     "fields": "Felder",
     "examples": "Beispiele",
     "covered": "Mit Tests",
     "uncovered": "Ohne Tests",
-    "showing": "Zeige {count} von {total} Bloecken",
-    "noResults": "Keine Bloecke gefunden",
+    "showing": "Zeige {count} von {total} Blöcken",
+    "noResults": "Keine Blöcke gefunden",
     "noResultsHint": "Versuchen Sie, die Filter oder die Suche anzupassen",
     "viewDetails": "Details anzeigen",
     "stats": {
-      "total": "Bloecke gesamt",
+      "total": "Blöcke gesamt",
       "covered": "Mit Tests",
       "uncovered": "Ohne Tests"
     },
@@ -225,11 +225,11 @@
     },
     "scopes": {
       "pages": "Seiten",
-      "posts": "Beitraege"
+      "posts": "Beiträge"
     },
     "detail": {
-      "back": "Zurueck zu Bloecken",
-      "overview": "Uebersicht",
+      "back": "Zurück zu Blöcken",
+      "overview": "Übersicht",
       "fieldsTab": "Felder",
       "preview": "Vorschau",
       "livePreview": "Live-Vorschau",
@@ -263,10 +263,10 @@
     "copied": "Kopiert!",
     "categories": {
       "layers": "Schichten",
-      "priorities": "Prioritaeten",
+      "priorities": "Prioritäten",
       "features": "Funktionen",
-      "flows": "Ablaeufe",
-      "blocks": "Bloecke",
+      "flows": "Abläufe",
+      "blocks": "Blöcke",
       "roles": "Rollen",
       "operations": "Operationen",
       "other": "Andere"
@@ -274,7 +274,7 @@
   },
   "scheduledActions": {
     "title": "Geplante Aktionen",
-    "description": "Geplante Hintergrundaktionen ueberwachen und verwalten",
+    "description": "Geplante Hintergrundaktionen überwachen und verwalten",
     "loading": "Geplante Aktionen werden geladen...",
     "empty": "Keine geplanten Aktionen gefunden",
     "emptyDescription": "Geplante Aktionen werden hier angezeigt, wenn sie erstellt werden",
@@ -286,13 +286,13 @@
       "actionType": "Aktionstyp",
       "allTypes": "Alle Typen",
       "apply": "Filter anwenden",
-      "reset": "Filter zuruecksetzen"
+      "reset": "Filter zurücksetzen"
     },
     "table": {
       "type": "Typ",
       "status": "Status",
       "attempts": "Versuche",
-      "scheduledAt": "Geplant fuer",
+      "scheduledAt": "Geplant für",
       "startedAt": "Gestartet",
       "completedAt": "Abgeschlossen",
       "team": "Team",
@@ -307,18 +307,18 @@
       "error": "Fehler beim Wiederholen der Aktion: {message}"
     },
     "run": {
-      "button": "Jetzt ausfuehren",
-      "success": "Aktion erfolgreich ausgefuehrt",
-      "error": "Fehler beim Ausfuehren der Aktion: {message}"
+      "button": "Jetzt ausführen",
+      "success": "Aktion erfolgreich ausgeführt",
+      "error": "Fehler beim Ausführen der Aktion: {message}"
     },
     "status": {
       "pending": "Ausstehend",
-      "running": "Wird ausgefuehrt",
+      "running": "Wird ausgeführt",
       "completed": "Abgeschlossen",
       "failed": "Fehlgeschlagen"
     },
     "pagination": {
-      "previous": "Zurueck",
+      "previous": "Zurück",
       "next": "Weiter",
       "page": "Seite {page} von {total}"
     }

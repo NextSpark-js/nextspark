@@ -1,34 +1,34 @@
 {
   "title": "DevTools",
-  "subtitle": "Ferramentas e Documentacao de Desenvolvimento",
-  "restrictedArea": "Area Restrita",
+  "subtitle": "Ferramentas e Documentação de Desenvolvimento",
+  "restrictedArea": "Área Restrita",
   "developerAccessOnly": "Apenas Acesso para Desenvolvedores",
   "exitToDashboard": "Sair para o Painel",
   "exitToDashboardDescription": "Retornar ao painel principal",
   "returnToDashboard": "Voltar ao painel",
   "goToSector7": "Ir para Sector7",
-  "goToSector7Description": "Acessar a area de administracao Sector7",
-  "superAdminArea": "Area de Super Admin",
+  "goToSector7Description": "Acessar a área de administração Sector7",
+  "superAdminArea": "Área de Super Admin",
   "nav": {
-    "home": "Inicio",
+    "home": "Início",
     "homeDescription": "Painel do desenvolvedor",
     "styleGallery": "Galeria de Estilos",
     "styleGalleryDescription": "Vitrine de componentes",
     "testCases": "Casos de Teste",
-    "testCasesDescription": "Documentacao de testes",
-    "config": "Configuracao",
-    "configDescription": "Configuracao do sistema",
+    "testCasesDescription": "Documentação de testes",
+    "config": "Configuração",
+    "configDescription": "Configuração do sistema",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral"
   },
   "home": {
     "welcome": "Bem-vindo ao DevTools",
-    "welcomeDescription": "Seu centro de ferramentas e documentacao de desenvolvimento",
-    "intro": "Esta area fornece acesso aos componentes do sistema de design, documentacao de casos de teste e configuracao do sistema. Use a navegacao para explorar as diferentes secoes.",
-    "systemInfo": "Informacoes do Sistema",
-    "systemInfoDescription": "Seu nivel de acesso e privilegios",
-    "accessLevel": "Nivel de Acesso",
-    "hierarchy": "Nivel de Hierarquia"
+    "welcomeDescription": "Seu centro de ferramentas e documentação de desenvolvimento",
+    "intro": "Esta área fornece acesso aos componentes do sistema de design, documentação de casos de teste e configuração do sistema. Use a navegação para explorar as diferentes seções.",
+    "systemInfo": "Informações do Sistema",
+    "systemInfoDescription": "Seu nível de acesso e privilégios",
+    "accessLevel": "Nível de Acesso",
+    "hierarchy": "Nível de Hierarquia"
   },
   "style": {
     "title": "Galeria de Estilos",
@@ -36,43 +36,43 @@
   },
   "tests": {
     "title": "Casos de Teste",
-    "description": "Explorar documentacao de testes",
+    "description": "Explorar documentação de testes",
     "fileTree": "Arquivos de Teste",
-    "fileTreeDescription": "Explorar documentacao de testes",
+    "fileTreeDescription": "Explorar documentação de testes",
     "noTests": "Nenhum arquivo de teste encontrado",
     "selectFile": "Selecione um arquivo para ver",
-    "selectFileDescription": "Escolha um arquivo de teste da arvore para ver seu conteudo",
+    "selectFileDescription": "Escolha um arquivo de teste da árvore para ver seu conteúdo",
     "error": "Erro ao carregar o arquivo",
     "loading": "Carregando...",
-    "fileNotFound": "Arquivo Nao Encontrado",
-    "fileNotFoundDescription": "O arquivo de teste \"{path}\" nao pode ser encontrado.",
+    "fileNotFound": "Arquivo Não Encontrado",
+    "fileNotFoundDescription": "O arquivo de teste \"{path}\" não pode ser encontrado.",
     "backToList": "Voltar para Lista"
   },
   "config": {
-    "title": "Visualizador de Configuracao",
-    "description": "Ver configuracao atual do sistema",
-    "themeTitle": "Configuracao do Tema",
-    "themeDescription": "Configuracao e metadata do tema atual",
+    "title": "Visualizador de Configuração",
+    "description": "Ver configuração atual do sistema",
+    "themeTitle": "Configuração do Tema",
+    "themeDescription": "Configuração e metadata do tema atual",
     "entitiesTitle": "Registro de Entidades",
     "entitiesDescription": "{count} entidades registradas",
     "copy": "Copiar",
     "copied": "Copiado!",
-    "error": "Erro ao carregar a configuracao",
+    "error": "Erro ao carregar a configuração",
     "tabs": {
       "theme": "Config do Tema",
       "entities": "Entidades"
     }
   },
   "scheduledActions": {
-    "title": "Acoes Agendadas",
-    "description": "Monitorar e gerenciar acoes agendadas em segundo plano",
-    "loading": "Carregando acoes agendadas...",
-    "empty": "Nenhuma acao agendada encontrada",
-    "emptyDescription": "As acoes agendadas aparecerao aqui quando forem criadas",
+    "title": "Ações Agendadas",
+    "description": "Monitorar e gerenciar ações agendadas em segundo plano",
+    "loading": "Carregando ações agendadas...",
+    "empty": "Nenhuma ação agendada encontrada",
+    "emptyDescription": "As ações agendadas aparecerão aqui quando forem criadas",
     "filters": {
       "status": "Status",
       "allStatuses": "Todos os Status",
-      "actionType": "Tipo de Acao",
+      "actionType": "Tipo de Ação",
       "allTypes": "Todos os Tipos",
       "apply": "Aplicar Filtros",
       "reset": "Resetar Filtros"
@@ -89,13 +89,13 @@
     "status": {
       "pending": "Pendente",
       "running": "Executando",
-      "completed": "Concluido",
+      "completed": "Concluído",
       "failed": "Falhou"
     },
     "pagination": {
       "previous": "Anterior",
-      "next": "Proximo",
-      "page": "Pagina {page} de {total}"
+      "next": "Próximo",
+      "page": "Página {page} de {total}"
     }
   }
 }

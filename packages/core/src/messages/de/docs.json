@@ -3,8 +3,8 @@
   "description": "Lernen Sie, unsere Plattform zu nutzen",
   "search": {
     "placeholder": "In Dokumentation suchen...",
-    "clear": "Suche loeschen",
-    "noResults": "Keine Ergebnisse gefunden fuer \"{query}\""
+    "clear": "Suche löschen",
+    "noResults": "Keine Ergebnisse gefunden für \"{query}\""
   },
   "categories": {
     "getting-started": "Erste Schritte",
@@ -19,7 +19,7 @@
   },
   "sidebar": {
     "close": "Seitenleiste schließen",
-    "open": "Seitenmenue oeffnen",
+    "open": "Seitenmenü öffnen",
     "label": "Dokumentationsnavigation"
   },
   "notFound": {

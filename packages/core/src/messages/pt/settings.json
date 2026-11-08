@@ -1,102 +1,102 @@
 {
-  "title": "Configuracoes",
-  "description": "Gerencie sua conta, seguranca e preferencias",
+  "title": "Configurações",
+  "description": "Gerencie sua conta, segurança e preferências",
   "overview": {
-    "title": "Bem-vindo as Configuracoes",
-    "description": "Use o menu a esquerda para navegar entre as diferentes secoes de configuracao da sua conta.",
-    "profileDescription": "Gerencie suas informacoes pessoais, nome, email e preferencias basicas.",
+    "title": "Bem-vindo às Configurações",
+    "description": "Use o menu a esquerda para navegar entre as diferentes seções de configuração da sua conta.",
+    "profileDescription": "Gerencie suas informações pessoais, nome, email e preferências básicas.",
     "passwordDescription": "Altere sua senha atual por uma nova e mais segura.",
-    "securityDescription": "Configure a autenticacao de dois fatores e revise suas sessoes ativas.",
-    "notificationsDescription": "Personalize como e quando receber notificacoes por email e push.",
-    "billingDescription": "Administre sua assinatura, metodos de pagamento e faturas.",
-    "api-keysDescription": "Gerencie chaves API para integracao externa e controle de acesso.",
+    "securityDescription": "Configure a autenticação de dois fatores e revise suas sessões ativas.",
+    "notificationsDescription": "Personalize como e quando receber notificações por email e push.",
+    "billingDescription": "Administre sua assinatura, métodos de pagamento e faturas.",
+    "api-keysDescription": "Gerencie chaves API para integração externa e controle de acesso.",
     "teamsDescription": "Administre suas equipes, membros e convites.",
-    "plansDescription": "Compare planos e faca upgrade da sua assinatura."
+    "plansDescription": "Compare planos e faça upgrade da sua assinatura."
   },
   "navigation": {
-    "ariaLabel": "Navegacao de configuracoes",
+    "ariaLabel": "Navegação de configurações",
     "backToDashboard": "Voltando ao painel principal",
     "backButton": "Voltar ao Painel",
     "profile": "Perfil",
     "password": "Senha",
-    "security": "Seguranca",
-    "notifications": "Notificacoes",
+    "security": "Segurança",
+    "notifications": "Notificações",
     "billing": "Faturamento",
     "api-keys": "Chaves API",
     "teams": "Equipes",
     "plans": "Planos"
   },
   "layout": {
-    "title": "Configuracoes",
-    "description": "Gerencie sua conta, seguranca e preferencias",
-    "sidebarLabel": "Menu de configuracoes",
-    "contentLabel": "Conteudo de configuracoes"
+    "title": "Configurações",
+    "description": "Gerencie sua conta, segurança e preferências",
+    "sidebarLabel": "Menu de configurações",
+    "contentLabel": "Conteúdo de configurações"
   },
   "profile": {
-    "title": "Informacao Pessoal",
-    "description": "Gerencie suas informacoes pessoais e preferencias basicas da sua conta.",
+    "title": "Informação Pessoal",
+    "description": "Gerencie suas informações pessoais e preferências básicas da sua conta.",
     "loading": {
-      "aria": "Carregando informacao do perfil",
-      "text": "Carregando informacao do perfil..."
+      "aria": "Carregando informação do perfil",
+      "text": "Carregando informação do perfil..."
     },
     "error": {
-      "message": "Erro ao carregar informacao do perfil. Por favor, tente novamente."
+      "message": "Erro ao carregar informação do perfil. Por favor, tente novamente."
     },
     "success": {
       "message": "Perfil atualizado com sucesso!"
     },
     "form": {
       "title": "Dados Pessoais",
-      "description": "Atualize seu nome, pais, fuso horario e idioma preferido",
+      "description": "Atualize seu nome, país, fuso horário e idioma preferido",
       "firstName": "Nome",
       "firstNamePlaceholder": "Seu nome",
       "lastName": "Sobrenome",
       "lastNamePlaceholder": "Seu sobrenome",
       "email": "Email",
-      "emailNote": "Nao pode ser alterado",
-      "authMethod": "Metodo de Autenticacao",
-      "verificationStatus": "Status de Verificacao",
+      "emailNote": "Não pode ser alterado",
+      "authMethod": "Método de Autenticação",
+      "verificationStatus": "Status de Verificação",
       "verified": "Verificado",
-      "notVerified": "Nao verificado",
+      "notVerified": "Não verificado",
       "language": "Idioma",
       "languagePlaceholder": "Selecione seu idioma",
-      "country": "Pais",
-      "countryPlaceholder": "Selecione seu pais",
-      "timezone": "Fuso Horario",
-      "timezonePlaceholder": "Selecione seu fuso horario",
-      "countrySearchPlaceholder": "Buscar pais...",
-      "countryNotFound": "Nenhum pais encontrado.",
-      "timezoneSearchPlaceholder": "Buscar fuso horario...",
-      "timezoneNotFound": "Nenhum fuso horario encontrado.",
+      "country": "País",
+      "countryPlaceholder": "Selecione seu país",
+      "timezone": "Fuso Horário",
+      "timezonePlaceholder": "Selecione seu fuso horário",
+      "countrySearchPlaceholder": "Buscar país...",
+      "countryNotFound": "Nenhum país encontrado.",
+      "timezoneSearchPlaceholder": "Buscar fuso horário...",
+      "timezoneNotFound": "Nenhum fuso horário encontrado.",
       "memberSince": "Membro desde",
       "updateButton": "Atualizar Perfil",
       "updating": "Atualizando...",
-      "submitHelp": "Salvar alteracoes no perfil",
-      "submitHelpUpdating": "Atualizando informacao do perfil"
+      "submitHelp": "Salvar alterações no perfil",
+      "submitHelpUpdating": "Atualizando informação do perfil"
     },
     "messages": {
       "updateSuccess": "Perfil atualizado corretamente",
       "updateError": "Erro ao atualizar perfil: {error}",
-      "deleteSuccess": "Conta excluida. Encerrando sessao...",
+      "deleteSuccess": "Conta excluída. Encerrando sessão...",
       "deleteError": "Erro ao excluir conta: {error}",
       "updating": "Atualizando perfil...",
       "deleting": "Excluindo conta...",
-      "advancedOpen": "Opcoes avancadas abertas",
-      "advancedClosed": "Opcoes avancadas fechadas"
+      "advancedOpen": "Opções avançadas abertas",
+      "advancedClosed": "Opções avançadas fechadas"
     },
     "advanced": {
-      "title": "Opcoes Avancadas",
-      "openLabel": "Abrir opcoes avancadas",
-      "closeLabel": "Fechar opcoes avancadas"
+      "title": "Opções Avançadas",
+      "openLabel": "Abrir opções avançadas",
+      "closeLabel": "Fechar opções avançadas"
     },
     "danger": {
       "title": "Zona de Perigo",
-      "warning": "Estas acoes nao podem ser desfeitas. Prossiga com cuidado.",
+      "warning": "Estas ações não podem ser desfeitas. Prossiga com cuidado.",
       "deleteButton": "Excluir Conta",
       "dialogTitle": "Excluir Conta",
-      "dialogDescription": "Voce esta prestes a excluir permanentemente sua conta e todos os dados associados.",
-      "dialogWarning": "Esta acao e irreversivel e nao pode ser desfeita.",
-      "dialogDetail": "Todas as suas informacoes de perfil, configuracoes e quaisquer outros dados serao excluidos permanentemente de nossos servidores.",
+      "dialogDescription": "Você está prestes a excluir permanentemente sua conta e todos os dados associados.",
+      "dialogWarning": "Esta ação é irreversível e não pode ser desfeita.",
+      "dialogDetail": "Todas as suas informações de perfil, configurações e quaisquer outros dados serão excluídos permanentemente de nossos servidores.",
       "deleting": "Excluindo...",
       "confirmDelete": "Excluir Conta"
     },
@@ -108,7 +108,7 @@
     "title": "Alterar Senha",
     "description": "Escolha uma nova senha segura para sua conta.",
     "loading": {
-      "verifying": "Verificando metodo de autenticacao..."
+      "verifying": "Verificando método de autenticação..."
     },
     "success": {
       "aria": "Senha atualizada com sucesso",
@@ -124,10 +124,10 @@
       "newPasswordPlaceholder": "Crie uma senha segura",
       "confirmPassword": "Confirmar Nova Senha",
       "confirmPasswordPlaceholder": "Confirme sua nova senha",
-      "revokeOtherSessions": "Encerrar sessao em outros dispositivos",
+      "revokeOtherSessions": "Encerrar sessão em outros dispositivos",
       "updateButton": "Atualizar Senha",
       "updating": "Atualizando...",
-      "submitHelp": "Enviar formulario para alterar senha",
+      "submitHelp": "Enviar formulário para alterar senha",
       "submitHelpUpdating": "Atualizando senha"
     },
     "messages": {
@@ -138,140 +138,140 @@
     }
   },
   "security": {
-    "title": "Seguranca",
-    "description": "Gerencie as configuracoes de seguranca da sua conta.",
+    "title": "Segurança",
+    "description": "Gerencie as configurações de segurança da sua conta.",
     "main": {
-      "title": "Configuracoes de Seguranca",
-      "description": "Gerencie a autenticacao de dois fatores e os alertas de seguranca da sua conta."
+      "title": "Configurações de Segurança",
+      "description": "Gerencie a autenticação de dois fatores e os alertas de segurança da sua conta."
     },
     "twoFactor": {
-      "title": "Autenticacao de Dois Fatores (2FA)",
-      "description": "Adicione uma camada extra de seguranca a sua conta",
+      "title": "Autenticação de Dois Fatores (2FA)",
+      "description": "Adicione uma camada extra de segurança à sua conta",
       "enabled": "Ativado",
       "disabled": "Desativado",
-      "enabledStatus": "Sua conta esta protegida com 2FA",
-      "disabledStatus": "Recomendamos ativar 2FA para maior seguranca",
+      "enabledStatus": "Sua conta está protegida com 2FA",
+      "disabledStatus": "Recomendamos ativar 2FA para maior segurança",
       "active": "Ativo",
       "inactive": "Inativo",
-      "ariaEnabled": "Autenticacao de dois fatores ativada",
-      "ariaDisabled": "Autenticacao de dois fatores desativada",
-      "recommendation": "Recomendamos ativar a autenticacao de dois fatores para proteger sua conta.",
-      "configuredMethods": "Metodos configurados:",
+      "ariaEnabled": "Autenticação de dois fatores ativada",
+      "ariaDisabled": "Autenticação de dois fatores desativada",
+      "recommendation": "Recomendamos ativar a autenticação de dois fatores para proteger sua conta.",
+      "configuredMethods": "Métodos configurados:",
       "appAuthenticator": "App Authenticator",
       "appDescription": "Google Authenticator, Authy",
       "configured": "Configurado"
     },
     "alerts": {
-      "title": "Alertas de Seguranca",
+      "title": "Alertas de Segurança",
       "loginTitle": "Alertas de Login",
-      "loginDescription": "Notificaremos voce por email sobre logins de novos dispositivos ou locais",
+      "loginDescription": "Notificaremos você por email sobre logins de novos dispositivos ou locais",
       "ariaEnabled": "Alertas de login ativados",
       "ariaDisabled": "Alertas de login desativados"
     },
     "sessions": {
-      "title": "Sessoes Ativas",
-      "description": "Revise e gerencie os dispositivos que tem acesso a sua conta.",
-      "current": "Sessao atual",
+      "title": "Sessões Ativas",
+      "description": "Revise e gerencie os dispositivos que têm acesso à sua conta.",
+      "current": "Sessão atual",
       "terminate": "Encerrar",
       "terminateDialog": {
-        "title": "Encerrar Sessao",
-        "description": "Tem certeza que deseja encerrar esta sessao? O dispositivo devera fazer login novamente.",
+        "title": "Encerrar Sessão",
+        "description": "Tem certeza que deseja encerrar esta sessão? O dispositivo deverá fazer login novamente.",
         "cancel": "Cancelar",
-        "confirm": "Encerrar Sessao"
+        "confirm": "Encerrar Sessão"
       },
-      "terminateAriaLabel": "Encerrar sessao para {device}",
-      "sessionAriaLabel": "Sessao {device} - {status}",
-      "currentSession": "Sessao atual",
-      "activeSession": "Sessao ativa"
+      "terminateAriaLabel": "Encerrar sessão para {device}",
+      "sessionAriaLabel": "Sessão {device} - {status}",
+      "currentSession": "Sessão atual",
+      "activeSession": "Sessão ativa"
     },
     "loginHistory": {
-      "title": "Historico de Acessos",
-      "description": "Revise as ultimas tentativas de login na sua conta.",
+      "title": "Histórico de Acessos",
+      "description": "Revise as últimas tentativas de login na sua conta.",
       "successful": "Login bem-sucedido",
       "failed": "Login falhou",
       "successBadge": "Sucesso",
       "failBadge": "Falhou",
-      "viewComplete": "Ver Historico Completo",
+      "viewComplete": "Ver Histórico Completo",
       "attemptAriaLabel": "Tentativa de login {status} de {location}",
-      "viewHistoryAriaLabel": "Ver historico completo de logins"
+      "viewHistoryAriaLabel": "Ver histórico completo de logins"
     },
     "messages": {
-      "sessionTerminated": "Sessao encerrada corretamente",
-      "twoFactorEnabled": "Autenticacao 2FA ativada",
-      "twoFactorDisabled": "Autenticacao 2FA desativada",
+      "sessionTerminated": "Sessão encerrada corretamente",
+      "twoFactorEnabled": "Autenticação 2FA ativada",
+      "twoFactorDisabled": "Autenticação 2FA desativada",
       "alertsEnabled": "Alertas de login ativados",
       "alertsDisabled": "Alertas de login desativados",
-      "saveSuccess": "Configuracao salva",
-      "saveSuccessDescription": "Suas configuracoes de seguranca foram salvas corretamente.",
+      "saveSuccess": "Configuração salva",
+      "saveSuccessDescription": "Suas configurações de segurança foram salvas corretamente.",
       "saveError": "Erro ao salvar",
-      "saveErrorDescription": "Houve um problema ao salvar suas configuracoes. Tente novamente."
+      "saveErrorDescription": "Houve um problema ao salvar suas configurações. Tente novamente."
     },
     "buttons": {
-      "save": "Salvar Alteracoes",
+      "save": "Salvar Alterações",
       "saving": "Salvando..."
     }
   },
   "notifications": {
-    "title": "Notificacoes",
-    "description": "Gerencie suas preferencias de notificacoes por email e push.",
+    "title": "Notificações",
+    "description": "Gerencie suas preferências de notificações por email e push.",
     "main": {
-      "title": "Configuracoes de Notificacoes",
-      "description": "Gerencie como e quando voce recebe notificacoes por email e push."
+      "title": "Configurações de Notificações",
+      "description": "Gerencie como e quando você recebe notificações por email e push."
     },
     "channels": {
-      "title": "Canais de Notificacao",
+      "title": "Canais de Notificação",
       "push": {
-        "title": "Notificacoes Push",
-        "description": "Notificacoes em tempo real no seu dispositivo",
+        "title": "Notificações Push",
+        "description": "Notificações em tempo real no seu dispositivo",
         "enabled": "Habilitadas",
         "disabled": "Desabilitadas",
-        "ariaEnabled": "Notificacoes push habilitadas",
-        "ariaDisabled": "Notificacoes push desabilitadas"
+        "ariaEnabled": "Notificações push habilitadas",
+        "ariaDisabled": "Notificações push desabilitadas"
       },
       "email": {
-        "title": "Notificacoes por Email",
-        "description": "Enviadas para seu endereco de email principal",
+        "title": "Notificações por Email",
+        "description": "Enviadas para seu endereço de email principal",
         "alwaysEnabled": "Sempre habilitadas"
       }
     },
     "categories": {
       "security": {
-        "title": "Seguranca e Conta",
+        "title": "Segurança e Conta",
         "description": "Alertas importantes sobre sua conta"
       },
       "activity": {
         "title": "Atividade do Produto",
-        "description": "Atualizacoes sobre sua atividade"
+        "description": "Atualizações sobre sua atividade"
       },
       "marketing": {
-        "title": "Marketing e Promocoes",
+        "title": "Marketing e Promoções",
         "description": "Novidades e ofertas especiais"
       }
     },
     "types": {
       "loginAlerts": {
         "title": "Novos logins",
-        "description": "Avisamos quando alguem acessa de um novo dispositivo"
+        "description": "Avisamos quando alguém acessa de um novo dispositivo"
       },
       "passwordChanges": {
-        "title": "Alteracoes de senha",
-        "description": "Confirmacao quando voce altera sua senha"
+        "title": "Alterações de senha",
+        "description": "Confirmação quando você altera sua senha"
       },
       "suspiciousActivity": {
         "title": "Atividade suspeita",
-        "description": "Alertas sobre tentativas de acesso nao autorizadas"
+        "description": "Alertas sobre tentativas de acesso não autorizadas"
       },
       "mentions": {
-        "title": "Mencoes e comentarios",
-        "description": "Quando alguem menciona voce ou comenta em seus projetos"
+        "title": "Menções e comentários",
+        "description": "Quando alguém menciona você ou comenta em seus projetos"
       },
       "projectUpdates": {
-        "title": "Atualizacoes de projetos",
-        "description": "Alteracoes importantes em projetos que voce segue"
+        "title": "Atualizações de projetos",
+        "description": "Alterações importantes em projetos que você segue"
       },
       "teamInvites": {
         "title": "Convites para equipes",
-        "description": "Quando voce e convidado a participar de uma equipe"
+        "description": "Quando você é convidado a participar de uma equipe"
       },
       "newsletter": {
         "title": "Newsletter semanal",
@@ -279,39 +279,39 @@
       },
       "promotions": {
         "title": "Ofertas especiais",
-        "description": "Descontos e promocoes exclusivas"
+        "description": "Descontos e promoções exclusivas"
       },
       "featureAnnouncements": {
         "title": "Novas funcionalidades",
-        "description": "Anuncios sobre novos recursos do produto"
+        "description": "Anúncios sobre novos recursos do produto"
       }
     },
     "labels": {
-      "required": "Obrigatoria",
+      "required": "Obrigatória",
       "email": "Email",
       "push": "Push",
-      "emailAriaLabel": "Notificacoes por email para {title} {status}",
-      "pushAriaLabel": "Notificacoes push para {title} {status}",
+      "emailAriaLabel": "Notificações por email para {title} {status}",
+      "pushAriaLabel": "Notificações push para {title} {status}",
       "enabled": "habilitadas",
       "disabled": "desabilitadas"
     },
     "messages": {
-      "pushEnabled": "Notificacoes push habilitadas",
-      "pushDisabled": "Notificacoes push desabilitadas",
-      "notificationToggled": "Notificacao {type} de {notification} {status}",
-      "saveSuccess": "Configuracao salva",
-      "saveSuccessDescription": "Suas preferencias de notificacoes foram salvas corretamente.",
+      "pushEnabled": "Notificações push habilitadas",
+      "pushDisabled": "Notificações push desabilitadas",
+      "notificationToggled": "Notificação {type} de {notification} {status}",
+      "saveSuccess": "Configuração salva",
+      "saveSuccessDescription": "Suas preferências de notificações foram salvas corretamente.",
       "saveError": "Erro ao salvar",
-      "saveErrorDescription": "Houve um problema ao salvar suas preferencias. Tente novamente."
+      "saveErrorDescription": "Houve um problema ao salvar suas preferências. Tente novamente."
     },
     "buttons": {
-      "save": "Salvar Alteracoes",
+      "save": "Salvar Alterações",
       "saving": "Salvando..."
     }
   },
   "billing": {
     "title": "Faturamento",
-    "description": "Gerencie sua assinatura, metodos de pagamento e faturas.",
+    "description": "Gerencie sua assinatura, métodos de pagamento e faturas.",
     "currentPlan": {
       "title": "Plano Atual",
       "description": "Sua assinatura atual e limites de uso",
@@ -319,24 +319,24 @@
     },
     "upgrade": {
       "title": "Precisa de mais recursos?",
-      "description": "Faca upgrade para Pro para obter limites mais altos e recursos avancados",
+      "description": "Faça upgrade para Pro para obter limites mais altos e recursos avançados",
       "button": "Fazer Upgrade do Plano",
       "ready": "Pronto para mais?",
       "explore": "Explore nossos planos Pro e Enterprise",
-      "viewPricing": "Ver Precos"
+      "viewPricing": "Ver Preços"
     },
     "paymentMethod": {
-      "title": "Metodo de Pagamento",
-      "description": "Administre seus metodos de pagamento",
-      "noMethod": "Nenhum metodo de pagamento configurado",
-      "addCard": "Adicione um cartao para fazer upgrade do seu plano",
-      "addButton": "Adicionar Metodo de Pagamento"
+      "title": "Método de Pagamento",
+      "description": "Administre seus métodos de pagamento",
+      "noMethod": "Nenhum método de pagamento configurado",
+      "addCard": "Adicione um cartão para fazer upgrade do seu plano",
+      "addButton": "Adicionar Método de Pagamento"
     },
     "billingHistory": {
-      "title": "Historico de Faturamento",
+      "title": "Histórico de Faturamento",
       "description": "Suas faturas e pagamentos recentes",
-      "noInvoices": "Nenhuma fatura disponivel",
-      "noInvoicesDescription": "As faturas aparecerao aqui quando voce tiver uma assinatura ativa"
+      "noInvoices": "Nenhuma fatura disponível",
+      "noInvoicesDescription": "As faturas aparecerão aqui quando você tiver uma assinatura ativa"
     },
     "invoices": {
       "table": {
@@ -353,7 +353,7 @@
       },
       "empty": {
         "title": "Sem faturas ainda",
-        "description": "As faturas aparecerao aqui quando voce tiver uma assinatura ativa"
+        "description": "As faturas aparecerão aqui quando você tiver uma assinatura ativa"
       },
       "status": {
         "paid": "Paga",
@@ -365,7 +365,7 @@
         "page": "Página {current} de {total}",
         "showing": "Mostrando {start} a {end} de {total} faturas",
         "previous": "Anterior",
-        "next": "Proximo"
+        "next": "Próximo"
       }
     },
     "features": {
@@ -373,8 +373,8 @@
       "description": "O que seu plano atual inclui"
     },
     "messages": {
-      "upgradeRedirect": "Redirecionando para pagina de upgrade do plano",
-      "addPaymentForm": "Abrindo formulario para adicionar metodo de pagamento"
+      "upgradeRedirect": "Redirecionando para página de upgrade do plano",
+      "addPaymentForm": "Abrindo formulário para adicionar método de pagamento"
     }
   },
   "teams": {
@@ -382,17 +382,17 @@
     "description": "Administre suas equipes, membros e convites.",
     "yourTeam": "Sua Equipe",
     "yourTeams": "Suas Equipes",
-    "yourTeamsDescription": "Equipes das quais voce e membro. Selecione uma para ver seus detalhes.",
+    "yourTeamsDescription": "Equipes das quais você e membro. Selecione uma para ver seus detalhes.",
     "singleUserDescription": "Seu espaço de trabalho pessoal.",
-    "noTeams": "Voce ainda nao pertence a nenhuma equipe.",
-    "manageTeamMembers": "Gerencie os membros e configuracao da equipe."
+    "noTeams": "Você ainda não pertence a nenhuma equipe.",
+    "manageTeamMembers": "Gerencie os membros e configuração da equipe."
   },
   "plans": {
-    "title": "Planos de Precos",
+    "title": "Planos de Preços",
     "description": "Escolha o plano que melhor se adapta as suas necessidades"
   },
   "pages": {
     "plans": "Planos",
-    "plansDescription": "Compare planos e faca upgrade da sua assinatura"
+    "plansDescription": "Compare planos e faça upgrade da sua assinatura"
   }
 }

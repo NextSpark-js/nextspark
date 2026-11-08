@@ -1,28 +1,28 @@
 {
   "title": "Observabilidade IA",
-  "description": "Monitore invocacoes de agentes LangChain e traces",
+  "description": "Monitore invocações de agentes LangChain e traces",
   "loading": "Carregando traces...",
   "error": "Erro ao carregar traces",
-  "disabled": "Observabilidade esta desabilitada nas configuracoes",
+  "disabled": "Observabilidade está desabilitada nas configurações",
   "loadMore": "Carregar mais",
   "loadingMore": "Carregando...",
   "reload": "Recarregar",
   "reloading": "Recarregando...",
   "period": {
-    "1h": "Ultima hora",
-    "24h": "Ultimas 24 horas",
-    "7d": "Ultimos 7 dias",
-    "30d": "Ultimos 30 dias"
+    "1h": "Última hora",
+    "24h": "Últimas 24 horas",
+    "7d": "Últimos 7 dias",
+    "30d": "Últimos 30 dias"
   },
   "status": {
-    "running": "Em execucao",
+    "running": "Em execução",
     "success": "Sucesso",
     "error": "Erro"
   },
   "filters": {
     "status": "Status",
     "agent": "Agente",
-    "period": "Periodo",
+    "period": "Período",
     "allStatus": "Todos os status",
     "allAgents": "Todos os agentes",
     "searchPlaceholder": "Buscar por ID de trace ou entrada..."
@@ -32,42 +32,42 @@
     "input": "Mensagem",
     "agent": "Agente",
     "status": "Status",
-    "duration": "Duracao",
+    "duration": "Duração",
     "tokens": "Tokens",
     "startedAt": "Iniciado",
-    "empty": "Nenhum trace encontrado para o periodo e filtros selecionados"
+    "empty": "Nenhum trace encontrado para o período e filtros selecionados"
   },
   "detail": {
     "title": "Detalhe do Trace",
     "back": "Voltar para traces",
     "agent": "Agente",
     "model": "Modelo",
-    "duration": "Duracao",
+    "duration": "Duração",
     "tokens": "Tokens",
     "calls": "Chamadas",
     "tools": "ferramentas",
     "input": "Entrada",
-    "output": "Saida",
+    "output": "Saída",
     "error": "Erro",
     "stackTrace": "Stack Trace",
-    "spans": "Spans de Execucao",
+    "spans": "Spans de Execução",
     "childTraces": "Traces de Sub-Agentes",
     "noSpans": "Nenhum span registrado para este trace",
     "showDetails": "Mostrar detalhes",
     "hideDetails": "Ocultar detalhes",
     "toolInput": "Entrada da Ferramenta",
-    "toolOutput": "Saida da Ferramenta",
+    "toolOutput": "Saída da Ferramenta",
     "hiddenSpans": "{count} chains internos ocultos",
     "showInternalChains": "Mostrar todos",
     "hideInternalChains": "Ocultar internos"
   },
   "flow": {
-    "title": "Fluxo de Conversacao",
-    "userMessage": "Usuario",
+    "title": "Fluxo de Conversação",
+    "userMessage": "Usuário",
     "assistantResponse": "Assistente",
     "toolCall": "Chamada de Ferramenta",
     "toolResult": "Resultado da Ferramenta",
-    "noSteps": "Nenhum passo de execucao registrado",
+    "noSteps": "Nenhum passo de execução registrado",
     "showFull": "Ver completo",
     "collapse": "Recolher"
   }

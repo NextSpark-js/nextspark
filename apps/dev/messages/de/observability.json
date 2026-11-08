@@ -1,6 +1,6 @@
 {
   "title": "KI-Observability",
-  "description": "Ueberwachen Sie LangChain-Agentenaufrufe und Traces",
+  "description": "Überwachen Sie LangChain-Agentenaufrufe und Traces",
   "loading": "Traces werden geladen...",
   "error": "Fehler beim Laden der Traces",
   "disabled": "Observability ist in der Konfiguration deaktiviert",
@@ -15,7 +15,7 @@
     "30d": "Letzte 30 Tage"
   },
   "status": {
-    "running": "Wird ausgefuehrt",
+    "running": "Wird ausgeführt",
     "success": "Erfolg",
     "error": "Fehler"
   },
@@ -35,11 +35,11 @@
     "duration": "Dauer",
     "tokens": "Tokens",
     "startedAt": "Gestartet",
-    "empty": "Keine Traces fuer den ausgewaehlten Zeitraum und Filter gefunden"
+    "empty": "Keine Traces für den ausgewählten Zeitraum und Filter gefunden"
   },
   "detail": {
     "title": "Trace-Details",
-    "back": "Zurueck zu Traces",
+    "back": "Zurück zu Traces",
     "agent": "Agent",
     "model": "Modell",
     "duration": "Dauer",
@@ -50,9 +50,9 @@
     "output": "Ausgabe",
     "error": "Fehler",
     "stackTrace": "Stack-Trace",
-    "spans": "Ausfuehrungs-Spans",
+    "spans": "Ausführungs-Spans",
     "childTraces": "Sub-Agent-Traces",
-    "noSpans": "Keine Spans fuer diesen Trace aufgezeichnet",
+    "noSpans": "Keine Spans für diesen Trace aufgezeichnet",
     "showDetails": "Details anzeigen",
     "hideDetails": "Details ausblenden",
     "toolInput": "Werkzeug-Eingabe",
@@ -67,8 +67,8 @@
     "assistantResponse": "Assistent",
     "toolCall": "Werkzeugaufruf",
     "toolResult": "Werkzeugergebnis",
-    "noSteps": "Keine Ausfuehrungsschritte aufgezeichnet",
-    "showFull": "Vollstaendig anzeigen",
+    "noSteps": "Keine Ausführungsschritte aufgezeichnet",
+    "showFull": "Vollständig anzeigen",
     "collapse": "Einklappen"
   }
 }

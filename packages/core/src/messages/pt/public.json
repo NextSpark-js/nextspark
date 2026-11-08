@@ -1,13 +1,13 @@
 {
   "navigation": {
-    "home": "Inicio",
+    "home": "Início",
     "features": "Recursos",
-    "pricing": "Precos",
-    "docs": "Documentacao",
+    "pricing": "Preços",
+    "docs": "Documentação",
     "support": "Suporte"
   },
   "cta": {
-    "getStarted": "Comecar",
+    "getStarted": "Começar",
     "learnMore": "Saiba mais",
     "contactUs": "Fale Conosco"
   }

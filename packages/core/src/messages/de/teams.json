@@ -3,19 +3,19 @@
   "description": "Verwalten Sie Ihre Teams und Zusammenarbeiten",
 
   "types": {
-    "personal": "Persoenlich",
+    "personal": "Persönlich",
     "work": "Arbeitsteam"
   },
 
   "roles": {
-    "owner": "Eigentuemer",
+    "owner": "Eigentümer",
     "admin": "Administrator",
     "member": "Mitglied",
     "viewer": "Betrachter"
   },
 
   "roleDescriptions": {
-    "owner": "Vollstaendige Kontrolle ueber das Team, einschliesslich Loeschung und Abrechnung",
+    "owner": "Vollständige Kontrolle über das Team, einschließlich Löschung und Abrechnung",
     "admin": "Kann Mitglieder, Einstellungen und die meisten Operationen verwalten",
     "member": "Kann Teaminhalte einsehen und mit anderen Mitgliedern zusammenarbeiten",
     "viewer": "Nur Lesezugriff auf Teaminhalte"
@@ -30,14 +30,14 @@
     "create": "Team erstellen",
     "creating": "Erstellen...",
     "edit": "Team bearbeiten",
-    "delete": "Team loeschen",
+    "delete": "Team löschen",
     "leave": "Team verlassen",
     "switch": "Team wechseln",
     "manage": "Team verwalten",
     "invite": "Mitglied einladen",
     "inviting": "Einladung wird gesendet...",
     "removeMember": "Mitglied entfernen",
-    "changeRole": "Rolle aendern",
+    "changeRole": "Rolle ändern",
     "makeRole": "Zu {role} machen",
     "cancel": "Abbrechen",
     "transferOwnership": "Eigentümerschaft übertragen"
@@ -49,7 +49,7 @@
     "switchComplete": "Wechsel abgeschlossen",
     "loadingTeamData": "Teamdaten werden geladen...",
     "ready": "Bereit!",
-    "personal": "Persoenlich",
+    "personal": "Persönlich",
     "workTeam": "Arbeitsteam",
     "manageTeams": "Teams verwalten",
     "active": "Aktiv",
@@ -64,7 +64,7 @@
     "slugLabel": "Team-URL",
     "slugPlaceholder": "team-url",
     "descriptionLabel": "Beschreibung",
-    "descriptionPlaceholder": "Beschreiben Sie, wofuer dieses Team ist",
+    "descriptionPlaceholder": "Beschreiben Sie, wofür dieses Team ist",
     "success": "Team erfolgreich erstellt",
     "error": "Fehler beim Erstellen des Teams"
   },
@@ -91,11 +91,11 @@
   },
 
   "deleteTeam": {
-    "title": "Team loeschen",
-    "description": "Sind Sie sicher, dass Sie dieses Team loeschen moechten? Diese Aktion kann nicht rueckgaengig gemacht werden.",
-    "confirmButton": "Team loeschen",
-    "success": "Team erfolgreich geloescht",
-    "error": "Fehler beim Loeschen des Teams"
+    "title": "Team löschen",
+    "description": "Sind Sie sicher, dass Sie dieses Team löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmButton": "Team löschen",
+    "success": "Team erfolgreich gelöscht",
+    "error": "Fehler beim Löschen des Teams"
   },
 
   "members": {
@@ -113,13 +113,13 @@
     "pending": "Ausstehend",
     "empty": "Keine ausstehenden Einladungen",
     "sent": "Gesendet {date}",
-    "expires": "Laeuft ab {date}",
-    "expiresAt": "Laeuft ab",
+    "expires": "Läuft ab {date}",
+    "expiresAt": "Läuft ab",
     "invitedBy": "Eingeladen von",
     "resend": "Erneut senden",
     "cancel": "Einladung abbrechen",
     "cancelTitle": "Einladung abbrechen",
-    "cancelDescription": "Sind Sie sicher, dass Sie diese Einladung abbrechen moechten?",
+    "cancelDescription": "Sind Sie sicher, dass Sie diese Einladung abbrechen möchten?",
     "cancelConfirm": "Ja, Abbrechen",
     "cancelSuccess": "Einladung abgebrochen",
     "cancelError": "Fehler beim Abbrechen der Einladung"
@@ -132,7 +132,7 @@
     "emailLabel": "E-Mail-Adresse",
     "emailPlaceholder": "kollege@beispiel.de",
     "roleLabel": "Rolle",
-    "rolePlaceholder": "Rolle auswaehlen",
+    "rolePlaceholder": "Rolle auswählen",
     "sendButton": "Einladung senden",
     "success": "Einladung erfolgreich gesendet",
     "error": "Fehler beim Senden der Einladung"
@@ -144,7 +144,7 @@
     "accept": "Einladung annehmen",
     "decline": "Ablehnen",
     "expired": "Diese Einladung ist abgelaufen",
-    "invalid": "Diese Einladung ist nicht mehr gueltig",
+    "invalid": "Diese Einladung ist nicht mehr gültig",
     "success": "Sie sind dem Team beigetreten!",
     "error": "Fehler beim Annehmen der Einladung"
   },
@@ -160,11 +160,11 @@
   "errors": {
     "notFound": "Team nicht gefunden",
     "notMember": "Sie sind kein Mitglied dieses Teams",
-    "permissionDenied": "Sie haben keine Berechtigung fuer diese Aktion",
-    "cannotDeletePersonal": "Persoenliches Team kann nicht geloescht werden",
-    "cannotLeaveOwner": "Eigentuemer koennen nicht gehen. Uebertragen Sie zuerst das Eigentum.",
+    "permissionDenied": "Sie haben keine Berechtigung für diese Aktion",
+    "cannotDeletePersonal": "Persönliches Team kann nicht gelöscht werden",
+    "cannotLeaveOwner": "Eigentümer können nicht gehen. Übertragen Sie zuerst das Eigentum.",
     "lastAdmin": "Letzter Administrator des Teams kann nicht entfernt werden",
-    "ownerOnlyEdit": "Nur Teameigentuemer koennen Teamnamen und Beschreibung bearbeiten"
+    "ownerOnlyEdit": "Nur Teameigentümer können Teamnamen und Beschreibung bearbeiten"
   },
 
   "empty": {

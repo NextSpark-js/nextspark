@@ -7,21 +7,21 @@
     "today": "Hoje",
     "7d": "7 dias",
     "30d": "30 dias",
-    "all": "Todo o periodo"
+    "all": "Todo o período"
   },
   "stats": {
     "totalTokens": {
       "title": "Tokens Totais",
       "input": "entrada",
-      "output": "saida"
+      "output": "saída"
     },
     "estimatedCost": {
       "title": "Custo Estimado",
       "currency": "USD"
     },
     "requests": {
-      "title": "Requisicoes",
-      "description": "Total de requisicoes de IA"
+      "title": "Requisições",
+      "description": "Total de requisições de IA"
     }
   },
   "usageByModel": {
@@ -29,8 +29,8 @@
     "tokens": "tokens"
   },
   "dailyUsage": {
-    "title": "Uso Diario",
-    "noData": "Nenhum dado de uso para este periodo",
+    "title": "Uso Diário",
+    "noData": "Nenhum dado de uso para este período",
     "tokens": "tokens"
   }
 }

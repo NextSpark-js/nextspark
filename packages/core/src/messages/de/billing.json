@@ -2,15 +2,15 @@
   "title": "Abrechnung",
   "description": "Verwalten Sie Ihr Abonnement und Ihre Rechnungen",
   "currentPlan": "Aktueller Tarif",
-  "selectPlan": "Tarif auswaehlen",
+  "selectPlan": "Tarif auswählen",
   "contactSales": "Vertrieb kontaktieren",
   "contactUs": "Kontaktieren Sie uns",
   "unlimited": "Unbegrenzt",
   "upgrade": "Upgrade",
-  "cancelSubscription": "Abonnement kuendigen",
-  "upgradeDescription": "Waehlen Sie den Tarif, der am besten zu Ihren Beduerfnissen passt",
+  "cancelSubscription": "Abonnement kündigen",
+  "upgradeDescription": "Wählen Sie den Tarif, der am besten zu Ihren Bedürfnissen passt",
   "monthly": "Monatlich",
-  "yearly": "Jaehrlich",
+  "yearly": "Jährlich",
   "perMonth": "/Monat",
   "perYear": "/Jahr",
   "savePercent": "{percent}% sparen",
@@ -22,19 +22,19 @@
     },
     "starter": {
       "name": "Starter",
-      "description": "Fuer kleine Teams, die gerade anfangen"
+      "description": "Für kleine Teams, die gerade anfangen"
     },
     "pro": {
       "name": "Pro",
-      "description": "Fuer wachsende Teams und Unternehmen"
+      "description": "Für wachsende Teams und Unternehmen"
     },
     "business": {
       "name": "Business",
-      "description": "Fuer grosse Organisationen mit erweiterten Anforderungen"
+      "description": "Für große Organisationen mit erweiterten Anforderungen"
     },
     "enterprise": {
       "name": "Enterprise",
-      "description": "Massgeschneiderte Loesungen fuer Grossunternehmen"
+      "description": "Maßgeschneiderte Lösungen für Großunternehmen"
     }
   },
 
@@ -47,23 +47,23 @@
     "realtime_analytics": "Echtzeit-Analysen",
     "realtime_analytics_description": "Live-Dashboards mit Echtzeit-Datenaktualisierungen",
     "api_access": "API-Zugang",
-    "api_access_description": "Vollstaendiger Zugang zur REST-API fuer Integrationen",
+    "api_access_description": "Vollständiger Zugang zur REST-API für Integrationen",
     "webhooks": "Webhooks",
     "webhooks_description": "Echtzeit-Ereignisbenachrichtigungen per HTTP erhalten",
     "custom_branding": "Eigenes Branding",
-    "custom_branding_description": "Fuegen Sie Ihr eigenes Logo und Markenfarben hinzu",
+    "custom_branding_description": "Fügen Sie Ihr eigenes Logo und Markenfarben hinzu",
     "white_label": "White Label",
-    "white_label_description": "Entfernen Sie alle Markenkennzeichnungen fuer ein vollstaendig angepasstes Erlebnis",
+    "white_label_description": "Entfernen Sie alle Markenkennzeichnungen für ein vollständig angepasstes Erlebnis",
     "sso": "Single Sign-On (SSO)",
-    "sso_description": "Enterprise-SSO mit SAML/OIDC-Unterstuetzung",
+    "sso_description": "Enterprise-SSO mit SAML/OIDC-Unterstützung",
     "audit_logs": "Audit-Protokolle",
-    "audit_logs_description": "Verfolgen Sie alle Benutzeraktionen und Aenderungen fuer Compliance",
-    "priority_support": "Prioritaets-Support",
-    "priority_support_description": "24/7 Prioritaets-Support mit schnelleren Reaktionszeiten",
+    "audit_logs_description": "Verfolgen Sie alle Benutzeraktionen und Änderungen für Compliance",
+    "priority_support": "Prioritäts-Support",
+    "priority_support_description": "24/7 Prioritäts-Support mit schnelleren Reaktionszeiten",
     "dedicated_support": "Dedizierter Support",
     "dedicated_support_description": "Dedizierter Account-Manager und exklusiver Support-Kanal",
     "guest_access": "Gastzugang",
-    "guest_access_description": "Laden Sie externe Mitarbeiter mit eingeschraenktem Zugang ein",
+    "guest_access_description": "Laden Sie externe Mitarbeiter mit eingeschränktem Zugang ein",
     "custom_domain": "Eigene Domain",
     "custom_domain_description": "Verwenden Sie Ihre eigene Domain",
     "advanced_seo": "Erweitertes SEO",
@@ -71,13 +71,13 @@
     "pipeline_automation": "Pipeline-Automatisierung",
     "pipeline_automation_description": "Automatisieren Sie Ihre Vertriebspipeline mit Regeln und Triggern",
     "email_templates": "E-Mail-Vorlagen",
-    "email_templates_description": "Verwenden Sie vorgefertigte E-Mail-Vorlagen fuer Outreach",
+    "email_templates_description": "Verwenden Sie vorgefertigte E-Mail-Vorlagen für Outreach",
     "gantt_view": "Gantt-Ansicht",
     "gantt_view_description": "Visualisieren Sie Projekte mit Gantt-Diagrammen",
     "time_tracking": "Zeiterfassung",
-    "time_tracking_description": "Erfassen Sie die fuer Aufgaben und Projekte aufgewendete Zeit",
+    "time_tracking_description": "Erfassen Sie die für Aufgaben und Projekte aufgewendete Zeit",
     "task_automation": "Aufgabenautomatisierung",
-    "task_automation_description": "Automatisieren Sie Aufgabenzuweisungen, Statusaenderungen und Benachrichtigungen",
+    "task_automation_description": "Automatisieren Sie Aufgabenzuweisungen, Statusänderungen und Benachrichtigungen",
     "customer_import": "Kundenimport",
     "customer_import_description": "Massenimport von Kunden aus CSV oder externen Quellen",
     "recurring_tasks": "Wiederkehrende Aufgaben",
@@ -94,7 +94,7 @@
     "storage_gb": "Speicher (GB)",
     "file_uploads": "Datei-Uploads / Monat",
     "webhooks_count": "Webhooks",
-    "posts": "Beitraege",
+    "posts": "Beiträge",
     "monthly_views": "Monatliche Aufrufe",
     "authors": "Autoren",
     "contacts": "Kontakte",
@@ -114,35 +114,35 @@
   },
 
   "errors": {
-    "quotaExceeded": "Sie haben das Limit Ihres Tarifs fuer {limit} erreicht",
-    "featureNotAvailable": "Diese Funktion ist in Ihrem aktuellen Tarif nicht verfuegbar",
-    "upgradeRequired": "Bitte fuehren Sie ein Upgrade durch, um auf diese Funktion zuzugreifen"
+    "quotaExceeded": "Sie haben das Limit Ihres Tarifs für {limit} erreicht",
+    "featureNotAvailable": "Diese Funktion ist in Ihrem aktuellen Tarif nicht verfügbar",
+    "upgradeRequired": "Bitte führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen"
   },
 
   "downgrade": {
     "title": "Ressourcenlimit-Warnung",
-    "description": "Ihre aktuellen Ressourcen ueberschreiten die Limits des neuen Tarifs",
+    "description": "Ihre aktuellen Ressourcen überschreiten die Limits des neuen Tarifs",
     "resource_over": "{resource}: {current} / {limit}",
-    "policy": "Vorhandene Ressourcen bleiben zugaenglich. Sie koennen keine neuen erstellen, bis Sie unter dem Limit sind.",
+    "policy": "Vorhandene Ressourcen bleiben zugänglich. Sie können keine neuen erstellen, bis Sie unter dem Limit sind.",
     "confirm": "Mit Downgrade fortfahren",
     "cancel": "Abbrechen"
   },
 
   "portal": {
     "manage": "Abrechnung verwalten",
-    "loading": "Abrechnungsportal wird geoeffnet...",
-    "error": "Fehler beim Oeffnen des Abrechnungsportals"
+    "loading": "Abrechnungsportal wird geöffnet...",
+    "error": "Fehler beim Öffnen des Abrechnungsportals"
   },
 
   "subscription": {
     "active": "Aktiv",
     "trialing": "Testphase",
-    "past_due": "Zahlung ueberfaellig",
-    "canceled": "Gekuendigt",
+    "past_due": "Zahlung überfällig",
+    "canceled": "Gekündigt",
     "expired": "Abgelaufen",
     "trialEnds": "Testphase endet {date}",
-    "renewsOn": "Verlaengert sich am {date}",
-    "cancelsOn": "Wird gekuendigt am {date}"
+    "renewsOn": "Verlängert sich am {date}",
+    "cancelsOn": "Wird gekündigt am {date}"
   },
 
   "invoices": {
@@ -171,18 +171,18 @@
   },
 
   "quota": {
-    "limitReached": "Sie haben Ihr Limit fuer {entity} erreicht",
-    "limitReachedDetail": "Ihr aktueller Tarif erlaubt keine weiteren {entity}. Fuehren Sie ein Upgrade durch, um weiterzuwachsen.",
+    "limitReached": "Sie haben Ihr Limit für {entity} erreicht",
+    "limitReachedDetail": "Ihr aktueller Tarif erlaubt keine weiteren {entity}. Führen Sie ein Upgrade durch, um weiterzuwachsen.",
     "featureNotIncluded": "Diese Funktion ist nicht in Ihrem Tarif enthalten",
-    "featureNotIncludedDetail": "Diese Funktion ist in Ihrem aktuellen Tarif nicht verfuegbar.",
-    "upgradePrompt": "Fuehren Sie ein Upgrade durch, um mehr Kapazitaet freizuschalten.",
+    "featureNotIncludedDetail": "Diese Funktion ist in Ihrem aktuellen Tarif nicht verfügbar.",
+    "upgradePrompt": "Führen Sie ein Upgrade durch, um mehr Kapazität freizuschalten.",
     "viewPlans": "Tarife ansehen",
-    "goBack": "Zurueck"
+    "goBack": "Zurück"
   },
 
   "placeholder": {
     "notReal": "Dies ist ein Platzhalter - noch keine echte Funktion",
-    "description": "Diese Funktion kommt bald. Fuehren Sie ein Upgrade durch, um benachrichtigt zu werden, wenn sie verfuegbar ist.",
+    "description": "Diese Funktion kommt bald. Führen Sie ein Upgrade durch, um benachrichtigt zu werden, wenn sie verfügbar ist.",
     "benefits": "Was Sie erhalten:"
   }
 }

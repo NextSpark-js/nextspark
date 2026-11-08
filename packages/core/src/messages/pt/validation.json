@@ -1,49 +1,49 @@
 {
   "email": {
-    "required": "O email e obrigatorio",
-    "invalid": "Por favor insira um email valido"
+    "required": "O email é obrigatório",
+    "invalid": "Por favor insira um email válido"
   },
   "password": {
-    "required": "A senha e obrigatoria",
-    "currentRequired": "A senha atual e obrigatoria",
+    "required": "A senha é obrigatória",
+    "currentRequired": "A senha atual é obrigatória",
     "min": "A senha deve ter pelo menos 8 caracteres",
     "minLength": "A senha deve ter pelo menos {min} caracteres",
-    "uppercase": "Deve conter pelo menos uma letra maiuscula",
-    "lowercase": "Deve conter pelo menos uma letra minuscula",
-    "number": "Deve conter pelo menos um numero",
-    "match": "As senhas nao coincidem",
+    "uppercase": "Deve conter pelo menos uma letra maiúscula",
+    "lowercase": "Deve conter pelo menos uma letra minúscula",
+    "number": "Deve conter pelo menos um número",
+    "match": "As senhas não coincidem",
     "different": "A nova senha deve ser diferente da atual"
   },
   "firstName": {
-    "required": "O nome e obrigatorio",
+    "required": "O nome é obrigatório",
     "min": "O nome deve ter pelo menos 2 caracteres",
     "minLength": "O nome deve ter pelo menos {min} caracteres"
   },
   "lastName": {
-    "required": "O sobrenome e obrigatorio",
+    "required": "O sobrenome é obrigatório",
     "min": "O sobrenome deve ter pelo menos 2 caracteres",
     "minLength": "O sobrenome deve ter pelo menos {min} caracteres"
   },
   "country": {
-    "required": "Por favor selecione um pais"
+    "required": "Por favor selecione um país"
   },
   "timezone": {
-    "required": "Por favor selecione um fuso horario"
+    "required": "Por favor selecione um fuso horário"
   },
   "language": {
     "required": "Por favor selecione um idioma"
   },
   "taskTitle": {
-    "required": "O titulo da tarefa e obrigatorio",
-    "min": "O titulo deve ter pelo menos 1 caractere",
-    "max": "O titulo nao pode exceder 200 caracteres",
-    "minLength": "O titulo da tarefa deve ter pelo menos {min} caracteres"
+    "required": "O título da tarefa é obrigatório",
+    "min": "O título deve ter pelo menos 1 caractere",
+    "max": "O título não pode exceder 200 caracteres",
+    "minLength": "O título da tarefa deve ter pelo menos {min} caracteres"
   },
   "taskDescription": {
-    "max": "A descricao nao pode exceder 500 caracteres"
+    "max": "A descrição não pode exceder 500 caracteres"
   },
   "terms": {
-    "required": "Voce deve aceitar os termos e condicoes"
+    "required": "Você deve aceitar os termos e condições"
   },
   "entity": {
     "required": "{label} é obrigatório",

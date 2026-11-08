@@ -3,21 +3,21 @@
   "subtitle": "Ferramentas de Desenvolvimento",
   "nav": {
     "home": "Painel",
-    "homeDescription": "Resumo e links rapidos do DevTools",
+    "homeDescription": "Resumo e links rápidos do DevTools",
     "styleGallery": "Galeria de Estilos",
-    "styleGalleryDescription": "Referencia de componentes e estilos",
+    "styleGalleryDescription": "Referência de componentes e estilos",
     "testCases": "Casos de Teste",
-    "testCasesDescription": "Cenarios de teste de desenvolvimento",
+    "testCasesDescription": "Cenários de teste de desenvolvimento",
     "features": "Recursos",
     "featuresDescription": "Registro de features e cobertura de testes",
     "flows": "Fluxos",
-    "flowsDescription": "Fluxos de usuario",
+    "flowsDescription": "Fluxos de usuário",
     "blocks": "Blocos",
     "blocksDescription": "Registro de blocos do page builder",
     "tags": "Tags",
-    "tagsDescription": "Visao geral e filtragem de tags de teste",
+    "tagsDescription": "Visão geral e filtragem de tags de teste",
     "config": "Visualizador de Config",
-    "configDescription": "Configuracao de tema e entidades",
+    "configDescription": "Configuração de tema e entidades",
     "api": "Explorador API",
     "apiDescription": "Navegar todos os endpoints API",
     "expandSidebar": "Expandir barra lateral",
@@ -27,20 +27,20 @@
   "exitToDashboardDescription": "Voltar ao painel principal",
   "returnToDashboard": "Voltar ao painel",
   "goToSuperadmin": "Painel Super Admin",
-  "goToSuperadminDescription": "Ir para area de super administrador",
-  "superAdminArea": "Area de super administrador",
-  "restrictedArea": "Area de Desenvolvedor",
+  "goToSuperadminDescription": "Ir para área de super administrador",
+  "superAdminArea": "Área de super administrador",
+  "restrictedArea": "Área de Desenvolvedor",
   "developerAccessOnly": "Apenas acesso de desenvolvedor",
   "config": {
     "title": "Visualizador de Configuração",
     "description": "Explorar configuração do tema e entidades",
-    "error": "Erro carregando configuracao",
+    "error": "Erro carregando configuração",
     "tabs": {
       "theme": "Config de Tema",
       "entities": "Entidades"
     },
-    "themeTitle": "Configuracao do Tema",
-    "themeDescription": "Configuracao ativa do tema e sobrescrituras",
+    "themeTitle": "Configuração do Tema",
+    "themeDescription": "Configuração ativa do tema e sobrescrituras",
     "entitiesTitle": "Registro de Entidades",
     "entitiesDescription": "{count} entidades registradas",
     "copied": "Copiado!",
@@ -52,15 +52,15 @@
     "searchPlaceholder": "Buscar testes...",
     "collapseAll": "Recolher todos",
     "expandAll": "Expandir todos",
-    "noMatchingTests": "Nenhum teste corresponde a sua busca",
-    "noTests": "Nenhum teste disponivel",
+    "noMatchingTests": "Nenhum teste corresponde à sua busca",
+    "noTests": "Nenhum teste disponível",
     "fileTree": "Arquivos de Teste",
-    "fileTreeDescription": "Navegar documentacao de testes",
-    "fileNotFound": "Arquivo Nao Encontrado",
-    "fileNotFoundDescription": "O arquivo '{path}' nao existe",
+    "fileTreeDescription": "Navegar documentação de testes",
+    "fileNotFound": "Arquivo Não Encontrado",
+    "fileNotFoundDescription": "O arquivo '{path}' não existe",
     "backToList": "Voltar para lista",
     "selectFile": "Selecione um arquivo",
-    "selectFileDescription": "Escolha um arquivo de teste da arvore para ver seu conteudo",
+    "selectFileDescription": "Escolha um arquivo de teste da árvore para ver seu conteúdo",
     "error": "Erro carregando arquivo",
     "dashboard": {
       "title": "Dashboard de Cobertura de Testes",
@@ -70,23 +70,23 @@
       "tags": "Tags",
       "coverage": "Cobertura",
       "gaps": "Lacunas de Cobertura",
-      "noGaps": "Todas as features e fluxos tem testes!",
-      "criticalPath": "Caminho Critico",
+      "noGaps": "Todas as features e fluxos têm testes!",
+      "criticalPath": "Caminho Crítico",
       "backToDashboard": "Dashboard",
       "withTests": "com testes",
       "withoutTests": "sem testes",
       "categories": {
         "core": "Core",
         "entities": "Entidades",
-        "content": "Conteudo",
-        "settings": "Configuracoes",
+        "content": "Conteúdo",
+        "settings": "Configurações",
         "admin": "Admin"
       }
     }
   },
   "api": {
     "title": "Explorador API",
-    "endpointsAvailable": "endpoints disponiveis",
+    "endpointsAvailable": "endpoints disponíveis",
     "endpointsInCategory": "endpoints nesta categoria",
     "noRoutesInCategory": "Sem rotas nesta categoria",
     "noRoutesMessage": "Nenhuma rota personalizada foi registrada para esta categoria.",
@@ -94,13 +94,13 @@
   },
   "apiTester": {
     "backToList": "Voltar para Endpoints",
-    "method": "Metodo HTTP",
+    "method": "Método HTTP",
     "urlPreview": "Preview da URL",
-    "pathParams": "Parametros de Rota",
-    "queryParams": "Parametros de Query",
+    "pathParams": "Parâmetros de Rota",
+    "queryParams": "Parâmetros de Query",
     "headers": "Headers Personalizados",
-    "headersInfo": "Content-Type e definido automaticamente. Adicione headers personalizados abaixo.",
-    "authentication": "Autenticacao",
+    "headersInfo": "Content-Type é definido automaticamente. Adicione headers personalizados abaixo.",
+    "authentication": "Autenticação",
     "requestBody": "Corpo do Request (JSON)",
     "sendRequest": "Enviar Request",
     "sending": "Enviando...",
@@ -110,7 +110,7 @@
     "responseHeaders": "Headers",
     "noResponse": "Envie um request para ver a resposta",
     "auth": {
-      "useSession": "Usar sessao atual",
+      "useSession": "Usar sessão atual",
       "useApiKey": "Usar API key",
       "apiKeyPlaceholder": "Insira sua API key...",
       "adminBypass": "Acesso cross-team",
@@ -122,7 +122,7 @@
       "addButton": "Adicionar"
     },
     "pathParam": {
-      "required": "obrigatorio",
+      "required": "obrigatório",
       "enterPlaceholder": "Insira {name}..."
     },
     "responseStates": {
@@ -133,7 +133,7 @@
   },
   "features": {
     "title": "Registro de Features",
-    "description": "Registro de features com informacao de cobertura de testes",
+    "description": "Registro de features com informação de cobertura de testes",
     "search": "Buscar features...",
     "tests": "testes",
     "covered": "Coberto",
@@ -156,14 +156,14 @@
     "categories": {
       "core": "Core",
       "entities": "Entidades",
-      "content": "Conteudo",
-      "settings": "Configuracoes",
+      "content": "Conteúdo",
+      "settings": "Configurações",
       "admin": "Admin"
     }
   },
   "flows": {
     "title": "Registro de Fluxos",
-    "description": "Fluxos de usuario com cobertura de testes",
+    "description": "Fluxos de usuário com cobertura de testes",
     "search": "Buscar fluxos...",
     "tests": "testes",
     "covered": "Coberto",
@@ -171,12 +171,12 @@
     "showing": "Mostrando {count} de {total} fluxos",
     "noResults": "Nenhum fluxo encontrado",
     "noResultsHint": "Tente ajustar os filtros ou a busca",
-    "criticalPath": "Rota Critica",
+    "criticalPath": "Rota Crítica",
     "stats": {
       "total": "Total Fluxos",
       "covered": "Com Testes",
       "uncovered": "Sem Testes",
-      "critical": "Rotas Criticas"
+      "critical": "Rotas Críticas"
     },
     "filters": {
       "all": "Todos",
@@ -185,16 +185,16 @@
       "uncovered": "Sem cobertura"
     },
     "categories": {
-      "acquisition": "Aquisicao",
-      "navigation": "Navegacao",
-      "content": "Conteudo",
-      "settings": "Configuracoes",
+      "acquisition": "Aquisição",
+      "navigation": "Navegação",
+      "content": "Conteúdo",
+      "settings": "Configurações",
       "admin": "Admin"
     }
   },
   "blocks": {
     "title": "Registro de Blocos",
-    "description": "Blocos do page builder com definicoes de campos",
+    "description": "Blocos do page builder com definições de campos",
     "search": "Buscar blocos...",
     "tests": "testes",
     "fields": "campos",
@@ -218,13 +218,13 @@
     },
     "categories": {
       "hero": "Hero",
-      "content": "Conteudo",
-      "media": "Midia",
+      "content": "Conteúdo",
+      "media": "Mídia",
       "cta": "CTA",
       "layout": "Layout"
     },
     "scopes": {
-      "pages": "Paginas",
+      "pages": "Páginas",
       "posts": "Posts"
     },
     "detail": {
@@ -233,7 +233,7 @@
       "fieldsTab": "Campos",
       "preview": "Preview",
       "livePreview": "Preview ao Vivo",
-      "previewDescription": "Este bloco e renderizado com conteudo de exemplo para mostrar como ficara no seu site.",
+      "previewDescription": "Este bloco é renderizado com conteúdo de exemplo para mostrar como ficará no seu site.",
       "exampleProps": "Props de Exemplo",
       "examplePropsDescription": "Os props usados para renderizar o preview. Copie este JSON como ponto de partida.",
       "scope": "Escopo",
@@ -241,16 +241,16 @@
       "testCoverage": "Cobertura de Testes",
       "fieldName": "Nome do Campo",
       "fieldType": "Tipo",
-      "required": "Obrigatorio",
-      "default": "Padrao",
+      "required": "Obrigatório",
+      "default": "Padrão",
       "placeholder": "Placeholder",
-      "options": "Opcoes",
+      "options": "Opções",
       "yes": "Sim",
-      "no": "Nao"
+      "no": "Não"
     }
   },
   "tags": {
-    "title": "Visualizacao de Tags",
+    "title": "Visualização de Tags",
     "description": "Todas as tags de teste organizadas por categoria",
     "search": "Buscar tags ou arquivos de teste...",
     "totalTags": "Total Tags",
@@ -267,23 +267,23 @@
       "features": "Features",
       "flows": "Fluxos",
       "blocks": "Blocos",
-      "roles": "Funcoes",
-      "operations": "Operacoes",
+      "roles": "Funções",
+      "operations": "Operações",
       "other": "Outros"
     }
   },
   "scheduledActions": {
-    "title": "Acoes Agendadas",
-    "description": "Monitorar e gerenciar acoes agendadas em segundo plano",
-    "loading": "Carregando acoes agendadas...",
-    "empty": "Nenhuma acao agendada encontrada",
-    "emptyDescription": "As acoes agendadas aparecerao aqui quando forem criadas",
-    "failedNotification": "{count, plural, one {# acao falhou} other {# acoes falharam}} nas ultimas 24 horas",
+    "title": "Ações Agendadas",
+    "description": "Monitorar e gerenciar ações agendadas em segundo plano",
+    "loading": "Carregando ações agendadas...",
+    "empty": "Nenhuma ação agendada encontrada",
+    "emptyDescription": "As ações agendadas aparecerão aqui quando forem criadas",
+    "failedNotification": "{count, plural, one {# ação falhou} other {# ações falharam}} nas últimas 24 horas",
     "viewFailed": "Ver falhas",
     "filters": {
       "status": "Status",
       "allStatuses": "Todos os Status",
-      "actionType": "Tipo de Acao",
+      "actionType": "Tipo de Ação",
       "allTypes": "Todos os Tipos",
       "apply": "Aplicar Filtros",
       "reset": "Resetar Filtros"
@@ -294,33 +294,33 @@
       "attempts": "Tentativas",
       "scheduledAt": "Agendado Para",
       "startedAt": "Iniciado",
-      "completedAt": "Concluido",
+      "completedAt": "Concluído",
       "team": "Equipe",
       "payload": "Dados",
       "error": "Erro",
-      "actions": "Acoes",
+      "actions": "Ações",
       "noTeam": "Global"
     },
     "retry": {
       "button": "Tentar novamente",
-      "success": "Acao agendada para nova tentativa",
-      "error": "Falha ao tentar novamente a acao: {message}"
+      "success": "Ação agendada para nova tentativa",
+      "error": "Falha ao tentar novamente a ação: {message}"
     },
     "run": {
       "button": "Executar agora",
-      "success": "Acao executada com sucesso",
-      "error": "Falha ao executar a acao: {message}"
+      "success": "Ação executada com sucesso",
+      "error": "Falha ao executar a ação: {message}"
     },
     "status": {
       "pending": "Pendente",
       "running": "Executando",
-      "completed": "Concluido",
+      "completed": "Concluído",
       "failed": "Falhou"
     },
     "pagination": {
       "previous": "Anterior",
-      "next": "Proximo",
-      "page": "Pagina {page} de {total}"
+      "next": "Próximo",
+      "page": "Página {page} de {total}"
     }
   }
 }

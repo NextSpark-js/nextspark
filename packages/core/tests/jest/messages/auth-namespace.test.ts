@@ -107,14 +107,7 @@ describe('the keys the auth pages read', () => {
     }
   })
 
-  // #408: German and Portuguese were written without their diacritics
-  test.each([
-    ['de', /Bestaetig|pruef|Pruef|fuer\b|ueberpruef|Ueberpruef|Zurueck|zurueck|Druecken|ungueltig|Ungueltig|spaeter|muessen|Mueller|Grossbuch|Oeffnen|laeuft|laueft/],
-    ['pt', /\b(?:nao|Nao|Voce|Ja|ja|opcoes|invalid[oa]s?|Usuario|autenticacao|informacoes|comecar|condicoes|verificacao|necessario|botao|faca|endereco|recuperacao|conexao|maiuscula|minuscula|numero|pagina|Ultimo|Joao)\b/],
-  ] as Array<[string, RegExp]>)('%s auth messages are written with their diacritics', (locale, unaccented) => {
-    const messages = flat(LOCALES[locale].auth)
-    expect(Object.entries(messages).filter(([, text]) => unaccented.test(text)).map(([key]) => key)).toEqual([])
-  })
+  // The diacritics of the German and Portuguese catalogs (#408, #411) are checked in diacritics.test.ts
 
   test('the metadata of the pages names keys the catalog holds', () => {
     for (const [file, keys] of [

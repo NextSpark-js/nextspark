@@ -10,31 +10,31 @@
     "free": "Gratuito"
   },
   "quickActions": {
-    "title": "Acoes Rapidas",
+    "title": "Ações Rápidas",
     "description": "Acesse rapidamente os recursos mais utilizados",
     "myTasks": "Minhas Tarefas",
-    "myTasksDescription": "Gerenciar pendencias",
+    "myTasksDescription": "Gerenciar pendências",
     "myProfile": "Meu Perfil",
-    "myProfileDescription": "Informacao pessoal",
-    "settings": "Configuracoes",
+    "myProfileDescription": "Informação pessoal",
+    "settings": "Configurações",
     "settingsDescription": "Ajustes da conta",
     "billing": "Faturamento",
     "billingDescription": "Plano e pagamentos",
     "createTask": "Criar Tarefa",
     "viewTasks": "Ver Tarefas",
     "updateProfile": "Atualizar Perfil",
-    "manageSettings": "Gerenciar Configuracoes"
+    "manageSettings": "Gerenciar Configurações"
   },
   "activity": {
     "title": "Atividade Recente",
-    "description": "Suas acoes e eventos recentes",
+    "description": "Suas ações e eventos recentes",
     "signedIn": "Login no painel",
     "justNow": "Agora mesmo",
     "accountCreated": "Conta criada"
   },
   "badges": {
     "verified": "verificado",
-    "basic": "basico",
+    "basic": "básico",
     "solo": "individual",
     "low": "baixo"
   }

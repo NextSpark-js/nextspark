@@ -1,12 +1,12 @@
 {
-  "home": "Inicio",
-  "docs": "Documentacao",
+  "home": "Início",
+  "docs": "Documentação",
   "dashboard": "Painel",
   "login": "Entrar",
   "signup": "Cadastrar-se",
   "logout": "Sair",
   "features": "Recursos",
-  "pricing": "Precos",
+  "pricing": "Preços",
   "support": "Suporte",
   "quickCreate": "Criação Rápida",
   "quickCreateNew": "Novo {entity}"

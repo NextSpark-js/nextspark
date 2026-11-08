@@ -6,12 +6,12 @@
     "analytics": "Analysen",
     "config": "Systemkonfiguration",
     "exitSector7": "Sector7 verlassen",
-    "returnToDashboard": "Zurueck zum Dashboard"
+    "returnToDashboard": "Zurück zum Dashboard"
   },
   "dashboard": {
     "title": "Sector7",
     "subtitle": "Super-Administrator-Kontrollzentrum",
-    "restrictedAccess": "Zugangsbeschraenkter Bereich - Nur fuer Superadmin und Developer",
+    "restrictedAccess": "Zugangsbeschränkter Bereich - Nur für Superadmin und Developer",
     "systemStatus": "Systemstatus",
     "systemVersion": "Plattformversion",
     "securityLevel": "Sicherheitsstufe",
@@ -53,7 +53,7 @@
   "users": {
     "title": "Benutzerverwaltung",
     "subtitle": "Alle Benutzer und Superadministratoren verwalten",
-    "regularUsers": "Regulaere Benutzer",
+    "regularUsers": "Reguläre Benutzer",
     "superadmins": "Superadmins",
     "totalUsers": "Benutzer gesamt",
     "allRegisteredUsers": "Alle registrierten Benutzer",
@@ -78,13 +78,13 @@
       "pending": "Ausstehend",
       "unverified": "Nicht verifiziert",
       "noUsers": "Keine Benutzer gefunden",
-      "noUsersDescription": "Es gibt noch keine regulaeren Benutzer im System.",
+      "noUsersDescription": "Es gibt noch keine regulären Benutzer im System.",
       "noSuperadmins": "Keine Superadmins gefunden",
-      "noSuperadminsDescription": "Das ist ungewoehnlich - es sollte mindestens einen Superadmin geben.",
+      "noSuperadminsDescription": "Das ist ungewöhnlich - es sollte mindestens einen Superadmin geben.",
       "you": "Sie"
     },
     "actions": {
-      "openMenu": "Menue oeffnen",
+      "openMenu": "Menü öffnen",
       "viewProfile": "Profil anzeigen",
       "editRole": "Rolle bearbeiten",
       "sendEmail": "E-Mail senden",
@@ -98,12 +98,12 @@
       "deleteUser": "Benutzer löschen"
     },
     "descriptions": {
-      "regularUsersDescription": "Alle Benutzer ausser Superadministratoren. Beinhaltet Mitglieder, Mitarbeiter und Administratoren.",
-      "superadminsDescription": "Benutzer mit vollstaendigem Systemzugriff und Administratorrechten. Mit aeusserster Vorsicht behandeln."
+      "regularUsersDescription": "Alle Benutzer außer Superadministratoren. Beinhaltet Mitglieder, Mitarbeiter und Administratoren.",
+      "superadminsDescription": "Benutzer mit vollständigem Systemzugriff und Administratorrechten. Mit äußerster Vorsicht behandeln."
     },
     "security": {
       "notice": "Sicherheitshinweis:",
-      "superadminWarning": "Superadmin-Zugriff gewaehrt vollstaendige Systemkontrolle. Mit aeusserster Vorsicht behandeln."
+      "superadminWarning": "Superadmin-Zugriff gewährt vollständige Systemkontrolle. Mit äußerster Vorsicht behandeln."
     },
     "confirm": {
       "demoteTitle": "Zum Mitglied herabstufen",
@@ -124,7 +124,7 @@
     "exportTokens": "Tokens exportieren",
     "stats": {
       "components": "Komponenten",
-      "availableComponents": "Verfuegbare UI-Komponenten",
+      "availableComponents": "Verfügbare UI-Komponenten",
       "colorTokens": "Farb-Tokens",
       "themeColorVariables": "Theme-Farbvariablen",
       "themes": "Themes",
@@ -139,30 +139,30 @@
     },
     "componentLibrary": {
       "title": "Komponentenbibliothek",
-      "description": "Vollstaendige Uebersicht aller verfuegbaren UI-Komponenten mit verschiedenen Zustaenden und Variationen"
+      "description": "Vollständige Übersicht aller verfügbaren UI-Komponenten mit verschiedenen Zuständen und Variationen"
     },
     "themeSystem": {
       "title": "Theme-System",
-      "description": "Farb-Tokens, Typografie und Designsystem-Variablen fuer helle und dunkle Themes"
+      "description": "Farb-Tokens, Typografie und Designsystem-Variablen für helle und dunkle Themes"
     },
     "designPrinciples": {
       "title": "Design-Prinzipien",
       "description": "Grundlegende Prinzipien, die unser Designsystem leiten",
       "consistency": {
         "title": "Konsistenz",
-        "description": "Visuelle und funktionale Konsistenz ueber alle Komponenten hinweg beibehalten"
+        "description": "Visuelle und funktionale Konsistenz über alle Komponenten hinweg beibehalten"
       },
       "accessibility": {
         "title": "Barrierefreiheit",
-        "description": "Sicherstellen, dass alle Komponenten die WCAG 2.1 AA-Standards erfuellen"
+        "description": "Sicherstellen, dass alle Komponenten die WCAG 2.1 AA-Standards erfüllen"
       },
       "scalability": {
         "title": "Skalierbarkeit",
-        "description": "Komponenten entwerfen, die in verschiedenen Masstaden und Kontexten funktionieren"
+        "description": "Komponenten entwerfen, die in verschiedenen Maßstäben und Kontexten funktionieren"
       },
       "performance": {
         "title": "Leistung",
-        "description": "Fuer schnelles Laden und fluessige Interaktionen optimieren"
+        "description": "Für schnelles Laden und flüssige Interaktionen optimieren"
       }
     },
     "usageGuidelines": {
@@ -174,15 +174,15 @@
       },
       "typographyScale": {
         "title": "Typografie-Skala",
-        "description": "Der etablierten Typografie-Skala fuer konsistente Hierarchie folgen"
+        "description": "Der etablierten Typografie-Skala für konsistente Hierarchie folgen"
       },
       "spacingSystem": {
         "title": "Abstandssystem",
-        "description": "Das 8px-Rastersystem fuer konsistenten Abstand und Ausrichtung verwenden"
+        "description": "Das 8px-Rastersystem für konsistenten Abstand und Ausrichtung verwenden"
       },
       "componentComposition": {
         "title": "Komponentenkomposition",
-        "description": "Basiskomponenten kombinieren, um komplexe Oberflaechen zu erstellen"
+        "description": "Basiskomponenten kombinieren, um komplexe Oberflächen zu erstellen"
       }
     },
     "technicalSpecs": {
@@ -197,23 +197,23 @@
     },
     "resources": {
       "title": "Ressourcen und Links",
-      "description": "Zusaetzliche Ressourcen und Dokumentation"
+      "description": "Zusätzliche Ressourcen und Dokumentation"
     }
   },
   "errors": {
     "accessDenied": "Zugriff verweigert",
-    "superadminRequired": "Sie benoetigen Superadmin-Rechte, um auf diesen Bereich zuzugreifen.",
-    "restrictedArea": "Dieser Bereich ist nur fuer Systemadministratoren zugaenglich. Wenn Sie glauben, dass dies ein Fehler ist, kontaktieren Sie bitte den Support.",
+    "superadminRequired": "Sie benötigen Superadmin-Rechte, um auf diesen Bereich zuzugreifen.",
+    "restrictedArea": "Dieser Bereich ist nur für Systemadministratoren zugänglich. Wenn Sie glauben, dass dies ein Fehler ist, kontaktieren Sie bitte den Support.",
     "sessionNotFound": "Sitzung nicht gefunden. Bitte melden Sie sich erneut an.",
-    "goBack": "Zurueck",
+    "goBack": "Zurück",
     "dashboard": "Dashboard",
     "errorLoadingUsers": "Fehler beim Laden der Benutzer",
     "failedToLoadUserData": "Benutzerdaten konnten nicht geladen werden",
     "retry": "Erneut versuchen"
   },
   "common": {
-    "backToSector7": "Zurueck zu Sector7",
-    "comingSoon": "Demnachst verfuegbar",
+    "backToSector7": "Zurück zu Sector7",
+    "comingSoon": "Demnächst verfügbar",
     "soon": "Bald",
     "loading": "Laden...",
     "error": "Fehler"

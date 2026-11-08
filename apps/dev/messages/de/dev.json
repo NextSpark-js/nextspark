@@ -1,11 +1,11 @@
 {
   "title": "DevTools",
   "subtitle": "Entwicklungswerkzeuge und Dokumentation",
-  "restrictedArea": "Zugangsbeschraenkter Bereich",
+  "restrictedArea": "Zugangsbeschränkter Bereich",
   "developerAccessOnly": "Nur Entwicklerzugang",
-  "exitToDashboard": "Zum Dashboard zurueck",
-  "exitToDashboardDescription": "Zurueck zum Haupt-Dashboard",
-  "returnToDashboard": "Zurueck zum Dashboard",
+  "exitToDashboard": "Zum Dashboard zurück",
+  "exitToDashboardDescription": "Zurück zum Haupt-Dashboard",
+  "returnToDashboard": "Zurück zum Dashboard",
   "goToSector7": "Zu Sector7 gehen",
   "goToSector7Description": "Zugriff auf den Sector7-Verwaltungsbereich",
   "superAdminArea": "Super-Admin-Bereich",
@@ -13,8 +13,8 @@
     "home": "Startseite",
     "homeDescription": "Entwickler-Dashboard",
     "styleGallery": "Stil-Galerie",
-    "styleGalleryDescription": "Komponentenuebersicht",
-    "testCases": "Testfaelle",
+    "styleGalleryDescription": "Komponentenübersicht",
+    "testCases": "Testfälle",
     "testCasesDescription": "Testdokumentation",
     "config": "Konfiguration",
     "configDescription": "Systemkonfiguration",
@@ -23,7 +23,7 @@
   },
   "home": {
     "welcome": "Willkommen bei DevTools",
-    "welcomeDescription": "Ihr Zentrum fuer Entwicklungswerkzeuge und Dokumentation",
+    "welcomeDescription": "Ihr Zentrum für Entwicklungswerkzeuge und Dokumentation",
     "intro": "Dieser Bereich bietet Zugang zu Designsystem-Komponenten, Testfall-Dokumentation und Systemkonfiguration. Nutzen Sie die Navigation, um die verschiedenen Bereiche zu erkunden.",
     "systemInfo": "Systeminformationen",
     "systemInfoDescription": "Ihre Zugangsstufe und Berechtigungen",
@@ -35,37 +35,37 @@
     "description": "Designsystem-Komponenten und Themes"
   },
   "tests": {
-    "title": "Testfaelle",
+    "title": "Testfälle",
     "description": "Testdokumentation erkunden",
     "fileTree": "Testdateien",
     "fileTreeDescription": "Testdokumentation erkunden",
     "noTests": "Keine Testdateien gefunden",
-    "selectFile": "Datei zum Anzeigen auswaehlen",
-    "selectFileDescription": "Waehlen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
+    "selectFile": "Datei zum Anzeigen auswählen",
+    "selectFileDescription": "Wählen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
     "error": "Fehler beim Laden der Datei",
     "loading": "Laden...",
     "fileNotFound": "Datei nicht gefunden",
     "fileNotFoundDescription": "Die Testdatei \"{path}\" konnte nicht gefunden werden.",
-    "backToList": "Zurueck zur Liste"
+    "backToList": "Zurück zur Liste"
   },
   "config": {
     "title": "Konfigurationsanzeige",
     "description": "Aktuelle Systemkonfiguration anzeigen",
     "themeTitle": "Theme-Konfiguration",
     "themeDescription": "Aktuelle Theme-Konfiguration und Metadaten",
-    "entitiesTitle": "Entitaetsregister",
-    "entitiesDescription": "{count} registrierte Entitaeten",
+    "entitiesTitle": "Entitätsregister",
+    "entitiesDescription": "{count} registrierte Entitäten",
     "copy": "Kopieren",
     "copied": "Kopiert!",
     "error": "Fehler beim Laden der Konfiguration",
     "tabs": {
       "theme": "Theme-Konfiguration",
-      "entities": "Entitaeten"
+      "entities": "Entitäten"
     }
   },
   "scheduledActions": {
     "title": "Geplante Aktionen",
-    "description": "Geplante Hintergrundaktionen ueberwachen und verwalten",
+    "description": "Geplante Hintergrundaktionen überwachen und verwalten",
     "loading": "Geplante Aktionen werden geladen...",
     "empty": "Keine geplanten Aktionen gefunden",
     "emptyDescription": "Geplante Aktionen werden hier angezeigt, wenn sie erstellt werden",
@@ -75,12 +75,12 @@
       "actionType": "Aktionstyp",
       "allTypes": "Alle Typen",
       "apply": "Filter anwenden",
-      "reset": "Filter zuruecksetzen"
+      "reset": "Filter zurücksetzen"
     },
     "table": {
       "type": "Typ",
       "status": "Status",
-      "scheduledAt": "Geplant fuer",
+      "scheduledAt": "Geplant für",
       "team": "Team",
       "payload": "Daten",
       "error": "Fehler",
@@ -88,12 +88,12 @@
     },
     "status": {
       "pending": "Ausstehend",
-      "running": "Wird ausgefuehrt",
+      "running": "Wird ausgeführt",
       "completed": "Abgeschlossen",
       "failed": "Fehlgeschlagen"
     },
     "pagination": {
-      "previous": "Zurueck",
+      "previous": "Zurück",
       "next": "Weiter",
       "page": "Seite {page} von {total}"
     }

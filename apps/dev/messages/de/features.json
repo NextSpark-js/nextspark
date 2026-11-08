@@ -7,7 +7,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "benefit1": "HTTP-Callbacks fuer Ereignisse",
+    "benefit1": "HTTP-Callbacks für Ereignisse",
     "benefit2": "Benutzerdefinierte Payload-Vorlagen",
     "benefit3": "Wiederholungslogik und Protokollierung"
   },
@@ -18,14 +18,14 @@
     "benefit3": "Workflow-Trigger"
   },
   "hero": {
-    "badge": "Funktionsuebersicht",
-    "title": "Alles, was Sie fuer moderne Anwendungen brauchen",
-    "description": "Unsere Plattform bietet ein umfassendes Set an Funktionen, die Ihren Entwicklungsprozess beschleunigen und gleichzeitig Sicherheit und Skalierbarkeit gewaehrleisten."
+    "badge": "Funktionsübersicht",
+    "title": "Alles, was Sie für moderne Anwendungen brauchen",
+    "description": "Unsere Plattform bietet ein umfassendes Set an Funktionen, die Ihren Entwicklungsprozess beschleunigen und gleichzeitig Sicherheit und Skalierbarkeit gewährleisten."
   },
   "highlights": {
     "productionReady": {
       "title": "Produktionsbereit",
-      "description": "Erprobte Architektur bereit fuer den Einsatz"
+      "description": "Erprobte Architektur bereit für den Einsatz"
     },
     "developerExperience": {
       "title": "Entwicklererfahrung",
@@ -37,7 +37,7 @@
     },
     "secure": {
       "title": "Sicher",
-      "description": "Enterprise-Sicherheit standardmaessig"
+      "description": "Enterprise-Sicherheit standardmäßig"
     }
   },
   "categories": {
@@ -50,11 +50,11 @@
         },
         "multiOAuth": {
           "name": "Multi-Provider OAuth",
-          "description": "Unterstuetzung fuer Google, GitHub und andere OAuth-Anbieter"
+          "description": "Unterstützung für Google, GitHub und andere OAuth-Anbieter"
         },
         "twoFactor": {
           "name": "Zwei-Faktor-Authentifizierung",
-          "description": "Erhoehte Sicherheit mit TOTP- und SMS-Verifizierung"
+          "description": "Erhöhte Sicherheit mit TOTP- und SMS-Verifizierung"
         }
       }
     },
@@ -63,15 +63,15 @@
       "features": {
         "darkLight": {
           "name": "Dunkel-/Hellmodus",
-          "description": "Nahtloser Theme-Wechsel mit Systempraeferenzerkennung"
+          "description": "Nahtloser Theme-Wechsel mit Systempräferenzerkennung"
         },
         "mobileResponsive": {
           "name": "Mobil-Responsive",
-          "description": "Optimierte Erfahrung auf allen Geraeten und Bildschirmgroessen"
+          "description": "Optimierte Erfahrung auf allen Geräten und Bildschirmgrößen"
         },
         "realTimeNotifications": {
           "name": "Echtzeit-Benachrichtigungen",
-          "description": "Sofortige Updates und Warnungen fuer wichtige Ereignisse"
+          "description": "Sofortige Updates und Warnungen für wichtige Ereignisse"
         }
       }
     },
@@ -80,7 +80,7 @@
       "features": {
         "typescriptReady": {
           "name": "TypeScript-bereit",
-          "description": "Volle TypeScript-Unterstuetzung mit Typsicherheit im gesamten System"
+          "description": "Volle TypeScript-Unterstützung mit Typsicherheit im gesamten System"
         },
         "modernStack": {
           "name": "Moderner Stack",
@@ -88,7 +88,7 @@
         },
         "componentLibrary": {
           "name": "Komponentenbibliothek",
-          "description": "Wunderschoene, barrierefreie Komponenten mit shadcn/ui"
+          "description": "Wunderschöne, barrierefreie Komponenten mit shadcn/ui"
         }
       }
     },
@@ -112,7 +112,7 @@
   },
   "cta": {
     "title": "Bereit loszulegen?",
-    "description": "Schliessen Sie sich Tausenden von Entwicklern an, die mit unserer Plattform grossartige Anwendungen erstellen.",
+    "description": "Schließen Sie sich Tausenden von Entwicklern an, die mit unserer Plattform großartige Anwendungen erstellen.",
     "getStarted": "Kostenlos starten",
     "viewDocs": "Dokumentation anzeigen"
   }

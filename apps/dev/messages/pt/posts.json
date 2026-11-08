@@ -3,23 +3,23 @@
   "description": "Gerencie seus posts de blog",
   "newPost": "Novo Post",
   "editPost": "Editar Post",
-  "postTitle": "Titulo",
+  "postTitle": "Título",
   "postDetails": "Detalhes do Post",
   "slug": "Slug",
   "status": "Status",
   "excerpt": "Resumo",
   "featuredImage": "Imagem destacada",
   "categories": "Categorias",
-  "content": "Conteudo",
+  "content": "Conteúdo",
   "published": "Publicado",
   "draft": "Rascunho",
   "author": "Autor",
   "createdAt": "Criado",
-  "actions": "Acoes",
+  "actions": "Ações",
   "search": "Buscar posts...",
   "noPostsFound": "Nenhum post encontrado",
   "deleteConfirm": "Tem certeza?",
-  "deleteDescription": "Isso excluira permanentemente \"{title}\". Esta acao nao pode ser desfeita.",
+  "deleteDescription": "Isso excluirá permanentemente \"{title}\". Esta ação não pode ser desfeita.",
   "savePost": "Salvar Post",
   "saving": "Salvando...",
   "deleting": "Excluindo...",
@@ -30,11 +30,11 @@
   "edit": "Editar",
   "delete": "Excluir",
   "cancel": "Cancelar",
-  "unsavedChanges": "Alteracoes nao salvas",
+  "unsavedChanges": "Alterações não salvas",
   "characters": "caracteres",
   "createSuccess": "Post criado com sucesso",
   "updateSuccess": "Post atualizado com sucesso",
-  "deleteSuccess": "Post excluido com sucesso",
+  "deleteSuccess": "Post excluído com sucesso",
   "filters": {
     "category": "Filtrar por categoria",
     "status": "Status",
@@ -42,13 +42,13 @@
     "allStatuses": "Todos os Status"
   },
   "placeholders": {
-    "title": "Insira o titulo do post",
+    "title": "Insira o título do post",
     "slug": "slug-do-post",
     "excerpt": "Resumo breve do seu post (max 500 caracteres)",
     "featuredImage": "https://exemplo.com/imagem.jpg"
   },
   "errors": {
-    "titleRequired": "O titulo e obrigatorio",
-    "slugRequired": "O slug e obrigatorio"
+    "titleRequired": "O título é obrigatório",
+    "slugRequired": "O slug é obrigatório"
   }
 }

@@ -1,77 +1,77 @@
 {
   "analytics": {
-    "title": "Analytics Avancado",
-    "benefit1": "Metricas em tempo real",
-    "benefit2": "Construtor de relatorios personalizados",
+    "title": "Analytics Avançado",
+    "benefit1": "Métricas em tempo real",
+    "benefit2": "Construtor de relatórios personalizados",
     "benefit3": "Exportar para PDF/CSV"
   },
   "webhooks": {
     "title": "Webhooks",
     "benefit1": "Callbacks HTTP para eventos",
     "benefit2": "Templates de payload personalizados",
-    "benefit3": "Logica de retry e logging"
+    "benefit3": "Lógica de retry e logging"
   },
   "automation": {
-    "title": "Automacao de Tarefas",
-    "benefit1": "Criacao automatica de tarefas",
-    "benefit2": "Acoes agendadas",
+    "title": "Automação de Tarefas",
+    "benefit1": "Criação automática de tarefas",
+    "benefit2": "Ações agendadas",
     "benefit3": "Gatilhos de workflow"
   },
   "hero": {
-    "badge": "Descricao de Recursos",
-    "title": "Tudo o que voce precisa para construir aplicacoes modernas",
-    "description": "Nossa plataforma fornece um conjunto abrangente de recursos projetados para acelerar seu processo de desenvolvimento mantendo seguranca e escalabilidade."
+    "badge": "Descrição de Recursos",
+    "title": "Tudo o que você precisa para construir aplicações modernas",
+    "description": "Nossa plataforma fornece um conjunto abrangente de recursos projetados para acelerar seu processo de desenvolvimento mantendo segurança e escalabilidade."
   },
   "highlights": {
     "productionReady": {
-      "title": "Pronto para Producao",
+      "title": "Pronto para Produção",
       "description": "Arquitetura testada em batalha pronta para deploy"
     },
     "developerExperience": {
-      "title": "Experiencia do Desenvolvedor",
+      "title": "Experiência do Desenvolvedor",
       "description": "Hot reload, TypeScript e ferramentas modernas"
     },
     "scalable": {
-      "title": "Escalavel",
-      "description": "Construido para crescer com as necessidades da sua aplicacao"
+      "title": "Escalável",
+      "description": "Construído para crescer com as necessidades da sua aplicação"
     },
     "secure": {
       "title": "Seguro",
-      "description": "Seguranca de nivel empresarial por padrao"
+      "description": "Segurança de nível empresarial por padrão"
     }
   },
   "categories": {
     "authSecurity": {
-      "title": "Autenticacao e Seguranca",
+      "title": "Autenticação e Segurança",
       "features": {
         "betterAuth": {
-          "name": "Integracao Better Auth",
-          "description": "Autenticacao moderna e segura com gerenciamento de sessao integrado"
+          "name": "Integração Better Auth",
+          "description": "Autenticação moderna e segura com gerenciamento de sessão integrado"
         },
         "multiOAuth": {
           "name": "OAuth Multi-Provedor",
           "description": "Suporte para Google, GitHub e outros provedores OAuth"
         },
         "twoFactor": {
-          "name": "Autenticacao de Dois Fatores",
-          "description": "Seguranca aprimorada com verificacao TOTP e SMS"
+          "name": "Autenticação de Dois Fatores",
+          "description": "Segurança aprimorada com verificação TOTP e SMS"
         }
       }
     },
     "userExperience": {
-      "title": "Experiencia do Usuario",
+      "title": "Experiência do Usuário",
       "features": {
         "darkLight": {
           "name": "Modo Escuro/Claro",
-          "description": "Troca fluida de tema com deteccao de preferencias do sistema"
+          "description": "Troca fluida de tema com detecção de preferências do sistema"
         },
         "mobileResponsive": {
           "name": "Responsivo para Mobile",
-          "description": "Experiencia otimizada em todos os dispositivos e tamanhos de tela"
+          "description": "Experiência otimizada em todos os dispositivos e tamanhos de tela"
         },
         "realTimeNotifications": {
-          "name": "Notificacoes em Tempo Real",
-          "description": "Atualizacoes instantaneas e alertas para eventos importantes"
+          "name": "Notificações em Tempo Real",
+          "description": "Atualizações instantâneas e alertas para eventos importantes"
         }
       }
     },
@@ -80,15 +80,15 @@
       "features": {
         "typescriptReady": {
           "name": "Pronto para TypeScript",
-          "description": "Suporte completo de TypeScript com seguranca de tipos em todo o sistema"
+          "description": "Suporte completo de TypeScript com segurança de tipos em todo o sistema"
         },
         "modernStack": {
           "name": "Stack Moderno",
-          "description": "Next.js 15, React 19 e as ultimas tecnologias web"
+          "description": "Next.js 15, React 19 e as últimas tecnologias web"
         },
         "componentLibrary": {
           "name": "Biblioteca de Componentes",
-          "description": "Componentes bonitos e acessiveis com shadcn/ui"
+          "description": "Componentes bonitos e acessíveis com shadcn/ui"
         }
       }
     },
@@ -97,23 +97,23 @@
       "features": {
         "postgresql": {
           "name": "Banco de Dados PostgreSQL",
-          "description": "Banco de dados robusto e escalavel com integracao Supabase"
+          "description": "Banco de dados robusto e escalável com integração Supabase"
         },
         "tanstackQuery": {
           "name": "TanStack Query",
-          "description": "Busca de dados poderosa, cache e sincronizacao"
+          "description": "Busca de dados poderosa, cache e sincronização"
         },
         "edgeRuntime": {
           "name": "Edge Runtime",
-          "description": "Respostas API rapidas e distribuidas globalmente"
+          "description": "Respostas API rápidas e distribuídas globalmente"
         }
       }
     }
   },
   "cta": {
-    "title": "Pronto para comecar?",
-    "description": "Junte-se a milhares de desenvolvedores que estao construindo aplicacoes incriveis com nossa plataforma.",
-    "getStarted": "Comecar Gratis",
-    "viewDocs": "Ver Documentacao"
+    "title": "Pronto para começar?",
+    "description": "Junte-se a milhares de desenvolvedores que estão construindo aplicações incríveis com nossa plataforma.",
+    "getStarted": "Começar Grátis",
+    "viewDocs": "Ver Documentação"
   }
 }

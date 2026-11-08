@@ -7,29 +7,29 @@
   "editDescription": "Editar detalhes da categoria",
   "name": "Nome",
   "slug": "Slug",
-  "icon": "Icone",
+  "icon": "Ícone",
   "color": "Cor",
-  "actions": "Acoes",
+  "actions": "Ações",
   "loading": "Carregando...",
   "empty": "Nenhuma categoria encontrada",
   "emptyDescription": "Comece criando sua primeira categoria.",
   "deleteConfirm": "Excluir categoria?",
-  "deleteDescription": "Tem certeza que deseja excluir \"{name}\"? Esta acao nao pode ser desfeita.",
+  "deleteDescription": "Tem certeza que deseja excluir \"{name}\"? Esta ação não pode ser desfeita.",
   "saveCategory": "Salvar Categoria",
   "saving": "Salvando...",
   "deleting": "Excluindo...",
   "cancel": "Cancelar",
   "delete": "Excluir",
-  "iconHelp": "Nome do icone Lucide (ex: cpu, book-open)",
+  "iconHelp": "Nome do ícone Lucide (ex: cpu, book-open)",
   "createSuccess": "Categoria criada com sucesso",
   "updateSuccess": "Categoria atualizada com sucesso",
-  "deleteSuccess": "Categoria excluida com sucesso",
+  "deleteSuccess": "Categoria excluída com sucesso",
   "placeholders": {
     "name": "Tecnologia",
     "slug": "tecnologia",
     "description": "Posts sobre tecnologia e desenvolvimento de software"
   },
   "errors": {
-    "nameRequired": "O nome e obrigatorio"
+    "nameRequired": "O nome é obrigatório"
   }
 }

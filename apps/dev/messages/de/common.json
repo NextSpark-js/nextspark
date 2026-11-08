@@ -5,12 +5,12 @@
     "developer": "Entwickler"
   },
   "teamRoles": {
-    "owner": "Eigentuemer",
+    "owner": "Eigentümer",
     "admin": "Administrator",
     "member": "Mitglied",
     "viewer": "Betrachter",
     "editor": "Redakteur"
   },
-  "comingSoon": "Demnachst verfuegbar",
+  "comingSoon": "Demnächst verfügbar",
   "soon": "Bald"
 }

@@ -11,77 +11,77 @@
   "upgradeDescription": "Escolha o plano que melhor se adapta as suas necessidades",
   "monthly": "Mensal",
   "yearly": "Anual",
-  "perMonth": "/mes",
+  "perMonth": "/mês",
   "perYear": "/ano",
   "savePercent": "Economize {percent}%",
 
   "plans": {
     "free": {
       "name": "Gratuito",
-      "description": "Comece com recursos basicos"
+      "description": "Comece com recursos básicos"
     },
     "starter": {
       "name": "Inicial",
-      "description": "Para equipes pequenas que estao comecando"
+      "description": "Para equipes pequenas que estão começando"
     },
     "pro": {
       "name": "Pro",
-      "description": "Para equipes e negocios em crescimento"
+      "description": "Para equipes e negócios em crescimento"
     },
     "business": {
       "name": "Empresarial",
-      "description": "Para organizacoes grandes com necessidades avancadas"
+      "description": "Para organizações grandes com necessidades avançadas"
     },
     "enterprise": {
       "name": "Enterprise",
-      "description": "Solucoes personalizadas para grandes organizacoes"
+      "description": "Soluções personalizadas para grandes organizações"
     }
   },
 
   "features": {
     "title": "Recursos",
-    "basic_analytics": "Analytics Basico",
-    "basic_analytics_description": "Ver estatisticas e relatorios basicos de uso",
-    "advanced_analytics": "Analytics Avancado",
-    "advanced_analytics_description": "Insights detalhados com relatorios personalizados e exportacao de dados",
+    "basic_analytics": "Analytics Básico",
+    "basic_analytics_description": "Ver estatísticas e relatórios básicos de uso",
+    "advanced_analytics": "Analytics Avançado",
+    "advanced_analytics_description": "Insights detalhados com relatórios personalizados e exportação de dados",
     "realtime_analytics": "Analytics em Tempo Real",
-    "realtime_analytics_description": "Dashboards ao vivo com atualizacoes de dados em tempo real",
+    "realtime_analytics_description": "Dashboards ao vivo com atualizações de dados em tempo real",
     "api_access": "Acesso a API",
-    "api_access_description": "Acesso completo a API REST para integracoes",
+    "api_access_description": "Acesso completo a API REST para integrações",
     "webhooks": "Webhooks",
-    "webhooks_description": "Receba notificacoes de eventos em tempo real via HTTP",
+    "webhooks_description": "Receba notificações de eventos em tempo real via HTTP",
     "custom_branding": "Marca Personalizada",
-    "custom_branding_description": "Adicione seu proprio logo e cores de marca",
+    "custom_branding_description": "Adicione seu próprio logo e cores de marca",
     "white_label": "White Label",
-    "white_label_description": "Remova toda a marca para uma experiencia completamente personalizada",
+    "white_label_description": "Remova toda a marca para uma experiência completamente personalizada",
     "sso": "Single Sign-On (SSO)",
     "sso_description": "SSO empresarial com suporte SAML/OIDC",
     "audit_logs": "Logs de Auditoria",
-    "audit_logs_description": "Rastreie todas as acoes de usuarios e alteracoes para conformidade",
-    "priority_support": "Suporte Prioritario",
-    "priority_support_description": "Suporte prioritario 24/7 com tempos de resposta mais rapidos",
+    "audit_logs_description": "Rastreie todas as ações de usuários e alterações para conformidade",
+    "priority_support": "Suporte Prioritário",
+    "priority_support_description": "Suporte prioritário 24/7 com tempos de resposta mais rápidos",
     "dedicated_support": "Suporte Dedicado",
     "dedicated_support_description": "Gerente de conta dedicado e canal de suporte exclusivo",
     "guest_access": "Acesso para Convidados",
     "guest_access_description": "Convide colaboradores externos com acesso limitado",
-    "custom_domain": "Dominio Personalizado",
-    "custom_domain_description": "Use seu proprio dominio",
-    "advanced_seo": "SEO Avancado",
-    "advanced_seo_description": "Ferramentas avancadas de SEO e otimizacao",
-    "pipeline_automation": "Automacao de Pipeline",
+    "custom_domain": "Domínio Personalizado",
+    "custom_domain_description": "Use seu próprio domínio",
+    "advanced_seo": "SEO Avançado",
+    "advanced_seo_description": "Ferramentas avançadas de SEO e otimização",
+    "pipeline_automation": "Automação de Pipeline",
     "pipeline_automation_description": "Automatize seu pipeline de vendas com regras e gatilhos",
     "email_templates": "Templates de Email",
-    "email_templates_description": "Use templates de email pre-desenhados para outreach",
-    "gantt_view": "Visualizacao Gantt",
+    "email_templates_description": "Use templates de email pré-desenhados para outreach",
+    "gantt_view": "Visualização Gantt",
     "gantt_view_description": "Visualize projetos com diagramas de Gantt",
     "time_tracking": "Controle de Tempo",
     "time_tracking_description": "Registre o tempo dedicado a tarefas e projetos",
-    "task_automation": "Automacao de Tarefas",
-    "task_automation_description": "Automatize atribuicoes, mudancas de status e notificacoes de tarefas",
-    "customer_import": "Importacao de Clientes",
-    "customer_import_description": "Importacao em massa de clientes de CSV ou fontes externas",
+    "task_automation": "Automação de Tarefas",
+    "task_automation_description": "Automatize atribuições, mudanças de status e notificações de tarefas",
+    "customer_import": "Importação de Clientes",
+    "customer_import_description": "Importação em massa de clientes de CSV ou fontes externas",
     "recurring_tasks": "Tarefas Recorrentes",
-    "recurring_tasks_description": "Crie tarefas que se repetem de acordo com um calendario"
+    "recurring_tasks_description": "Crie tarefas que se repetem de acordo com um calendário"
   },
 
   "limits": {
@@ -89,18 +89,18 @@
     "team_members": "Membros da Equipe",
     "tasks": "Tarefas",
     "customers": "Clientes",
-    "api_calls": "Chamadas API / mes",
+    "api_calls": "Chamadas API / mês",
     "storage": "Armazenamento",
     "storage_gb": "Armazenamento (GB)",
-    "file_uploads": "Uploads de Arquivo / mes",
+    "file_uploads": "Uploads de Arquivo / mês",
     "webhooks_count": "Webhooks",
-    "posts": "Publicacoes",
-    "monthly_views": "Visualizacoes Mensais",
+    "posts": "Publicações",
+    "monthly_views": "Visualizações Mensais",
     "authors": "Autores",
     "contacts": "Contatos",
-    "deals": "Negocios",
+    "deals": "Negócios",
     "pipelines": "Pipelines",
-    "workspaces": "Espacos de Trabalho"
+    "workspaces": "Espaços de Trabalho"
   },
 
   "usage": {
@@ -114,16 +114,16 @@
   },
 
   "errors": {
-    "quotaExceeded": "Voce atingiu o limite do seu plano para {limit}",
-    "featureNotAvailable": "Este recurso nao esta disponivel no seu plano atual",
-    "upgradeRequired": "Por favor faca upgrade do seu plano para acessar este recurso"
+    "quotaExceeded": "Você atingiu o limite do seu plano para {limit}",
+    "featureNotAvailable": "Este recurso não está disponível no seu plano atual",
+    "upgradeRequired": "Por favor faça upgrade do seu plano para acessar este recurso"
   },
 
   "downgrade": {
     "title": "Aviso de Limite de Recursos",
     "description": "Seus recursos atuais excedem os limites do novo plano",
     "resource_over": "{resource}: {current} / {limit}",
-    "policy": "Os recursos existentes permanecerao acessiveis. Voce nao podera criar novos ate estar abaixo do limite.",
+    "policy": "Os recursos existentes permanecerão acessíveis. Você não poderá criar novos até estar abaixo do limite.",
     "confirm": "Prosseguir com o Downgrade",
     "cancel": "Cancelar"
   },
@@ -171,18 +171,18 @@
   },
 
   "quota": {
-    "limitReached": "Voce atingiu seu limite de {entity}",
-    "limitReachedDetail": "Seu plano atual nao permite mais {entity}. Faca upgrade para continuar crescendo.",
-    "featureNotIncluded": "Este recurso nao esta incluido no seu plano",
-    "featureNotIncludedDetail": "Este recurso nao esta disponivel no seu plano atual.",
-    "upgradePrompt": "Faca upgrade do seu plano para desbloquear mais capacidade.",
+    "limitReached": "Você atingiu seu limite de {entity}",
+    "limitReachedDetail": "Seu plano atual não permite mais {entity}. Faça upgrade para continuar crescendo.",
+    "featureNotIncluded": "Este recurso não está incluído no seu plano",
+    "featureNotIncludedDetail": "Este recurso não está disponível no seu plano atual.",
+    "upgradePrompt": "Faça upgrade do seu plano para desbloquear mais capacidade.",
     "viewPlans": "Ver Planos",
     "goBack": "Voltar"
   },
 
   "placeholder": {
-    "notReal": "Isto e um placeholder - ainda nao e um recurso real",
-    "description": "Este recurso chegara em breve. Faca upgrade do seu plano para receber notificacao quando estiver disponivel.",
-    "benefits": "O que voce tera:"
+    "notReal": "Isto é um placeholder - ainda não é um recurso real",
+    "description": "Este recurso chegará em breve. Faça upgrade do seu plano para receber notificação quando estiver disponível.",
+    "benefits": "O que você terá:"
   }
 }

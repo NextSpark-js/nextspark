@@ -3,7 +3,7 @@
   "description": "Verwalten Sie die Beitragskategorien",
   "newCategory": "Neue Kategorie",
   "editCategory": "Kategorie bearbeiten",
-  "createDescription": "Erstellen Sie eine neue Kategorie zum Organisieren von Beitraegen",
+  "createDescription": "Erstellen Sie eine neue Kategorie zum Organisieren von Beiträgen",
   "editDescription": "Kategoriedetails bearbeiten",
   "name": "Name",
   "slug": "Slug",
@@ -13,21 +13,21 @@
   "loading": "Laden...",
   "empty": "Keine Kategorien gefunden",
   "emptyDescription": "Beginnen Sie mit der Erstellung Ihrer ersten Kategorie.",
-  "deleteConfirm": "Kategorie loeschen?",
-  "deleteDescription": "Sind Sie sicher, dass Sie \"{name}\" loeschen moechten? Diese Aktion kann nicht rueckgaengig gemacht werden.",
+  "deleteConfirm": "Kategorie löschen?",
+  "deleteDescription": "Sind Sie sicher, dass Sie \"{name}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
   "saveCategory": "Kategorie speichern",
   "saving": "Speichern...",
-  "deleting": "Loeschen...",
+  "deleting": "Löschen...",
   "cancel": "Abbrechen",
-  "delete": "Loeschen",
+  "delete": "Löschen",
   "iconHelp": "Lucide-Symbolname (z.B.: cpu, book-open)",
   "createSuccess": "Kategorie erfolgreich erstellt",
   "updateSuccess": "Kategorie erfolgreich aktualisiert",
-  "deleteSuccess": "Kategorie erfolgreich geloescht",
+  "deleteSuccess": "Kategorie erfolgreich gelöscht",
   "placeholders": {
     "name": "Technologie",
     "slug": "technologie",
-    "description": "Beitraege ueber Technologie und Softwareentwicklung"
+    "description": "Beiträge über Technologie und Softwareentwicklung"
   },
   "errors": {
     "nameRequired": "Name ist erforderlich"

@@ -9,7 +9,7 @@
     "password": "Passwort",
     "security": "Sicherheit",
     "notifications": "Benachrichtigungen",
-    "apiKeys": "API-Schluessel",
+    "apiKeys": "API-Schlüssel",
     "billing": "Abrechnung",
     "help": "Hilfe & Support",
     "team": "Team",
@@ -32,25 +32,25 @@
     "settings": "Einstellungen",
     "more": "Mehr",
     "moreOptions": "Weitere Optionen",
-    "moreOptionsDescription": "Zugriff auf Einstellungen und zusaetzliche Funktionen",
+    "moreOptionsDescription": "Zugriff auf Einstellungen und zusätzliche Funktionen",
     "quickCreateDescription": "Neues Element erstellen",
-    "noEntitiesAvailable": "Keine Elemente zum Erstellen verfuegbar",
+    "noEntitiesAvailable": "Keine Elemente zum Erstellen verfügbar",
     "createNew": "Neu erstellen"
   },
   "buttons": {
     "save": "Speichern",
     "cancel": "Abbrechen",
-    "delete": "Loeschen",
+    "delete": "Löschen",
     "edit": "Bearbeiten",
-    "add": "Hinzufuegen",
+    "add": "Hinzufügen",
     "update": "Aktualisieren",
     "submit": "Absenden",
-    "close": "Schliessen",
-    "back": "Zurueck",
+    "close": "Schließen",
+    "back": "Zurück",
     "next": "Weiter",
     "previous": "Zurück",
     "continue": "Fortfahren",
-    "finish": "Abschliessen",
+    "finish": "Abschließen",
     "signIn": "Anmelden",
     "signUp": "Registrieren",
     "signOut": "Abmelden",
@@ -67,7 +67,7 @@
     "create": "Erstellen",
     "read": "Anzeigen",
     "update": "Aktualisieren",
-    "delete": "Loeschen"
+    "delete": "Löschen"
   },
   "common": {
     "yes": "Ja",
@@ -85,7 +85,7 @@
     "current": "aktuelles Theme",
     "change": "Theme wechseln",
     "loading": "Theme-Auswahl wird geladen",
-    "changed": "Theme geaendert zu",
+    "changed": "Theme geändert zu",
     "light": "Hell",
     "dark": "Dunkel",
     "system": "System",
@@ -108,10 +108,10 @@
   "search": {
     "placeholder": "Seiten, Einstellungen suchen...",
     "label": "Seiten und Einstellungen suchen",
-    "clear": "Suche loeschen",
+    "clear": "Suche löschen",
     "results": "Suchergebnisse",
     "searching": "Suche...",
-    "noResults": "Keine Ergebnisse gefunden fuer \"{query}\"",
+    "noResults": "Keine Ergebnisse gefunden für \"{query}\"",
     "tryDifferent": "Versuchen Sie andere Suchbegriffe",
     "entityLabel": "Entität",
     "settingLabel": "Einstellung",
@@ -136,9 +136,9 @@
       "main": "Hauptnavigation",
       "search": "Suchen",
       "mobileActions": "Mobile Aktionen",
-      "closeMenu": "Menue schliessen",
-      "openMenu": "Menue oeffnen",
-      "mobileMenu": "Mobiles Menue",
+      "closeMenu": "Menü schließen",
+      "openMenu": "Menü öffnen",
+      "mobileMenu": "Mobiles Menü",
       "mainMobile": "Mobile Hauptnavigation",
       "settings": "Einstellungsnavigation",
       "dashboard": "Dashboard-Navigation"
@@ -148,7 +148,7 @@
     },
     "user": {
       "loading": "Benutzer wird geladen",
-      "menu": "Benutzermenue fuer {name}",
+      "menu": "Benutzermenü für {name}",
       "avatar": "Avatar von {name}",
       "info": "Benutzerinformationen",
       "defaultName": "Benutzer",
@@ -167,7 +167,7 @@
     "groups": {
       "collapse": "Gruppe einklappen",
       "expand": "Gruppe ausklappen",
-      "delete": "Gruppe loeschen"
+      "delete": "Gruppe löschen"
     },
     "media": {
       "articleCover": "Artikeltitelbild",
@@ -181,11 +181,11 @@
     "taskCard": "Aufgabenkarte: {title}. Status: {status}",
     "toggleTask": "Aufgabe '{title}' als {action} markieren",
     "createdDate": "Erstellt am {date}",
-    "deleteTask": "Aufgabe loeschen: {title}",
+    "deleteTask": "Aufgabe löschen: {title}",
     "completedTaskCard": "Erledigte Aufgabe: {title}",
     "reactivateTask": "Aufgabe reaktivieren: {title}",
     "completedDate": "Erledigt am {date}",
-    "deleteCompletedTask": "Erledigte Aufgabe loeschen: {title}"
+    "deleteCompletedTask": "Erledigte Aufgabe löschen: {title}"
   },
   "a11y": {
     "accessDeveloperArea": "Auf DevTools – Entwicklerbereich zugreifen",
@@ -234,7 +234,7 @@
     "mobileTopBar": "Obere mobile Navigationsleiste",
     "more": "Mehr",
     "morePages": "Weitere Seiten",
-    "navigatingToAnnouncement": "Navigiere zu {name} - {description}",
+    "navigatingToAnnouncement": "Navigieren Sie zu {name} - {description}",
     "nextPage": "Nächste Seite",
     "openHelpCenterNewTab": "Hilfe-Center in neuem Tab öffnen",
     "openMenu": "Menü öffnen",

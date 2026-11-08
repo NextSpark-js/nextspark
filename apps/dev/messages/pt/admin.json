@@ -1,11 +1,11 @@
 {
   "pages": {
-    "title": "Paginas",
-    "description": "Gerencie suas paginas dinamicas",
-    "loading": "Carregando paginas...",
-    "empty": "Nenhuma pagina encontrada. Crie sua primeira pagina para comecar.",
+    "title": "Páginas",
+    "description": "Gerencie suas páginas dinâmicas",
+    "loading": "Carregando páginas...",
+    "empty": "Nenhuma página encontrada. Crie sua primeira página para começar.",
     "search": {
-      "placeholder": "Buscar paginas..."
+      "placeholder": "Buscar páginas..."
     },
     "filters": {
       "locale": "Idioma",
@@ -16,19 +16,19 @@
       "draft": "Rascunho"
     },
     "table": {
-      "title": "Titulo",
+      "title": "Título",
       "slug": "Slug",
       "locale": "Idioma",
       "status": "Status",
-      "updated": "Ultima Atualizacao"
+      "updated": "Última Atualização"
     },
     "status": {
       "published": "Publicado",
       "draft": "Rascunho",
-      "unsaved": "Alteracoes nao salvas"
+      "unsaved": "Alterações não salvas"
     },
     "actions": {
-      "create": "Criar Pagina",
+      "create": "Criar Página",
       "edit": "Editar",
       "view": "Ver",
       "delete": "Excluir",
@@ -38,15 +38,15 @@
       "preview": "Visualizar"
     },
     "new": {
-      "title": "Criar Nova Pagina",
-      "description": "Crie uma nova pagina dinamica para seu site",
-      "back": "Voltar para Paginas",
-      "success": "Pagina criada com sucesso",
+      "title": "Criar Nova Página",
+      "description": "Crie uma nova página dinâmica para seu site",
+      "back": "Voltar para Páginas",
+      "success": "Página criada com sucesso",
       "form": {
-        "title": "Detalhes da Pagina",
-        "description": "Insira as informacoes basicas da sua pagina",
+        "title": "Detalhes da Página",
+        "description": "Insira as informações básicas da sua página",
         "fields": {
-          "title": "Titulo da Pagina",
+          "title": "Título da Página",
           "slug": "Slug da URL",
           "locale": "Idioma"
         },
@@ -55,30 +55,30 @@
           "slug": "sobre-nos"
         },
         "hints": {
-          "slug": "Versao amigavel para URL do titulo (minusculas, sem espacos)"
+          "slug": "Versão amigável para URL do título (minúsculas, sem espaços)"
         },
         "actions": {
           "cancel": "Cancelar",
-          "create": "Criar Pagina",
+          "create": "Criar Página",
           "creating": "Criando..."
         }
       }
     },
     "edit": {
-      "title": "Editar Pagina",
-      "loading": "Carregando pagina...",
-      "back": "Voltar para Paginas",
+      "title": "Editar Página",
+      "loading": "Carregando página...",
+      "back": "Voltar para Páginas",
       "fields": {
-        "title": "Titulo",
+        "title": "Título",
         "slug": "Slug"
       },
       "placeholders": {
-        "title": "Titulo da pagina",
+        "title": "Título da página",
         "slug": "slug-da-pagina"
       },
       "status": {
         "published": "Publicado",
-        "unsaved": "Alteracoes nao salvas"
+        "unsaved": "Alterações não salvas"
       },
       "actions": {
         "save": "Salvar",
@@ -92,22 +92,22 @@
         "preview": "Preview"
       },
       "messages": {
-        "saved": "Pagina salva com sucesso"
+        "saved": "Página salva com sucesso"
       }
     },
     "settings": {
-      "title": "Configuracao da Pagina",
+      "title": "Configuração da Página",
       "seo": {
-        "title": "Configuracao SEO",
-        "metaTitle": "Meta Titulo",
-        "metaTitlePlaceholder": "Insira o titulo para mecanismos de busca",
+        "title": "Configuração SEO",
+        "metaTitle": "Meta Título",
+        "metaTitlePlaceholder": "Insira o título para mecanismos de busca",
         "metaTitleHint": "Recomendado: 50-60 caracteres",
-        "metaDescription": "Meta Descricao",
-        "metaDescriptionPlaceholder": "Insira uma breve descricao para mecanismos de busca",
+        "metaDescription": "Meta Descrição",
+        "metaDescriptionPlaceholder": "Insira uma breve descrição para mecanismos de busca",
         "characters": "caracteres",
         "metaKeywords": "Palavras-chave",
         "metaKeywordsPlaceholder": "palavra1, palavra2, palavra3",
-        "metaKeywordsHint": "Palavras-chave separadas por virgula",
+        "metaKeywordsHint": "Palavras-chave separadas por vírgula",
         "ogImage": "Imagem Social (OG Image)",
         "ogImagePlaceholder": "https://exemplo.com/imagem.jpg",
         "ogImageHint": "Imagem exibida ao compartilhar em redes sociais"
@@ -136,38 +136,38 @@
     "canvas": {
       "empty": {
         "message": "Nenhum bloco adicionado ainda",
-        "hint": "Arraste blocos da biblioteca para comecar a construir sua pagina"
+        "hint": "Arraste blocos da biblioteca para começar a construir sua página"
       }
     },
     "block": {
       "error": {
-        "notFound": "Bloco '{slug}' nao encontrado"
+        "notFound": "Bloco '{slug}' não encontrado"
       }
     },
     "settings": {
       "empty": {
         "message": "Nenhum bloco selecionado",
-        "hint": "Selecione um bloco do canvas para editar sua configuracao"
+        "hint": "Selecione um bloco do canvas para editar sua configuração"
       },
       "error": {
-        "notFound": "Configuracao do bloco nao encontrada"
+        "notFound": "Configuração do bloco não encontrada"
       },
-      "noFields": "Este bloco nao tem campos configuraveis",
+      "noFields": "Este bloco não tem campos configuráveis",
       "actions": {
         "reset": "Redefinir",
         "remove": "Remover"
       },
       "tabs": {
-        "content": "Conteudo",
+        "content": "Conteúdo",
         "design": "Design",
-        "advanced": "Avancado",
-        "noContentFields": "Nenhum campo de conteudo disponivel",
-        "noDesignFields": "Nenhum campo de design disponivel",
-        "noAdvancedFields": "Nenhum campo avancado disponivel"
+        "advanced": "Avançado",
+        "noContentFields": "Nenhum campo de conteúdo disponível",
+        "noDesignFields": "Nenhum campo de design disponível",
+        "noAdvancedFields": "Nenhum campo avançado disponível"
       }
     },
     "form": {
-      "selectPlaceholder": "Selecione uma opcao",
+      "selectPlaceholder": "Selecione uma opção",
       "emptyArray": "Nenhum elemento adicionado",
       "itemNumber": "Elemento {number}",
       "addItem": "Adicionar elemento",
@@ -178,13 +178,13 @@
     "back": "Voltar",
     "loading": "Carregando...",
     "fields": {
-      "title": "Titulo",
+      "title": "Título",
       "slug": "Slug"
     },
     "placeholders": {
-      "title": "Insira o titulo...",
+      "title": "Insira o título...",
       "slug": "url-slug",
-      "excerpt": "Breve descricao...",
+      "excerpt": "Breve descrição...",
       "imageUrl": "https://exemplo.com/imagem.jpg"
     },
     "status": {
@@ -192,7 +192,7 @@
       "draft": "Rascunho",
       "scheduled": "Agendado",
       "archived": "Arquivado",
-      "unsaved": "Alteracoes nao salvas"
+      "unsaved": "Alterações não salvas"
     },
     "actions": {
       "save": "Salvar",
@@ -201,15 +201,15 @@
     },
     "viewMode": {
       "layout": "Design",
-      "preview": "Visualizacao"
+      "preview": "Visualização"
     },
     "sidebar": {
       "blocks": "Blocos",
       "fields": "Campos",
       "fieldsTitle": "Campos da Entidade",
       "fieldsDescription": "Configure propriedades adicionais",
-      "noFields": "Nenhum campo adicional disponivel",
-      "noCategories": "Nenhuma categoria disponivel"
+      "noFields": "Nenhum campo adicional disponível",
+      "noCategories": "Nenhuma categoria disponível"
     },
     "messages": {
       "saved": "Salvo com sucesso",

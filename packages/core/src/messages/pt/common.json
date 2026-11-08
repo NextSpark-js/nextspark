@@ -3,25 +3,25 @@
   "comingSoon": "Em breve",
   "navigation": {
     "dashboard": "Painel",
-    "settings": "Configuracoes",
-    "patterns": "Padroes",
+    "settings": "Configurações",
+    "patterns": "Padrões",
     "profile": "Perfil",
     "password": "Senha",
-    "security": "Seguranca",
-    "notifications": "Notificacoes",
+    "security": "Segurança",
+    "notifications": "Notificações",
     "apiKeys": "Chaves API",
     "billing": "Faturamento",
     "help": "Ajuda e Suporte",
     "team": "Equipe",
-    "admin": "Administracao",
+    "admin": "Administração",
     "learn": "Aprender",
     "teach": "Ensinar",
     "myCourses": "Meus Cursos",
-    "catalog": "Catalogo",
+    "catalog": "Catálogo",
     "courses": "Cursos",
-    "lessons": "Licoes",
+    "lessons": "Lições",
     "analytics": "Analytics",
-    "enrollments": "Inscricoes",
+    "enrollments": "Inscrições",
     "students": "Estudantes"
   },
   "a11y": {
@@ -103,15 +103,15 @@
   },
   "mobileNav": {
     "greeting": "Ola, {name}",
-    "home": "Inicio",
+    "home": "Início",
     "tasks": "Tarefas",
     "create": "Criar",
     "settings": "Ajustes",
     "more": "Mais",
-    "moreOptions": "Mais Opcoes",
-    "moreOptionsDescription": "Acesse configuracoes e recursos adicionais",
+    "moreOptions": "Mais Opções",
+    "moreOptionsDescription": "Acesse configurações e recursos adicionais",
     "quickCreateDescription": "Crie um novo item",
-    "noEntitiesAvailable": "Nenhum item disponivel para criar",
+    "noEntitiesAvailable": "Nenhum item disponível para criar",
     "createNew": "Criar novo"
   },
   "buttons": {
@@ -138,7 +138,7 @@
     "success": "Sucesso",
     "error": "Erro",
     "warning": "Aviso",
-    "info": "Informacao"
+    "info": "Informação"
   },
   "actions": {
     "create": "Criar",
@@ -148,7 +148,7 @@
   },
   "common": {
     "yes": "Sim",
-    "no": "Nao",
+    "no": "Não",
     "enabled": "Habilitado",
     "disabled": "Desabilitado",
     "active": "Ativo",
@@ -171,20 +171,20 @@
     "changeToSystem": "Mudar para tema do sistema"
   },
   "notifications": {
-    "title": "Notificacoes",
-    "unread": "nao lida",
+    "title": "Notificações",
+    "unread": "não lida",
     "unreadStatus": "não lida",
     "new": "nova",
-    "markAllAsRead": "Marcar todas as notificacoes como lidas",
+    "markAllAsRead": "Marcar todas as notificações como lidas",
     "markAll": "Marcar todas",
-    "empty": "Voce nao tem notificacoes",
-    "configure": "Configurar notificacoes",
+    "empty": "Você não tem notificações",
+    "configure": "Configurar notificações",
     "read": "lida",
     "markAsRead": "Marcar como lida"
   },
   "search": {
-    "placeholder": "Buscar paginas, configuracoes...",
-    "label": "Buscar paginas e configuracoes",
+    "placeholder": "Buscar páginas, configurações...",
+    "label": "Buscar páginas e configurações",
     "clear": "Limpar busca",
     "results": "Resultados da busca",
     "searching": "Buscando...",
@@ -210,27 +210,27 @@
   },
   "accessibility": {
     "navigation": {
-      "main": "Navegacao principal",
+      "main": "Navegação principal",
       "search": "Buscar",
-      "mobileActions": "Acoes mobile",
+      "mobileActions": "Ações mobile",
       "closeMenu": "Fechar menu",
       "openMenu": "Abrir menu",
       "mobileMenu": "Menu mobile",
-      "mainMobile": "Navegacao principal mobile",
-      "settings": "Navegacao de configuracoes",
-      "dashboard": "Navegacao do painel"
+      "mainMobile": "Navegação principal mobile",
+      "settings": "Navegação de configurações",
+      "dashboard": "Navegação do painel"
     },
     "brand": {
-      "goToHome": "Ir para inicio"
+      "goToHome": "Ir para início"
     },
     "user": {
-      "loading": "Carregando usuario",
-      "menu": "Menu do usuario para {name}",
+      "loading": "Carregando usuário",
+      "menu": "Menu do usuário para {name}",
       "avatar": "Avatar de {name}",
-      "info": "Informacao do usuario",
-      "defaultName": "Usuario",
+      "info": "Informação do usuário",
+      "defaultName": "Usuário",
       "goToProfile": "Ir para perfil",
-      "goToSettings": "Ir para configuracoes",
+      "goToSettings": "Ir para configurações",
       "signOut": "Sair",
       "signIn": "Entrar",
       "signUp": "Cadastrar-se"
@@ -238,7 +238,7 @@
     "actions": {
       "goToDashboard": "Ir para painel",
       "goToProfile": "Ir para perfil",
-      "goToSettings": "Ir para configuracoes"
+      "goToSettings": "Ir para configurações"
     },
     "loading": "Carregando",
     "groups": {
@@ -248,21 +248,21 @@
     },
     "media": {
       "articleCover": "Capa do artigo",
-      "postMedia": "Midia do post",
-      "postMediaNumber": "Midia do post {number}",
-      "story": "Historia",
-      "post": "Publicacao",
-      "tweetMedia": "Midia do tweet",
+      "postMedia": "Mídia do post",
+      "postMediaNumber": "Mídia do post {number}",
+      "story": "História",
+      "post": "Publicação",
+      "tweetMedia": "Mídia do tweet",
       "uploaded": "Arquivo enviado"
     },
     "taskCard": "Card de tarefa: {title}. Status: {status}",
     "toggleTask": "Marcar tarefa '{title}' como {action}",
     "createdDate": "Criada em {date}",
     "deleteTask": "Excluir tarefa: {title}",
-    "completedTaskCard": "Tarefa concluida: {title}",
+    "completedTaskCard": "Tarefa concluída: {title}",
     "reactivateTask": "Reativar tarefa: {title}",
-    "completedDate": "Concluida em {date}",
-    "deleteCompletedTask": "Excluir tarefa concluida: {title}"
+    "completedDate": "Concluída em {date}",
+    "deleteCompletedTask": "Excluir tarefa concluída: {title}"
   },
   "relativeTime": {
     "justNow": "Agora mesmo",

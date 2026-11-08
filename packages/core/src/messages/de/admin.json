@@ -12,7 +12,7 @@
       "allLocales": "Alle Sprachen",
       "status": "Status",
       "allStatuses": "Alle Status",
-      "published": "Veroeffentlicht",
+      "published": "Veröffentlicht",
       "draft": "Entwurf"
     },
     "table": {
@@ -23,24 +23,24 @@
       "updated": "Zuletzt aktualisiert"
     },
     "status": {
-      "published": "Veroeffentlicht",
+      "published": "Veröffentlicht",
       "draft": "Entwurf",
-      "unsaved": "Ungespeicherte Aenderungen"
+      "unsaved": "Ungespeicherte Änderungen"
     },
     "actions": {
       "create": "Seite erstellen",
       "edit": "Bearbeiten",
       "view": "Ansehen",
-      "delete": "Loeschen",
+      "delete": "Löschen",
       "save": "Speichern",
       "saving": "Speichern...",
-      "publish": "Veroeffentlichen",
+      "publish": "Veröffentlichen",
       "preview": "Vorschau"
     },
     "new": {
       "title": "Neue Seite erstellen",
-      "description": "Erstellen Sie eine neue dynamische Seite fuer Ihre Website",
-      "back": "Zurueck zu Seiten",
+      "description": "Erstellen Sie eine neue dynamische Seite für Ihre Website",
+      "back": "Zurück zu Seiten",
       "success": "Seite erfolgreich erstellt",
       "form": {
         "title": "Seitendetails",
@@ -51,7 +51,7 @@
           "locale": "Sprache"
         },
         "placeholders": {
-          "title": "Ueber uns",
+          "title": "Über uns",
           "slug": "ueber-uns"
         },
         "hints": {
@@ -67,7 +67,7 @@
     "edit": {
       "title": "Seite bearbeiten",
       "loading": "Seite wird geladen...",
-      "back": "Zurueck zu Seiten",
+      "back": "Zurück zu Seiten",
       "fields": {
         "title": "Titel",
         "slug": "Slug"
@@ -77,13 +77,13 @@
         "slug": "seiten-slug"
       },
       "status": {
-        "published": "Veroeffentlicht",
-        "unsaved": "Ungespeicherte Aenderungen"
+        "published": "Veröffentlicht",
+        "unsaved": "Ungespeicherte Änderungen"
       },
       "actions": {
         "save": "Speichern",
         "saving": "Speichern...",
-        "publish": "Veroeffentlichen",
+        "publish": "Veröffentlichen",
         "preview": "Vorschau",
         "viewPage": "Ansehen"
       },
@@ -100,34 +100,34 @@
       "seo": {
         "title": "SEO-Einstellungen",
         "metaTitle": "Meta-Titel",
-        "metaTitlePlaceholder": "Geben Sie den Titel fuer Suchmaschinen ein",
+        "metaTitlePlaceholder": "Geben Sie den Titel für Suchmaschinen ein",
         "metaTitleHint": "Empfohlen: 50-60 Zeichen",
         "metaDescription": "Meta-Beschreibung",
-        "metaDescriptionPlaceholder": "Geben Sie eine kurze Beschreibung fuer Suchmaschinen ein",
+        "metaDescriptionPlaceholder": "Geben Sie eine kurze Beschreibung für Suchmaschinen ein",
         "characters": "Zeichen",
-        "metaKeywords": "Schluesselwoerter",
+        "metaKeywords": "Schlüsselwörter",
         "metaKeywordsPlaceholder": "wort1, wort2, wort3",
-        "metaKeywordsHint": "Durch Komma getrennte Schluesselwoerter",
+        "metaKeywordsHint": "Durch Komma getrennte Schlüsselwörter",
         "ogImage": "Social-Media-Bild (OG Image)",
         "ogImagePlaceholder": "https://beispiel.de/bild.jpg",
         "ogImageHint": "Bild, das beim Teilen in sozialen Netzwerken angezeigt wird"
       },
       "customFields": {
         "title": "Benutzerdefinierte Felder",
-        "empty": "Keine benutzerdefinierten Felder hinzugefuegt",
-        "keyPlaceholder": "Feldschluessel",
+        "empty": "Keine benutzerdefinierten Felder hinzugefügt",
+        "keyPlaceholder": "Feldschlüssel",
         "valuePlaceholder": "Feldwert",
-        "add": "Feld hinzufuegen"
+        "add": "Feld hinzufügen"
       }
     }
   },
   "blockEditor": {
     "picker": {
       "title": "Block-Bibliothek",
-      "description": "Bloecke ziehen oder klicken zum Hinzufuegen",
-      "empty": "Keine Bloecke gefunden",
+      "description": "Blöcke ziehen oder klicken zum Hinzufügen",
+      "empty": "Keine Blöcke gefunden",
       "search": {
-        "placeholder": "Bloecke suchen..."
+        "placeholder": "Blöcke suchen..."
       },
       "categories": {
         "all": "Alle"
@@ -135,8 +135,8 @@
     },
     "canvas": {
       "empty": {
-        "message": "Noch keine Bloecke hinzugefuegt",
-        "hint": "Ziehen Sie Bloecke aus der Bibliothek, um Ihre Seite zu erstellen"
+        "message": "Noch keine Blöcke hinzugefügt",
+        "hint": "Ziehen Sie Blöcke aus der Bibliothek, um Ihre Seite zu erstellen"
       }
     },
     "block": {
@@ -146,44 +146,44 @@
     },
     "settings": {
       "empty": {
-        "message": "Kein Block ausgewaehlt",
-        "hint": "Waehlen Sie einen Block auf der Arbeitsflaeche aus, um seine Einstellungen zu bearbeiten"
+        "message": "Kein Block ausgewählt",
+        "hint": "Wählen Sie einen Block auf der Arbeitsfläche aus, um seine Einstellungen zu bearbeiten"
       },
       "error": {
         "notFound": "Block-Einstellungen nicht gefunden"
       },
       "noFields": "Dieser Block hat keine konfigurierbaren Felder",
       "actions": {
-        "reset": "Zuruecksetzen",
+        "reset": "Zurücksetzen",
         "remove": "Entfernen"
       },
       "tabs": {
         "content": "Inhalt",
         "design": "Design",
         "advanced": "Erweitert",
-        "noContentFields": "Keine Inhaltsfelder verfuegbar",
-        "noDesignFields": "Keine Designfelder verfuegbar",
-        "noAdvancedFields": "Keine erweiterten Felder verfuegbar"
+        "noContentFields": "Keine Inhaltsfelder verfügbar",
+        "noDesignFields": "Keine Designfelder verfügbar",
+        "noAdvancedFields": "Keine erweiterten Felder verfügbar"
       }
     },
     "form": {
-      "selectPlaceholder": "Option auswaehlen",
-      "emptyArray": "Keine Elemente hinzugefuegt",
+      "selectPlaceholder": "Option auswählen",
+      "emptyArray": "Keine Elemente hinzugefügt",
       "itemNumber": "Element {number}",
-      "addItem": "Element hinzufuegen",
+      "addItem": "Element hinzufügen",
       "itemCount": "{current} von {max} Elementen",
       "loadingEntity": "{entity} wird geladen...",
       "failedToLoad": "{entity} konnte nicht geladen werden",
-      "selectedCount": "{count} ausgewaehlt",
+      "selectedCount": "{count} ausgewählt",
       "noEntityFound": "Kein {entity} gefunden",
-      "selectEntity": "{entity} auswaehlen...",
-      "pickDate": "Datum auswaehlen",
+      "selectEntity": "{entity} auswählen...",
+      "pickDate": "Datum auswählen",
       "arrayItemsCount": "{count} Elemente",
       "configured": "konfiguriert"
     }
   },
   "builder": {
-    "back": "Zurueck",
+    "back": "Zurück",
     "loading": "Laden...",
     "fields": {
       "title": "Titel",
@@ -196,11 +196,11 @@
       "imageUrl": "https://beispiel.de/bild.jpg"
     },
     "status": {
-      "published": "Veroeffentlicht",
+      "published": "Veröffentlicht",
       "draft": "Entwurf",
       "scheduled": "Geplant",
       "archived": "Archiviert",
-      "unsaved": "Ungespeicherte Aenderungen"
+      "unsaved": "Ungespeicherte Änderungen"
     },
     "actions": {
       "save": "Speichern",
@@ -212,12 +212,12 @@
       "preview": "Vorschau"
     },
     "sidebar": {
-      "blocks": "Bloecke",
+      "blocks": "Blöcke",
       "fields": "Felder",
-      "fieldsTitle": "Entitaetsfelder",
-      "fieldsDescription": "Zusaetzliche Eigenschaften konfigurieren",
-      "noFields": "Keine zusaetzlichen Felder verfuegbar",
-      "noCategories": "Keine Kategorien verfuegbar"
+      "fieldsTitle": "Entitätsfelder",
+      "fieldsDescription": "Zusätzliche Eigenschaften konfigurieren",
+      "noFields": "Keine zusätzlichen Felder verfügbar",
+      "noCategories": "Keine Kategorien verfügbar"
     },
     "messages": {
       "saved": "Erfolgreich gespeichert",

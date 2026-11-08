@@ -1,10 +1,10 @@
 {
   "title": "Dokumentation",
-  "description": "Vollstaendige Dokumentation zur effektiven Nutzung unserer Plattform.",
+  "description": "Vollständige Dokumentation zur effektiven Nutzung unserer Plattform.",
   "sidebar": {
     "label": "Dokumentationsnavigation",
-    "open": "Navigationsmenue oeffnen",
-    "close": "Navigationsmenue schliessen"
+    "open": "Navigationsmenü öffnen",
+    "close": "Navigationsmenü schließen"
   },
   "labels": {
     "coreDoc": "Core"

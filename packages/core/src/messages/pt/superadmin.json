@@ -1,24 +1,24 @@
 {
   "navigation": {
     "dashboard": "Painel",
-    "users": "Usuarios",
+    "users": "Usuários",
     "style": "Galeria de Estilos",
     "analytics": "Analytics",
-    "config": "Configuracao do Sistema",
+    "config": "Configuração do Sistema",
     "exitSector7": "Sair do Sector7",
     "returnToDashboard": "Voltar ao painel"
   },
   "dashboard": {
     "title": "Sector7",
     "subtitle": "Painel de Controle de Super Administrador",
-    "restrictedAccess": "Area de Acesso Restrito - Apenas Superadmin e Developer",
+    "restrictedAccess": "Área de Acesso Restrito - Apenas Superadmin e Developer",
     "systemStatus": "Status do Sistema",
-    "systemVersion": "Versao da Plataforma",
-    "securityLevel": "Nivel de Seguranca",
+    "systemVersion": "Versão da Plataforma",
+    "securityLevel": "Nível de Segurança",
     "quickActions": {
       "userManagement": {
-        "title": "Gerenciamento de Usuarios",
-        "description": "Ver e gerenciar todos os usuarios e superadministradores"
+        "title": "Gerenciamento de Usuários",
+        "description": "Ver e gerenciar todos os usuários e superadministradores"
       },
       "styleGallery": {
         "title": "Galeria de Estilos",
@@ -26,11 +26,11 @@
       },
       "analytics": {
         "title": "Analytics",
-        "description": "Estatisticas da plataforma e metricas de uso"
+        "description": "Estatísticas da plataforma e métricas de uso"
       },
       "systemConfig": {
-        "title": "Configuracao do Sistema",
-        "description": "Configuracoes e ajustes da aplicacao"
+        "title": "Configuração do Sistema",
+        "description": "Configurações e ajustes da aplicação"
       }
     },
     "status": {
@@ -51,46 +51,46 @@
     }
   },
   "users": {
-    "title": "Gerenciamento de Usuarios",
-    "subtitle": "Gerenciar todos os usuarios e superadministradores",
-    "regularUsers": "Usuarios Regulares",
+    "title": "Gerenciamento de Usuários",
+    "subtitle": "Gerenciar todos os usuários e superadministradores",
+    "regularUsers": "Usuários Regulares",
     "superadmins": "Superadmins",
-    "totalUsers": "Total de Usuarios",
-    "allRegisteredUsers": "Todos os usuarios registrados",
+    "totalUsers": "Total de Usuários",
+    "allRegisteredUsers": "Todos os usuários registrados",
     "membersCollaboratorsAdmins": "Membros, colaboradores, administradores",
     "systemAdministrators": "Administradores do sistema",
-    "roleDistribution": "Distribuicao de Funcoes",
-    "roles": "funcoes",
+    "roleDistribution": "Distribuição de Funções",
+    "roles": "funções",
     "refresh": "Atualizar",
-    "lastUpdated": "Ultima atualizacao",
+    "lastUpdated": "Última atualização",
     "requestedBy": "Solicitado por",
     "source": "Fonte",
     "table": {
-      "user": "Usuario",
+      "user": "Usuário",
       "email": "Email",
-      "role": "Funcao",
+      "role": "Função",
       "status": "Status",
       "joined": "Entrou",
       "since": "Desde",
-      "actions": "Acoes",
+      "actions": "Ações",
       "administrator": "Administrador",
       "verified": "Verificado",
       "pending": "Pendente",
-      "unverified": "Nao verificado",
-      "noUsers": "Nenhum usuario encontrado",
-      "noUsersDescription": "Ainda nao ha usuarios regulares no sistema.",
+      "unverified": "Não verificado",
+      "noUsers": "Nenhum usuário encontrado",
+      "noUsersDescription": "Ainda não há usuários regulares no sistema.",
       "noSuperadmins": "Nenhum superadmin encontrado",
-      "noSuperadminsDescription": "Isso e incomum - deveria haver pelo menos um superadmin.",
-      "you": "Voce"
+      "noSuperadminsDescription": "Isso é incomum - deveria haver pelo menos um superadmin.",
+      "you": "Você"
     },
     "actions": {
       "openMenu": "Abrir menu",
       "viewProfile": "Ver Perfil",
-      "editRole": "Editar Funcao",
+      "editRole": "Editar Função",
       "sendEmail": "Enviar Email",
       "sendMessage": "Enviar Mensagem",
-      "suspendUser": "Suspender Usuario",
-      "adminSettings": "Configuracoes de Admin",
+      "suspendUser": "Suspender Usuário",
+      "adminSettings": "Configurações de Admin",
       "revokeAdmin": "Revogar Admin",
       "restrictedTarget": "Apenas um desenvolvedor pode modificar esta conta",
       "ownAccount": "Você não pode alterar sua própria conta aqui",
@@ -98,11 +98,11 @@
       "deleteUser": "Excluir Usuário"
     },
     "descriptions": {
-      "regularUsersDescription": "Todos os usuarios excluindo superadministradores. Inclui membros, colaboradores e administradores.",
-      "superadminsDescription": "Usuarios com acesso completo ao sistema e privilegios administrativos. Manuseie com extrema cautela."
+      "regularUsersDescription": "Todos os usuários excluindo superadministradores. Inclui membros, colaboradores e administradores.",
+      "superadminsDescription": "Usuários com acesso completo ao sistema e privilégios administrativos. Manuseie com extrema cautela."
     },
     "security": {
-      "notice": "Aviso de Seguranca:",
+      "notice": "Aviso de Segurança:",
       "superadminWarning": "O acesso de superadmin concede controle total do sistema. Manuseie com extrema cautela."
     },
     "confirm": {
@@ -124,12 +124,12 @@
     "exportTokens": "Exportar Tokens",
     "stats": {
       "components": "Componentes",
-      "availableComponents": "Componentes UI disponiveis",
+      "availableComponents": "Componentes UI disponíveis",
       "colorTokens": "Tokens de Cor",
-      "themeColorVariables": "Variaveis de cor do tema",
+      "themeColorVariables": "Variáveis de cor do tema",
       "themes": "Temas",
       "lightDarkModes": "Modos claro e escuro",
-      "documentation": "Documentacao",
+      "documentation": "Documentação",
       "componentCoverage": "Cobertura de componentes"
     },
     "tabs": {
@@ -139,22 +139,22 @@
     },
     "componentLibrary": {
       "title": "Biblioteca de Componentes",
-      "description": "Vitrine completa de todos os componentes UI disponiveis com diferentes estados e variacoes"
+      "description": "Vitrine completa de todos os componentes UI disponíveis com diferentes estados e variações"
     },
     "themeSystem": {
       "title": "Sistema de Temas",
-      "description": "Tokens de cor, tipografia e variaveis do sistema de design para temas claro e escuro"
+      "description": "Tokens de cor, tipografia e variáveis do sistema de design para temas claro e escuro"
     },
     "designPrinciples": {
-      "title": "Principios de Design",
-      "description": "Principios fundamentais que guiam nosso sistema de design",
+      "title": "Princípios de Design",
+      "description": "Princípios fundamentais que guiam nosso sistema de design",
       "consistency": {
-        "title": "Consistencia",
-        "description": "Manter consistencia visual e funcional em todos os componentes"
+        "title": "Consistência",
+        "description": "Manter consistência visual e funcional em todos os componentes"
       },
       "accessibility": {
         "title": "Acessibilidade",
-        "description": "Garantir que todos os componentes cumpram os padroes WCAG 2.1 AA"
+        "description": "Garantir que todos os componentes cumpram os padrões WCAG 2.1 AA"
       },
       "scalability": {
         "title": "Escalabilidade",
@@ -162,7 +162,7 @@
       },
       "performance": {
         "title": "Desempenho",
-        "description": "Otimizar para carregamento rapido e interacoes fluidas"
+        "description": "Otimizar para carregamento rápido e interações fluidas"
       }
     },
     "usageGuidelines": {
@@ -170,45 +170,45 @@
       "description": "Como usar efetivamente este sistema de design",
       "colorUsage": {
         "title": "Uso de Cores",
-        "description": "Usar nomes semanticos de cores (primary, secondary, destructive) em vez de cores especificas"
+        "description": "Usar nomes semânticos de cores (primary, secondary, destructive) em vez de cores específicas"
       },
       "typographyScale": {
-        "title": "Escala Tipografica",
-        "description": "Seguir a escala tipografica estabelecida para hierarquia consistente"
+        "title": "Escala Tipográfica",
+        "description": "Seguir a escala tipográfica estabelecida para hierarquia consistente"
       },
       "spacingSystem": {
-        "title": "Sistema de Espacamento",
-        "description": "Usar o sistema de grade de 8px para espacamento e alinhamento consistente"
+        "title": "Sistema de Espaçamento",
+        "description": "Usar o sistema de grade de 8px para espaçamento e alinhamento consistente"
       },
       "componentComposition": {
-        "title": "Composicao de Componentes",
+        "title": "Composição de Componentes",
         "description": "Combinar componentes base para criar interfaces complexas"
       }
     },
     "technicalSpecs": {
-      "title": "Especificacoes Tecnicas",
-      "description": "Detalhes de implementacao e requisitos",
+      "title": "Especificações Técnicas",
+      "description": "Detalhes de implementação e requisitos",
       "framework": "Framework",
       "styling": "Estilos",
       "components": "Componentes",
-      "icons": "Icones",
+      "icons": "Ícones",
       "themeSystem": "Sistema de Temas",
       "buildTool": "Ferramenta de Build"
     },
     "resources": {
       "title": "Recursos e Links",
-      "description": "Recursos adicionais e documentacao"
+      "description": "Recursos adicionais e documentação"
     }
   },
   "errors": {
     "accessDenied": "Acesso Negado",
-    "superadminRequired": "Voce precisa de privilegios de superadmin para acessar esta area.",
-    "restrictedArea": "Esta secao e restrita apenas a administradores do sistema. Se voce acredita que isso e um erro, por favor contate o suporte.",
-    "sessionNotFound": "Sessao nao encontrada. Por favor faca login novamente.",
+    "superadminRequired": "Você precisa de privilégios de superadmin para acessar esta área.",
+    "restrictedArea": "Esta seção é restrita apenas a administradores do sistema. Se você acredita que isso é um erro, por favor contate o suporte.",
+    "sessionNotFound": "Sessão não encontrada. Por favor faça login novamente.",
     "goBack": "Voltar",
     "dashboard": "Painel",
-    "errorLoadingUsers": "Erro ao Carregar Usuarios",
-    "failedToLoadUserData": "Falha ao carregar dados de usuarios",
+    "errorLoadingUsers": "Erro ao Carregar Usuários",
+    "failedToLoadUserData": "Falha ao carregar dados de usuários",
     "retry": "Tentar Novamente"
   },
   "common": {

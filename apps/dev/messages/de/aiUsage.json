@@ -1,6 +1,6 @@
 {
   "title": "KI-Nutzung",
-  "description": "Ueberwachen Sie Ihre KI-Token-Nutzung und Kosten",
+  "description": "Überwachen Sie Ihre KI-Token-Nutzung und Kosten",
   "loading": "Nutzungsdaten werden geladen...",
   "error": "Fehler beim Laden der Nutzungsdaten",
   "period": {
@@ -16,7 +16,7 @@
       "output": "Ausgabe"
     },
     "estimatedCost": {
-      "title": "Geschaetzte Kosten",
+      "title": "Geschätzte Kosten",
       "currency": "EUR"
     },
     "requests": {
@@ -29,8 +29,8 @@
     "tokens": "Tokens"
   },
   "dailyUsage": {
-    "title": "Taegliche Nutzung",
-    "noData": "Keine Nutzungsdaten fuer diesen Zeitraum",
+    "title": "Tägliche Nutzung",
+    "noData": "Keine Nutzungsdaten für diesen Zeitraum",
     "tokens": "Tokens"
   }
 }

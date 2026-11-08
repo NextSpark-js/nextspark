@@ -2,7 +2,7 @@
   "actions": {
     "create": "{entity} erstellen",
     "edit": "{entity} bearbeiten",
-    "delete": "{entity} loeschen",
+    "delete": "{entity} löschen",
     "view": "{entity} anzeigen",
     "duplicate": "Duplizieren",
     "archive": "Archivieren",
@@ -23,13 +23,13 @@
   "messages": {
     "created": "{entity} erfolgreich erstellt",
     "updated": "{entity} erfolgreich aktualisiert",
-    "deleted": "{entity} erfolgreich geloescht",
+    "deleted": "{entity} erfolgreich gelöscht",
     "archived": "{entity} erfolgreich archiviert",
     "restored": "{entity} erfolgreich wiederhergestellt",
     "duplicated": "{entity} erfolgreich dupliziert",
-    "confirmDelete": "Sind Sie sicher, dass Sie dieses {entity} loeschen moechten?",
-    "confirmArchive": "Sind Sie sicher, dass Sie dieses {entity} archivieren moechten?",
-    "deleteWarning": "Diese Aktion kann nicht rueckgaengig gemacht werden.",
+    "confirmDelete": "Sind Sie sicher, dass Sie dieses {entity} löschen möchten?",
+    "confirmArchive": "Sind Sie sicher, dass Sie dieses {entity} archivieren möchten?",
+    "deleteWarning": "Diese Aktion kann nicht rückgängig gemacht werden.",
     "notFound": "{entity} nicht gefunden",
     "loadError": "Fehler beim Laden von {entity}"
   },
@@ -41,10 +41,10 @@
     "searchPlaceholder": "{entities} suchen...",
     "noResults": "Keine Ergebnisse gefunden",
     "showing": "Zeige {count} von {total} {entities}",
-    "selected": "{count} ausgewaehlt"
+    "selected": "{count} ausgewählt"
   },
   "detail": {
-    "back": "Zurueck zu {entities}",
+    "back": "Zurück zu {entities}",
     "createdAt": "Erstellt {date}",
     "updatedAt": "Aktualisiert {date}",
     "idCopied": "ID in Zwischenablage kopiert"
