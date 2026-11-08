@@ -43,9 +43,9 @@ export interface AuthSession {
  *
  * The same union as core's `AuthLoginMethod` (lib/config/types.ts): mobile cannot import core, so it is written
  * out here, and a test fails if the two differ. The login screen draws a button for the methods it has a flow for
- * (`email-otp`, `email-password`, `google`) and nothing for `github`, `microsoft` or `apple`.
+ * (`email-otp`, `email-password`, `google`) and nothing for `magic-link`, `github`, `microsoft` or `apple`.
  */
-export type AuthLoginMethod = 'email-otp' | SocialLoginMethod | 'email-password'
+export type AuthLoginMethod = 'email-otp' | 'magic-link' | SocialLoginMethod | 'email-password'
 
 /** The social providers core can sign in with. */
 export type SocialLoginMethod = 'google' | 'github' | 'microsoft' | 'apple'
