@@ -245,6 +245,18 @@ describe('shipped auth route runtime readiness integration', () => {
       expect(response.headers.get('location')).toBe('/auth-error?error=ACCOUNT_SUSPENDED')
     })
 
+    test('a sign-in link without a working provider goes to the error page, not to JSON', async () => {
+      const response = await GET(nextRequest('/api/auth/magic-link/verify?token=abc'), { params: Promise.resolve({ all: [] }) })
+      expect(response.status).toBe(302)
+      expect(response.headers.get('location')).toBe('/auth-error?error=AUTH_METHOD_UNAVAILABLE')
+      expect(mockGet).not.toHaveBeenCalled()
+    })
+
+    test('the same gate on the sending POST stays a JSON 503', async () => {
+      const response = await POST(nextRequest('/api/auth/sign-in/magic-link', { method: 'POST' }))
+      expect(response.status).toBe(503)
+      expect((await response.json()).code).toBe('AUTH_METHOD_UNAVAILABLE')
+    })
   })
 
   test.each([

@@ -28,12 +28,15 @@ export async function OPTIONS(req: NextRequest) {
 // Intercept email verification requests to redirect to UI page
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(req: NextRequest, context: { params: Promise<{ all: string[] }> }) {
+  const pathname = req.nextUrl.pathname;
+  // A sign-in link is opened in a browser: whatever refuses it ends on the error page, not in JSON
+  const isMagicLinkVerify = pathname.includes('/api/auth/magic-link/verify');
+
   const readinessResponse = await getAuthReadinessResponse(req);
   if (readinessResponse) {
-    return wrapAuthHandlerWithCors(() => Promise.resolve(readinessResponse), req);
+    const response = await wrapAuthHandlerWithCors(() => Promise.resolve(readinessResponse), req);
+    return isMagicLinkVerify ? magicLinkFailurePage(response) : response;
   }
-
-  const pathname = req.nextUrl.pathname;
 
   // Check if this is an email verification request from an email link
   // We check for a special header to determine if it's from our UI or from an email click
@@ -58,7 +61,6 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
   // roleMap (never an arbitrary role), so it cannot be used to escalate.
   const isOAuthCallback = pathname.includes('/api/auth/callback/');
   // A sign-in link is the same kind of browser GET, and its first use creates the account
-  const isMagicLinkVerify = pathname.includes('/api/auth/magic-link/verify');
   const signupIntent = isOAuthCallback || isMagicLinkVerify
     ? (req.cookies.get('signup-intent')?.value || undefined)
     : undefined;
