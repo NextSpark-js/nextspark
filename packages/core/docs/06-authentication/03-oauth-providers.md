@@ -33,6 +33,7 @@ export const APP_CONFIG_OVERRIDES = {
 - The core default lists `providers.google`, so `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` alone keep enabling Google through the API, as they always did, and `methods` decides its button.
 - Credentials alone never turn on another provider: a `GITHUB_CLIENT_ID` that belongs to another integration does nothing until `github` is listed.
 - `options` are extra, non-secret Better Auth options for that provider (scopes, `prompt`, an `issuer`). They cannot replace the credentials.
+- With `overrideUserInfoOnSignIn: true` in `options`, every sign-in sets `language` back to the default. For a profile with no name parts the mapping knows (Discord's), `users.name` takes the provider's name and `firstName` and `lastName` stay as they were.
 - The resolution lives in `lib/auth/social-providers.ts` (`resolveSocialProviders`), and `lib/auth.ts` passes its result to Better Auth.
 
 ### Readiness
