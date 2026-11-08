@@ -492,7 +492,9 @@ export const auth = betterAuth({
                 const existingTeam = await TeamService.getGlobal();
                 if (!existingTeam) {
                   // First user - create the global team
-                  const teamName = user.name ? `${user.name}'s Company` : 'Company';
+                  // sync_user_name leaves a trailing space on a name without a last name
+                  const ownerName = user.name?.trim();
+                  const teamName = ownerName ? `${ownerName}'s Company` : 'Company';
                   await TeamService.create(user.id, teamName);
                   console.log(`[Teams] Global team created for first user ${user.id}`);
                 } else {

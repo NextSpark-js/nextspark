@@ -43,7 +43,8 @@ export async function createTeam(userId: string, name?: string): Promise<Team> {
   // Generate team slug and name
   const timestamp = Date.now().toString(36)
   const teamSlug = `team-${timestamp}-${userId.substring(0, 4).toLowerCase()}`
-  const teamName = name || (user.name ? `${user.name}'s Team` : 'My Team')
+  const ownerName = user.name?.trim()
+  const teamName = name || (ownerName ? `${ownerName}'s Team` : 'My Team')
 
   // Use a SERVICE transaction (RLS bypass): this bootstrap creates the first
   // team_members (owner) row + first subscription, which the membership-based

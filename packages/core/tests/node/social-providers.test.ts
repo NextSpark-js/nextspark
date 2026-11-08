@@ -25,6 +25,7 @@ const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256
 
 type Step =
   | { op: 'otp'; email: string }
+  | { op: 'password'; email: string; name?: string; firstName?: string }
   | { op: 'google'; email: string; name?: string }
   | { op: 'github'; email: string; emailVerified?: boolean; name?: string | null; noEmail?: boolean; id?: number }
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
@@ -32,9 +33,9 @@ type Step =
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
 type Result = Step & { body?: string; setsSession?: boolean; status: number; code?: string; location?: string; responseMode?: string; postStatus?: number; postLocation?: string; appleClientSecret?: string; redirectUri?: string }
 
-function runSteps(databaseUrl: string, registration: string, steps: Step[], { basePath, discordOptions }: { basePath?: string; discordOptions?: object } = {}): Result[] {
+function runSteps(databaseUrl: string, registration: string, steps: Step[], { basePath, discordOptions, teams = 'multi-tenant' }: { basePath?: string; discordOptions?: object; teams?: string } = {}): Result[] {
   const appConfig = {
-    teams: { mode: 'multi-tenant' },
+    teams: { mode: teams },
     auth: { registration: { mode: registration }, methods: ['email-otp', 'github', 'apple'], providers: { discord: { options: discordOptions } } },
   }
   const run = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'driver.mts')], {
@@ -165,6 +166,13 @@ test('a one-word name: the team is named without a stray space, with GitHub and 
   for (const result of results) assert.ok(signedIn(result), JSON.stringify(result))
   assert.equal((await person(owner, 'ada@example.test')).team, "Ada's Team")
   assert.equal((await person(owner, 'cher@example.test')).team, "Cher's Team")
+})
+
+test('single-tenant: a one-word name leaves no stray space in the global team\'s name', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  const [created] = runSteps(ownerUrl, 'invitation-only', [{ op: 'github', email: 'ada@example.test', name: 'Ada', id: 8282 }], { teams: 'single-tenant' })
+  assert.ok(signedIn(created), JSON.stringify(created))
+  assert.equal((await person(owner, 'ada@example.test')).team, "Ada's Company")
 })
 
 test('a provider enabled only by the map: signs up a verified address, refuses an unverified one, and meets the registration gate', { skip, timeout: 300000 }, async t => {

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **A person who signs in with a social provider keeps their name, and their team is named correctly.** A provider enabled only through `auth.providers` whose profile has no `name` fields the mapping knows (Discord's `global_name`, for example) left the user with an empty name and a team called " 's Team"; `firstName` and `lastName` now come from the name Better Auth read from the provider, and `overrideUserInfoOnSignIn` no longer erases them. A one-word name no longer leaves a space before `'s Team`. (#279)
+- **A person who signs in with a social provider keeps their name, and their team is named correctly.** A provider enabled only through `auth.providers` whose profile has no `name` fields the mapping knows (Discord's `global_name`, for example) left the user with an empty name and a team called " 's Team"; `firstName` and `lastName` now come from the name Better Auth read from the provider, and `overrideUserInfoOnSignIn` no longer erases them. A one-word name no longer leaves a space before `'s Team` or `'s Company`. (#279)
 - **The German and Portuguese catalogs outside `auth` are written with their diacritics, and the German ones address the user as "Sie" throughout.** Core, the starter project and the dev app said "fuer", "Zurueck" and "Aenderungen", "Configuracoes", "Documentacao" and "nao", and the sign-up, password and invitation emails spoke to the user as "du". Only the values changed, not the keys. A test now reads every German and Portuguese catalog of those three and fails on common words written without their diacritics. (#411)
 ### Added
 
