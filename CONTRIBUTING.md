@@ -84,7 +84,7 @@ nextspark/
 ├── packages/
 │   ├── core/          # Main framework
 │   ├── cli/           # CLI tool
-│   └── create-nextspark/  # Project scaffolding
+│   └── create-nextspark-app/  # Project scaffolding
 ├── apps/
 │   ├── dev/           # Development app
 │   └── demo/          # Demo app
