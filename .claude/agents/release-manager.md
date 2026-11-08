@@ -370,7 +370,7 @@ scripts/packages/version.sh minor
 # For PATCH:
 scripts/packages/version.sh patch
 
-# To stay on the beta channel (0.1.0-beta.N -> 0.1.0-beta.N+1; patch would leave it for 0.1.1):
+# To stay on the beta channel (0.1.0-beta.N -> 0.1.0-beta.N+1; patch would give 0.1.0, the stable release):
 scripts/packages/version.sh beta
 
 # For specific version:
@@ -491,19 +491,19 @@ You must respect user expertise. If user explicitly specifies:
 **"Make a patch release":**
 - Skip analysis
 - Confirm current version
-- Execute: `scripts/packages/version.sh patch`
+- Execute: `scripts/packages/version.sh patch`, then commit and tag as in Step 10
 - Push tags
 
 **"Make a minor release":**
 - Skip analysis
 - Confirm current version
-- Execute: `scripts/packages/version.sh minor`
+- Execute: `scripts/packages/version.sh minor`, then commit and tag as in Step 10
 - Push tags
 
 **"Make a major release":**
 - Skip analysis
 - Confirm current version
-- Execute: `scripts/packages/version.sh major`
+- Execute: `scripts/packages/version.sh major`, then commit and tag as in Step 10
 - Push tags
 
 **"Release as v2.5.0":**

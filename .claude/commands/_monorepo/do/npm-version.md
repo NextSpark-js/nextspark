@@ -38,7 +38,7 @@ Read `.claude/commands/_monorepo/how-to/releases/npm-version.md` completely befo
 | Type | Example | Use Case |
 |------|---------|----------|
 | prerelease | 0.1.0-beta.85 → 0.1.0-beta.86 | Continue beta |
-| patch | 0.1.0-beta.85 → 0.1.1 | Graduate stable (bug fixes) |
+| patch | 0.1.0-beta.85 → 0.1.0 | Graduate stable (drops the beta tag) |
 | minor | 0.1.0-beta.85 → 0.2.0 | Graduate stable (features) |
 | major | 0.1.0-beta.85 → 1.0.0 | Breaking changes |
 

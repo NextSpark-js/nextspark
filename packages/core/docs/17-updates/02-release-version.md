@@ -11,10 +11,10 @@ The packages of the repository (`packages/*` and `plugins/*`) are versioned toge
 1. Be on `main`, up to date, with a clean working tree.
 2. Read the current version from `packages/core/package.json`.
 3. Close `## [Unreleased]` in each `CHANGELOG.md` that has entries: rename it to `## [X.Y.Z] - YYYY-MM-DD` and leave a new empty `## [Unreleased]` above it.
-4. Update every package at once with `scripts/packages/version.sh <major|minor|patch|alpha|beta|rc>` (add `--yes` to skip the confirmation). It keeps the internal `/*` ranges consistent. From a beta release use `beta` to stay on the channel: `patch` goes from `0.1.0-beta.201` to `0.1.1` and leaves it.
-5. Review the diff, and run the package test and build gates. Run `node scripts/security/verify-no-dev-credentials.mjs <project>` on a project created from the packed packages.
+4. Update every package at once with `scripts/packages/version.sh <major|minor|patch|alpha|beta|rc>` (add `--yes` to skip the confirmation). It keeps the internal `@nextsparkjs/*` ranges consistent. From a beta release use `beta` to stay on the channel: `patch` goes from `0.1.0-beta.201` to `0.1.0`, the stable release, and leaves it.
+5. Review the diff, and run the package test and build gates.
 6. Commit the version change and the closed changelog entries (`git add packages/*/package.json plugins/*/package.json`, plus the changelogs), and tag it (`git tag -a vX.Y.Z -m "Release vX.Y.Z"`). `version.sh` does neither.
-7. Pack with `pnpm pkg:pack`, check the tarballs with `pnpm pkg:verify-tarballs`, and publish with `pnpm pkg:publish`. `pkg:publish` publishes under the `latest` dist-tag unless told otherwise: pass `--tag beta` (or `alpha`, `rc`, `next`) for a prerelease so it does not become the default install, and `--also-tag <tag>` to point a second tag at the same versions. Never run `npm publish` directly: it does not resolve `workspace:*` ranges.
+7. Pack with `pnpm pkg:pack`, check the tarballs with `pnpm pkg:verify-tarballs`, run `node scripts/security/verify-no-dev-credentials.mjs <project>` on a built project created from the tarballs, and publish with `pnpm pkg:publish`. `pkg:publish` publishes under the `latest` dist-tag unless told otherwise: pass `--tag beta` (or `alpha`, `rc`, `next`) for a prerelease so it does not become the default install, and `--also-tag <tag>` to point a second tag at the same versions. Never run `npm publish` directly: it does not resolve `workspace:*` ranges.
 8. Push the commit and the tag, and write the GitHub release notes from the `CHANGELOG.md` entry.
 
 ---

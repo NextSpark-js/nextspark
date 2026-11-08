@@ -16,7 +16,7 @@
 #   --yes    Skip confirmation prompt and execute immediately
 #
 # EXAMPLES:
-#   ./increment-version.sh patch          # 0.1.0-beta.4 -> 0.1.1
+#   ./increment-version.sh patch          # 0.1.0-beta.4 -> 0.1.0
 #   ./increment-version.sh minor          # 0.1.0-beta.4 -> 0.2.0
 #   ./increment-version.sh major          # 0.1.0-beta.4 -> 1.0.0
 #   ./increment-version.sh alpha          # 0.1.0 -> 0.1.1-alpha.0 or 0.1.0-alpha.0 -> 0.1.0-alpha.1

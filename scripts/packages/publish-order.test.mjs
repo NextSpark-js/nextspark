@@ -147,8 +147,8 @@ test('publish.sh --dry-run lists the packages in dependency order and the dist-t
   const out = r.stdout.replace(/\x1b\[[0-9;]*m/g, '')
   const published = [...out.matchAll(/Would publish (\S+)\.tgz/g)].map((m) => m[1])
   const tagged = [...out.matchAll(/Would run: npm dist-tag add (\S+)@(\S+) beta/g)].map((m) => m[1])
-  assert.equal(published.length, 12)
-  assert.equal(tagged.length, 12)
+  assert.equal(published.length, 13)
+  assert.equal(tagged.length, 13)
   assert.ok(tagged.indexOf('@nextsparkjs/ui') < tagged.indexOf('@nextsparkjs/core'))
   assert.ok(tagged.indexOf('@nextsparkjs/core') < tagged.indexOf('@nextsparkjs/plugin-ai'))
   assert.ok(tagged.indexOf('@nextsparkjs/cli') < tagged.indexOf('create-nextspark-app'))
@@ -179,7 +179,7 @@ withFakeNpm('a re-run skips what is already published and still moves the beta t
   assert.equal(r.status, 0, out)
   assert.equal([...out.matchAll(/\[SKIP\] already published/g)].length, 5)
   assert.equal(callsOf(calls, 'publish').length, 7)
-  assert.equal(callsOf(calls, 'dist-tag').length, 12)
+  assert.equal(callsOf(calls, 'dist-tag').length, 13)
 })
 
 withFakeNpm('a failed publish runs npm publish once, prints its output and stops before the dependents', () => {
@@ -194,7 +194,7 @@ withFakeNpm('a failed publish runs npm publish once, prints its output and stops
 withFakeNpm('a failed dist-tag exits 1, keeps publishing and prints the command to re-run', () => {
   const { r, out, calls } = runWithFakeNpm({ FAKE_NPM_FAIL_TAG: '@nextsparkjs/mobile@' })
   assert.equal(r.status, 1)
-  assert.equal(callsOf(calls, 'publish').length, 12)
+  assert.equal(callsOf(calls, 'publish').length, 13)
   assert.match(out, /Failed dist-tag commands[\s\S]*npm dist-tag add @nextsparkjs\/mobile@\S+ beta/)
 })
 
@@ -226,7 +226,7 @@ exec "${realNode}" "$@"
 withFakeNpm('publish.sh stops before publishing when the order lists fewer packages than tarballs', () => {
   const { r, out, calls } = runWithFakeNpm_drop()
   assert.equal(r.status, 1, out)
-  assert.match(out, /The publish order lists 11 package\(s\) for 12 tarball\(s\)\. Nothing was published\./)
+  assert.match(out, /The publish order lists 12 package\(s\) for 13 tarball\(s\)\. Nothing was published\./)
   assert.equal(callsOf(calls, 'publish').length, 0)
 })
 const runWithFakeNpm_drop = () => runWithFakeNode('drop')
@@ -234,7 +234,7 @@ const runWithFakeNpm_drop = () => runWithFakeNode('drop')
 withFakeNpm('a node warning on stderr is not counted as a package line', () => {
   const { r, out, calls } = runWithFakeNode('warn')
   assert.equal(r.status, 0, out)
-  assert.equal(callsOf(calls, 'publish').length, 12)
+  assert.equal(callsOf(calls, 'publish').length, 13)
 })
 
 withFakeNpm('every publish runs before the first dist-tag', () => {
@@ -242,5 +242,5 @@ withFakeNpm('every publish runs before the first dist-tag', () => {
   assert.equal(r.status, 0, out)
   const verbs = calls.map((c) => c.split(' ')[0])
   assert.ok(verbs.lastIndexOf('publish') < verbs.indexOf('dist-tag'), 'dist-tags run after the last publish')
-  assert.equal(callsOf(calls, 'dist-tag').length, 12)
+  assert.equal(callsOf(calls, 'dist-tag').length, 13)
 })
