@@ -1,0 +1,41 @@
+{
+  "name": "@nextsparkjs/plugin-marketplace-payments",
+  "version": "0.1.0-beta.201",
+  "files": [
+    "plugin.config.ts",
+    "api",
+    "components",
+    "docs",
+    "lib",
+    "messages",
+    "migrations",
+    "templates",
+    ".env.example",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "private": false,
+  "main": "./plugin.config.ts",
+  "scripts": {
+    "test": "tsx --tsconfig tests/tsconfig.json --test --test-concurrency=1 'tests/*.test.ts'"
+  },
+  "requiredPlugins": [],
+  "dependencies": {},
+  "peerDependencies": {
+    "@nextsparkjs/core": ">=0.1.0-beta.201",
+    "@tanstack/react-query": "^5.85.0",
+    "next": "~16.4.2",
+    "next-intl": "^4.3.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.0.0"
+  },
+  "nextspark": {
+    "type": "plugin",
+    "name": "marketplace-payments"
+  },
+  "devDependencies": {
+    "@nextsparkjs/core": "workspace:*",
+    "tsx": "^4.23.13"
+  }
+}
