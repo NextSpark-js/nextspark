@@ -189,7 +189,7 @@ To move the directory:
 
 2. Move the files, for example with `git mv api routes`.
 3. Replace the imports of the old location (`@/api/` becomes `@/routes/`).
-4. Run `pnpm nextspark prepare`. A route file left in `api/` stops it with `NS_HOST_API_DIR_LEFTOVER`.
+4. Run `pnpm nextspark prepare`. A route file left in `api/` stops it with `NS_HOST_API_DIR_LEFTOVER`. A helper that is not a route does not stop it, but Vercel keeps building it while it stays in `api/`, so move those too.
 5. Restart `nextspark dev` if it was running.
 
 The URLs do not change: the directory is still served at `/api/<path>`. `apiDir` is a relative path inside the project with segments of letters, digits, `-` and `_`. It cannot be, or live under, a root directory with another use (`app`, `public`, `node_modules`, `templates`, `lib` and the like), or `api/` itself.

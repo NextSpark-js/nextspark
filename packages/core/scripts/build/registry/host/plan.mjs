@@ -336,7 +336,7 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], with
   ]
   // A moved API directory with routes left in api/ would serve none of them, while Vercel keeps building them as functions
   if (project?.root && apiDir !== 'api') {
-    const leftover = walk(join(project.root, 'api')).files.filter(path => kindForFileStem(pattern.exec(path.split('/').at(-1))?.groups.name))
+    const leftover = walk(join(project.root, 'api')).files.filter(path => pattern.exec(path.split('/').at(-1))?.groups.name === 'route')
     if (leftover.length > 0) {
       diagnostics.push({
         code: PLAN_DIAGNOSTICS.API_DIR_LEFTOVER,

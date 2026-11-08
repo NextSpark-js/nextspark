@@ -54,6 +54,7 @@ test('route files left in api/ after moving the directory stop the plan; other f
   const { root, cleanup } = project('routes')
   try {
     write(root, 'api/helper.ts', 'export const helper = 1\n')
+    write(root, 'api/client/error.ts', 'export const error = 1\n')
     const clean = planHost({ coreRoutes: [], project: { root, importBase: '@', label: '.', apiDir: 'routes' } })
     assert.deepEqual(clean.diagnostics, [])
 
