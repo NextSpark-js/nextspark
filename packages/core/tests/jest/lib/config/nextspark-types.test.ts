@@ -199,7 +199,13 @@ describe('nextspark.config.ts source contract', () => {
       expect(result.errors).toEqual([expect.stringMatching(shape)])
     }
 
-    for (const value of ['app', 'pages', 'src', 'public', 'node_modules', 'templates', 'plugins', 'lib/api', 'App', 'config/routes']) {
+    for (const value of ['node_modules', 'server/node_modules', 'server/node_modules/api', 'server/Node_Modules']) {
+      const result = accepted(value)
+      expect(result.valid).toBe(false)
+      expect(result.errors).toEqual([expect.stringMatching(/apiDir cannot be inside a "node_modules\/" directory/)])
+    }
+
+    for (const value of ['app', 'pages', 'src', 'public', 'templates', 'plugins', 'lib/api', 'App', 'config/routes', 'about', 'contents', 'contents/api']) {
       const result = accepted(value)
       expect(result.valid).toBe(false)
       expect(result.errors).toEqual([expect.stringMatching(/apiDir cannot be inside/)])

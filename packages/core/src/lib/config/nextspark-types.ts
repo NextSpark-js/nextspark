@@ -103,7 +103,7 @@ const DEFAULT_API_DIR = 'api'
 const RESERVED_API_DIRS = new Set([
   'app', 'pages', 'src', 'public', 'node_modules', 'dist', 'build', 'out',
   'templates', 'entities', 'config', 'blocks', 'components', 'hooks', 'lib', 'services', 'messages', 'styles',
-  'emails', 'auth', 'plugins', 'migrations', 'scripts', 'tests', 'docs',
+  'emails', 'auth', 'plugins', 'migrations', 'scripts', 'tests', 'docs', 'about', 'contents',
 ])
 
 const ROOT_FIELDS = new Set([
@@ -300,8 +300,12 @@ function validateApiDir(value: unknown, errors: string[]): void {
     errors.push(`apiDir must be a relative path inside the project, such as "routes" or "server/api": segments of letters, digits, - and _ separated by /, with no leading or trailing slash, "." or "..". Received ${JSON.stringify(value)}.`)
     return
   }
-  const first = value.split('/')[0].toLowerCase()
-  if (RESERVED_API_DIRS.has(first)) {
+  const segments = value.toLowerCase().split('/')
+  const first = segments[0]
+  // The route discovery does not look inside node_modules, at any depth
+  if (segments.includes('node_modules')) {
+    errors.push(`apiDir cannot be inside a "node_modules/" directory. Received ${JSON.stringify(value)}.`)
+  } else if (RESERVED_API_DIRS.has(first)) {
     errors.push(`apiDir cannot be inside "${first}/", a project root directory with another use. Received ${JSON.stringify(value)}.`)
   } else if (first === DEFAULT_API_DIR) {
     errors.push(`apiDir cannot be a directory under "api/": Vercel builds everything under a root api/ as functions, which is what moving it avoids. Received ${JSON.stringify(value)}.`)
