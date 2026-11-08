@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A person who signs in with a social provider keeps their name, and their team is named correctly.** A provider enabled only through `auth.providers` whose profile has no `name` fields the mapping knows (Discord's `global_name`, for example) left the user with an empty name and a team called " 's Team"; `firstName` and `lastName` now come from the name Better Auth read from the provider, and `overrideUserInfoOnSignIn` no longer erases them. A one-word name no longer leaves a space before `'s Team`. (#279)
+- **The German and Portuguese catalogs outside `auth` are written with their diacritics, and the German ones address the user as "Sie" throughout.** Core, the starter project and the dev app said "fuer", "Zurueck" and "Aenderungen", "Configuracoes", "Documentacao" and "nao", and the sign-up, password and invitation emails spoke to the user as "du". Only the values changed, not the keys. A test now reads every German and Portuguese catalog of those three and fails on common words written without their diacritics. (#411)
 ### Added
 
 - **`apiDir` in `nextspark.config.ts` names the directory of the project's Route Handlers.** The default stays `api`, so a project that sets nothing does not change. The generated routes, the API docs and presets, `nextspark migrate`, `nextspark prepare --check` and the messages of the CLI follow it, and the routes are still served at `/api/<path>`. The value is a relative path inside the project, outside the root directories with another use. With `apiDir` set, a route file left in `api/` stops `nextspark prepare` (`NS_HOST_API_DIR_LEFTOVER`). The Vercel guide explains why a project deployed there should move the directory, and how, and a build on Vercel with routes still in `api/` logs a notice about it (`NS_HOST_VERCEL_API_DIR`) (#415).
