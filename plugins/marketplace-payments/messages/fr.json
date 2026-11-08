@@ -1,0 +1,79 @@
+{
+  "settings": {
+    "title": "Paiements de la marketplace",
+    "description": "Connectez un compte de paiement pour recevoir les paiements de vos clients."
+  },
+  "provider": {
+    "stripe": "Stripe",
+    "mercadopago": "Mercado Pago"
+  },
+  "account": {
+    "notConnected": "Aucun compte connecté pour le moment.",
+    "notConfigured": "Ce fournisseur n'est pas disponible sur cette plateforme.",
+    "charges": "Encaissements",
+    "payouts": "Virements",
+    "enabled": "Activés",
+    "disabled": "Désactivés",
+    "connect": "Connecter",
+    "continueSetup": "Continuer la configuration",
+    "reconnect": "Reconnecter",
+    "disconnect": "Déconnecter",
+    "disconnectConfirm": "Déconnecter ce compte ? Aucun nouveau paiement ne sera possible avant de le reconnecter.",
+    "actionFailed": "Cela n'a pas fonctionné. Veuillez réessayer."
+  },
+  "status": {
+    "pending": "En attente",
+    "active": "Actif",
+    "restricted": "Restreint",
+    "disconnected": "Déconnecté"
+  },
+  "result": {
+    "connected": "Votre compte est connecté.",
+    "invalid_state": "La connexion n'a pas pu être vérifiée. Veuillez recommencer.",
+    "forbidden": "Vous n'avez pas l'autorisation de connecter un compte pour cette équipe.",
+    "already_connected": "Ce compte est déjà connecté à une autre équipe.",
+    "error": "La connexion a échoué. Veuillez réessayer."
+  },
+  "payments": {
+    "title": "Historique des paiements",
+    "description": "Paiements reçus via vos comptes connectés.",
+    "empty": "Aucun paiement pour le moment.",
+    "date": "Date",
+    "item": "Description",
+    "provider": "Fournisseur",
+    "amount": "Montant",
+    "commission": "Commission",
+    "net": "Vous recevez",
+    "status": "Statut",
+    "allStatuses": "Tous les statuts",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "page": "Page {page} sur {pages}"
+  },
+  "paymentStatus": {
+    "pending": "En attente",
+    "succeeded": "Payé",
+    "failed": "Échoué",
+    "cancelled": "Annulé",
+    "partially_refunded": "Remboursé en partie",
+    "refunded": "Remboursé",
+    "disputed": "Contesté"
+  },
+  "loadError": "Les données n'ont pas pu être chargées.",
+  "admin": {
+    "title": "Marketplace",
+    "description": "Vendeurs connectés et volume des paiements partagés sur toute la plateforme.",
+    "totals": "Volume par fournisseur et par devise",
+    "volume": "Volume",
+    "commission": "Commission",
+    "payments": "Paiements",
+    "accounts": "Vendeurs connectés",
+    "accountsByStatus": "Vendeurs par statut",
+    "team": "Équipe",
+    "provider": "Fournisseur",
+    "status": "Statut",
+    "country": "Pays",
+    "connectedAt": "Connecté le",
+    "empty": "Aucune donnée pour le moment."
+  }
+}

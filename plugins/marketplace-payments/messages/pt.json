@@ -1,0 +1,79 @@
+{
+  "settings": {
+    "title": "Pagamentos do marketplace",
+    "description": "Conecte uma conta de pagamentos para receber dos seus clientes."
+  },
+  "provider": {
+    "stripe": "Stripe",
+    "mercadopago": "Mercado Pago"
+  },
+  "account": {
+    "notConnected": "Nenhuma conta conectada ainda.",
+    "notConfigured": "Este provedor não está disponível nesta plataforma.",
+    "charges": "Cobranças",
+    "payouts": "Repasses",
+    "enabled": "Ativados",
+    "disabled": "Desativados",
+    "connect": "Conectar",
+    "continueSetup": "Continuar a configuração",
+    "reconnect": "Conectar novamente",
+    "disconnect": "Desconectar",
+    "disconnectConfirm": "Desconectar esta conta? Novos pagamentos só serão possíveis depois de conectar novamente.",
+    "actionFailed": "Não foi possível concluir. Tente novamente."
+  },
+  "status": {
+    "pending": "Pendente",
+    "active": "Ativa",
+    "restricted": "Restrita",
+    "disconnected": "Desconectada"
+  },
+  "result": {
+    "connected": "Sua conta está conectada.",
+    "invalid_state": "Não foi possível verificar a conexão. Comece novamente.",
+    "forbidden": "Você não tem permissão para conectar uma conta neste time.",
+    "already_connected": "Essa conta já está conectada a outro time.",
+    "error": "A conexão falhou. Tente novamente."
+  },
+  "payments": {
+    "title": "Histórico de pagamentos",
+    "description": "Pagamentos recebidos pelas suas contas conectadas.",
+    "empty": "Ainda não há pagamentos.",
+    "date": "Data",
+    "item": "Descrição",
+    "provider": "Provedor",
+    "amount": "Valor",
+    "commission": "Comissão",
+    "net": "Você recebe",
+    "status": "Status",
+    "allStatuses": "Todos os status",
+    "previous": "Anterior",
+    "next": "Próxima",
+    "page": "Página {page} de {pages}"
+  },
+  "paymentStatus": {
+    "pending": "Pendente",
+    "succeeded": "Pago",
+    "failed": "Falhou",
+    "cancelled": "Cancelado",
+    "partially_refunded": "Reembolsado em parte",
+    "refunded": "Reembolsado",
+    "disputed": "Em disputa"
+  },
+  "loadError": "Não foi possível carregar os dados.",
+  "admin": {
+    "title": "Marketplace",
+    "description": "Vendedores conectados e volume de pagamentos divididos em toda a plataforma.",
+    "totals": "Volume por provedor e moeda",
+    "volume": "Volume",
+    "commission": "Comissão",
+    "payments": "Pagamentos",
+    "accounts": "Vendedores conectados",
+    "accountsByStatus": "Vendedores por status",
+    "team": "Time",
+    "provider": "Provedor",
+    "status": "Status",
+    "country": "País",
+    "connectedAt": "Conectado em",
+    "empty": "Ainda não há dados."
+  }
+}

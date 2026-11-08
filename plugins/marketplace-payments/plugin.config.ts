@@ -15,6 +15,9 @@ export const marketplacePaymentsPluginConfig: PluginConfig = definePlugin({
   enabled: true,
   dependencies: [],
   api: {},
+  navigation: {
+    superadmin: { items: [{ href: '/superadmin/marketplace', label: 'Marketplace', icon: 'Globe' }] },
+  },
 })
 
 export default marketplacePaymentsPluginConfig

@@ -1,0 +1,79 @@
+{
+  "settings": {
+    "title": "Pagos del marketplace",
+    "description": "Conectá una cuenta de pagos para recibir los cobros de tus clientes."
+  },
+  "provider": {
+    "stripe": "Stripe",
+    "mercadopago": "Mercado Pago"
+  },
+  "account": {
+    "notConnected": "Todavía no hay una cuenta conectada.",
+    "notConfigured": "Este proveedor no está disponible en esta plataforma.",
+    "charges": "Cobros",
+    "payouts": "Pagos a tu cuenta",
+    "enabled": "Habilitados",
+    "disabled": "Deshabilitados",
+    "connect": "Conectar",
+    "continueSetup": "Continuar la configuración",
+    "reconnect": "Volver a conectar",
+    "disconnect": "Desconectar",
+    "disconnectConfirm": "¿Desconectar esta cuenta? No vas a poder recibir pagos nuevos hasta que la vuelvas a conectar.",
+    "actionFailed": "No se pudo completar. Probá de nuevo."
+  },
+  "status": {
+    "pending": "Pendiente",
+    "active": "Activa",
+    "restricted": "Restringida",
+    "disconnected": "Desconectada"
+  },
+  "result": {
+    "connected": "Tu cuenta quedó conectada.",
+    "invalid_state": "No se pudo verificar la conexión. Empezá de nuevo.",
+    "forbidden": "No tenés permiso para conectar una cuenta en este equipo.",
+    "already_connected": "Esa cuenta ya está conectada a otro equipo.",
+    "error": "La conexión falló. Probá de nuevo."
+  },
+  "payments": {
+    "title": "Historial de pagos",
+    "description": "Pagos recibidos a través de tus cuentas conectadas.",
+    "empty": "Todavía no hay pagos.",
+    "date": "Fecha",
+    "item": "Descripción",
+    "provider": "Proveedor",
+    "amount": "Importe",
+    "commission": "Comisión",
+    "net": "Recibís",
+    "status": "Estado",
+    "allStatuses": "Todos los estados",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "page": "Página {page} de {pages}"
+  },
+  "paymentStatus": {
+    "pending": "Pendiente",
+    "succeeded": "Pagado",
+    "failed": "Fallido",
+    "cancelled": "Cancelado",
+    "partially_refunded": "Reembolsado en parte",
+    "refunded": "Reembolsado",
+    "disputed": "En disputa"
+  },
+  "loadError": "No se pudieron cargar los datos.",
+  "admin": {
+    "title": "Marketplace",
+    "description": "Vendedores conectados y volumen de pagos divididos en toda la plataforma.",
+    "totals": "Volumen por proveedor y moneda",
+    "volume": "Volumen",
+    "commission": "Comisión",
+    "payments": "Pagos",
+    "accounts": "Vendedores conectados",
+    "accountsByStatus": "Vendedores por estado",
+    "team": "Equipo",
+    "provider": "Proveedor",
+    "status": "Estado",
+    "country": "País",
+    "connectedAt": "Conectado el",
+    "empty": "Todavía no hay datos."
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "settings": {
+    "title": "Marktplatz-Zahlungen",
+    "description": "Verbinde ein Zahlungskonto, um Zahlungen deiner Kunden zu empfangen."
+  },
+  "provider": {
+    "stripe": "Stripe",
+    "mercadopago": "Mercado Pago"
+  },
+  "account": {
+    "notConnected": "Noch kein Konto verbunden.",
+    "notConfigured": "Dieser Anbieter ist auf dieser Plattform nicht verfügbar.",
+    "charges": "Zahlungen",
+    "payouts": "Auszahlungen",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "connect": "Verbinden",
+    "continueSetup": "Einrichtung fortsetzen",
+    "reconnect": "Erneut verbinden",
+    "disconnect": "Trennen",
+    "disconnectConfirm": "Dieses Konto trennen? Neue Zahlungen sind erst möglich, wenn du es wieder verbindest.",
+    "actionFailed": "Das hat nicht funktioniert. Bitte versuche es erneut."
+  },
+  "status": {
+    "pending": "Ausstehend",
+    "active": "Aktiv",
+    "restricted": "Eingeschränkt",
+    "disconnected": "Getrennt"
+  },
+  "result": {
+    "connected": "Dein Konto ist verbunden.",
+    "invalid_state": "Die Verbindung konnte nicht bestätigt werden. Bitte beginne von vorn.",
+    "forbidden": "Du hast keine Berechtigung, für dieses Team ein Konto zu verbinden.",
+    "already_connected": "Dieses Konto ist bereits mit einem anderen Team verbunden.",
+    "error": "Die Verbindung ist fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "payments": {
+    "title": "Zahlungsverlauf",
+    "description": "Über deine verbundenen Konten empfangene Zahlungen.",
+    "empty": "Noch keine Zahlungen.",
+    "date": "Datum",
+    "item": "Beschreibung",
+    "provider": "Anbieter",
+    "amount": "Betrag",
+    "commission": "Provision",
+    "net": "Du erhältst",
+    "status": "Status",
+    "allStatuses": "Alle Status",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "page": "Seite {page} von {pages}"
+  },
+  "paymentStatus": {
+    "pending": "Ausstehend",
+    "succeeded": "Bezahlt",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen",
+    "partially_refunded": "Teilweise erstattet",
+    "refunded": "Erstattet",
+    "disputed": "Angefochten"
+  },
+  "loadError": "Die Daten konnten nicht geladen werden.",
+  "admin": {
+    "title": "Marktplatz",
+    "description": "Verbundene Verkäufer und Volumen geteilter Zahlungen auf der gesamten Plattform.",
+    "totals": "Volumen nach Anbieter und Währung",
+    "volume": "Volumen",
+    "commission": "Provision",
+    "payments": "Zahlungen",
+    "accounts": "Verbundene Verkäufer",
+    "accountsByStatus": "Verkäufer nach Status",
+    "team": "Team",
+    "provider": "Anbieter",
+    "status": "Status",
+    "country": "Land",
+    "connectedAt": "Verbunden am",
+    "empty": "Noch keine Daten."
+  }
+}
