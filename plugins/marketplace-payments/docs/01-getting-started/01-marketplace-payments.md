@@ -140,3 +140,4 @@ Needs the variables above with test credentials, and a public HTTPS URL for the 
 - Deleting a team deletes its marketplace rows, like its other data.
 - After a MercadoPago seller is disconnected, its earlier payments are no longer updated and cannot be refunded from here, because that needs the seller's token. A payment made to another provider account than the one connected now is in the same situation.
 - A disconnected account stays linked to its team: it cannot be connected to another team.
+- A MercadoPago checkout created before the seller connected another account can still be paid. That payment stays *Pending* in the history, with only a notice in the server log.
