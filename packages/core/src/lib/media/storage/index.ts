@@ -33,6 +33,8 @@ export interface StorageDriver {
    * this bucket and environment, null for any other URL (and always null with the bucket public). Absent on drivers whose URLs are already usable.
    */
   signedReadUrl?(url: string): Promise<string | null>
+  /** True when reads are signed (the private bucket mode is on); absent or false otherwise. */
+  readonly privateReads?: boolean
 }
 
 export interface PresignedUpload {

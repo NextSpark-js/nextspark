@@ -9,6 +9,7 @@ import { sel } from '../../../lib/test'
 import { FloatingBlockToolbar } from './floating-block-toolbar'
 import type { BlockInstance } from '../../../types/blocks'
 import { getBlockComponent, normalizeBlockProps } from '../../../lib/blocks/loader'
+import { useSignedProps } from '../../../hooks/useDisplayUrls'
 import { isPatternReference } from '../../../types/pattern-reference'
 import { PatternReferencePreview } from './pattern-reference-preview'
 
@@ -199,10 +200,12 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
   const BlockComponent = getBlockComponent(block.blockSlug)
 
   // Memoize normalized props to prevent unnecessary recalculations
-  const normalizedProps = useMemo(
+  const storedProps = useMemo(
     () => normalizeBlockProps(block.props),
     [block.props]
   )
+  // Private bucket: the canvas renders signed URLs; the block keeps the stored ones
+  const normalizedProps = useSignedProps(storedProps)
 
   if (!BlockComponent) {
     return (

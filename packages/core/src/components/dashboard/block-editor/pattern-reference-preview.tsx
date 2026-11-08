@@ -12,6 +12,7 @@ import type { PatternReference } from '../../../types/pattern-reference'
 import type { BlockInstance } from '../../../types/blocks'
 import { getBlockComponent, normalizeBlockProps } from '../../../lib/blocks/loader'
 import { withBasePath } from '../../../lib/base-path'
+import { useSignedProps } from '../../../hooks/useDisplayUrls'
 import { TEAM_ID_HEADER } from '../../../lib/api/client-headers'
 
 interface PatternReferencePreviewProps {
@@ -87,6 +88,9 @@ export function PatternReferencePreview({
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
+
+  // Private bucket: the blocks render signed URLs (the same blocks while nothing is signed)
+  const patternBlocks = useSignedProps<BlockInstance[] | undefined>(patternData?.data?.blocks)
 
   // Loading state
   if (isLoading) {
@@ -183,7 +187,7 @@ export function PatternReferencePreview({
 
       {/* Render pattern blocks (read-only visual, always visible) */}
       <div className="pointer-events-none">
-        {pattern.blocks?.map((block: BlockInstance) => {
+        {patternBlocks?.map((block: BlockInstance) => {
           const BlockComponent = getBlockComponent(block.blockSlug)
 
           if (!BlockComponent) {

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTrigger } from './dialog'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
 import { matchesAcceptedType, useFieldUpload } from '../../hooks/useFieldUpload'
+import { useDisplayUrls } from '../../hooks/useDisplayUrls'
 import { UploadStatus } from './upload-status'
 
 export interface UploadedImage {
@@ -78,6 +79,7 @@ export function ImageUpload({
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const { pending, error, uploadFiles, cancel, claim, release, typeNotAccepted } = useFieldUpload()
+  const display = useDisplayUrls(value.map((image) => image.url))
   // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
   const valueRef = React.useRef(value)
   valueRef.current = value
@@ -253,7 +255,7 @@ export function ImageUpload({
             >
               <div className={cn("relative", getAspectRatioClass() || "aspect-square")}>
                 <NextImage
-                  src={withBasePathIfInApp(image.url)}
+                  src={withBasePathIfInApp(display(image.url))}
                   alt={image.alt || image.name}
                   fill
                   className="object-cover"
@@ -269,7 +271,7 @@ export function ImageUpload({
                     </DialogTrigger>
                     <DialogContent className="max-w-3xl">
                       <NextImage
-                        src={withBasePathIfInApp(image.url)}
+                        src={withBasePathIfInApp(display(image.url))}
                         alt={image.alt || image.name}
                         width={800}
                         height={600}
@@ -281,7 +283,7 @@ export function ImageUpload({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => window.open(withBasePathIfInApp(image.url), "_blank")}
+                    onClick={() => window.open(withBasePathIfInApp(display(image.url)), "_blank")}
                   >
                     <Download className="h-4 w-4" />
                   </Button>

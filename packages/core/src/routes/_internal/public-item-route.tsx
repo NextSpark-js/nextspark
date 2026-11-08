@@ -87,6 +87,7 @@ async function renderDefaultPublicItem(source: PublicItemSource, entity: EntityC
           slug: item.slug,
           blocks: resolvedBlocks,
           locale: item.locale || 'en',
+          teamId: item.teamId,
         }}
       />
     </div>

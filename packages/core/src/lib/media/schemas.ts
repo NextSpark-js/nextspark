@@ -37,6 +37,12 @@ export const checkDuplicatesSchema = z.object({
   })).min(1).max(MAX_MEDIA_BATCH),
 })
 
+/** The stored URLs a screen wants to display (#361): a few dozen at most, each a plain string. */
+export const MAX_SIGN_URLS = 50
+export const signUrlsSchema = z.object({
+  urls: z.array(z.string().min(1).max(2048)).min(1).max(MAX_SIGN_URLS),
+})
+
 export const mediaListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   offset: z.coerce.number().int().min(0).optional().default(0),

@@ -152,6 +152,10 @@ const REQUEST_TIMEOUT_MS = 30_000
  */
 export class S3StorageDriver implements StorageDriver {
   readonly name = 's3' as const
+
+  get privateReads(): boolean {
+    return !!this.config.private
+  }
   readonly direct: DirectUploads
 
   constructor(private readonly config: S3Config) {

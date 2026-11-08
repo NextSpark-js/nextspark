@@ -15,6 +15,7 @@ import { registerFieldRenderer, type FieldRendererProps } from '@/core/component
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry.client'
 import type { FieldDefinition } from '@/core/types/blocks'
 
+jest.mock('@/core/hooks/useDisplayUrls', () => ({ useDisplayUrls: () => (url: string) => url, useSignedProps: (props: unknown) => props }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('@/core/lib/test', () => ({ sel: (path: string) => path }))
 jest.mock('@/core/components/ui/image-upload', () => ({ ImageUpload: () => null }))

@@ -15,6 +15,7 @@
 - [Direct Upload (S3)](#direct-upload-s3)
 - [Serve Local Files](#serve-local-files)
 - [Check Duplicates](#check-duplicates)
+- [Sign Stored URLs](#sign-stored-urls)
 - [Get Single Media](#get-single-media)
 - [Update Media Metadata](#update-media-metadata)
 - [Delete Media](#delete-media)
@@ -81,6 +82,7 @@ fetch('/api/v1/media', { credentials: 'include' })
 | **POST** | `/api/v1/media/upload/confirm` | Confirm a direct upload, create the record | `media:write` |
 | **GET** | `/api/v1/media/files/[name]` | Serve a file of the `local` driver | public |
 | **POST** | `/api/v1/media/check-duplicates` | Check for duplicates by filename+size | `media:read` |
+| **POST** | `/api/v1/media/sign` | Signed read URLs for stored URLs (private bucket) | `media:read` |
 | **GET** | `/api/v1/media/[id]` | Get single media | `media:read` |
 | **PATCH** | `/api/v1/media/[id]` | Update media metadata | `media:write` |
 | **DELETE** | `/api/v1/media/[id]` | Delete media (soft delete) and its file | `media:delete` |
@@ -405,6 +407,25 @@ GET /api/v1/media/files/:name
 ```
 
 With `STORAGE_DRIVER=local`, the URL of every uploaded file. Public, like a Blob or bucket URL. Answers the file with the `Content-Type` of its stored extension (a type outside the raster/video table, or an unknown one, as a download), `X-Content-Type-Options: nosniff` and `Cache-Control: public, max-age=31536000, immutable`; a `Range: bytes=start-end` header gets `206`. Any name not of the generated shape, a symbolic link, and any request while another driver is selected answer `404`. No rate limit: put a CDN or a reverse-proxy cache in front on a public site.
+
+---
+
+## Sign Stored URLs
+
+```
+POST /api/v1/media/sign
+```
+
+With `STORAGE_S3_PRIVATE=true`, signed read URLs for stored media URLs that live outside a media row (an entity `image` or `video` field, a block image). The dashboard calls it for you; the stored value stays the canonical URL.
+
+```bash
+curl -X POST "https://yourdomain.com/api/v1/media/sign" \
+  -H "Authorization: Bearer sk_live_abc123" -H "x-team-id: team_123" -H "Content-Type: application/json" \
+  -d '{ "urls": ["https://s3.example.org/bucket/uploads/1700000000000_0123abcd....png"] }'
+# { "success": true, "data": { "signed": { "<the stored url>": "<the stored url>?X-Amz-...&X-Amz-Signature=..." } } }
+```
+
+`urls` is 1 to 50 strings (`400` otherwise). Not an open signer: it needs a session or an API key with `media:read`, the `media.read` permission in the current team, and the usual `read` rate limit; and a URL is signed only when it is an object of the configured bucket and environment (same host, port and prefix, a server-generated name) **and** an active file of the current team. Any other URL (another origin, another environment's prefix, a file of another team, a deleted file, an unknown one) is simply missing from `signed`, with no hint of which. With the mode off the answer is always `{ "signed": {} }`. Nothing is stored or logged.
 
 ---
 

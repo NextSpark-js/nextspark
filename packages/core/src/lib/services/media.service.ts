@@ -7,7 +7,7 @@
  * @module MediaService
  */
 
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getTransactionClient } from '../db'
+import { query, queryOneWithRLS, queryWithRLS, mutateWithRLS, getTransactionClient } from '../db'
 import type {
   Media,
   CreateMediaInput,
@@ -218,6 +218,19 @@ export class MediaService {
   static async hasUrl(url: string, userId: string): Promise<boolean> {
     if (!userId?.trim()) throw new Error('User ID is required')
     return !!(await queryOneWithRLS('SELECT 1 FROM "media" WHERE url = $1 LIMIT 1', [url], userId))
+  }
+
+  /**
+   * Which of these URLs are active files of this team. `userId` runs it under that user's RLS context;
+   * null (a public page, which has no user) uses the service connection, and the team filter is the same.
+   */
+  static async teamUrls(urls: string[], teamId: string, userId: string | null): Promise<Set<string>> {
+    if (urls.length === 0) return new Set()
+    const sql = `SELECT url FROM "media" WHERE url = ANY($1) AND "teamId" = $2 AND status = 'active'`
+    const rows = userId
+      ? await queryWithRLS<{ url: string }>(sql, [urls, teamId], userId)
+      : (await query<{ url: string }>(sql, [urls, teamId])).rows
+    return new Set(rows.map(row => row.url))
   }
 
   /**

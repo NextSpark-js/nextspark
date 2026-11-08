@@ -27,6 +27,8 @@ interface UploadResult {
 /** What `GET /api/v1/media/upload` answers about the active storage driver. */
 export interface UploadCapabilities {
   directUpload: boolean
+  /** Private bucket: stored URLs need `POST /api/v1/media/sign` to be shown (#361). */
+  privateReads?: boolean
   storage?: string
   supportedTypes?: string[]
   /** e.g. "10MB" */
@@ -47,7 +49,7 @@ export interface MediaUploadRequest {
 const CAPABILITIES_KEY = ['media', 'upload-capabilities']
 
 /** Asked once per QueryClient. null (no answer, e.g. no `media.read`) means the server upload, which checks everything itself. */
-async function loadCapabilities(queryClient: QueryClient): Promise<UploadCapabilities | null> {
+export async function loadCapabilities(queryClient: QueryClient): Promise<UploadCapabilities | null> {
   try {
     return await queryClient.fetchQuery({
       queryKey: CAPABILITIES_KEY,

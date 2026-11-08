@@ -8,6 +8,7 @@ import { BlockPreviewCanvas } from '@/core/components/dashboard/block-editor/blo
 import type { BlockInstance } from '@/core/types/blocks'
 
 // Mock next-intl
+jest.mock('@/core/hooks/useDisplayUrls', () => ({ useDisplayUrls: () => (url: string) => url, useSignedProps: (props: unknown) => props }))
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {

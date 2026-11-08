@@ -11,7 +11,9 @@
  * @module core/components/public/pageBuilder
  */
 
+import { connection } from 'next/server'
 import type { BlockInstance } from '../../../types/blocks'
+import { privateReadsEnabled, signBlocksMedia } from '../../../lib/media/storage/display'
 import { normalizeBlockProps } from '../../../lib/blocks/loader'
 import { getBlockComponentSSR } from '../../../lib/blocks/loader.server'
 
@@ -52,12 +54,24 @@ export interface PageRendererProps {
     slug: string
     blocks: BlockInstance[]
     locale: string
+    /**
+     * Team that owns the page. With a private bucket (STORAGE_S3_PRIVATE=true) the files of this team that
+     * the blocks reference are shown through short-lived signed URLs; without it, none are signed.
+     */
+    teamId?: string
   }
 }
 
-export function PageRenderer({ page }: PageRendererProps) {
+export async function PageRenderer({ page }: PageRendererProps) {
   // Ensure blocks is an array
-  const blocks = Array.isArray(page.blocks) ? page.blocks : []
+  let blocks = Array.isArray(page.blocks) ? page.blocks : []
+
+  // Private bucket: signed URLs expire, so this page must not be served from a cache (static HTML, ISR):
+  // it renders per request, and the signatures in it are minted now. Nothing changes with the mode off.
+  if (privateReadsEnabled() && page.teamId) {
+    await connection()
+    blocks = await signBlocksMedia(blocks, page.teamId)
+  }
 
   if (blocks.length === 0) {
     return (

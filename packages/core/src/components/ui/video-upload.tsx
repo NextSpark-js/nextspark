@@ -7,6 +7,7 @@ import { Button } from './button'
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
 import { matchesAcceptedType, useFieldUpload, MEDIA_PROBE_TIMEOUT_MS } from '../../hooks/useFieldUpload'
+import { useDisplayUrls } from '../../hooks/useDisplayUrls'
 import { UploadStatus } from './upload-status'
 
 export interface UploadedVideo {
@@ -45,6 +46,7 @@ export function VideoUpload({
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const { pending, error, uploadFiles, cancel, claim, release, typeNotAccepted } = useFieldUpload()
+  const display = useDisplayUrls(value.flatMap((video) => [video.url, video.thumbnail]))
   // An upload finishes after a render: add to the value as it is then, not as it was when the files were chosen
   const valueRef = React.useRef(value)
   valueRef.current = value
@@ -255,7 +257,7 @@ export function VideoUpload({
               <div className="relative w-24 h-16 bg-muted rounded overflow-hidden">
                 {video.thumbnail ? (
                   <NextImage
-                    src={withBasePathIfInApp(video.thumbnail)}
+                    src={withBasePathIfInApp(display(video.thumbnail))}
                     alt={video.name}
                     fill
                     className="object-cover"
@@ -284,7 +286,7 @@ export function VideoUpload({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(withBasePathIfInApp(video.url), "_blank")}
+                  onClick={() => window.open(withBasePathIfInApp(display(video.url)), "_blank")}
                 >
                   <Download className="h-4 w-4" />
                 </Button>

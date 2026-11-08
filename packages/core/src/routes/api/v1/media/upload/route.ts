@@ -236,6 +236,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       message: 'Media upload endpoint is active',
       storage: selection.driver ? selection.driver.name : 'Not configured (set STORAGE_DRIVER or BLOB_READ_WRITE_TOKEN)',
       directUpload: !!selection.driver?.direct,
+      privateReads: !!selection.driver?.privateReads,
       supportedTypes: allowedMimeTypes(),
       maxFileSize: `${maxSizeMB}MB`,
       ...(MEDIA_CONFIG?.maxSizeImageMB != null && { maxImageSize: `${MEDIA_CONFIG.maxSizeImageMB}MB` }),

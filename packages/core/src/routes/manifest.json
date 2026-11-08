@@ -339,6 +339,11 @@
   },
   {
     "kind": "route",
+    "target": "api/v1/media/sign/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/media/sign/route"
+  },
+  {
+    "kind": "route",
     "target": "api/v1/media/upload/confirm/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/media/upload/confirm/route"
   },

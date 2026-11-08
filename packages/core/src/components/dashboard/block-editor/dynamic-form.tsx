@@ -31,6 +31,7 @@ import { resolveFieldRenderer } from './editor-extensions'
 import { fetchWithTeam } from '../../../lib/api/entities'
 import type { FieldDefinition, MediaRef } from '../../../types/blocks'
 import { resolveMediaUrl } from '../../../types/blocks'
+import { useDisplayUrls } from '../../../hooks/useDisplayUrls'
 import type { Media } from '../../../lib/media/types'
 import { withBasePathIfInApp } from '../../../lib/base-path'
 
@@ -122,7 +123,9 @@ function MediaLibraryField({
   const t = useTranslations('admin.blockEditor.form')
 
   // Resolve URL from either format for display
-  const displayUrl = resolveMediaUrl(value || undefined) || ''
+  const storedUrl = resolveMediaUrl(value || undefined) || ''
+  // Private bucket: the preview shows a signed URL; the value saved stays the stored one
+  const displayUrl = useDisplayUrls([storedUrl])(storedUrl)
 
   const handleSelect = (media: Media | Media[]) => {
     if (Array.isArray(media)) return

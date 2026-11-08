@@ -8,7 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { act, fireEvent, render } from '@testing-library/react'
 
 const mutateAsync = jest.fn<(input: { files: File[] }) => Promise<unknown>>()
-jest.mock('@/core/hooks/useMediaUpload', () => ({ useMediaUpload: () => ({ mutateAsync }) }))
+jest.mock('@/core/hooks/useDisplayUrls', () => ({ useDisplayUrls: () => (url: string) => url, useSignedProps: (props: unknown) => props }))
+jest.mock('@/core/hooks/useMediaUpload',() => ({ useMediaUpload: () => ({ mutateAsync }) }))
 jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: null, isPending: false }) }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('next/image', () => ({ __esModule: true, default: () => null }))

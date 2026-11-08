@@ -24,6 +24,7 @@ import { sel } from '../../../lib/test'
 import type { FieldDefinition } from '../../../types/blocks'
 import type { Media } from '../../../lib/media/types'
 import { withBasePathIfInApp } from '../../../lib/base-path'
+import { useDisplayUrls } from '../../../hooks/useDisplayUrls'
 import { resolveFieldRenderer } from './editor-extensions'
 
 interface ArrayFieldProps {
@@ -43,6 +44,7 @@ function ArrayMediaLibraryField({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const t = useTranslations('admin.blockEditor.form')
+  const display = useDisplayUrls([value])
 
   const handleSelect = (media: Media | Media[]) => {
     if (Array.isArray(media)) return
@@ -54,7 +56,7 @@ function ArrayMediaLibraryField({
     <>
       {value ? (
         <div className="relative group rounded-md overflow-hidden">
-          <img src={withBasePathIfInApp(value)} alt="" className="w-full h-24 object-cover" />
+          <img src={withBasePathIfInApp(display(value))} alt="" className="w-full h-24 object-cover" />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => setIsOpen(true)}>
               {t('changeImage')}
