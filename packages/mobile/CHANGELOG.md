@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The mobile template and `create-nextspark-app` declare `@preeternal/react-native-cookie-manager` `7.0.0` (React Native's New Architecture only, which is the only one React Native 0.88 has). The two calls the package makes, `get(url)` and `clearAll()`, keep their signatures, and the peer range `>=6.3.0` is unchanged. An existing project moves with `pnpm add @preeternal/react-native-cookie-manager@7.0.0` and a new `expo prebuild`. (#286)
+
 - The mobile template and `create-nextspark-app` declare `react-native` `0.88.1` and `react-native-safe-area-context` `~5.11.1`, the versions Expo SDK 58 now lists, and the template's `tsconfig.json` includes `nativewind-env.d.ts`, so `expo-doctor` reports nothing on a new project and does not rewrite the file. (#286)
 
 ## [0.1.0-beta.201] - 2026-11-06

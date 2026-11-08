@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.14",
-    "@preeternal/react-native-cookie-manager": "6.4.1",
+    "@preeternal/react-native-cookie-manager": "7.0.0",
     "@tanstack/react-query": "^5.62.0",
     "babel-preset-expo": "~58.0.17",
     "class-variance-authority": "^0.7.1",

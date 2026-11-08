@@ -45,8 +45,8 @@ importers:
         specifier: ~58.0.14
         version: 58.0.14(@expo/log-box@58.0.12)(expo@58.0.14)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.1(@babel/core@7.28.6)(@react-native/metro-config@0.88.0(@babel/core@7.28.6))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       '@preeternal/react-native-cookie-manager':
-        specifier: 6.4.1
-        version: 6.4.1(react-native@0.88.1(@babel/core@7.28.6)(@react-native/metro-config@0.88.0(@babel/core@7.28.6))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+        specifier: 7.0.0
+        version: 7.0.0(react-native@0.88.1(@babel/core@7.28.6)(@react-native/metro-config@0.88.0(@babel/core@7.28.6))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       '@tanstack/react-query':
         specifier: ^5.62.0
         version: 5.90.20(react@19.3.0)
@@ -1219,8 +1219,8 @@ packages:
     resolution: {integrity: sha512-SEeaJLb3qBNF/OaXnaR1NmmBbFYk1zC0ZH/52fATcRPLFg/p791YrcyFFy44Bo9sLaGuSuLp5Q6axbb/O+v/RA==}
     engines: {node: ^14.18.0 || >=16.0.0}
 
-  '@preeternal/react-native-cookie-manager@6.4.1':
-    resolution: {integrity: sha512-RuVvkOxlR2qmZMYOHr5FRFSaGDA0QGSF/wL+OFlYQ5ih2e4vkjbrlobsYJaZTkt/ABGV5T5TCgkRACFC2heLQw==}
+  '@preeternal/react-native-cookie-manager@7.0.0':
+    resolution: {integrity: sha512-xgbzW7Ebz6YO9k5aYAHpMc1Psd0hu67iAoPE6c8UbWbl8d959nsTOMxrT2xBOrYiVKt/cOjmC5W0gcIE+Dly2w==}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -1493,7 +1493,7 @@ packages:
     engines: {node: ^22.13.0 || ^24.3.0 || >= 26.0.0}
     peerDependencies:
       '@types/react': ^19.2.0
-      react: 19.2.4
+      react: '*'
       react-native: 0.88.1
     peerDependenciesMeta:
       '@types/react':
@@ -3806,7 +3806,7 @@ packages:
     hasBin: true
     peerDependencies:
       '@types/react': ^19.1.1
-      react: 19.2.4
+      react: ^19.3.0
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -5882,7 +5882,7 @@ snapshots:
 
   '@pkgr/core@0.3.6': {}
 
-  '@preeternal/react-native-cookie-manager@6.4.1(react-native@0.88.1(@babel/core@7.28.6)(@react-native/metro-config@0.88.0(@babel/core@7.28.6))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
+  '@preeternal/react-native-cookie-manager@7.0.0(react-native@0.88.1(@babel/core@7.28.6)(@react-native/metro-config@0.88.0(@babel/core@7.28.6))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)':
     dependencies:
       react: 19.3.0
       react-native: 0.88.1(@babel/core@7.28.6)(@react-native/metro-config@0.88.0(@babel/core@7.28.6))(@types/react@19.3.0)(react@19.3.0)

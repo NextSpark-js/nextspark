@@ -141,7 +141,7 @@ export const VERSIONS = {
   RN_WORKLETS: '0.13.0',
   // Lets @nextsparkjs/mobile empty the native cookie store on sign-out.
   // Exact version: the package has a single maintainer.
-  RN_COOKIE_MANAGER: '6.4.1',
+  RN_COOKIE_MANAGER: '7.0.0',
 
   // Styling
   NATIVEWIND: '^4.2.1',
