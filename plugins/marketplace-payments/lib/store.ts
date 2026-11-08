@@ -240,11 +240,13 @@ export const webhookStore: WebhookStore = {
     queryOne<StoredPayment>(`${STORED_PAYMENT} WHERE p.provider = $1 AND p."providerPaymentId" = $2`, [provider, providerPaymentId]),
 
   async transitionPayment(id, status, fields = {}) {
-    // the source check is in the UPDATE, so two concurrent events cannot both pass it
+    // The source check is in the UPDATE, so two concurrent events cannot both pass it. A refund during a dispute
+    // leaves the status alone and keeps its amount, for when the dispute ends.
     await query(
       `UPDATE public."marketplace_payments"
-       SET status = $2, "providerPaymentId" = COALESCE($3, "providerPaymentId"), "refundedCents" = GREATEST("refundedCents", COALESCE($4::bigint, 0)), "updatedAt" = now()
-       WHERE id = $1 AND status = ANY($5::text[])`,
+       SET status = CASE WHEN status = ANY($5::text[]) THEN $2::text ELSE status END,
+           "providerPaymentId" = COALESCE($3, "providerPaymentId"), "refundedCents" = GREATEST("refundedCents", COALESCE($4::bigint, 0)), "updatedAt" = now()
+       WHERE id = $1 AND (status = ANY($5::text[]) OR (status = 'disputed' AND $4::bigint IS NOT NULL))`,
       [id, status, fields.providerPaymentId ?? null, fields.refundedCents ?? null, PAYMENT_STATUS_SOURCES[status]]
     )
   },

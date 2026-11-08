@@ -175,6 +175,15 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
     await store.webhookStore.transitionPayment(payB, 'disputed')
     await store.webhookStore.resolveDispute(payB, 2000)
     assert.equal(await statusOf(payB), 'refunded')
+
+    const payC = await store.createPendingPayment({ teamId: 'team-b', accountId: accountB, provider: 'mercadopago', providerAccountId: 'mp-b', amountCents: 2000, commissionCents: 200, currency: 'ars', description: 'z' })
+    await store.webhookStore.transitionPayment(payC, 'succeeded')
+    await store.webhookStore.transitionPayment(payC, 'disputed')
+    await store.webhookStore.transitionPayment(payC, 'partially_refunded', { refundedCents: 300 })
+    assert.equal(await statusOf(payC), 'disputed', 'a refund does not end the dispute')
+    await store.webhookStore.resolveDispute(payC)
+    assert.equal(await statusOf(payC), 'partially_refunded')
+    assert.equal((await owner.query(`SELECT "refundedCents"::int AS r FROM public."marketplace_payments" WHERE id = $1`, [payC])).rows[0].r, 300)
   })
 
   await t.test('an OAuth state works once, for its user and team, and not after it expires', async () => {
