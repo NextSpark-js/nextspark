@@ -31,19 +31,20 @@ export function contractsDirFrom(projectRoot, target) {
  *
  * @param {object} input
  * @param {{ contract: object, source: string }[]} input.entities - `planContracts(...).entities`
+ * @param {{ parent: string, name: string, fields: object[], source: string }[]} [input.children] - `planContracts(...).children`
  * @param {string} input.projectRoot
  * @param {{ root: string }} input.target - where the contracts module is written (`resolveContractsTarget`)
  */
-export function planClient({ entities, projectRoot, target }) {
+export function planClient({ entities, children = [], projectRoot, target }) {
   const diagnostics = []
   const owners = new Map()
   for (const { contract } of entities) {
-    for (const name of new Set(clientExportedNames(contract))) {
+    for (const name of new Set(clientExportedNames(contract, children.filter(child => child.parent === contract.slug)))) {
       const owner = owners.get(name)
       if (owner && owner !== contract.slug) diagnostics.push({ code: 'NS_CLIENT_NAME_CLASH', message: `entities "${owner}" and "${contract.slug}" would both export ${name} from the generated client; give one of them a different names.singular` })
       else owners.set(name, contract.slug)
     }
   }
   if (diagnostics.length > 0) return { files: [], diagnostics }
-  return { files: renderClient(entities, { contractsDir: contractsDirFrom(projectRoot, target) }), diagnostics }
+  return { files: renderClient(entities, { children, contractsDir: contractsDirFrom(projectRoot, target) }), diagnostics }
 }

@@ -786,11 +786,11 @@ export function checkGeneration({ hostRoot, previous, appFiles, inputs, versions
       }
     }
     // A file in the registries directory that no record lists (left by hand, or by a build that did not finish) is not NextSpark's
-    // to ignore: it is imported by `@nextsparkjs/registries/*` like the rest
+    // to ignore: it is imported by `@nextsparkjs/registries/*` like the rest. prepare leaves it alone, so the message asks for it to be deleted
     for (const path of scanTree(hostRoot, REGISTRIES_DIR).files) {
       if (path.endsWith('.nextspark-tmp') || previous.files[path] !== undefined) continue
       if (generatedRegistries?.files.some(file => file.path === path)) continue
-      problems.push({ state: 'foreign', path, detail: 'not recorded by the generation; nextspark prepare owns this directory' })
+      problems.push({ state: 'foreign', path, detail: `no generation record lists it, and nextspark prepare never deletes a file it does not own: delete ${path} by hand` })
     }
     const before = previous.inputs?.files ?? {}
     const now = inputs?.files ?? {}

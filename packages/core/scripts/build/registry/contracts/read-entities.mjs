@@ -358,6 +358,28 @@ function readChildEntities(object, file, sources) {
 }
 
 /**
+ * A nested child entity (`entities/<parent>/children/<child>/<child>.config.ts`, exporting `...ChildConfig`): the object
+ * `{ table, fields }` the child routes serve. Returns `{ fields, table }` or `{ error }` (nothing is guessed).
+ */
+export async function readChildDefinition({ file, exportName, projectRoot, sources: shared }) {
+  const ts = await loadTypeScriptFor(projectRoot)
+  const sources = shared ?? new Sources(ts, projectRoot)
+  const sourceFile = sources.load(file)
+  if (!sourceFile) return { error: 'cannot be read or does not parse' }
+  const initializer = topLevelConst(sourceFile, exportName, ts)
+  const resolved = initializer ? resolve(initializer, file, sources) : null
+  if (!resolved || !ts.isObjectLiteralExpression(resolved.node)) return { error: `has no \`const ${exportName} = { ... }\` object literal` }
+  const fieldsProperty = property(resolved.node, 'fields', ts)
+  if (fieldsProperty.state) return { error: 'has no literal `fields`' }
+  const elements = elementsOf(fieldsProperty.node, resolved.file, sources)
+  if (!elements) return { error: 'its `fields` are not a literal array' }
+  const problems = []
+  const fields = elements.map(element => readField(element, sources, message => problems.push(message)))
+  if (problems.length > 0 || fields.some(field => !field)) return { error: `has fields that cannot be read (${problems.join('; ') || 'a field is unreadable'})` }
+  return { fields }
+}
+
+/**
  * Read one entity config.
  *
  * @param {{ file: string, exportName: string, projectRoot: string, sources?: Sources, migrationDirs?: string[] }} input

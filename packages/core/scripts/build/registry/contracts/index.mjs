@@ -28,7 +28,7 @@ import { projectFiles } from '../../safe-fs.mjs'
 import { discoverAllEntities } from '../discovery/all-entities.mjs'
 import { entityConfigFile, routableEntities } from '../host/entity-routes.mjs'
 import { PortableSourcesError, loadResponseShape, readPortableSources } from './portable.mjs'
-import { Sources, readEntityContract } from './read-entities.mjs'
+import { Sources, readChildDefinition, readEntityContract } from './read-entities.mjs'
 import { SHARED_EXPORTS, entityNames, exportedNames, renderContracts } from './render.mjs'
 import { CONTRACTS_GENERATION_FILE, ContractsPublishError, checkContracts, foreignDiagnostic, planPublication, publishContracts, readContractsRecord } from './publish.mjs'
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
@@ -111,9 +111,23 @@ export async function planContracts({ entities, projectRoot, coreRoot, plugins =
       continue
     }
     for (const warning of read.contract.warnings) warnings.push(`${read.contract.slug}: ${warning}`)
-    contracts.push({ contract: read.contract, source: entity.configPath })
+    contracts.push({ contract: read.contract, source: entity.configPath, name: entity.name })
   }
   contracts.sort((a, b) => (a.contract.slug < b.contract.slug ? -1 : a.contract.slug > b.contract.slug ? 1 : 0))
+
+  // The child entities the child routes serve: the registry's entries whose `parent` is one of these entities (nested
+  // `children/<child>/` directories). The routes resolve them from the registry, so the client follows the same source.
+  const parents = new Map(contracts.map(entry => [entry.name, entry.contract.slug]))
+  const children = []
+  for (const entity of entities) {
+    if (!entity.parent || !parents.has(entity.parent) || !/(?:Child|Entity)Config$/.test(entity.exportName ?? '')) continue
+    const parent = parents.get(entity.parent)
+    const file = entityConfigFile(entity, { projectRoot, plugins })
+    const read = file && existsSync(file) ? await readChildDefinition({ file, exportName: entity.exportName, projectRoot, sources }) : { error: 'the config file cannot be found' }
+    if (read.error) warnings.push(`${parent}: child entity "${entity.name}" (${entity.configPath}) ${read.error}, so it has no client`)
+    else children.push({ parent, name: entity.name, fields: read.fields, source: entity.configPath })
+  }
+  children.sort((a, b) => `${a.parent}\0${a.name}` < `${b.parent}\0${b.name}` ? -1 : 1)
 
   const seenSlugs = new Map()
   const seenNames = new Map(SHARED_EXPORTS.map(name => [name, 'the shared envelope and field schemas']))
@@ -127,7 +141,7 @@ export async function planContracts({ entities, projectRoot, coreRoot, plugins =
     }
   }
   // `entities` ({ contract, source }, slug order) feed the typed client generated from the same contracts (client/)
-  return { files: diagnostics.length > 0 ? [] : renderContracts(contracts, { portable, shape }), warnings, diagnostics, entities: contracts }
+  return { files: diagnostics.length > 0 ? [] : renderContracts(contracts, { portable, shape }), warnings, diagnostics, entities: contracts, children }
 }
 
 /**

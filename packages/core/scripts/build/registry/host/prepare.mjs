@@ -201,7 +201,7 @@ export async function predictHost(config, { devStatus = false } = {}) {
       const plan = await config.contracts.plan()
       diagnostics.push(...plan.diagnostics)
       if (plan.diagnostics.length === 0) preflightContractsPlan({ target: config.contracts.target(), plan })
-      if (plan.diagnostics.length === 0 && config.client) diagnostics.push(...config.client.plan({ entities: plan.entities ?? [], target: config.contracts.target() }).diagnostics)
+      if (plan.diagnostics.length === 0 && config.client) diagnostics.push(...config.client.plan({ entities: plan.entities ?? [], children: plan.children ?? [], target: config.contracts.target() }).diagnostics)
       checks.contracts = plan.diagnostics.length > 0 ? 'failed' : 'passed'
     } catch (error) {
       if (!(error instanceof ContractsPublishError || error instanceof PrepareError)) throw error
@@ -301,7 +301,7 @@ async function planContractsStep(config) {
 /** The files of the typed entity client planned from the contracts plan ([]: the host has no client step). */
 function planClientStep(config, contracts) {
   if (!config.client || !contracts) return []
-  const { files, diagnostics } = config.client.plan({ entities: contracts.plan.entities ?? [], target: contracts.target })
+  const { files, diagnostics } = config.client.plan({ entities: contracts.plan.entities ?? [], children: contracts.plan.children ?? [], target: contracts.target })
   if (diagnostics.length > 0) throw new PrepareError(diagnostics)
   return files
 }
@@ -373,7 +373,7 @@ export async function checkHost(config, { dev = false } = {}) {
       contractsPlan = { diagnostics: error.diagnostics, files: [] }
     }
   }
-  const client = config.client && contractsPlan && contractsPlan.diagnostics.length === 0 ? config.client.plan({ entities: contractsPlan.entities ?? [], target: config.contracts.target() }) : null
+  const client = config.client && contractsPlan && contractsPlan.diagnostics.length === 0 ? config.client.plan({ entities: contractsPlan.entities ?? [], children: contractsPlan.children ?? [], target: config.contracts.target() }) : null
   const result = checkGeneration({
     hostRoot: config.hostRoot,
     previous,
@@ -571,7 +571,7 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
     // The contracts are generated with the core that runs this script (its portable sources are what the server runs too)
     contracts: projectContracts({ projectRoot: config.projectRoot, coreRoot: CORE_ROOT, currentConfig, plugins: pluginsOf }),
     // The typed client and hooks (#277): generated from the contracts' entities, written with the registries
-    client: { plan: ({ entities, target }) => planClient({ entities, projectRoot: config.projectRoot, target }) },
+    client: { plan: ({ entities, children, target }) => planClient({ entities, children, projectRoot: config.projectRoot, target }) },
     webhooks: () =>
       webhookRoutes({
         webhookExtensions: currentConfig().billing?.webhookExtensions,

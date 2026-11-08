@@ -36,7 +36,7 @@ changes). Do not edit them.
 
 ```
 .nextspark/registries/entity-client/
-  tasks.ts          the client of the entity: tasksClient, Task, CreateTaskInput, UpdateTaskInput, TasksListParams
+  tasks.client.ts   the client of the entity: tasksClient, Task, CreateTaskInput, UpdateTaskInput, TasksListParams
   tasks.hooks.ts    'use client': useTasksList, useTask, useCreateTask, useUpdateTask, useDeleteTask
   index.ts          api: every client by slug (api.tasks, api['blog-posts']), and every entity module re-exported
   hooks.ts          'use client': every hooks module re-exported
@@ -102,8 +102,11 @@ its team. Query options (`enabled`, `staleTime`, ...) are passed through; the mu
 
 ## Child Entities
 
-An entity with `childEntities` also gets a client and hooks for each child, which the API serves under the parent record
-(`/api/v1/<slug>/<parentId>/child/<child>`):
+A child entity is a nested directory of its parent, `entities/<parent>/children/<child>/<child>.config.ts`, exporting a `...ChildConfig`
+with `table` and `fields`. The API serves the children the entity registry holds under the parent record
+(`/api/v1/<slug>/<parentId>/child/<name>`, `name` being the child's registry name: its `table`), and the client is generated for exactly
+those. (A `childEntities` block in the parent's config describes the child rows of a create or update payload; the child routes do not
+serve it, so it has no client.) In the examples the child's name is `lines`:
 
 ```ts
 const lines = await api.orders.children.lines.list(orderId)
@@ -119,8 +122,10 @@ add.mutate({ parentId: orderId, data: { sku: 'A-1' } })
 // useUpdateOrderLine: { parentId, id, data }, useDeleteOrderLine: { parentId, id }
 ```
 
-A child row is typed from the parent's contract: `OrderLineRow` is the child fields plus `id`, `parentId`, `createdAt` and
-`updatedAt`, so a renamed child field is a compile error too. Reading the children needs the parent readable, and changing one is
+The types of a child are not in the contracts, so the client file declares them from the child's own `fields`, with the same wire
+kinds as the contract (`OrderLineRow` is the child fields plus `id`, `parentId`, `createdAt` and `updatedAt`; a number is
+`number | string`, as the driver returns it; a kind that is not described is `unknown`, never `any`). A renamed child field is a compile
+error too. A child config whose `fields` are not a literal gets no client, and `prepare` says so in a warning. Reading the children needs the parent readable, and changing one is
 an update of the parent, like every other child route.
 
 ## Invalidation Rules
@@ -132,7 +137,7 @@ come the active team id and the kind (`list`, `detail`, `children`), so a team s
 | --- | --- |
 | create | invalidates everything under `['entity', slug]` |
 | update | writes the returned row into the item's query, then invalidates everything under `['entity', slug]` |
-| delete | removes the item's query (it would be refetched into a 404), then invalidates everything under `['entity', slug]` |
+| delete | removes the item's cached query, then invalidates everything under `['entity', slug]`. A component that still has the item mounted (`useTask(id)`) observes it again and may request it, so unmount it or pass `enabled: false` when you delete |
 | a child create, update or delete | invalidates everything under the parent's `['entity', slug]`: the child list, the parent item and the lists |
 
 "Everything" includes the dashboard's lists of the same entity, so a task created from your own screen shows up in the
@@ -156,7 +161,7 @@ server cannot disagree about a field. `import type` is erased at build time: the
 ## Bundle Size
 
 Nothing in core imports the generated client, so a route that does not use it carries none of it. The per-entity modules
-(`tasks.ts`, `tasks.hooks.ts`) carry that entity only, plus TanStack Query, which the app already bundles. `index.ts` and
+(`tasks.client.ts`, `tasks.hooks.ts`) carry that entity only, plus TanStack Query, which the app already bundles. `index.ts` and
 `hooks.ts` import every entity: use them in code that really needs several, and prefer the per-entity modules in routes where
 the JavaScript budget matters.
 
