@@ -72,7 +72,7 @@ export function calculateTaskStats(tasks: Array<{ status: string; dueDate?: stri
         case 'done':
           acc.completed++
           break
-        case 'in_progress':
+        case 'in-progress':
           acc.inProgress++
           break
         case 'todo':
@@ -142,7 +142,7 @@ export function getStatusColor(status: string): string {
   switch (status) {
     case 'done':
       return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30'
-    case 'in_progress':
+    case 'in-progress':
       return 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
     case 'todo':
       return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-900/30'

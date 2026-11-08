@@ -29,7 +29,7 @@ export const tasksConfig = {
   fields: [
     { name: 'title', type: 'text', required: true },
     { name: 'description', type: 'textarea' },
-    { name: 'status', type: 'select', options: ['pending', 'in_progress', 'completed'] },
+    { name: 'status', type: 'select', options: ['todo', 'in-progress', 'review', 'done', 'blocked'] },
     { name: 'dueDate', type: 'date' },
     { name: 'assignedTo', type: 'relation', target: 'users' }
   ]
@@ -56,7 +56,7 @@ POST /api/v1/tasks/bulk
 {
   "ids": ["task-1", "task-2", "task-3"],
   "action": "updateStatus",
-  "data": { "status": "completed" }
+  "data": { "status": "done" }
 }
 ```
 
@@ -107,9 +107,9 @@ Response:
 {
   "total": 150,
   "byStatus": {
-    "pending": 45,
-    "in_progress": 30,
-    "completed": 75
+    "todo": 45,
+    "in-progress": 30,
+    "done": 75
   },
   "overdue": 12
 }
@@ -147,7 +147,7 @@ Modify available statuses in the entity configuration:
   options: [
     { value: 'backlog', label: 'Backlog' },
     { value: 'todo', label: 'To Do' },
-    { value: 'in_progress', label: 'In Progress' },
+    { value: 'in-progress', label: 'In Progress' },
     { value: 'review', label: 'In Review' },
     { value: 'done', label: 'Done' }
   ]
