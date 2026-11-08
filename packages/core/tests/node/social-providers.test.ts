@@ -2,8 +2,9 @@
  * GitHub and Apple sign-in on core's real auth routes and Better Auth (#279), run by
  * fixtures/registration-gates/driver.mts against a throwaway cluster with core's migrations. Only the providers'
  * token and user endpoints are stubbed. Covers the registration gate on a non-Google callback, the profile mapping,
- * linking by verified email (and its refusal on an unverified one), an address-less GitHub account, and Apple's
- * form_post callback with its signed client secret and first-consent name.
+ * linking by verified email (and its refusal on an unverified one), an address-less GitHub account, a provider
+ * enabled only by the map, a callback under a basePath, and Apple's form_post callback with its signed client secret
+ * and first-consent name.
  *
  * Skipped when initdb and pg_ctl are not on the PATH.
  */
@@ -26,13 +27,14 @@ type Step =
   | { op: 'otp'; email: string }
   | { op: 'github'; email: string; emailVerified?: boolean; name?: string | null; noEmail?: boolean; id?: number }
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
+  | { op: 'discord'; email: string; emailVerified?: boolean; id?: string }
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
-type Result = Step & { body?: string; setsSession?: boolean; status: number; code?: string; location?: string; responseMode?: string; postStatus?: number; postLocation?: string; appleClientSecret?: string }
+type Result = Step & { body?: string; setsSession?: boolean; status: number; code?: string; location?: string; responseMode?: string; postStatus?: number; postLocation?: string; appleClientSecret?: string; redirectUri?: string }
 
-function runSteps(databaseUrl: string, registration: string, steps: Step[]): Result[] {
+function runSteps(databaseUrl: string, registration: string, steps: Step[], basePath?: string): Result[] {
   const appConfig = {
     teams: { mode: 'multi-tenant' },
-    auth: { registration: { mode: registration }, methods: ['email-otp', 'github', 'apple'] },
+    auth: { registration: { mode: registration }, methods: ['email-otp', 'github', 'apple'], providers: { discord: {} } },
   }
   const run = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'driver.mts')], {
     cwd: CORE,
@@ -47,6 +49,9 @@ function runSteps(databaseUrl: string, registration: string, steps: Step[]): Res
       BETTER_AUTH_SECRET: 'social-providers-secret-0123456789abcdef',
       BETTER_AUTH_URL: ORIGIN,
       NEXT_PUBLIC_APP_URL: ORIGIN,
+      ...(basePath ? { __NEXT_ROUTER_BASEPATH: basePath } : {}),
+      DISCORD_CLIENT_ID: 'discord-map-client',
+      DISCORD_CLIENT_SECRET: 'discord-map-secret',
       GITHUB_CLIENT_ID: 'Ov23liSocialProvider',
       GITHUB_CLIENT_SECRET: 'social-providers-github-secret',
       APPLE_CLIENT_ID: 'com.example.web',
@@ -140,6 +145,38 @@ test('invitation-only: the GitHub and Apple callbacks meet the same gate as Goog
   assert.ok(signedIn(invited), JSON.stringify(invited))
   assert.ok(signedIn(again), JSON.stringify(again))
   assert.deepEqual((await accounts(owner)).map(r => r.email), ['first@example.test', 'invited@example.test'])
+})
+
+test('a provider enabled only by the map: signs up a verified address, refuses an unverified one, and meets the registration gate', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  const [created, unverified] = runSteps(ownerUrl, 'open', [
+    { op: 'discord', email: 'nelly@example.test' },
+    { op: 'discord', email: 'unverified@example.test', emailVerified: false, id: '80351110224678913' },
+  ])
+  assert.ok(signedIn(created), JSON.stringify(created))
+  assert.equal(errorOf(unverified), 'SOCIAL_EMAIL_UNVERIFIED', JSON.stringify(unverified))
+  // the map's default role and language; its name is Better Auth's business
+  assert.deepEqual((await accounts(owner)).map(r => [r.email, r.providers, r.role, r.language]), [['nelly@example.test', 'discord', 'member', 'en']])
+
+  const [stranger, again] = runSteps(ownerUrl, 'invitation-only', [
+    { op: 'discord', email: 'stranger@example.test', id: '80351110224678914' },
+    { op: 'discord', email: 'nelly@example.test' },
+  ])
+  assert.match(stranger.location ?? '', /\/auth-error\?error=SIGNUP_RESTRICTED(&|$)/, JSON.stringify(stranger))
+  assert.ok(signedIn(again), JSON.stringify(again))
+  assert.deepEqual((await accounts(owner)).map(r => r.email), ['nelly@example.test'])
+})
+
+test('under a basePath: GitHub asks for the callback with the base path, completes it and redirects under it', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  const [created, unverified] = runSteps(ownerUrl, 'open', [
+    { op: 'github', email: 'octo@example.test' },
+    { op: 'github', email: 'unverified@example.test', emailVerified: false, id: 7171 },
+  ], '/app')
+  assert.equal(created.redirectUri, `${ORIGIN}/app/api/auth/callback/github`, JSON.stringify(created))
+  assert.ok(signedIn(created) && created.location!.startsWith('/app/dashboard'), JSON.stringify(created))
+  assert.match(unverified.location ?? '', /^(http:\/\/localhost:5173)?\/app\/auth-error\?error=SOCIAL_EMAIL_UNVERIFIED(&|$)/, JSON.stringify(unverified))
+  assert.deepEqual((await accounts(owner)).map(r => [r.email, r.providers]), [['octo@example.test', 'github']])
 })
 
 test('Apple: form_post callback, a client secret signed with the .p8 key, the name from the first consent', { skip, timeout: 300000 }, async t => {

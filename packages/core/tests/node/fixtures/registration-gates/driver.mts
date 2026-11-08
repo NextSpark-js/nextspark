@@ -1,7 +1,7 @@
 /**
  * Runs the registration steps of REGISTRATION_GATES_STEPS through core's real auth routes and Better Auth (no mocks),
  * and prints one `RESULT <json>` line per step. Only the providers' endpoints are stubbed: Google's and Apple's token
- * endpoints answer with an id token for the step's address, GitHub's token and user API with the step's profile, and
+ * endpoints answer with an id token for the step's address, GitHub's and Discord's token and user API with the step's profile, and
  * a `send-code` step replaces the email provider with one that sends, answers { success: false } or throws.
  * Started by registration-gates.test.ts and social-providers.test.ts under tsx with this folder's tsconfig.
  */
@@ -18,6 +18,8 @@ type Step =
   | { op: 'github'; email: string; emailVerified?: boolean; name?: string | null; noEmail?: boolean; id?: number }
   // Apple posts its answer back (form_post) with the name on the first consent only
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
+  // A provider enabled only through the auth.providers map: no readiness check, no button, no mapping of its own
+  | { op: 'discord'; email: string; emailVerified?: boolean; id?: string }
   // A native app's Sign in with Apple: /sign-in/social with an id token signed by APPLE_PRIVATE_KEY (Apple's keys are stubbed with its public half)
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
   // POST /email-otp/send-verification-otp with an email provider that sends, fails or throws
@@ -56,6 +58,7 @@ let apple: Extract<Step, { op: 'apple' }> | null = null
 let appleClientSecret: string | undefined
 const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
 const jsonResponse = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } })
+let discord: Extract<Step, { op: 'discord' }> | null = null
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
@@ -67,6 +70,12 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   }
   if (url === 'https://api.github.com/user/emails') {
     return jsonResponse(github!.noEmail ? [] : [{ email: github!.email, primary: true, verified: github!.emailVerified ?? true }])
+  }
+  if (url.startsWith('https://discord.com/api/oauth2/token')) {
+    return jsonResponse({ access_token: 'stub-discord-access', token_type: 'Bearer', expires_in: 600, scope: 'identify email' })
+  }
+  if (url === 'https://discord.com/api/users/%40me') { // how Better Auth's fetch writes /users/@me
+    return jsonResponse({ id: discord!.id ?? '80351110224678912', username: 'nelly', global_name: 'Nelly Bly', discriminator: '0', avatar: 'abc', email: discord!.email, verified: discord!.emailVerified ?? true })
   }
   if (url.startsWith('https://appleid.apple.com/auth/token')) {
     appleClientSecret = new URLSearchParams(String(init?.body ?? '')).get('client_secret') ?? undefined
@@ -87,7 +96,8 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 
 /** Starts the provider's sign-in and returns its state and the cookies the browser keeps. */
 async function startSocial(provider: string) {
-  const start = await authRoute.POST(json('/api/auth/sign-in/social', { provider, callbackURL: '/dashboard' }))
+  // Next.js hands the routes URLs without the base path; the client's callbackURL carries it
+  const start = await authRoute.POST(json('/api/auth/sign-in/social', { provider, callbackURL: `${process.env.__NEXT_ROUTER_BASEPATH ?? ''}/dashboard` }))
   const { url } = await start.json() as { url: string }
   return {
     authorizationUrl: url,
@@ -168,8 +178,14 @@ async function run(step: Step) {
     }
     case 'github': {
       github = step
-      const { state, cookie } = await startSocial('github')
-      return outcome(await callbackGet(`${ORIGIN}/api/auth/callback/github?code=stub-code&state=${encodeURIComponent(state)}`, cookie))
+      const { state, cookie, authorizationUrl } = await startSocial('github')
+      const result = await outcome(await callbackGet(`${ORIGIN}/api/auth/callback/github?code=stub-code&state=${encodeURIComponent(state)}`, cookie))
+      return { ...result, redirectUri: new URL(authorizationUrl).searchParams.get('redirect_uri') }
+    }
+    case 'discord': {
+      discord = step
+      const { state, cookie } = await startSocial('discord')
+      return outcome(await callbackGet(`${ORIGIN}/api/auth/callback/discord?code=stub-code&state=${encodeURIComponent(state)}`, cookie))
     }
     case 'apple': {
       apple = step

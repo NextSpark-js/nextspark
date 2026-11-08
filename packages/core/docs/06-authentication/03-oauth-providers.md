@@ -611,7 +611,7 @@ mapProfileToUser: (profile) => {
 
 ## Real-Provider Test Plans
 
-These plans need real OAuth apps and accounts, so they are not part of the automated suites. They are written to be run by a person, on a production build (`pnpm build` + `next start`), and the result recorded like Google's (case, result). The automated suites cover the same paths with the providers' endpoints stubbed: `tests/node/social-providers.test.ts` (GitHub and Apple on the real auth routes and Better Auth) and `tests/jest/lib/auth/social-*.test.ts`.
+These plans need real OAuth apps and accounts, so they are not part of the automated suites. They are written to be run by a person, on a production build (`pnpm build` + `next start`), and the result recorded like Google's (case, result). The automated suites cover the same paths with the providers' endpoints stubbed: `tests/node/social-providers.test.ts` (GitHub, Apple and a provider enabled only by the map on the real auth routes and Better Auth, including a callback under a `basePath`) and `tests/jest/lib/auth/social-*.test.ts`.
 
 Setup for every plan: a fresh database, `teams.mode: 'multi-tenant'`, the provider listed in `auth.methods`, its variables in `.env`, and two accounts at the provider (A and B). Reset the database between sections when a case needs an empty one.
 
