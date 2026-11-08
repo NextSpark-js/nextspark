@@ -110,6 +110,8 @@ The reason in each row is one of `template-import` (a stable template imports it
 | `./lib/permissions/hooks` | documented — Permission hooks named by the entity and teams guides. |
 | `./lib/api/rate-limit` | documented — Rate limiting for API routes (rate-limiting guide). |
 | `./lib/api/entity/generic-handler` | documented — The generic entity route handler named by the API guides. |
+| `./lib/api/entity-client` | documented — The runtime of the typed entity clients nextspark prepare generates (entity API guide). |
+| `./hooks/entity-client` | documented — The TanStack Query hooks behind the generated entity hooks (entity API guide). |
 | `./components/entities/wrappers` | documented — Entity list, detail and form wrappers (entity guide). |
 
 ### Plugins and blocks

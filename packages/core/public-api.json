@@ -190,6 +190,18 @@
       "note": "The generic entity route handler named by the API guides."
     },
     {
+      "subpath": "./lib/api/entity-client",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "The runtime of the typed entity clients nextspark prepare generates (entity API guide)."
+    },
+    {
+      "subpath": "./hooks/entity-client",
+      "reason": "documented",
+      "area": "Entities and permissions",
+      "note": "The TanStack Query hooks behind the generated entity hooks (entity API guide)."
+    },
+    {
       "subpath": "./components/entities/wrappers",
       "reason": "documented",
       "area": "Entities and permissions",
