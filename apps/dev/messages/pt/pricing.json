@@ -85,11 +85,11 @@
     "questions": {
       "changePlan": "Posso mudar de plano a qualquer momento?",
       "changePlanAnswer": "Sim, você pode mudar seu plano a qualquer momento pelo seu painel. As mudanças são aplicadas imediatamente.",
-      "setupCost": "Ha algum custo de configuração?",
+      "setupCost": "Há algum custo de configuração?",
       "setupCostAnswer": "Não, todos os nossos planos incluem configuração gratuita e suporte durante a implementação.",
       "paymentMethods": "Quais métodos de pagamento vocês aceitam?",
       "paymentMethodsAnswer": "Aceitamos todos os principais cartões de crédito, PayPal e transferências bancárias para planos Enterprise.",
-      "annualDiscount": "Ha descontos para pagamento anual?",
+      "annualDiscount": "Há descontos para pagamento anual?",
       "annualDiscountAnswer": "Sim, oferecemos 2 meses grátis ao pagar anualmente nos planos Pro e Enterprise."
     }
   },

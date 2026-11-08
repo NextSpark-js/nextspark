@@ -38,7 +38,7 @@ function strings(node: unknown, prefix = ''): Array<[string, string]> {
 
 // The words that lose their diacritics when a catalog is written in plain ASCII
 const UNACCENTED: Record<string, RegExp> = {
-  de: /Bestaetig|pruef|Pruef|fuer\b|ueberpruef|Ueberpruef|Zurueck|zurueck|Druecken|ungueltig|Ungueltig|spaeter|muessen|Mueller|Grossbuch|Oeffnen|laeuft|laueft/,
+  de: /Bestaetig|pruef|Pruef|fuer\b|ueberpruef|Ueberpruef|Zurueck|zurueck|Druecken|ungueltig|Ungueltig|spaeter|muessen|Mueller|Grossbuch|Oeffnen|laeuft|laueft|Loesch|loesch|Bloeck|verfuegbar|Verfuegbar|Aenderung|aender|koennen|moecht|Uebersicht/,
   pt: /\b(?:nao|Nao|Voce|Ja|ja|opcoes|invalid[oa]s?|Usuario|autenticacao|informacoes|comecar|condicoes|verificacao|necessario|botao|faca|endereco|recuperacao|conexao|maiuscula|minuscula|numero|pagina|Ultimo|Joao)\b/,
 }
 

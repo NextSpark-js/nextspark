@@ -9,5 +9,5 @@
   "quickCreateDescription": "Crie um novo item",
   "noEntitiesAvailable": "Nenhum item disponível para criar",
   "createNew": "Criar novo",
-  "greeting": "Ola, {name}"
+  "greeting": "Olá, {name}"
 }

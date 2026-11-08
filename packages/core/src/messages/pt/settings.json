@@ -3,7 +3,7 @@
   "description": "Gerencie sua conta, segurança e preferências",
   "overview": {
     "title": "Bem-vindo às Configurações",
-    "description": "Use o menu a esquerda para navegar entre as diferentes seções de configuração da sua conta.",
+    "description": "Use o menu à esquerda para navegar entre as diferentes seções de configuração da sua conta.",
     "profileDescription": "Gerencie suas informações pessoais, nome, email e preferências básicas.",
     "passwordDescription": "Altere sua senha atual por uma nova e mais segura.",
     "securityDescription": "Configure a autenticação de dois fatores e revise suas sessões ativas.",
@@ -389,7 +389,7 @@
   },
   "plans": {
     "title": "Planos de Preços",
-    "description": "Escolha o plano que melhor se adapta as suas necessidades"
+    "description": "Escolha o plano que melhor se adapta às suas necessidades"
   },
   "pages": {
     "plans": "Planos",

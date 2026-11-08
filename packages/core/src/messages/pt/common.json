@@ -102,7 +102,7 @@
     "userMenuForName": "Menu do usuário. Conta: {name}"
   },
   "mobileNav": {
-    "greeting": "Ola, {name}",
+    "greeting": "Olá, {name}",
     "home": "Início",
     "tasks": "Tarefas",
     "create": "Criar",
