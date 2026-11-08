@@ -137,7 +137,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
     onSuccess: (data) => {
       toast({
         title: t('toast.success'),
-        description: data.message || t('toast.actionCompleted'),
+        description: t('toast.actionCompleted'),
       });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       onRefresh?.();
@@ -166,7 +166,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
     onSuccess: (data) => {
       toast({
         title: t('toast.deleted'),
-        description: data.message || t('toast.deletedDescription'),
+        description: t('toast.deletedDescription'),
       });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       onRefresh?.();

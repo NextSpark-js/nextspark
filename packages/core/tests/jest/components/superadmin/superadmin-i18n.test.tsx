@@ -33,9 +33,14 @@ jest.mock('next-intl', () => {
 })
 jest.mock('next/navigation', () => ({ usePathname: () => '/superadmin/users', useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('@nextsparkjs/registries/plugin-registry.client', () => ({ getPluginNavItems: () => [] }))
-jest.mock('@tanstack/react-query', () => ({ useMutation: () => ({ isPending: false, mutate: jest.fn() }), useQueryClient: () => ({ invalidateQueries: jest.fn() }) }))
+const mockToast = jest.fn()
+const mockMutations: Array<{ onSuccess?: (data: unknown) => void }> = []
+jest.mock('@tanstack/react-query', () => ({
+  useMutation: (options: { onSuccess?: (data: unknown) => void }) => { mockMutations.push(options); return { isPending: false, mutate: jest.fn() } },
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+}))
 jest.mock('@nextsparkjs/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: 'viewer', role: 'developer' } } }) }))
-jest.mock('@nextsparkjs/core/hooks/useToast', () => ({ useToast: () => ({ toast: jest.fn() }) }))
+jest.mock('@nextsparkjs/core/hooks/useToast', () => ({ useToast: () => ({ toast: mockToast }) }))
 jest.mock('@nextsparkjs/core/lib/role-helpers', () => ({ useRoleTranslations: () => (role: string) => role }))
 jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children, ...rest }: React.ComponentProps<'a'>) => <a href={href as string} {...rest}>{children}</a> }))
 
@@ -124,6 +129,15 @@ describe('RolesPermissionsMatrix', () => {
 })
 
 describe('the users tables', () => {
+  test('the toasts of UsersTable are the catalog\'s, not the API message (always English)', () => {
+    mockMutations.length = 0
+    mockToast.mockClear()
+    render(<UsersTable users={[]} />)
+    for (const mutation of mockMutations) mutation.onSuccess?.({ message: 'English from the API' })
+    const descriptions = mockToast.mock.calls.map(([toast]) => toast.description)
+    expect(descriptions).toEqual([es.superadmin.users.toast.actionCompleted, es.superadmin.users.toast.deletedDescription])
+  })
+
   const user = { id: 'user-0123456789', fullName: 'Luz Perez', email: 'luz@acme.test', role: 'member', emailVerified: false, createdAt: '2024-03-05T12:00:00Z' }
 
   test('UsersTable has its columns, status and date in Spanish', () => {
