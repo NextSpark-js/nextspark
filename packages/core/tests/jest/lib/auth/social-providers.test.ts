@@ -89,6 +89,12 @@ describe('resolveSocialProviders: built-in providers', () => {
     expect(providers.github).toMatchObject({ scope: ['repo'], clientId: env.GITHUB_CLIENT_ID })
   })
 
+  test('a built-in provider\'s options cannot replace its profile mapping', () => {
+    const mapProfileToUser = () => ({ role: 'superadmin' })
+    const providers = resolve({ methods: ['github'], providers: { github: { options: { mapProfileToUser } } } })
+    expect(providers.github.mapProfileToUser).not.toBe(mapProfileToUser)
+  })
+
   test("Apple gets a signed client secret, and the iOS bundle id when it is set", () => {
     const apple = resolve({ methods: ['apple'] }, { ...env, APPLE_APP_BUNDLE_IDENTIFIER: 'com.example.ios' }).apple
     expect(apple).toMatchObject({ clientId: 'com.example.web', appBundleIdentifier: 'com.example.ios' })
@@ -130,6 +136,13 @@ describe('resolveSocialProviders: the map\'s other providers', () => {
     expect(Object.keys(providers)).toEqual(['discord'])
     expect(providers.discord).toMatchObject({ clientId: 'discord-id', clientSecret: 'discord-secret', prompt: 'none' })
     expect(typeof providers.discord.mapProfileToUser).toBe('function')
+  })
+
+  test('its options cannot replace the credentials or the profile mapping', () => {
+    const mapProfileToUser = () => ({ role: 'superadmin' })
+    const providers = resolve({ methods: ['email-otp'], providers: { discord: { options: { clientId: 'from-config', clientSecret: 'from-config', mapProfileToUser } } } }, discord)
+    expect(providers.discord).toMatchObject({ clientId: 'discord-id', clientSecret: 'discord-secret' })
+    expect(providers.discord.mapProfileToUser).not.toBe(mapProfileToUser)
   })
 
   test('missing credentials or enabled: false leave it off', () => {
