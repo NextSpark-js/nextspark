@@ -5,7 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
-import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, loadCoreHost, planAppConversion, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
+import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
@@ -1350,7 +1350,7 @@ function toolingReferences(repositoryRoot: string): ToolingReference[] {
   return references.sort((left, right) => left.path.localeCompare(right.path) || left.line - right.line);
 }
 
-function collisions(hostRoot: string, themeDirectory: string | null): Omit<MigrateReport['collisions'], 'renamed'> {
+function collisions(hostRoot: string, themeDirectory: string | null, apiDir: string): Omit<MigrateReport['collisions'], 'renamed'> {
   if (!themeDirectory) return { reserved: [], files: [] };
   const reserved: { path: string; reason: string }[] = [];
   const fileCollisions: { path: string; identical: boolean }[] = [];
@@ -1360,7 +1360,7 @@ function collisions(hostRoot: string, themeDirectory: string | null): Omit<Migra
     const reservation = reservedThemePath(themePath);
     if (hook) reserved.push({ path: themePath, reason: 'Next reserves this root file name; migration maps it to config/hooks/' });
     else if (reservation) reserved.push(reservation);
-    const destination = themeDestination(hostRoot, themePath);
+    const destination = themeDestination(hostRoot, themePath, apiDir);
     if (!destination) continue;
     if (existsSync(destination) && statSync(destination).isFile()) {
       fileCollisions.push({ path: themePath, identical: readFileSync(file).equals(readFileSync(destination)) });
@@ -1730,7 +1730,9 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   const envExample = themeDirectory ? envExamplePlan(host.root, themeDirectory) : { action: 'none' as const, path: null };
   const scripts = coreScripts(host.root, templates);
   const hostFiles = filesIn(host.root);
-  const movePlan = themeDirectory ? planMove(host.root, themeDirectory, pluginsDirectory) : null;
+  const apiLookup = await projectApiDir(templates ? dirname(templates) : null, host.root);
+  const apiDir = 'apiDir' in apiLookup ? apiLookup.apiDir : 'api';
+  const movePlan = themeDirectory ? planMove(host.root, themeDirectory, pluginsDirectory, apiDir) : null;
   const usePpr = legacyProjectUsedPpr(host.root);
   // The app root, or a directory above it, being a symbolic link would carry every delete outside the project
   const rootLink = appRoot ? appRoot.split('/').reduce<{ path: string; link: string | null }>((state, part) => {
@@ -1747,9 +1749,11 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
       core: await loadCoreHost(templates ? dirname(templates) : null),
       reserved: new Set(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => item.destination) : []),
       coreTemplates: templates,
+      apiDir,
     })
     : null;
   const blockers = appPlan ? unrecognizedLines(appPlan) : [];
+  if ('error' in apiLookup) blockers.push(apiLookup.error);
   // core's own app/globals.css imports the active theme's stylesheet; without the theme name it reads as a project file, and the generic line hides the real cause
   if (!selectedTheme.name && appPlan) {
     const line = `${appPlan.root}/globals.css: `;
@@ -1939,7 +1943,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
     imports,
     entitySlugs: { ...planEntitySlugs(host.root, selectedTheme.name), rename: false, report: [] },
     toolingReferences: toolingReferences(repository),
-    collisions: { ...collisions(host.root, themeDirectory), renamed: movePlan?.renamed ?? [] },
+    collisions: { ...collisions(host.root, themeDirectory, apiDir), renamed: movePlan?.renamed ?? [] },
     untracked,
     siblingThemeReferences: siblingReferences(repository, host.root, selectedTheme.name),
     compatRewrites: { entries: compatEntries, file: nextConfigFile ? pathFrom(repository, nextConfigFile) : null, note: COMPAT_NOTE },
@@ -2152,16 +2156,23 @@ function reservedThemePath(relativePath: string): { path: string; reason: string
   return null;
 }
 
-function themeDestination(hostRoot: string, relativePath: string): string | null {
+function themeDestination(hostRoot: string, relativePath: string, apiDir: string): string | null {
   const hook = hookDestination(hostRoot, relativePath);
   if (hook) return hook;
   if (reservedThemePath(relativePath)) return null;
   // Project source is root-first: named roots document common surfaces, while
   // every non-reserved top-level file or directory remains project-owned.
-  return join(hostRoot, relativePath);
+  return join(hostRoot, relativePath === 'api' || relativePath.startsWith('api/') ? `${apiDir}${relativePath.slice('api'.length)}` : relativePath);
 }
 
-function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): MovePlan {
+async function resolvedApiDir(hostRoot: string, repository: string): Promise<string> {
+  const templates = templateDirectory(hostRoot, repository);
+  const lookup = await projectApiDir(templates ? dirname(templates) : null, hostRoot);
+  if ('error' in lookup) throw new MigrateAnalysisError(lookup.error);
+  return lookup.apiDir;
+}
+
+function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string, apiDir: string): MovePlan {
   const moves: PlannedMove[] = [];
   const duplicates: PlannedMove[] = [];
   const collisions: PlannedMove[] = [];
@@ -2223,7 +2234,7 @@ function planMove(hostRoot: string, themeRoot: string, pluginsRoot: string): Mov
       unmoved.push(source);
       continue;
     }
-    const destination = themeDestination(hostRoot, relativePath);
+    const destination = themeDestination(hostRoot, relativePath, apiDir);
     if (!destination) unmoved.push(source);
     else add(source, destination, 'theme');
   }
@@ -4294,7 +4305,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!appTreeOnly && !existsSync(themeRoot)) throw new MigrateAnalysisError(`Active theme ${theme} was not found under contents/themes/.`);
     const pluginsRoot = join(hostRoot, 'contents', 'plugins');
     if (!appTreeOnly) assertMoveRootsAreLocal(hostRoot, themeRoot, pluginsRoot);
-    const plan: MovePlan = appTreeOnly ? { moves: [], duplicates: [], collisions: [], renamed: [], reserved: [], unmoved: [] } : planMove(hostRoot, themeRoot, pluginsRoot);
+    const plan: MovePlan = appTreeOnly ? { moves: [], duplicates: [], collisions: [], renamed: [], reserved: [], unmoved: [] } : planMove(hostRoot, themeRoot, pluginsRoot, await resolvedApiDir(hostRoot, repository));
     validateHookExports(plan);
     assertPhysicalRoot(repository, hostRoot);
     // Every path the move will read, write or remove is inside the project with no link on the way, before anything is written

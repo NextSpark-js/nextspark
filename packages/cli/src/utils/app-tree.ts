@@ -23,7 +23,7 @@ import { closingBrace, sourceView } from './source-view.js';
  *   `templates/<path>` for pages, layouts and the like, and for a core Route Handler under
  *   `api/v1/**` too (the project's own `api/` is served at `/api/<path>`, and core owns `/api/v1`);
  * - a file the project added moves to `templates/<path>`, or for a Route Handler under `api/` to
- *   `api/<path without the api/ prefix>`;
+ *   `<apiDir>/<path without the api/ prefix>` (`api` by default);
  * - what cannot be placed with certainty stops the whole migration before it writes anything, with
  *   the file and the reason.
  *
@@ -119,6 +119,24 @@ export async function loadCoreHost(coreDir: string | null): Promise<CoreHostLook
   }
 }
 
+/**
+ * The project's `apiDir`, read with the installed core's own loader (so it is validated there). No config, or a core
+ * without the loader, is the default. A config that cannot be read counts only when it mentions `apiDir`: migrate also
+ * runs on projects whose config predates the current schema, and those keep working.
+ */
+export async function projectApiDir(coreDir: string | null, hostRoot: string): Promise<{ apiDir: string } | { error: string }> {
+  const configFile = join(hostRoot, 'nextspark.config.ts');
+  const loader = coreDir ? join(coreDir, 'scripts', 'build', 'config-loader.mjs') : null;
+  if (!existsSync(configFile) || !loader || !existsSync(loader)) return { apiDir: 'api' };
+  try {
+    const { loadNextSparkConfigSync } = await import(pathToFileURL(loader).href);
+    return { apiDir: loadNextSparkConfigSync(hostRoot).apiDir ?? 'api' };
+  } catch (error) {
+    if (!readFileSync(configFile, 'utf8').includes('apiDir')) return { apiDir: 'api' };
+    return { error: `nextspark.config.ts sets apiDir, but it could not be read: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
 export type AppFileFate =
   | { kind: 'remove'; evidence: string }
   | { kind: 'loader'; template: string | null }
@@ -156,6 +174,8 @@ export interface AppConversionInput {
   core: CoreHostLookup;
   /** Absolute paths the rest of the migration is about to create, which a converted file must not collide with. */
   reserved: ReadonlySet<string>;
+  /** Where the project's Route Handlers go (`apiDir` of nextspark.config.ts). Default `api`. */
+  apiDir?: string;
   /** Core's `templates/` directory (its stubs are how an untouched webhook extension is recognized). */
   coreTemplates: string | null;
 }
@@ -517,7 +537,7 @@ function sourceExtension(path: string): string | null {
 }
 
 /** Where a project file of the app tree goes, or why it cannot go anywhere. */
-function destinationFor(path: string, host: CoreHost, override: boolean): { destination: string } | { reason: string } {
+function destinationFor(path: string, host: CoreHost, override: boolean, apiDir: string): { destination: string } | { reason: string } {
   const isApi = path === 'api' || path.startsWith('api/');
   const stem = splitName(posix.basename(path))?.stem ?? posix.basename(path);
   if (!isApi) {
@@ -538,7 +558,7 @@ function destinationFor(path: string, host: CoreHost, override: boolean): { dest
   if (rest === 'v1' || rest.startsWith('v1/') || rest === 'plugins' || rest.startsWith('plugins/')) {
     return { reason: `it adds ${path.replace(/\/[^/]+$/, '')} in the namespace core owns (/api/v1/** and /api/plugins/**): the generator refuses a project route there. Rename its directory to /api/<name> (the URL changes, so update its callers) and run migrate again` };
   }
-  return { destination: `api/${rest}` };
+  return { destination: `${apiDir}/${rest}` };
 }
 
 /**
@@ -547,7 +567,7 @@ function destinationFor(path: string, host: CoreHost, override: boolean): { dest
  * @throws never: what cannot be placed is `unrecognized` in the plan
  */
 export async function planAppConversion(input: AppConversionInput): Promise<AppConversionPlan> {
-  const { hostRoot, root, generated, core } = input;
+  const { hostRoot, root, generated, core, apiDir = 'api' } = input;
   const appRootDirectory = join(hostRoot, root);
   const files: AppFilePlan[] = [];
   const decided = new Map<string, AppFilePlan>();
@@ -589,7 +609,7 @@ export async function planAppConversion(input: AppConversionInput): Promise<AppC
       }
     }
     // ...or for the project's own template at that path: a generation of this release wrote it
-    const own = isText(content) ? await projectFacadeMatch(host, hostRoot, path, content.toString('utf8')) : null;
+    const own = isText(content) ? await projectFacadeMatch(host, hostRoot, path, content.toString('utf8'), apiDir) : null;
     if (own) {
       record(path, { kind: 'remove', evidence: `identical to the file the generator emits for the project's ${own}` });
       continue;
@@ -617,7 +637,7 @@ export async function planAppConversion(input: AppConversionInput): Promise<AppC
       record(path, { kind: 'unrecognized', reason: `it is a binary file of the app root (${name}): move it to public/ by hand (Next serves public/favicon.ico), then run migrate again` });
       continue;
     }
-    const place = destinationFor(path, host, coreRoute !== undefined);
+    const place = destinationFor(path, host, coreRoute !== undefined, apiDir);
     if ('reason' in place) {
       record(path, { kind: 'unrecognized', reason: place.reason });
       continue;
@@ -628,10 +648,11 @@ export async function planAppConversion(input: AppConversionInput): Promise<AppC
       continue;
     }
     if (isRoute) {
-      const surface = place.destination.startsWith('api/') ? 'api' : 'templates';
+      const isApi = place.destination.startsWith(`${apiDir}/`);
+      const surface = isApi ? apiDir : 'templates';
       const withoutExtension = place.destination.slice(surface.length + 1).replace(/\.[^.]+$/, '');
       // A file of api/ is served at /api/<path>; templates/ replaces the route at the same path
-      const target = surface === 'api' ? place.destination : path;
+      const target = isApi ? `api/${place.destination.slice(apiDir.length + 1)}` : path;
       try {
         await host.emit({
           kind: host.kindForFileStem(routeStem) as string,
@@ -710,14 +731,14 @@ async function facadeShape(host: CoreHost, route: CoreRoute, path: string, hostR
 }
 
 /** The project source a file of the app tree would be the generated facade of (`templates/<path>` or `api/<path>`), when it is exactly that. */
-async function projectFacadeMatch(host: CoreHost, hostRoot: string, path: string, content: string): Promise<string | null> {
+async function projectFacadeMatch(host: CoreHost, hostRoot: string, path: string, content: string, apiDir: string): Promise<string | null> {
   const parts = splitName(posix.basename(path));
   const routeStem = posix.basename(path).split('.')[0];
   const kind = parts && ROUTE_FILE_EXTENSIONS.includes(parts.extension) ? host.kindForFileStem(routeStem) : null;
   if (!parts || !kind) return null;
   const withoutExtension = path.slice(0, path.length - parts.extension.length - 1);
   const candidates = [{ surface: 'templates', rest: withoutExtension, target: path }];
-  if (path.startsWith('api/')) candidates.push({ surface: 'api', rest: withoutExtension.slice('api/'.length), target: path });
+  if (path.startsWith('api/')) candidates.push({ surface: apiDir, rest: withoutExtension.slice('api/'.length), target: path });
   for (const { surface, rest, target } of candidates) {
     for (const extension of ROUTE_FILE_EXTENSIONS) {
       const file = join(hostRoot, surface, `${rest}.${extension}`);
