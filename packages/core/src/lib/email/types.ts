@@ -110,3 +110,12 @@ export interface OtpVerificationEmailData extends EmailTemplateData {
    */
   expiresIn?: number;
 }
+
+export interface MagicLinkEmailData extends EmailTemplateData {
+  email: string;
+  /** The single-use sign-in link. */
+  url: string;
+  appName: string;
+  /** Link lifetime in seconds, from `resolveMagicLinkExpiresIn`. */
+  expiresIn?: number;
+}

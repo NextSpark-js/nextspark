@@ -55,9 +55,19 @@ describe('auth methods presets', () => {
   })
 
   test('unknown entries are dropped with a warning; duplicates removed', () => {
-    const methods = resolveAuthMethods({ methods: ['google', 'magic-link', 'google', 'email-otp'] })
+    const methods = resolveAuthMethods({ methods: ['google', 'sms-code', 'google', 'email-otp'] })
     expect(methods).toEqual(['google', 'email-otp'])
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('magic-link'))
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('sms-code'))
+  })
+
+  test("'magic-link' is an accepted method, opt-in, and a passwordless one", () => {
+    expect(resolveAuthMethods({ methods: ['magic-link', 'google'] })).toEqual(['magic-link', 'google'])
+    expect(warnSpy).not.toHaveBeenCalled()
+    expect(DEFAULT_AUTH_METHODS).not.toContain('magic-link')
+    expect(isPasswordlessPreset(['magic-link', 'google'])).toBe(true)
+    expect(isPasswordlessPreset(['magic-link', 'email-password'])).toBe(false)
+    expect(getPrimaryEmailMethod(['google', 'magic-link', 'email-otp'])).toBe('magic-link')
+    expect(getPrimaryEmailMethod(['email-otp', 'magic-link'])).toBe('email-otp')
   })
 
   test('an empty or fully invalid list falls back to the passwordless preset', () => {

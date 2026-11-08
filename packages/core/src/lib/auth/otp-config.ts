@@ -49,7 +49,7 @@ function resolveNumber(value: unknown, fallback: number, field: string): number 
   // is not a short expiry — it floors to zero, an OTP that is dead on arrival.
   if (!isPositiveNumber(value) || Math.floor(value) < 1) {
     console.warn(
-      `[Auth] Ignoring invalid auth.otp.${field} (${String(value)}); using default ${fallback}`
+      `[Auth] Ignoring invalid ${field} (${String(value)}); using default ${fallback}`
     )
     return fallback
   }
@@ -68,9 +68,9 @@ export function resolveOtpConfig(
 ): ResolvedOtpConfig {
   const cfg: AuthOtpConfig = authConfig?.otp ?? {}
 
-  const expiresIn = resolveNumber(cfg.expiresIn, DEFAULT_OTP_CONFIG.expiresIn, 'expiresIn')
+  const expiresIn = resolveNumber(cfg.expiresIn, DEFAULT_OTP_CONFIG.expiresIn, 'auth.otp.expiresIn')
 
-  let otpLength = resolveNumber(cfg.otpLength, DEFAULT_OTP_CONFIG.otpLength, 'otpLength')
+  let otpLength = resolveNumber(cfg.otpLength, DEFAULT_OTP_CONFIG.otpLength, 'auth.otp.otpLength')
   if (otpLength < MIN_OTP_LENGTH || otpLength > MAX_OTP_LENGTH) {
     console.warn(
       `[Auth] auth.otp.otpLength (${otpLength}) is outside ${MIN_OTP_LENGTH}-${MAX_OTP_LENGTH}; using default ${DEFAULT_OTP_CONFIG.otpLength}`
@@ -79,6 +79,14 @@ export function resolveOtpConfig(
   }
 
   return { expiresIn, otpLength }
+}
+
+/** A sign-in link lives as long as a code by default (Better Auth's own default too). */
+export const DEFAULT_MAGIC_LINK_EXPIRES_IN = 60 * 5
+
+/** Lifetime of an emailed sign-in link, in seconds: `auth.magicLink.expiresIn` or the default. */
+export function resolveMagicLinkExpiresIn(authConfig?: Pick<AuthConfig, 'magicLink'> | null): number {
+  return resolveNumber(authConfig?.magicLink?.expiresIn, DEFAULT_MAGIC_LINK_EXPIRES_IN, 'auth.magicLink.expiresIn')
 }
 
 /**

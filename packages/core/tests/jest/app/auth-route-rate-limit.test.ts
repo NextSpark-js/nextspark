@@ -125,6 +125,13 @@ describe('auth route rate limit (#364)', () => {
     expect((await garbage()).status).toBe(429)
   })
 
+  test('asking for a sign-in link draws from the same per-email budget as asking for a code', async () => {
+    const email = 'ana@example.com'
+    for (let i = 0; i < 3; i++) expect((await post('/api/auth/email-otp/send-verification-otp', { email, type: 'sign-in' })).status).toBe(200)
+    for (let i = 0; i < 2; i++) expect((await post('/api/auth/sign-in/magic-link', { email })).status).toBe(200)
+    expect((await post('/api/auth/sign-in/magic-link', { email })).status).toBe(429)
+  })
+
   test('resending the verification email is charged per email', async () => {
     for (let i = 0; i < 5; i++) expect((await post('/api/auth/send-verification-email', { email: 'ana@example.com' })).status).toBe(200)
     expect((await post('/api/auth/send-verification-email', { email: 'ana@example.com' })).status).toBe(429)

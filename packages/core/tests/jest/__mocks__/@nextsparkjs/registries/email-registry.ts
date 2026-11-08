@@ -16,12 +16,14 @@
 import verifyEmail from '../../../../../src/emails/verify-email'
 import resetPassword from '../../../../../src/emails/reset-password'
 import otpVerification from '../../../../../src/emails/otp-verification'
+import magicLink from '../../../../../src/emails/magic-link'
 import teamInvitation from '../../../../../src/emails/team-invitation'
 
 export const EMAIL_REGISTRY = {
   'verify-email': verifyEmail,
   'reset-password': resetPassword,
   'otp-verification': otpVerification,
+  'magic-link': magicLink,
   'team-invitation': teamInvitation,
 } as const
 
@@ -31,11 +33,12 @@ export const EMAIL_REGISTRY_METADATA = {
   'verify-email': { source: 'core' as const, overridden: false },
   'reset-password': { source: 'core' as const, overridden: false },
   'otp-verification': { source: 'core' as const, overridden: false },
+  'magic-link': { source: 'core' as const, overridden: false },
   'team-invitation': { source: 'core' as const, overridden: false },
 } as const
 
 export const EMAIL_REGISTRY_INFO = {
   totalTemplates: 4,
   generatedAt: 'test-mock',
-  slugs: ['verify-email', 'reset-password', 'otp-verification', 'team-invitation'] as const,
+  slugs: ['verify-email', 'reset-password', 'otp-verification', 'magic-link', 'team-invitation'] as const,
 } as const

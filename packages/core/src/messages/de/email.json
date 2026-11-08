@@ -39,6 +39,18 @@
     "copyright": "© {year} {appName}. Alle Rechte vorbehalten.",
     "footerLine1": "Dies ist eine automatische E-Mail von {appName}."
   },
+  "magicLink": {
+    "subject": "Ihr Anmeldelink - {appName}",
+    "headerSubtitle": "Anmeldelink",
+    "title": "Bei {appName} anmelden",
+    "intro": "Klicken Sie auf die Schaltfläche, um sich anzumelden. Dieser Link funktioniert nur einmal.",
+    "button": "Anmelden",
+    "linkFallback": "Falls die Schaltfläche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:",
+    "expiresNotice": "Dieser Link läuft in {minutes, plural, =0 {weniger als einer Minute} one {# Minute} other {# Minuten}} ab.",
+    "ignoreNotice": "Wenn Sie diesen Link nicht angefordert haben, können Sie diese E-Mail ignorieren.",
+    "copyright": "© {year} {appName}. Alle Rechte vorbehalten.",
+    "footerLine1": "Dies ist eine automatische E-Mail von {appName}."
+  },
   "teamInvitation": {
     "subject": "Sie wurden eingeladen, {teamName} bei {appName} beizutreten",
     "headerSubtitle": "Team-Einladung",

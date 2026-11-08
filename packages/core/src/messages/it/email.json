@@ -39,6 +39,18 @@
     "copyright": "© {year} {appName}. Tutti i diritti riservati.",
     "footerLine1": "Questa è un'email automatica di {appName}."
   },
+  "magicLink": {
+    "subject": "Il tuo link di accesso - {appName}",
+    "headerSubtitle": "Link di accesso",
+    "title": "Accedi a {appName}",
+    "intro": "Fai clic sul pulsante qui sotto per accedere. Questo link funziona una sola volta.",
+    "button": "Accedi",
+    "linkFallback": "Se il pulsante non funziona, copia e incolla questo link nel browser:",
+    "expiresNotice": "Questo link scade tra {minutes, plural, =0 {meno di un minuto} one {# minuto} other {# minuti}}.",
+    "ignoreNotice": "Se non hai richiesto questo link, puoi ignorare questa email.",
+    "copyright": "© {year} {appName}. Tutti i diritti riservati.",
+    "footerLine1": "Questa è un'email automatica di {appName}."
+  },
   "teamInvitation": {
     "subject": "Sei stato invitato a unirti a {teamName} su {appName}",
     "headerSubtitle": "Invito al team",

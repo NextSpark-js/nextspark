@@ -12,8 +12,9 @@
  * failed, so the request ends with EMAIL_SEND_FAILED instead of the platform's
  * own timeout.
  *
- * Only sign-in codes are tracked: Better Auth sends one for every address,
- * known or not, so the error tells nothing about whether an account exists.
+ * Only sign-in codes and sign-in links are tracked: Better Auth sends one for
+ * every address, known or not, so the error tells nothing about whether an
+ * account exists.
  * Verification and password-reset codes go only to existing accounts, and
  * their failures stay in the log.
  */

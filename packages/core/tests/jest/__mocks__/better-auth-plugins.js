@@ -5,4 +5,5 @@
 
 module.exports = {
   emailOTP: jest.fn(() => ({})),
+  magicLink: jest.fn(() => ({})),
 }

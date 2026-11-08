@@ -24,7 +24,7 @@ export const SOCIAL_PROVIDER_LABELS: Readonly<Record<SocialLoginMethod, string>>
 }
 
 /** Every method the core knows how to render/serve. */
-export const AUTH_LOGIN_METHODS: readonly AuthLoginMethod[] = ['email-otp', ...SOCIAL_LOGIN_METHODS, 'email-password']
+export const AUTH_LOGIN_METHODS: readonly AuthLoginMethod[] = ['email-otp', 'magic-link', ...SOCIAL_LOGIN_METHODS, 'email-password']
 
 /** Named bundles of login methods. Arrays are in UI priority order. */
 export const AUTH_PRESETS: Readonly<Record<AuthPreset, readonly AuthLoginMethod[]>> = {
@@ -79,23 +79,23 @@ export function isAuthMethodEnabled(methods: readonly AuthLoginMethod[], method:
 }
 
 /**
- * True when the login has NO password path: a one-time code is offered and
- * `'email-password'` is not. Google may or may not be present.
+ * True when the login has NO password path: a one-time code or a sign-in link
+ * is offered and `'email-password'` is not. Google may or may not be present.
  */
 export function isPasswordlessPreset(methods: readonly AuthLoginMethod[]): boolean {
-  return methods.includes('email-otp') && !methods.includes('email-password')
+  return (methods.includes('email-otp') || methods.includes('magic-link')) && !methods.includes('email-password')
 }
 
 /**
  * The email-based method the login form should open with: the first of
- * `'email-otp'` / `'email-password'` in the configured order, or null when the
- * app is Google-only.
+ * `'email-otp'` / `'magic-link'` / `'email-password'` in the configured order,
+ * or null when the app is Google-only.
  */
 export function getPrimaryEmailMethod(
   methods: readonly AuthLoginMethod[]
-): Extract<AuthLoginMethod, 'email-otp' | 'email-password'> | null {
+): Extract<AuthLoginMethod, 'email-otp' | 'magic-link' | 'email-password'> | null {
   for (const method of methods) {
-    if (method === 'email-otp' || method === 'email-password') return method
+    if (method === 'email-otp' || method === 'magic-link' || method === 'email-password') return method
   }
   return null
 }

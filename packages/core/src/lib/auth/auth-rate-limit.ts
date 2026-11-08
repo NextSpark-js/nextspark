@@ -19,6 +19,7 @@ const CHARGED: Record<string, 'send' | 'verify' | 'password' | undefined> = {
   'email-otp/request-password-reset': 'send',
   'forget-password/email-otp': 'send',
   'request-password-reset': 'send',
+  'sign-in/magic-link': 'send',
   // try a code
   'sign-in/email-otp': 'verify',
   'email-otp/check-verification-otp': 'verify',

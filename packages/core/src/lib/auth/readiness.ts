@@ -589,7 +589,7 @@ export function evaluateAuthReadiness(input: AuthReadinessInput): AuthReadinessR
   const socialEnabled = (provider: SocialLoginMethod) => input.authConfig?.providers?.[provider]?.enabled !== false
 
   const providerBackedEmailMethods = declaredMethods.filter(
-    (method) => method === 'email-otp' || (method === 'email-password' && passwordEnabled)
+    (method) => method === 'email-otp' || method === 'magic-link' || (method === 'email-password' && passwordEnabled)
   )
   if (providerBackedEmailMethods.length > 0) {
     const emailStatus = evaluateEmailConfiguration(input, diagnostics)

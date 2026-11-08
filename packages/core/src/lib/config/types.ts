@@ -637,6 +637,9 @@ export interface AuthOtpConfig {
  *   user (Better Auth `emailOTP` plugin, sent through the configured email
  *   provider — Resend in the default setup). A first sign-in creates the
  *   account, so no separate signup form is needed.
+ * - `'magic-link'`: passwordless — a single-use sign-in link is emailed to the
+ *   user (Better Auth `magicLink` plugin, sent through the configured email
+ *   provider). Opt-in: only an app that lists it serves its endpoints.
  * - `'google'`: Google OAuth (needs GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET;
  *   also gated by `providers.google.enabled`).
  * - `'github'`, `'microsoft'`, `'apple'`: the other built-in social providers
@@ -645,7 +648,7 @@ export interface AuthOtpConfig {
  * - `'email-password'`: classic email + password, with signup and
  *   forgot/reset-password flows.
  */
-export type AuthLoginMethod = 'email-otp' | SocialLoginMethod | 'email-password'
+export type AuthLoginMethod = 'email-otp' | 'magic-link' | SocialLoginMethod | 'email-password'
 
 /** The social providers the core ships a button, readiness check and profile mapping for. */
 export type SocialLoginMethod = 'google' | 'github' | 'microsoft' | 'apple'
@@ -667,8 +670,8 @@ export interface AuthConfig {
    *
    * Drives the login templates (web `LoginForm`, mobile login screen) and
    * `PUBLIC_AUTH_CONFIG.methods`. The first email method in the list
-   * (`'email-otp'` or `'email-password'`) is the one the login form opens
-   * with; when both are listed the user can switch between them.
+   * (`'email-otp'`, `'magic-link'` or `'email-password'`) is the one the login
+   * form opens with; when several are listed the user can switch between them.
    *
    * Default: the passwordless preset `['email-otp', 'google']` — the login has
    * no password field at all. Themes override it in their app.config.ts:
@@ -709,6 +712,12 @@ export interface AuthConfig {
    * core defaults (5 minutes, 6 digits).
    */
   otp?: AuthOtpConfig
+
+  /** Sign-in link settings (method `'magic-link'`). */
+  magicLink?: {
+    /** Lifetime of an emailed link, in seconds. Default: 300 (5 minutes). */
+    expiresIn?: number
+  }
 
   /** OAuth provider settings */
   providers?: AuthProvidersConfig

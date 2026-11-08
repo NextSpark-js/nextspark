@@ -12,6 +12,7 @@ import { getClientIp } from "@nextsparkjs/core/lib/api/client-ip";
 import { withSignupContext } from "@nextsparkjs/core/lib/auth-context";
 import { dispatchSecurityNotificationsForRequest } from "@nextsparkjs/core/lib/auth/security-notifications";
 import { verifyEmailPageUrl } from "@nextsparkjs/core/lib/auth/verify-email-link";
+import { magicLinkFailurePage } from "@nextsparkjs/core/lib/auth/magic-link";
 import { withBasePathRequest } from "@nextsparkjs/core/lib/base-path";
 import { getAuthReadinessResponse } from "@nextsparkjs/core/lib/auth/runtime-readiness";
 import { withCodeSendOutcome } from "@nextsparkjs/core/lib/auth/code-send";
@@ -56,7 +57,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
   // matches the header: the value only maps to an app-configured role via
   // roleMap (never an arbitrary role), so it cannot be used to escalate.
   const isOAuthCallback = pathname.includes('/api/auth/callback/');
-  const signupIntent = isOAuthCallback
+  // A sign-in link is the same kind of browser GET, and its first use creates the account
+  const isMagicLinkVerify = pathname.includes('/api/auth/magic-link/verify');
+  const signupIntent = isOAuthCallback || isMagicLinkVerify
     ? (req.cookies.get('signup-intent')?.value || undefined)
     : undefined;
 
@@ -64,12 +67,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
   const authReq = withBasePathRequest(req);
 
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
-  return wrapAuthHandlerWithCors(
+  const response = await wrapAuthHandlerWithCors(
     signupIntent
       ? () => withSignupContext({ signupIntent }, () => handlers.GET(authReq))
       : () => handlers.GET(authReq),
     req
   );
+  return isMagicLinkVerify ? magicLinkFailurePage(response, req.url) : response;
 }
 
 // Intercept signup requests to validate registration mode

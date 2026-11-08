@@ -34,6 +34,31 @@ afterEach(() => {
   console.error = originalError
 })
 
+describe('sign-in link readiness', () => {
+  test('it is offered with a working provider, and not without one', () => {
+    expect(getPublicAuthReadiness({ authConfig: { methods: ['magic-link'] }, env: { ...production, ...validEmail } }).availableMethods).toEqual(['magic-link'])
+    expect(getPublicAuthReadiness({ authConfig: { methods: ['magic-link'] }, env: production })).toMatchObject({ status: 'unavailable', availableMethods: [] })
+    // the method goes; the reason stays in the diagnostics
+    const missing = getRuntimeAuthReadiness({ authConfig: { methods: ['magic-link', 'google'] }, env: { ...production, ...validGoogle } })
+    expect(missing.availableMethods).toEqual(['google'])
+    expect(missing.diagnostics.map(({ code }) => code)).toEqual(expect.arrayContaining([expect.stringMatching(/^(EMAIL|RESEND)_/)]))
+  })
+
+  test.each([
+    ['POST', '/api/auth/sign-in/magic-link'],
+    ['GET', '/api/auth/magic-link/verify'],
+  ])('%s %s answers 503 before the provider code without a working provider, and runs with one', async (method, path) => {
+    const blocked = await withAuthRequestReadiness(request(path, { method }), okHandler, { authConfig: { methods: ['magic-link'] }, env: production })
+    expect(blocked.status).toBe(503)
+    expect(await blocked.json()).toEqual({ error: 'Authentication method unavailable', code: 'AUTH_METHOD_UNAVAILABLE', method: 'magic-link' })
+    expect(okHandler).not.toHaveBeenCalled()
+
+    const allowed = await withAuthRequestReadiness(request(path, { method }), okHandler, { authConfig: { methods: ['magic-link'] }, env: { ...production, ...validEmail } })
+    expect(allowed.status).toBe(200)
+    expect(okHandler).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('runtime auth readiness adapter', () => {
   test('supplies runtime environment and resolved config to the pure evaluator', () => {
     const ready = getRuntimeAuthReadiness({

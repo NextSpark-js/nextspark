@@ -2,10 +2,11 @@ import { betterAuth, APIError } from "better-auth";
 import type { Pool } from "pg";
 import { createPool } from './db-pool';
 import { nextCookies } from "better-auth/next-js";
-import { emailOTP } from "better-auth/plugins";
+import { emailOTP, magicLink } from "better-auth/plugins";
 import { parseSSLConfig, stripSSLParams, queryOne } from './db';
 import { EmailFactory } from './email';
 import {
+  sendMagicLinkEmail,
   sendOtpVerificationEmail,
 } from './email/send';
 import { sendResetPasswordCallback, sendVerificationEmailCallback } from './auth-email-callbacks';
@@ -22,8 +23,8 @@ import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
-import { resolveOtpConfig } from './auth/otp-config';
-import { isPasswordLoginEnabled } from './auth/auth-methods';
+import { resolveMagicLinkExpiresIn, resolveOtpConfig } from './auth/otp-config';
+import { isPasswordLoginEnabled, resolveAuthMethods } from './auth/auth-methods';
 import { sessionSecretProblem } from './auth/readiness';
 import { isRuntimeEmailAvailable } from './auth/runtime-readiness';
 import { trackCodeSend } from './auth/code-send';
@@ -124,6 +125,7 @@ const sessionConfig = resolveSessionConfig(AUTH_CONFIG);
 // resolved values through PUBLIC_AUTH_CONFIG.otp, so the countdown it shows is
 // derived from what the server enforces instead of restating it.
 const otpConfig = resolveOtpConfig(AUTH_CONFIG);
+const magicLinkExpiresIn = resolveMagicLinkExpiresIn(AUTH_CONFIG);
 
 // The social provider map (lib/auth/social-providers): the built-in providers
 // auth.methods or auth.providers lists whose credentials are ready (Google is
@@ -338,6 +340,36 @@ export const auth = betterAuth({
           expiresIn: otpConfig.expiresIn,
           sendVerificationOnSignUp: false,
           disableSignUp: false, // auto-create user on first OTP sign-in
+        })]
+      : []),
+    // Single-use sign-in link by email (AUTH_CONFIG.methods 'magic-link', opt-in).
+    // The gates are the code's: the link's first use creates the account through
+    // the same user.create.before hook, with the address it just proved.
+    ...(resolveAuthMethods(AUTH_CONFIG).includes('magic-link') && isRuntimeEmailAvailable()
+      ? [magicLink({
+          sendMagicLink({ email, url }) {
+            const send = (async () => {
+              try {
+                const template = await sendMagicLinkEmail({
+                  email,
+                  url,
+                  appName: process.env.NEXT_PUBLIC_APP_NAME || APP_NAME,
+                  expiresIn: magicLinkExpiresIn,
+                }, I18N_CONFIG.defaultLocale);
+                const response = await getEmailService().send({ to: email, ...template });
+                if (!response.success) throw new Error(response.error || 'the email provider did not send it');
+              } catch (error) {
+                // The provider's error stays in the server log
+                console.error('[auth] The sign-in link email could not be sent:', error);
+                throw new Error('The sign-in link email could not be sent');
+              }
+            })();
+            // Not awaited here: a failed or stuck send becomes the route's bounded EMAIL_SEND_FAILED (lib/auth/code-send)
+            trackCodeSend(send).catch(() => {});
+          },
+          expiresIn: magicLinkExpiresIn,
+          storeToken: 'hashed', // a read of the verification table gives no usable link
+          disableSignUp: false, // auto-create user on the first use of a link
         })]
       : []),
     nextCookies(), // MUST be the last plugin for Next.js cookie handling

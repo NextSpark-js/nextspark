@@ -6,6 +6,7 @@
  * Started by registration-gates.test.ts and social-providers.test.ts under tsx with this folder's tsconfig.
  */
 import { createPrivateKey, createPublicKey, sign } from 'node:crypto'
+import { createServer } from 'node:net'
 import { NextRequest } from 'next/server'
 
 type Step =
@@ -21,6 +22,11 @@ type Step =
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
   // POST /email-otp/send-verification-otp with an email provider that sends, fails or throws
   | { op: 'send-code'; email: string; type?: 'sign-in' | 'email-verification' | 'forget-password'; provider: 'ok' | 'fail' | 'throw' }
+  // POST /sign-in/magic-link with a provider that sends, fails or throws, or (smtp) the real SMTP provider against a fake server; the link is kept per address
+  | { op: 'magic-send'; email: string; provider: 'ok' | 'fail' | 'throw' | 'smtp'; callbackURL?: string }
+  // Opens the address's kept link as a browser would; callbackURL rewrites it in the link
+  | { op: 'magic-open'; email: string; callbackURL?: string; signupIntent?: string }
+  | { op: 'wait'; email: string; ms: number }
 
 const CORE_SRC = new URL('../../../../src/', import.meta.url)
 const authRoute = await import(new URL('routes/api/auth/[...all]/route.ts', CORE_SRC).href)
@@ -93,6 +99,50 @@ async function startSocial(provider: string) {
 const callbackGet = (url: string, cookie: string) =>
   authRoute.GET(new NextRequest(url, { headers: { cookie } }), { params: Promise.resolve({ all: ['callback', new URL(url).pathname.split('/').pop()!] }) })
 
+// A minimal SMTP server, for the steps that go through the real provider: it keeps the text of each message
+const smtpMessages: string[] = []
+if (process.env.EMAIL_PROVIDER === 'smtp') {
+  createServer((socket) => {
+    let inData = false
+    let data = ''
+    let line = ''
+    socket.write('220 fake\r\n')
+    socket.on('error', () => {})
+    socket.on('data', (chunk) => {
+      if (inData) {
+        data += chunk.toString()
+        if (data.endsWith('\r\n.\r\n')) {
+          inData = false
+          smtpMessages.push(data)
+          data = ''
+          socket.write('250 ok\r\n')
+        }
+        return
+      }
+      line += chunk.toString()
+      if (!line.endsWith('\r\n')) return
+      const command = line.slice(0, 4).toUpperCase()
+      line = ''
+      if (command === 'DATA') {
+        inData = true
+        socket.write('354 go\r\n')
+      } else if (command === 'QUIT') {
+        socket.end('221 bye\r\n')
+      } else {
+        socket.write('250 ok\r\n')
+      }
+    })
+  }).listen(Number(process.env.SMTP_PORT), '127.0.0.1')
+}
+
+/** The link of a sent message, whose body may be quoted-printable. */
+const hrefIn = (message: string) => {
+  const text = message.replace(/=\r\n/g, '').replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+  return /href="([^"]+)"/.exec(text)?.[1]
+}
+
+const magicLinks = new Map<string, string>()
+
 async function run(step: Step) {
   switch (step.op) {
     case 'password': {
@@ -164,6 +214,39 @@ async function run(step: Step) {
       await new Promise(resolve => setTimeout(resolve, 200))
       return { ...(await outcome(res)), body, sends }
     }
+    case 'magic-send': {
+      let sends = 0
+      const { provider, email } = step
+      if (provider !== 'smtp') {
+        EmailFactory.create = () => ({
+          send: async (message: { html: string }) => {
+            sends++
+            if (provider === 'throw') throw new Error('stub provider detail: connection reset')
+            if (provider === 'fail') return { id: '', success: false, error: 'stub provider detail: domain not verified' }
+            magicLinks.set(email, hrefIn(message.html)!)
+            return { id: 'stub', success: true }
+          },
+          verify: async () => true,
+        })
+      }
+      const before = smtpMessages.length
+      const res = await authRoute.POST(json('/api/auth/sign-in/magic-link', { email, callbackURL: step.callbackURL ?? '/dashboard', errorCallbackURL: '/auth-error' }))
+      const body = await res.clone().text()
+      if (provider === 'smtp' && smtpMessages.length > before) {
+        sends = smtpMessages.length - before
+        magicLinks.set(email, hrefIn(smtpMessages.at(-1)!)!)
+      }
+      return { ...(await outcome(res)), body, sends, link: magicLinks.get(email) }
+    }
+    case 'magic-open': {
+      const link = new URL(magicLinks.get(step.email)!)
+      if (step.callbackURL) link.searchParams.set('callbackURL', step.callbackURL)
+      const res = await callbackGet(link.href, step.signupIntent ? `signup-intent=${step.signupIntent}` : '')
+      return { ...(await outcome(res)), setsSession: res.headers.getSetCookie().some(c => c.includes('session_token')) }
+    }
+    case 'wait':
+      await new Promise(resolve => setTimeout(resolve, step.ms))
+      return { status: 0 }
     case 'invite':
       return outcome(await inviteRoute.POST(json('/api/v1/auth/signup-with-invite', { email: step.email, password: PASSWORD, firstName: 'Invited', inviteToken: step.token })))
   }

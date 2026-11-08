@@ -15,7 +15,7 @@ import it from '@/core/messages/it/index'
 import pt from '@/core/messages/pt/index'
 
 const LOCALES = { en, es, de, fr, it, pt } as Record<string, Record<string, any>>
-const EMAIL_TEMPLATES = ['otpVerification', 'verifyEmail', 'resetPassword', 'teamInvitation']
+const EMAIL_TEMPLATES = ['otpVerification', 'magicLink', 'verifyEmail', 'resetPassword', 'teamInvitation']
 
 describe('core messages expose the email namespace', () => {
   test.each(Object.keys(LOCALES))('%s exports email.* for every server email template', (locale) => {

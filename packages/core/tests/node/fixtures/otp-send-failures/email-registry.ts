@@ -8,5 +8,6 @@ export const EMAIL_REGISTRY = {
   'verify-email': template('Verify your email'),
   'reset-password': template('Reset your password'),
   'otp-verification': template('Your code'),
+  'magic-link': (data: { url: string }) => ({ subject: 'Your link', html: `<a href="${data.url}">Sign in</a>`, text: data.url }),
   'team-invitation': template('You are invited'),
 } as const

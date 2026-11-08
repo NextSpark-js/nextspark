@@ -6,5 +6,6 @@ export {
   sendVerifyEmail,
   sendResetPasswordEmail,
   sendOtpVerificationEmail,
+  sendMagicLinkEmail,
   sendTeamInvitationEmail,
 } from './send';

@@ -112,7 +112,7 @@ export function getPublicAuthReadiness(options: RuntimeAuthReadinessOptions = {}
 }
 
 function evaluateProvider(
-  method: Extract<AuthLoginMethod, 'email-otp'> | SocialLoginMethod,
+  method: Extract<AuthLoginMethod, 'email-otp' | 'magic-link'> | SocialLoginMethod,
   options: RuntimeAuthReadinessOptions,
 ): AuthReadinessResult {
   const authConfig = options.authConfig === undefined ? AUTH_CONFIG : options.authConfig
@@ -234,11 +234,12 @@ export async function getAuthReadinessResponse(
   ].includes(route)
   const isGeneralEmailDeliveryOperation = ['/send-verification-email', '/change-email'].includes(route)
 
-  if (isOtpOperation) {
-    method = 'email-otp'
-    const readiness = evaluateProvider('email-otp', options)
+  const emailSignIn = isOtpOperation ? 'email-otp' as const : route === '/sign-in/magic-link' || route === '/magic-link/verify' ? 'magic-link' as const : null
+  if (emailSignIn) {
+    method = emailSignIn
+    const readiness = evaluateProvider(emailSignIn, options)
     diagnostics = readiness.diagnostics
-    if (!readiness.availableMethods.includes('email-otp')) {
+    if (!readiness.availableMethods.includes(emailSignIn)) {
       return unavailableResponse(method, diagnostics, pathname)
     }
   }

@@ -14,6 +14,7 @@ import type {
   VerificationEmailData,
   PasswordResetEmailData,
   OtpVerificationEmailData,
+  MagicLinkEmailData,
   TeamInvitationEmailData,
 } from './types';
 
@@ -34,6 +35,12 @@ export const sendOtpVerificationEmail = (
   locale?: string,
 ): EmailContent | Promise<EmailContent> =>
   EMAIL_REGISTRY['otp-verification'](data, locale);
+
+export const sendMagicLinkEmail = (
+  data: MagicLinkEmailData,
+  locale?: string,
+): EmailContent | Promise<EmailContent> =>
+  EMAIL_REGISTRY['magic-link'](data, locale);
 
 export const sendTeamInvitationEmail = (
   data: TeamInvitationEmailData,

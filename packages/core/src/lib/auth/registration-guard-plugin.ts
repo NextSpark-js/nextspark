@@ -54,15 +54,16 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
           // hook's refusal would never reach the form. The answer depends only
           // on the domain, never on whether an account exists, so it reveals
           // nothing about accounts.
-          matcher: (ctx) => ctx.path === '/email-otp/send-verification-otp' || ctx.path === '/sign-up/email',
+          matcher: (ctx) => ctx.path === '/email-otp/send-verification-otp' || ctx.path === '/sign-in/magic-link' || ctx.path === '/sign-up/email',
           handler: async (ctx) => {
             const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
             if (registrationMode !== 'domain-restricted' && registrationMode !== 'domain-open') return;
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             const body = ctx.body as { email?: unknown; type?: unknown } | undefined;
             // the handler gets the endpoint context the matcher saw; its type does not declare path
-            const signUp = (ctx as { path?: string }).path === '/sign-up/email';
-            if ((!signUp && body?.type !== 'sign-in') || typeof body?.email !== 'string' || allowedDomains.length === 0) return;
+            const path = (ctx as { path?: string }).path;
+            const signUp = path === '/sign-up/email';
+            if ((!signUp && path !== '/sign-in/magic-link' && body?.type !== 'sign-in') || typeof body?.email !== 'string' || allowedDomains.length === 0) return;
             if (!isDomainAllowed(body.email, allowedDomains)) {
               // The body is not validated yet: log a bounded, quoted domain so a crafted address cannot forge log lines
               console.log(`[Auth] Refused ${signUp ? 'a sign-up' : 'a sign-in code'} for a user at ${JSON.stringify((body.email.split('@').pop() ?? '').slice(0, 100))}: domain not in allowedDomains`);

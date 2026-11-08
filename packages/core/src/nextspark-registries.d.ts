@@ -842,7 +842,7 @@ declare module '@nextsparkjs/registries/api-presets-registry' {
 // Email Registry
 //
 // Keyed by slug ('verify-email', 'reset-password', 'otp-verification',
-// 'team-invitation', plus any consumer-defined slugs). Callers index with a
+// 'magic-link', 'team-invitation', plus any consumer-defined slugs). Callers index with a
 // known literal and pass their own typed `data`, so `any` here is the
 // correct (and only sound) parameter type for the shared function shape.
 // ============================================================================

@@ -39,6 +39,18 @@
     "copyright": "© {year} {appName}. All rights reserved.",
     "footerLine1": "This is an automated email from {appName}."
   },
+  "magicLink": {
+    "subject": "Your sign-in link - {appName}",
+    "headerSubtitle": "Sign-in link",
+    "title": "Sign in to {appName}",
+    "intro": "Click the button below to sign in. This link works once.",
+    "button": "Sign in",
+    "linkFallback": "If the button doesn't work, copy and paste this link into your browser:",
+    "expiresNotice": "This link expires in {minutes, plural, =0 {less than a minute} one {# minute} other {# minutes}}.",
+    "ignoreNotice": "If you didn't request this link, you can safely ignore this email.",
+    "copyright": "© {year} {appName}. All rights reserved.",
+    "footerLine1": "This is an automated email from {appName}."
+  },
   "teamInvitation": {
     "subject": "You've been invited to join {teamName} on {appName}",
     "headerSubtitle": "Team Invitation",
