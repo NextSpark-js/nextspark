@@ -34,8 +34,6 @@ No teams functionality. Single user owns all content.
 
 | Feature | owner | Description |
 |---------|-------|-------------|
-| `posts.export_json` | ✅ | Export posts to JSON format |
-| `posts.import_json` | ✅ | Import posts from JSON format |
 
 ---
 

@@ -20,8 +20,6 @@ Los permisos están configurados en `permissions.config.ts`:
 
 | Feature | Descripción | Roles |
 |---------|-------------|-------|
-| `posts.export_json` | Exportar posts a JSON | owner |
-| `posts.import_json` | Importar posts desde JSON | owner |
 
 ### Componentes
 

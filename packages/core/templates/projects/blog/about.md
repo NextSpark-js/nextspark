@@ -33,8 +33,6 @@ single-user
 
 | Feature | Descripción | Roles |
 |---------|-------------|-------|
-| posts.export_json | Exportar posts en formato JSON | owner |
-| posts.import_json | Importar posts desde JSON | owner |
 
 ## Permisos
 
