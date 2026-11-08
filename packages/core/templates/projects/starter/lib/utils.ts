@@ -146,7 +146,7 @@ export function getStatusColor(status: string): string {
       return 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
     case 'todo':
       return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-900/30'
-    case 'cancelled':
+    case 'blocked':
       return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30'
     default:
       return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-900/30'

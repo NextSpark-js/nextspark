@@ -19,4 +19,9 @@ describe('starter task helpers', () => {
     expect(getStatusColor('in-progress')).toContain('text-blue-600')
     expect(getStatusColor('in-progress')).not.toBe(getStatusColor('unknown'))
   })
+
+  it('colours a blocked task in red, since "blocked" is a stored status and "cancelled" is not', () => {
+    expect(getStatusColor('blocked')).toContain('text-red-600')
+    expect(getStatusColor('cancelled')).not.toContain('text-red-600')
+  })
 })
