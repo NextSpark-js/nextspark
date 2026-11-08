@@ -34,7 +34,8 @@ Read `.claude/commands/_monorepo/how-to/releases/release-version.md` completely 
 
 ```bash
 # Bump every package version
-scripts/packages/version.sh <major|minor|patch>
+scripts/packages/version.sh <major|minor|patch|beta>
+# beta keeps a beta release in its channel (0.1.0-beta.N -> 0.1.0-beta.N+1); patch would leave it for 0.1.1
 
 # Commit and tag
 git add packages/*/package.json plugins/*/package.json

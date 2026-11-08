@@ -370,14 +370,21 @@ scripts/packages/version.sh minor
 # For PATCH:
 scripts/packages/version.sh patch
 
+# To stay on the beta channel (0.1.0-beta.N -> 0.1.0-beta.N+1; patch would leave it for 0.1.1):
+scripts/packages/version.sh beta
+
 # For specific version:
 # set the version of every package to 2.5.3 by hand (version.sh takes only an increment type)
+
+# version.sh does not commit or tag; after it (add --yes to skip its confirmation):
+git add packages/*/package.json plugins/*/package.json
+git commit -m "chore: release vX.Y.Z"
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
 ```
 
 **Monitor output:**
 - Confirm the package versions are updated
-- Confirm Git commit created
-- Confirm Git tag created
+- Confirm the Git commit and tag created by the commands above
 - Capture new version number
 
 ### Step 11: Push Tags to Remote

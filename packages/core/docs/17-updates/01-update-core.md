@@ -310,6 +310,6 @@ If `pnpm update-core` answers `Command "update-core" not found`, the installed c
 
 ## See Also
 
-- [Release Version Command](./02-release-version.md) - Creating new core releases
+- [Releasing a Version](./02-release-version.md) - Creating new core releases
 - [Installation Guide](../02-getting-started/01-installation.md) - Initial setup
 - [Deployment](../14-deployment/01-deployment-overview.md) - Production deployment strategies

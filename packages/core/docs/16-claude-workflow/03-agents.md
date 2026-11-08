@@ -672,7 +672,7 @@ if (remainingTags.length > 0) {
 1. Analyze commits since last release
 2. Determine version bump (MAJOR/MINOR/PATCH)
 3. Create git tag
-4. Run `scripts/packages/version.sh <type>`
+4. Run `scripts/packages/version.sh <major|minor|patch|beta>`
 5. Generate changelog
 
 **Versioning Rules:**

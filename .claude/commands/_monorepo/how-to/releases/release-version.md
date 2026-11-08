@@ -83,7 +83,8 @@ else → PATCH
 
 ```bash
 # Bump every package version (a type, not a number)
-scripts/packages/version.sh <major|minor|patch>
+scripts/packages/version.sh <major|minor|patch|beta>
+# beta keeps a beta release in its channel (0.1.0-beta.N -> 0.1.0-beta.N+1); patch would leave it for 0.1.1
 
 # Commit version change
 git add packages/*/package.json plugins/*/package.json && git commit -m "chore: release vX.Y.Z"
