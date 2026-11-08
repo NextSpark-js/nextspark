@@ -28,7 +28,7 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
 
   const store = await import('../lib/store')
   const { handleStripeWebhook } = await import('../lib/webhooks/handler')
-  const { webhookDedupe } = await import('../lib/runtime')
+  const { appLink, mercadoPagoNotificationUrl, webhookDedupe } = await import('../lib/runtime')
   const { createMarketplaceCheckout, SellerAccountChangedError, SellerNotReadyError, refundMarketplacePayment } = await import('../lib/checkout')
   const { completeMercadoPagoOAuth, startSellerOnboarding } = await import('../lib/onboarding')
   const { rotateSellerTokenKeys } = await import('../lib/token-crypto')
@@ -242,6 +242,18 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
     await store.upsertAccount({ teamId: 'team-a', provider: 'stripe', providerAccountId: 'acct_new', status: 'active', chargesEnabled: true, payoutsEnabled: true })
     await assert.rejects(refundMarketplacePayment({ paymentId, idempotencyKey: 'k2' }, gateway), SellerAccountChangedError)
     assert.equal((await store.findPayment(paymentId))?.providerAccountId, 'acct_a')
+  })
+
+  await t.test('the links the plugin builds carry the base path', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.test'
+    process.env.__NEXT_ROUTER_BASEPATH = '/shop'
+    try {
+      assert.equal(appLink('/dashboard/settings/marketplace'), 'https://app.test/shop/dashboard/settings/marketplace')
+      assert.equal(mercadoPagoNotificationUrl('p1'), 'https://app.test/shop/api/plugins/marketplace-payments/webhooks/mercadopago?ref=p1&source_news=webhooks')
+    } finally {
+      delete process.env.__NEXT_ROUTER_BASEPATH
+      delete process.env.NEXT_PUBLIC_APP_URL
+    }
   })
 
   await t.test('reconnecting a disconnected Stripe seller saves the state the provider reports', async () => {

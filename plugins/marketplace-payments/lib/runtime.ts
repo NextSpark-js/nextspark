@@ -3,6 +3,7 @@
  */
 
 import { processWebhookEventOnce, webhookOutcomeResponse } from '@nextsparkjs/core/lib/billing/webhook-events'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 import { mercadoPagoClientId, mercadoPagoClientSecret, mercadoPagoSandbox, stripeSecretKey } from './env'
 import { createMercadoPagoGateway, type MercadoPagoGateway } from './mercadopago/gateway'
@@ -15,7 +16,7 @@ export const SETTINGS_PATH = '/dashboard/settings/marketplace'
 
 const appUrl = () => resolveAppUrl().replace(/\/+$/, '')
 
-export const appLink = (path: string) => `${appUrl()}${path}`
+export const appLink = (path: string) => `${appUrl()}${withBasePath(path)}`
 
 export function mercadoPagoGateway(): MercadoPagoGateway {
   return createMercadoPagoGateway({
