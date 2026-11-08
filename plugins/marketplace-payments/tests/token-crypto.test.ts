@@ -53,6 +53,13 @@ test('a removed key, another account, a tampered value or a bad format fail, and
   assert.throws(() => decryptToken(swapped.join('.'), parseTokenKeyring(`k2:${KEY2},k1:${KEY1}`), CONTEXT), /could not be decrypted/)
 })
 
+test('a stored value must carry the whole authentication tag', () => {
+  const keyring = parseTokenKeyring(`k1:${KEY1}`)
+  const parts = encryptToken('t0ken', keyring, CONTEXT).split('.')
+  parts[3] = Buffer.from(parts[3], 'base64url').subarray(0, 4).toString('base64url')
+  assert.throws(() => decryptToken(parts.join('.'), keyring, CONTEXT), /could not be decrypted/)
+})
+
 test('a keyring must be well formed and the error holds no key', () => {
   for (const value of [undefined, '', 'nokey', `:${KEY1}`, 'k1:short', `bad id:${KEY1}`, `k1:${KEY1},k1:${KEY2}`]) {
     assert.throws(() => parseTokenKeyring(value), (error: Error) => !error.message.includes(KEY1), String(value))

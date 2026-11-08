@@ -55,7 +55,7 @@ export function decryptToken(stored: string, keyring: TokenKeyring, context: str
   const key = keyring.keys.get(parts[1])
   if (!key) throw new Error('Stored token was encrypted with a key that is no longer configured')
   try {
-    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(parts[2], 'base64url'))
+    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(parts[2], 'base64url'), { authTagLength: 16 })
     decipher.setAAD(Buffer.from(context))
     decipher.setAuthTag(Buffer.from(parts[3], 'base64url'))
     return Buffer.concat([decipher.update(Buffer.from(parts[4], 'base64url')), decipher.final()]).toString('utf8')
