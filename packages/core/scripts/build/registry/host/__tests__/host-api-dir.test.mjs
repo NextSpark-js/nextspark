@@ -10,7 +10,7 @@ import { join } from 'node:path'
 
 import { discoverThemes } from '../../discovery/themes.mjs'
 import { PLAN_DIAGNOSTICS, planHost } from '../plan.mjs'
-import { checkHost, prepareHost, projectHostConfig } from '../prepare.mjs'
+import { checkHost, predictHost, prepareHost, projectHostConfig } from '../prepare.mjs'
 import { foreignFilesDiagnostic } from '../generation.mjs'
 import { loadFixtureCoreRoutes } from '../../../../../tests/fixtures/host-conformance/plan.mjs'
 import { PAGE, ROUTE, read, write } from './host-helpers.mjs'
@@ -125,6 +125,7 @@ test('a real project with the directory moved: the facade is the default one but
 
     write(moved.root, 'src/app/foreign/page.tsx', PAGE('Foreign'))
     await assert.rejects(prepareHost(movedConfig), /to templates\/ or server\/api\/ \(route sources\)/)
+    assert.match(JSON.stringify(await predictHost(movedConfig)), /to templates\/ or server\/api\/ \(route sources\)/)
   } finally {
     fallback.cleanup()
     moved.cleanup()
