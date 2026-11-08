@@ -221,6 +221,17 @@ describe('Registration Guard Plugin', () => {
       await expect(otpHandler(signUp('someone@other.example'))).resolves.toBeUndefined()
     })
 
+    test('a refused sign-in link is logged as a link, not as a code', async () => {
+      mockAuthConfig.registration.mode = 'domain-open'
+      mockAuthConfig.registration.allowedDomains = ['example.test']
+      const log = jest.spyOn(console, 'log').mockImplementation(() => {})
+      const plugin = registrationGuardPlugin()
+      const hook = plugin.hooks!.before![1]
+      await expect(hook.handler({ path: '/sign-in/magic-link', body: { email: 'a@other.example' } } as never)).rejects.toMatchObject({ body: { code: 'DOMAIN_NOT_ALLOWED' } })
+      expect(log.mock.calls.flat().join(' ')).toContain('Refused a sign-in link for a user at "other.example"')
+      log.mockRestore()
+    })
+
     test('refuses a sign-in code for a domain outside allowedDomains with a 403 DOMAIN_NOT_ALLOWED', async () => {
       await expect(otpHandler(otpCtx('someone@other.example'))).rejects.toMatchObject({
         status: 'FORBIDDEN',

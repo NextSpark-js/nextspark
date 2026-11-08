@@ -66,7 +66,7 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
             if ((!signUp && path !== '/sign-in/magic-link' && body?.type !== 'sign-in') || typeof body?.email !== 'string' || allowedDomains.length === 0) return;
             if (!isDomainAllowed(body.email, allowedDomains)) {
               // The body is not validated yet: log a bounded, quoted domain so a crafted address cannot forge log lines
-              console.log(`[Auth] Refused ${signUp ? 'a sign-up' : 'a sign-in code'} for a user at ${JSON.stringify((body.email.split('@').pop() ?? '').slice(0, 100))}: domain not in allowedDomains`);
+              console.log(`[Auth] Refused ${signUp ? 'a sign-up' : path === '/sign-in/magic-link' ? 'a sign-in link' : 'a sign-in code'} for a user at ${JSON.stringify((body.email.split('@').pop() ?? '').slice(0, 100))}: domain not in allowedDomains`);
               throw registrationError('DOMAIN_NOT_ALLOWED');
             }
           },
