@@ -102,7 +102,8 @@ function describeDiagnostic(diagnostic) {
  */
 /** A log line for a build running on Vercel with the project's routes still under the default api/ directory. */
 function vercelApiDirNotice(config, routes) {
-  if (!config.onVercel || config.project?.apiDir !== 'api') return []
+  if (!config.onVercel) return []
+  // A route's source starts with api/ only while apiDir is the default
   const count = routes.filter(route => route.source?.startsWith('api/')).length
   if (count === 0) return []
   return [{
