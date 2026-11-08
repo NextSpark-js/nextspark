@@ -43,3 +43,22 @@ for (const template of ['starter', 'blog', 'crm', 'productivity']) {
     }
   })
 }
+
+// react-native bundles a renderer for exactly one React: a web-mobile workspace declares that one in both apps (#286).
+for (const [projectType, expected] of [['web-mobile', '19.3.0'], ['web', '^19.3.1']] as const) {
+  test(`${projectType}: the web app declares ${expected} for react and react-dom`, async () => {
+    const previous = process.cwd()
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-react-pin-'))
+    process.chdir(dir)
+    try {
+      fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'web', dependencies: { react: '^19.3.1', 'react-dom': '^19.3.1' } }))
+      await updatePackageJson({ projectSlug: 'acme', projectType } as WizardConfig, {})
+      const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
+      assert.equal(pkg.dependencies.react, expected)
+      assert.equal(pkg.dependencies['react-dom'], expected)
+    } finally {
+      process.chdir(previous)
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+}

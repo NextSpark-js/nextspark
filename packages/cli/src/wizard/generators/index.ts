@@ -44,7 +44,7 @@ import { writeGitignore } from './git-init.js'
 import { writeProductionSignInEnv } from './production-sign-in-env.js'
 import { getDefaultProductionSignIn, type ProductionSignInResult } from '../prompts/production-sign-in.js'
 // Monorepo generator
-import { generateMonorepoStructure, isMonorepoProject, getWebDir, reconcileMobileSampleEntities } from './monorepo-generator.js'
+import { generateMonorepoStructure, isMonorepoProject, VERSIONS, getWebDir, reconcileMobileSampleEntities } from './monorepo-generator.js'
 import { isLocalPackageRef } from './local-package-refs.js'
 import { rangeFromCore, readCoreManifest } from './core-ranges.js'
 import { writeProxyFile, type ProxyFileResult } from './proxy-file-writer.js'
@@ -438,6 +438,13 @@ export async function updatePackageJson(
     } else if (!packageJson.devDependencies[name]) {
       packageJson.devDependencies[name] = version
     }
+  }
+
+  // One React in the workspace: react-native bundles a renderer for exactly VERSIONS.REACT and fails with
+  // "Incompatible React versions" on any other, so the mobile app pins it and the web app takes the same (#286).
+  if (isMonorepoProject(config)) {
+    packageJson.dependencies['react'] = VERSIONS.REACT
+    packageJson.dependencies['react-dom'] = VERSIONS.REACT
   }
 
   // What the project template's source imports (it ships no package.json of its own). Last, so an existing
