@@ -1,6 +1,5 @@
-import type { Metadata } from 'next'
-import { SuperadminLayout, defaultMetadata, withSuperadminMessages } from '../_internal/superadmin-layout'
+import { SuperadminLayout, generateMetadata, withSuperadminMessages } from '../_internal/superadmin-layout'
 
-export const metadata: Metadata = defaultMetadata
+export { generateMetadata }
 
 export default withSuperadminMessages(SuperadminLayout)

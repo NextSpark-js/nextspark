@@ -29,9 +29,8 @@ export const NAMESPACE_GROUPS = {
     'observability', 'permissions', 'settings', 'superadmin', 'teams', 'users', 'validation',
   ],
 
-  // DeveloperGuard and every devtools client view. 'superadmin' is for the style galleries (components/superadmin/misc),
-  // which the devtools style page renders and whose texts live in that namespace.
-  devtools: ['common', 'dev', 'devtools', 'permissions', 'superadmin'],
+  // DeveloperGuard and every devtools client view (the style galleries read `devtools.gallery`).
+  devtools: ['common', 'dev', 'devtools', 'permissions'],
 } as const
 
 /**

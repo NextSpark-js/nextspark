@@ -83,7 +83,9 @@ function UsersPage() {
   const t = useTranslations("superadmin");
   const tTeams = useTranslations("teams");
   const locale = useLocale();
-  const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
+  // a user role (member, developer, suspended, superadmin), else a team role, else the id as it comes
+  const roleLabel = (role: string) =>
+    t.has(`usersPage.roles.${role}`) ? t(`usersPage.roles.${role}`) : tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role;
   const roleOptions = [
     { value: "member", label: t("usersPage.roles.member") },
     { value: "developer", label: t("usersPage.roles.developer") },
@@ -371,7 +373,7 @@ function UsersPage() {
                   {Object.entries(usersData?.counts.teamRoleDistribution || {}).map(
                     ([role, count]) => (
                       <div key={role} className="flex justify-between text-xs">
-                        <span>{t("usersPage.roleEntry", { role: teamRoleLabel(role) })}</span>
+                        <span className="capitalize">{t("usersPage.roleEntry", { role: roleLabel(role) })}</span>
                         <span className="font-medium">{count}</span>
                       </div>
                     )

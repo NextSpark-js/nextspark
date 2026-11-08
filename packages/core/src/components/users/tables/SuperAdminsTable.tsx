@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
 import { useMutation } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -45,6 +44,7 @@ import {
 } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
 import { useCommonText } from '../../../lib/i18n/common-text';
+import { formatLocaleDate } from '../../../lib/i18n/format';
 import { useSession, type ClientSession } from '../../../lib/auth-client';
 import type { SessionUser } from '../../../lib/auth';
 import { useToast } from '../../../hooks/useToast';
@@ -89,6 +89,9 @@ export function SuperAdminsTable({
 
   const getRoleName = useRoleTranslations();
   const t = useTranslations('superadmin.users');
+  const tPage = useTranslations('superadmin.usersPage');
+  const tShared = useTranslations('superadmin.shared');
+  const locale = useLocale();
   const { toast } = useToast();
   const { data: session } = useSession();
   const viewerRole = ((session as ClientSession | null)?.user as SessionUser | undefined)?.role;
@@ -152,9 +155,9 @@ export function SuperAdminsTable({
     return (
       <div className="text-center py-8">
         <Shield className="mx-auto h-12 w-12 text-red-500" />
-        <h3 className="mt-4 text-lg font-medium">No superadmins found</h3>
+        <h3 className="mt-4 text-lg font-medium">{t('table.noSuperadmins')}</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          This is unusual - there should be at least one superadmin.
+          {t('table.noSuperadminsDescription')}
         </p>
       </div>
     );
@@ -165,12 +168,12 @@ export function SuperAdminsTable({
       <Table>
         <TableHeader className="bg-red-50">
           <TableRow>
-            <TableHead>Administrator</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Since</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t('table.administrator')}</TableHead>
+            <TableHead>{t('table.email')}</TableHead>
+            <TableHead>{t('table.role')}</TableHead>
+            <TableHead>{t('table.status')}</TableHead>
+            <TableHead>{t('table.since')}</TableHead>
+            <TableHead className="text-right">{t('table.actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -190,15 +193,15 @@ export function SuperAdminsTable({
                     </Avatar>
                     <div>
                       <div className="font-medium flex items-center gap-2">
-                        {admin.fullName || 'No name'}
+                        {admin.fullName || tPage('noName')}
                         {isCurrentUser && (
                           <Badge variant="outline" className="text-xs text-blue-600 border-blue-600">
-                            You
+                            {t('table.you')}
                           </Badge>
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        ID: {admin.id.slice(0, 8)}...
+                        {t('table.id', { id: `${admin.id.slice(0, 8)}...` })}
                       </div>
                     </div>
                   </div>
@@ -226,12 +229,12 @@ export function SuperAdminsTable({
                     {admin.emailVerified ? (
                       <Badge variant="default" className="bg-green-100 text-green-800">
                         <Shield className="mr-1 h-3 w-3" />
-                        Verified
+                        {t('table.verified')}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-red-600 border-red-600">
                         <AlertTriangle className="mr-1 h-3 w-3" />
-                        Unverified
+                        {t('table.unverified')}
                       </Badge>
                     )}
                   </div>
@@ -241,7 +244,7 @@ export function SuperAdminsTable({
                 <TableCell>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    {admin.createdAt ? format(new Date(admin.createdAt), 'MMM dd, yyyy') : 'Unknown'}
+                    {admin.createdAt ? formatLocaleDate(admin.createdAt, locale) : tShared('unknown')}
                   </div>
                 </TableCell>
 
@@ -255,20 +258,20 @@ export function SuperAdminsTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Admin Actions</DropdownMenuLabel>
+                      <DropdownMenuLabel>{t('actions.adminActions')}</DropdownMenuLabel>
                       <DropdownMenuItem 
                         className="cursor-pointer"
                       >
                         <Eye className="mr-2 h-4 w-4" />
-                        View Profile
+                        {t('actions.viewProfile')}
                       </DropdownMenuItem>
                       <DropdownMenuItem className="cursor-pointer">
                         <Settings className="mr-2 h-4 w-4" />
-                        Admin Settings
+                        {t('actions.adminSettings')}
                       </DropdownMenuItem>
                       <DropdownMenuItem className="cursor-pointer">
                         <Mail className="mr-2 h-4 w-4" />
-                        Send Message
+                        {t('actions.sendMessage')}
                       </DropdownMenuItem>
                       
                       {/* Only a developer acts on a superadmin, and nobody on their own account */}
@@ -319,9 +322,9 @@ export function SuperAdminsTable({
       <div className="bg-red-50 border-t border-red-200 p-3">
         <div className="flex items-center gap-2 text-red-700 text-sm">
           <Shield className="h-4 w-4" />
-          <span className="font-medium">Security Notice:</span>
+          <span className="font-medium">{t('security.notice')}</span>
           <span>
-            Superadmin access grants full system control. Handle with extreme caution.
+            {t('security.superadminWarning')}
           </span>
         </div>
       </div>

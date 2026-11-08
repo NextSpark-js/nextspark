@@ -16,7 +16,7 @@ import type { FieldDefinition } from '../../../types/blocks'
  * Displays all available entity field types with examples and variants
  */
 export function FieldTypesGallery() {
-  const t = useTranslations('superadmin.gallery.fieldTypes')
+  const t = useTranslations('devtools.gallery.fieldTypes')
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
   const [blockEditorValues, setBlockEditorValues] = useState<Record<string, unknown[]>>({
     repeater_items: [],

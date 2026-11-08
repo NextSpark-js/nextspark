@@ -322,5 +322,481 @@
       "next": "Suivant",
       "page": "Page {page} sur {total}"
     }
+  },
+  "gallery": {
+    "theme": {
+      "themeControls": {
+        "title": "Contrôles du thème",
+        "description": "Basculez entre les thèmes clair et sombre pour prévisualiser les variations de couleur"
+      },
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système",
+      "current": "Actuel : {theme}",
+      "copy": "Copier {name}",
+      "groups": {
+        "primary": {
+          "title": "Couleurs primaires",
+          "description": "Couleurs principales de la marque et tons d’accent"
+        },
+        "background": {
+          "title": "Couleurs d’arrière-plan",
+          "description": "Couleurs d’arrière-plan de la page et des cartes"
+        },
+        "interactive": {
+          "title": "Couleurs interactives",
+          "description": "Boutons, liens et éléments interactifs"
+        },
+        "status": {
+          "title": "Couleurs d’état",
+          "description": "Indicateurs d’erreur, d’avertissement et d’état"
+        }
+      },
+      "colors": {
+        "primary": {
+          "name": "Primaire",
+          "description": "Couleur principale de la marque"
+        },
+        "primaryForeground": {
+          "name": "Primaire (texte)",
+          "description": "Texte sur l’arrière-plan primaire"
+        },
+        "secondary": {
+          "name": "Secondaire",
+          "description": "Couleur secondaire de la marque"
+        },
+        "secondaryForeground": {
+          "name": "Secondaire (texte)",
+          "description": "Texte sur l’arrière-plan secondaire"
+        },
+        "background": {
+          "name": "Arrière-plan",
+          "description": "Arrière-plan principal de la page"
+        },
+        "foreground": {
+          "name": "Texte",
+          "description": "Couleur principale du texte"
+        },
+        "card": {
+          "name": "Carte",
+          "description": "Arrière-plan de la carte"
+        },
+        "cardForeground": {
+          "name": "Carte (texte)",
+          "description": "Texte sur l’arrière-plan de la carte"
+        },
+        "accent": {
+          "name": "Accent",
+          "description": "Couleur d’accent pour les mises en évidence"
+        },
+        "accentForeground": {
+          "name": "Accent (texte)",
+          "description": "Texte sur l’arrière-plan d’accent"
+        },
+        "muted": {
+          "name": "Atténué",
+          "description": "Couleur d’arrière-plan discrète"
+        },
+        "mutedForeground": {
+          "name": "Atténué (texte)",
+          "description": "Couleur de texte discrète"
+        },
+        "destructive": {
+          "name": "Destructeur",
+          "description": "États d’erreur et de danger"
+        },
+        "destructiveForeground": {
+          "name": "Destructeur (texte)",
+          "description": "Texte sur l’arrière-plan destructeur"
+        },
+        "border": {
+          "name": "Bordure",
+          "description": "Couleur de la bordure"
+        },
+        "input": {
+          "name": "Champ de saisie",
+          "description": "Couleur de la bordure du champ de saisie"
+        }
+      },
+      "typography": {
+        "title": "Typographie",
+        "description": "Familles de polices, tailles et styles de texte",
+        "heading1": "Titre 1",
+        "heading2": "Titre 2",
+        "heading3": "Titre 3",
+        "heading4": "Titre 4",
+        "body": "Texte courant - Il s’agit du style de texte par défaut utilisé dans toute l’application.",
+        "small": "Petit texte - Utilisé pour les légendes, les textes d’aide et les informations secondaires.",
+        "code": "Texte de code - Police à chasse fixe pour les extraits de code"
+      },
+      "radius": {
+        "title": "Rayon de bordure",
+        "description": "Jetons de rayon de bordure et exemples"
+      }
+    },
+    "fieldTypes": {
+      "repeater": {
+        "label": "Champ répétable",
+        "help": "Ajoutez, supprimez et réorganisez des éléments",
+        "itemTitle": "Titre",
+        "itemTitlePlaceholder": "Titre de l’élément",
+        "itemDescription": "Description",
+        "itemDescriptionPlaceholder": "Description de l’élément...",
+        "itemLink": "Lien",
+        "title": "Champ répétable / liste",
+        "description": "Liste dynamique avec ajout, suppression et réorganisation",
+        "items": "{min}-{max} éléments"
+      },
+      "fields": {
+        "text": {
+          "label": "Champ de texte",
+          "placeholder": "Saisissez du texte...",
+          "description": "Saisie de texte simple pour les chaînes courtes"
+        },
+        "textarea": {
+          "label": "Champ de zone de texte",
+          "placeholder": "Saisissez un texte long...",
+          "description": "Saisie de texte multiligne pour les contenus longs"
+        },
+        "email": {
+          "label": "Champ e-mail",
+          "description": "Saisie d’e-mail avec validation"
+        },
+        "url": {
+          "label": "Champ URL",
+          "description": "Saisie d’URL avec validation"
+        },
+        "phone": {
+          "label": "Champ téléphone",
+          "placeholder": "Numéro de téléphone",
+          "description": "Saisie de téléphone avec indicatif du pays"
+        },
+        "number": {
+          "label": "Champ numérique",
+          "placeholder": "Saisissez un nombre...",
+          "description": "Champ de saisie numérique"
+        },
+        "boolean": {
+          "label": "Champ booléen",
+          "description": "Interrupteur vrai/faux"
+        },
+        "date": {
+          "label": "Champ date",
+          "description": "Sélecteur de date"
+        },
+        "datetime": {
+          "label": "Champ date et heure",
+          "description": "Sélecteur de date et d’heure"
+        },
+        "rating": {
+          "label": "Champ de notation",
+          "description": "Sélecteur de notation par étoiles"
+        },
+        "range": {
+          "label": "Champ de plage",
+          "description": "Sélecteur de plage avec curseur"
+        },
+        "doublerange": {
+          "label": "Champ de plage double",
+          "description": "Double curseur pour les plages de valeurs"
+        },
+        "select": {
+          "label": "Champ de sélection",
+          "placeholder": "Choisissez une option...",
+          "description": "Liste déroulante à choix unique"
+        },
+        "multiselect": {
+          "label": "Champ de sélection multiple",
+          "placeholder": "Choisissez plusieurs options...",
+          "description": "Sélection multiple avec badges"
+        },
+        "radio": {
+          "label": "Champ de boutons radio",
+          "description": "Sélection par groupe de boutons radio"
+        },
+        "buttongroup": {
+          "label": "Champ de groupe de boutons",
+          "description": "Sélection par groupe de boutons (boutons radio stylisés)"
+        },
+        "combobox": {
+          "label": "Champ de liste déroulante avec recherche",
+          "placeholder": "Recherchez et sélectionnez...",
+          "description": "Liste déroulante avec recherche"
+        },
+        "tags": {
+          "label": "Champ d’étiquettes",
+          "placeholder": "Ajoutez des étiquettes...",
+          "description": "Saisie dynamique d’étiquettes avec création"
+        },
+        "timezone": {
+          "label": "Champ de fuseau horaire",
+          "placeholder": "Sélectionnez un fuseau horaire...",
+          "description": "Sélecteur de fuseau horaire avec recherche"
+        },
+        "currency": {
+          "label": "Champ de devise",
+          "placeholder": "Sélectionnez une devise...",
+          "description": "Sélecteur de code de devise"
+        },
+        "country": {
+          "label": "Champ de pays",
+          "placeholder": "Sélectionnez un pays...",
+          "description": "Sélecteur de pays avec recherche"
+        },
+        "address": {
+          "label": "Champ d’adresse",
+          "description": "Formulaire de saisie d’adresse complet"
+        },
+        "file": {
+          "label": "Téléversement de fichiers",
+          "description": "Téléversement de fichiers générique avec glisser-déposer"
+        },
+        "image": {
+          "label": "Téléversement d’images",
+          "description": "Téléversement d’images avec aperçu"
+        },
+        "video": {
+          "label": "Téléversement de vidéos",
+          "description": "Téléversement de vidéos avec génération de miniatures"
+        },
+        "audio": {
+          "label": "Téléversement d’audio",
+          "description": "Téléversement d’audio avec lecteur"
+        },
+        "json": {
+          "label": "Champ JSON",
+          "description": "Saisie de données JSON avec validation"
+        },
+        "markdown": {
+          "label": "Champ Markdown",
+          "placeholder": "# Saisissez du Markdown...",
+          "description": "Éditeur de texte Markdown"
+        },
+        "richtext": {
+          "label": "Champ de texte enrichi",
+          "placeholder": "Saisissez du contenu en texte enrichi...",
+          "description": "Éditeur WYSIWYG avec barre de mise en forme (gras, italique, liens, listes)"
+        },
+        "code": {
+          "label": "Champ de code",
+          "description": "Éditeur de code avec coloration syntaxique"
+        },
+        "relation": {
+          "label": "Champ de relation",
+          "placeholder": "Sélectionnez des éléments liés...",
+          "description": "Relation avec d’autres entités"
+        },
+        "user": {
+          "label": "Champ d’utilisateur",
+          "placeholder": "Sélectionnez des utilisateurs...",
+          "description": "Sélection d’utilisateurs avec recherche"
+        }
+      },
+      "options": {
+        "option1": "Option 1",
+        "option2": "Option 2",
+        "option3": "Option 3",
+        "tag1": "Étiquette 1",
+        "tag2": "Étiquette 2",
+        "tag3": "Étiquette 3",
+        "tag4": "Étiquette 4",
+        "small": "Petit",
+        "medium": "Moyen",
+        "large": "Grand",
+        "edit": "Modifier",
+        "view": "Voir",
+        "delete": "Supprimer",
+        "react": "Bibliothèque JavaScript",
+        "vue": "Framework progressif",
+        "angular": "Framework TypeScript",
+        "svelte": "Framework de compilation"
+      },
+      "value": "Valeur :",
+      "stats": {
+        "fieldTypes": "Types de champ",
+        "functional": "Fonctionnel",
+        "categories": "Catégories",
+        "combinations": "Combinaisons"
+      },
+      "tabs": {
+        "basic": "De base",
+        "data": "Données",
+        "selection": "Sélection",
+        "location": "Localisation",
+        "media": "Médias",
+        "advanced": "Avancés"
+      },
+      "sections": {
+        "basic": {
+          "title": "Champs de texte de base",
+          "description": "Champs de saisie de texte fondamentaux pour les formulaires et la saisie de données"
+        },
+        "data": {
+          "title": "Champs de saisie de données",
+          "description": "Champs pour les nombres, les dates, les booléens et les types de données spécialisés"
+        },
+        "selection": {
+          "title": "Champs de sélection",
+          "description": "Divers mécanismes de sélection : listes déroulantes, boutons radio et sélection multiple"
+        },
+        "location": {
+          "title": "Sélecteurs de localisation et de données",
+          "description": "Sélecteurs géographiques et de données spécifiques avec validation intégrée"
+        },
+        "media": {
+          "title": "Champs de téléversement de médias",
+          "description": "Champs de téléversement de fichiers avec aperçu et gestion (affichage seul ici : les téléversements sont désactivés)"
+        },
+        "advanced": {
+          "title": "Champs avancés",
+          "description": "Types de données complexes et champs de relation pour les cas d’usage avancés"
+        }
+      }
+    },
+    "components": {
+      "basicComponents": "Composants de base",
+      "essentialUiElementsAnd": "Éléments d’interface essentiels et briques de base",
+      "buttons": "Boutons",
+      "default": "Par défaut",
+      "small": "Petit",
+      "large": "Grand",
+      "disabled": "Désactivé",
+      "withIcon": "Avec icône",
+      "secondary": "Secondaire",
+      "destructive": "Destructeur",
+      "outline": "Contour",
+      "ghost": "Fantôme",
+      "link": "Lien",
+      "formElements": "Éléments de formulaire",
+      "textInput": "Saisie de texte...",
+      "emailInput": "Saisie d’e-mail...",
+      "textarea": "Zone de texte...",
+      "selectOption": "Sélectionnez une option...",
+      "option1": "Option 1",
+      "option2": "Option 2",
+      "enableNotifications": "Activer les notifications",
+      "iAgreeToTerms": "J’accepte les conditions",
+      "badgesProgress": "Badges et progression",
+      "success": "Succès",
+      "warning": "Avertissement",
+      "slider": "Curseur",
+      "defaultSlider": "Curseur par défaut",
+      "volume25": "Volume : 25 %",
+      "disabledSlider": "Curseur désactivé",
+      "avatars": "Avatars",
+      "alertsNotifications": "Alertes et notifications",
+      "differentAlertTypesAnd": "Différents types d’alerte et styles de notification",
+      "information": "Information",
+      "thisIsAnInformational": "Ceci est une alerte informative avec un contexte supplémentaire.",
+      "pleaseReviewYourSettings": "Veuillez vérifier vos paramètres avant de continuer.",
+      "error": "Erreur",
+      "somethingWentWrongPlease": "Une erreur s’est produite. Veuillez réessayer.",
+      "operationCompletedSuccessfully": "Opération terminée avec succès !",
+      "tabsNavigation": "Onglets et navigation",
+      "tabbedInterfacesAndNavigation": "Interfaces à onglets et éléments de navigation",
+      "tab1": "Onglet 1",
+      "tab2": "Onglet 2",
+      "tab3": "Onglet 3",
+      "tab1Content": "Contenu de l’onglet 1",
+      "thisIsTheContent": "Voici le contenu du premier onglet. Vous pouvez y placer n’importe quel contenu.",
+      "tab2Content": "Contenu de l’onglet 2",
+      "thisIsTheContent2": "Voici le contenu du deuxième onglet, avec des informations différentes.",
+      "tab3Content": "Contenu de l’onglet 3",
+      "andThisIsThe": "Et voici le contenu du troisième onglet.",
+      "accordion": "Accordéon",
+      "collapsibleContentSectionsFor": "Sections de contenu repliables pour les FAQ et les informations regroupées",
+      "singleModeCollapsible": "Mode unique (repliable)",
+      "isItAccessible": "Est-ce accessible ?",
+      "yesItAdheresTo": "Oui. Il respecte le modèle de conception WAI-ARIA pour les accordéons.",
+      "isItStyled": "Est-ce stylisé ?",
+      "yesItComesWith": "Oui. Il est fourni avec des styles par défaut qui s’accordent à l’esthétique des autres composants.",
+      "isItAnimated": "Est-ce animé ?",
+      "yesItSAnimated": "Oui. Il est animé par défaut, mais vous pouvez le désactiver si vous préférez.",
+      "multipleMode": "Mode multiple",
+      "howDoIGet": "Comment démarrer ?",
+      "cloneRepository": "Clonez simplement le dépôt et exécutez <code>pnpm install</code> pour installer les dépendances.",
+      "canICustomizeThe": "Puis-je personnaliser le thème ?",
+      "absolutelyAllComponentsUse": "Tout à fait ! Tous les composants utilisent des variables CSS personnalisables dans la configuration du thème.",
+      "isThereMobileSupport": "Y a-t-il une prise en charge du mobile ?",
+      "nativeSupport": "Oui ! Tous les composants disposent d’implémentations React Native natives dans le paquet @nextsparkjs/ui.",
+      "layoutElements": "Éléments de mise en page",
+      "separatorsDividersAndLayout": "Séparateurs, diviseurs et aides à la mise en page",
+      "separators": "Séparateurs",
+      "contentAbove": "Contenu au-dessus",
+      "contentBelow": "Contenu en dessous",
+      "iconButtons": "Boutons avec icône",
+      "dashboardMetrics": "Indicateurs du tableau de bord",
+      "revenueSubscriptionsAndKey": "Revenus, abonnements et indicateurs clés de performance",
+      "totalRevenue": "Revenu total",
+      "fromLastMonth": "{change} par rapport au mois dernier",
+      "subscriptions": "Abonnements",
+      "calendarActivityTracking": "Calendrier et suivi d’activité",
+      "dateSelectionAndGoal": "Interfaces de sélection de dates et de définition d’objectifs",
+      "calendarComponent": "Composant calendrier",
+      "goalSettingWidget": "Widget de définition d’objectifs",
+      "moveGoal": "Objectif de mouvement",
+      "setYourDailyActivity": "Définissez votre objectif d’activité quotidien.",
+      "caloriesDay": "CALORIES/JOUR",
+      "exerciseMinutes": "Minutes d’exercice",
+      "setGoal": "Définir l’objectif",
+      "dataTables": "Tableaux de données",
+      "complexDataVisualizationWith": "Visualisation de données complexe avec indicateurs d’état",
+      "payments": "Paiements",
+      "manageYourPayments": "Gérez vos paiements.",
+      "status": "Statut",
+      "email": "E-mail",
+      "amount": "Montant",
+      "processing": "En cours de traitement",
+      "failed": "Échoué",
+      "pending": "En attente",
+      "n0Of6Row": "0 sur 6 ligne(s) sélectionnée(s).",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "pricingComponents": "Composants de tarification",
+      "subscriptionPlansAndPricing": "Forfaits d’abonnement et grilles tarifaires",
+      "pricing": "Tarifs",
+      "checkOutOurAffordable": "Découvrez nos forfaits à prix abordable",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "plus": "Plus",
+      "forPersonalUse": "Pour un usage personnel",
+      "billedAnnually": "Facturé {amount} par an",
+      "upTo5Team": "Jusqu’à 5 membres d’équipe",
+      "basicComponentsLibrary": "Bibliothèque de composants de base",
+      "communitySupport": "Support communautaire",
+      "n1gbStorageSpace": "1 Go d’espace de stockage",
+      "purchase": "Acheter",
+      "pro": "Pro",
+      "forProfessionals": "Pour les professionnels",
+      "mostPopular": "Le plus populaire",
+      "everythingInPlusAnd": "Tout ce qui est dans Plus, et en plus :",
+      "unlimitedTeamMembers": "Membres d’équipe illimités",
+      "advancedComponents": "Composants avancés",
+      "prioritySupport": "Support prioritaire",
+      "unlimitedStorage": "Stockage illimité",
+      "formComponents": "Composants de formulaire",
+      "completeFormElementsAnd": "Éléments de formulaire complets et états de validation",
+      "password": "Mot de passe",
+      "enterYourPassword": "Saisissez votre mot de passe",
+      "message": "Message",
+      "typeYourMessageHere": "Saisissez votre message ici...",
+      "planSelection": "Choix du forfait",
+      "selectAPlan": "Sélectionnez un forfait",
+      "starterPlan": "Forfait Starter",
+      "proPlan": "Forfait Pro",
+      "enterprisePlan": "Forfait Entreprise",
+      "iAgreeToThe": "J’accepte les conditions générales",
+      "allowUsToSend": "Autorisez-nous à vous envoyer des e-mails",
+      "cancel": "Annuler",
+      "submitForm": "Envoyer le formulaire",
+      "contextualAlerts": "Alertes contextuelles",
+      "realWorldNotificationExamples": "Exemples concrets de notifications avec un contexte métier",
+      "subscriptionUpdate": "Mise à jour de l’abonnement",
+      "yourSubscriptionIsUp": "Votre abonnement est à jour. Prochaine date de facturation : 1er juin 2024.",
+      "paymentDue": "Paiement à venir",
+      "yourPaymentMethodWill": "Votre moyen de paiement sera débité dans 3 jours. Mettez à jour vos informations de facturation si nécessaire.",
+      "upgradeSuccessful": "Mise à niveau réussie",
+      "yourSubscriptionHasBeen": "Votre abonnement est passé à Pro. Profitez des nouvelles fonctionnalités !"
+    }
   }
 }

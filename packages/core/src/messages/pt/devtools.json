@@ -322,5 +322,481 @@
       "next": "Próximo",
       "page": "Página {page} de {total}"
     }
+  },
+  "gallery": {
+    "theme": {
+      "themeControls": {
+        "title": "Controles do tema",
+        "description": "Alterne entre os temas claro e escuro para visualizar as variações de cor"
+      },
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema",
+      "current": "Atual: {theme}",
+      "copy": "Copiar {name}",
+      "groups": {
+        "primary": {
+          "title": "Cores primárias",
+          "description": "Cores principais da marca e tons de destaque"
+        },
+        "background": {
+          "title": "Cores de fundo",
+          "description": "Cores de fundo da página e dos cartões"
+        },
+        "interactive": {
+          "title": "Cores interativas",
+          "description": "Botões, links e elementos interativos"
+        },
+        "status": {
+          "title": "Cores de status",
+          "description": "Indicadores de erro, aviso e status"
+        }
+      },
+      "colors": {
+        "primary": {
+          "name": "Primária",
+          "description": "Cor principal da marca"
+        },
+        "primaryForeground": {
+          "name": "Primária (texto)",
+          "description": "Texto sobre o fundo primário"
+        },
+        "secondary": {
+          "name": "Secundária",
+          "description": "Cor secundária da marca"
+        },
+        "secondaryForeground": {
+          "name": "Secundária (texto)",
+          "description": "Texto sobre o fundo secundário"
+        },
+        "background": {
+          "name": "Fundo",
+          "description": "Fundo principal da página"
+        },
+        "foreground": {
+          "name": "Texto",
+          "description": "Cor principal do texto"
+        },
+        "card": {
+          "name": "Cartão",
+          "description": "Fundo do cartão"
+        },
+        "cardForeground": {
+          "name": "Cartão (texto)",
+          "description": "Texto sobre o fundo do cartão"
+        },
+        "accent": {
+          "name": "Destaque",
+          "description": "Cor de destaque para realces"
+        },
+        "accentForeground": {
+          "name": "Destaque (texto)",
+          "description": "Texto sobre o fundo de destaque"
+        },
+        "muted": {
+          "name": "Suave",
+          "description": "Cor de fundo sutil"
+        },
+        "mutedForeground": {
+          "name": "Suave (texto)",
+          "description": "Cor de texto sutil"
+        },
+        "destructive": {
+          "name": "Destrutiva",
+          "description": "Estados de erro e perigo"
+        },
+        "destructiveForeground": {
+          "name": "Destrutiva (texto)",
+          "description": "Texto sobre o fundo destrutivo"
+        },
+        "border": {
+          "name": "Borda",
+          "description": "Cor da borda"
+        },
+        "input": {
+          "name": "Campo de entrada",
+          "description": "Cor da borda do campo de entrada"
+        }
+      },
+      "typography": {
+        "title": "Tipografia",
+        "description": "Famílias de fontes, tamanhos e estilos de texto",
+        "heading1": "Título 1",
+        "heading2": "Título 2",
+        "heading3": "Título 3",
+        "heading4": "Título 4",
+        "body": "Texto do corpo - Este é o estilo de texto padrão usado em todo o aplicativo.",
+        "small": "Texto pequeno - Usado para legendas, textos de ajuda e informações secundárias.",
+        "code": "Texto de código - Fonte monoespaçada para trechos de código"
+      },
+      "radius": {
+        "title": "Raio da borda",
+        "description": "Tokens de raio de borda e exemplos"
+      }
+    },
+    "fieldTypes": {
+      "repeater": {
+        "label": "Campo repetidor",
+        "help": "Adicione, remova e reordene itens",
+        "itemTitle": "Título",
+        "itemTitlePlaceholder": "Título do item",
+        "itemDescription": "Descrição",
+        "itemDescriptionPlaceholder": "Descrição do item...",
+        "itemLink": "Link",
+        "title": "Campo repetidor / de lista",
+        "description": "Lista dinâmica com opções para adicionar, remover e reordenar",
+        "items": "{min}-{max} itens"
+      },
+      "fields": {
+        "text": {
+          "label": "Campo de texto",
+          "placeholder": "Digite um texto...",
+          "description": "Entrada de texto básica para textos curtos"
+        },
+        "textarea": {
+          "label": "Campo de área de texto",
+          "placeholder": "Digite um texto longo...",
+          "description": "Entrada de texto de várias linhas para conteúdo longo"
+        },
+        "email": {
+          "label": "Campo de e-mail",
+          "description": "Entrada de e-mail com validação"
+        },
+        "url": {
+          "label": "Campo de URL",
+          "description": "Entrada de URL com validação"
+        },
+        "phone": {
+          "label": "Campo de telefone",
+          "placeholder": "Número de telefone",
+          "description": "Entrada de telefone com suporte a código de país"
+        },
+        "number": {
+          "label": "Campo numérico",
+          "placeholder": "Digite um número...",
+          "description": "Campo de entrada numérica"
+        },
+        "boolean": {
+          "label": "Campo booleano",
+          "description": "Interruptor de verdadeiro/falso"
+        },
+        "date": {
+          "label": "Campo de data",
+          "description": "Seletor de data"
+        },
+        "datetime": {
+          "label": "Campo de data e hora",
+          "description": "Seletor de data e hora"
+        },
+        "rating": {
+          "label": "Campo de avaliação",
+          "description": "Seletor de avaliação por estrelas"
+        },
+        "range": {
+          "label": "Campo de intervalo",
+          "description": "Seletor de intervalo com controle deslizante"
+        },
+        "doublerange": {
+          "label": "Campo de intervalo duplo",
+          "description": "Controle deslizante duplo para intervalos de valores"
+        },
+        "select": {
+          "label": "Campo de seleção",
+          "placeholder": "Escolha uma opção...",
+          "description": "Lista suspensa de seleção única"
+        },
+        "multiselect": {
+          "label": "Campo de seleção múltipla",
+          "placeholder": "Escolha várias opções...",
+          "description": "Seleção múltipla com selos"
+        },
+        "radio": {
+          "label": "Campo de opções",
+          "description": "Seleção com grupo de botões de opção"
+        },
+        "buttongroup": {
+          "label": "Campo de grupo de botões",
+          "description": "Seleção com grupo de botões (opções estilizadas)"
+        },
+        "combobox": {
+          "label": "Campo de caixa de combinação",
+          "placeholder": "Pesquise e selecione...",
+          "description": "Lista suspensa com pesquisa"
+        },
+        "tags": {
+          "label": "Campo de tags",
+          "placeholder": "Adicione tags...",
+          "description": "Entrada dinâmica de tags com criação"
+        },
+        "timezone": {
+          "label": "Campo de fuso horário",
+          "placeholder": "Selecione um fuso horário...",
+          "description": "Seletor de fuso horário com pesquisa"
+        },
+        "currency": {
+          "label": "Campo de moeda",
+          "placeholder": "Selecione uma moeda...",
+          "description": "Seletor de código de moeda"
+        },
+        "country": {
+          "label": "Campo de país",
+          "placeholder": "Selecione um país...",
+          "description": "Seletor de país com pesquisa"
+        },
+        "address": {
+          "label": "Campo de endereço",
+          "description": "Formulário completo de endereço"
+        },
+        "file": {
+          "label": "Upload de arquivos",
+          "description": "Upload geral de arquivos com arrastar e soltar"
+        },
+        "image": {
+          "label": "Upload de imagens",
+          "description": "Upload de imagens com pré-visualização"
+        },
+        "video": {
+          "label": "Upload de vídeos",
+          "description": "Upload de vídeos com geração de miniaturas"
+        },
+        "audio": {
+          "label": "Upload de áudio",
+          "description": "Upload de áudio com player"
+        },
+        "json": {
+          "label": "Campo JSON",
+          "description": "Entrada de dados JSON com validação"
+        },
+        "markdown": {
+          "label": "Campo Markdown",
+          "placeholder": "# Digite em Markdown...",
+          "description": "Editor de texto Markdown"
+        },
+        "richtext": {
+          "label": "Campo de texto formatado",
+          "placeholder": "Digite conteúdo de texto formatado...",
+          "description": "Editor WYSIWYG com barra de formatação (negrito, itálico, links, listas)"
+        },
+        "code": {
+          "label": "Campo de código",
+          "description": "Editor de código com destaque de sintaxe"
+        },
+        "relation": {
+          "label": "Campo de relação",
+          "placeholder": "Selecione itens relacionados...",
+          "description": "Relação com outras entidades"
+        },
+        "user": {
+          "label": "Campo de usuário",
+          "placeholder": "Selecione usuários...",
+          "description": "Seleção de usuários com pesquisa"
+        }
+      },
+      "options": {
+        "option1": "Opção 1",
+        "option2": "Opção 2",
+        "option3": "Opção 3",
+        "tag1": "Tag 1",
+        "tag2": "Tag 2",
+        "tag3": "Tag 3",
+        "tag4": "Tag 4",
+        "small": "Pequeno",
+        "medium": "Médio",
+        "large": "Grande",
+        "edit": "Editar",
+        "view": "Ver",
+        "delete": "Excluir",
+        "react": "Biblioteca JavaScript",
+        "vue": "Framework progressivo",
+        "angular": "Framework TypeScript",
+        "svelte": "Framework de tempo de compilação"
+      },
+      "value": "Valor:",
+      "stats": {
+        "fieldTypes": "Tipos de campo",
+        "functional": "Funcional",
+        "categories": "Categorias",
+        "combinations": "Combinações"
+      },
+      "tabs": {
+        "basic": "Básicos",
+        "data": "Dados",
+        "selection": "Seleção",
+        "location": "Localização",
+        "media": "Mídia",
+        "advanced": "Avançados"
+      },
+      "sections": {
+        "basic": {
+          "title": "Campos de texto básicos",
+          "description": "Campos de entrada de texto fundamentais para formulários e entrada de dados"
+        },
+        "data": {
+          "title": "Campos de entrada de dados",
+          "description": "Campos para números, datas, valores booleanos e tipos de dados especializados"
+        },
+        "selection": {
+          "title": "Campos de seleção",
+          "description": "Vários mecanismos de seleção, incluindo listas suspensas, botões de opção e seleção múltipla"
+        },
+        "location": {
+          "title": "Seletores de localização e dados",
+          "description": "Seletores geográficos e de dados específicos com validação integrada"
+        },
+        "media": {
+          "title": "Campos de upload de mídia",
+          "description": "Campos de upload de arquivos com pré-visualização e gerenciamento (apenas demonstração: os uploads estão desativados)"
+        },
+        "advanced": {
+          "title": "Campos avançados",
+          "description": "Tipos de dados complexos e campos de relação para casos de uso avançados"
+        }
+      }
+    },
+    "components": {
+      "basicComponents": "Componentes básicos",
+      "essentialUiElementsAnd": "Elementos de interface essenciais e blocos de construção",
+      "buttons": "Botões",
+      "default": "Padrão",
+      "small": "Pequeno",
+      "large": "Grande",
+      "disabled": "Desativado",
+      "withIcon": "Com ícone",
+      "secondary": "Secundário",
+      "destructive": "Destrutivo",
+      "outline": "Contorno",
+      "ghost": "Fantasma",
+      "link": "Link",
+      "formElements": "Elementos de formulário",
+      "textInput": "Entrada de texto...",
+      "emailInput": "Entrada de e-mail...",
+      "textarea": "Área de texto...",
+      "selectOption": "Selecione uma opção...",
+      "option1": "Opção 1",
+      "option2": "Opção 2",
+      "enableNotifications": "Ativar notificações",
+      "iAgreeToTerms": "Concordo com os termos",
+      "badgesProgress": "Selos e progresso",
+      "success": "Sucesso",
+      "warning": "Aviso",
+      "slider": "Controle deslizante",
+      "defaultSlider": "Controle deslizante padrão",
+      "volume25": "Volume: 25%",
+      "disabledSlider": "Controle deslizante desativado",
+      "avatars": "Avatares",
+      "alertsNotifications": "Alertas e notificações",
+      "differentAlertTypesAnd": "Diferentes tipos de alerta e estilos de notificação",
+      "information": "Informação",
+      "thisIsAnInformational": "Este é um alerta informativo com contexto adicional.",
+      "pleaseReviewYourSettings": "Revise suas configurações antes de continuar.",
+      "error": "Erro",
+      "somethingWentWrongPlease": "Algo deu errado. Tente novamente.",
+      "operationCompletedSuccessfully": "Operação concluída com sucesso!",
+      "tabsNavigation": "Abas e navegação",
+      "tabbedInterfacesAndNavigation": "Interfaces com abas e elementos de navegação",
+      "tab1": "Aba 1",
+      "tab2": "Aba 2",
+      "tab3": "Aba 3",
+      "tab1Content": "Conteúdo da aba 1",
+      "thisIsTheContent": "Este é o conteúdo da primeira aba. Você pode colocar qualquer conteúdo aqui.",
+      "tab2Content": "Conteúdo da aba 2",
+      "thisIsTheContent2": "Este é o conteúdo da segunda aba, com informações diferentes.",
+      "tab3Content": "Conteúdo da aba 3",
+      "andThisIsThe": "E este é o conteúdo da terceira aba.",
+      "accordion": "Acordeão",
+      "collapsibleContentSectionsFor": "Seções de conteúdo recolhíveis para perguntas frequentes e informações agrupadas",
+      "singleModeCollapsible": "Modo único (recolhível)",
+      "isItAccessible": "É acessível?",
+      "yesItAdheresTo": "Sim. Segue o padrão de design WAI-ARIA para acordeões.",
+      "isItStyled": "Tem estilo?",
+      "yesItComesWith": "Sim. Vem com estilos padrão que combinam com a estética dos demais componentes.",
+      "isItAnimated": "Tem animação?",
+      "yesItSAnimated": "Sim. Tem animação por padrão, mas você pode desativá-la se preferir.",
+      "multipleMode": "Modo múltiplo",
+      "howDoIGet": "Como começo?",
+      "cloneRepository": "Basta clonar o repositório e executar <code>pnpm install</code> para instalar as dependências.",
+      "canICustomizeThe": "Posso personalizar o tema?",
+      "absolutelyAllComponentsUse": "Com certeza! Todos os componentes usam variáveis CSS que podem ser personalizadas na configuração do tema.",
+      "isThereMobileSupport": "Há suporte para dispositivos móveis?",
+      "nativeSupport": "Sim! Todos os componentes têm implementações nativas em React Native no pacote @nextsparkjs/ui.",
+      "layoutElements": "Elementos de layout",
+      "separatorsDividersAndLayout": "Separadores, divisores e auxiliares de layout",
+      "separators": "Separadores",
+      "contentAbove": "Conteúdo acima",
+      "contentBelow": "Conteúdo abaixo",
+      "iconButtons": "Botões com ícone",
+      "dashboardMetrics": "Métricas do painel",
+      "revenueSubscriptionsAndKey": "Receita, assinaturas e principais indicadores de desempenho",
+      "totalRevenue": "Receita total",
+      "fromLastMonth": "{change} em relação ao mês passado",
+      "subscriptions": "Assinaturas",
+      "calendarActivityTracking": "Calendário e acompanhamento de atividades",
+      "dateSelectionAndGoal": "Interfaces de seleção de datas e definição de metas",
+      "calendarComponent": "Componente de calendário",
+      "goalSettingWidget": "Widget de definição de metas",
+      "moveGoal": "Meta de movimento",
+      "setYourDailyActivity": "Defina sua meta diária de atividade.",
+      "caloriesDay": "CALORIAS/DIA",
+      "exerciseMinutes": "Minutos de exercício",
+      "setGoal": "Definir meta",
+      "dataTables": "Tabelas de dados",
+      "complexDataVisualizationWith": "Visualização de dados complexa com indicadores de status",
+      "payments": "Pagamentos",
+      "manageYourPayments": "Gerencie seus pagamentos.",
+      "status": "Status",
+      "email": "E-mail",
+      "amount": "Valor",
+      "processing": "Processando",
+      "failed": "Falhou",
+      "pending": "Pendente",
+      "n0Of6Row": "0 de 6 linha(s) selecionada(s).",
+      "previous": "Anterior",
+      "next": "Próximo",
+      "pricingComponents": "Componentes de preços",
+      "subscriptionPlansAndPricing": "Planos de assinatura e tabelas de preços",
+      "pricing": "Preços",
+      "checkOutOurAffordable": "Conheça nossos planos de preços acessíveis",
+      "monthly": "Mensal",
+      "yearly": "Anual",
+      "plus": "Plus",
+      "forPersonalUse": "Para uso pessoal",
+      "billedAnnually": "Cobrado {amount} por ano",
+      "upTo5Team": "Até 5 membros da equipe",
+      "basicComponentsLibrary": "Biblioteca de componentes básicos",
+      "communitySupport": "Suporte da comunidade",
+      "n1gbStorageSpace": "1 GB de armazenamento",
+      "purchase": "Comprar",
+      "pro": "Pro",
+      "forProfessionals": "Para profissionais",
+      "mostPopular": "Mais popular",
+      "everythingInPlusAnd": "Tudo do Plus e mais:",
+      "unlimitedTeamMembers": "Membros da equipe ilimitados",
+      "advancedComponents": "Componentes avançados",
+      "prioritySupport": "Suporte prioritário",
+      "unlimitedStorage": "Armazenamento ilimitado",
+      "formComponents": "Componentes de formulário",
+      "completeFormElementsAnd": "Elementos de formulário completos e estados de validação",
+      "password": "Senha",
+      "enterYourPassword": "Digite sua senha",
+      "message": "Mensagem",
+      "typeYourMessageHere": "Digite sua mensagem aqui...",
+      "planSelection": "Seleção de plano",
+      "selectAPlan": "Selecione um plano",
+      "starterPlan": "Plano Starter",
+      "proPlan": "Plano Pro",
+      "enterprisePlan": "Plano Enterprise",
+      "iAgreeToThe": "Concordo com os termos e condições",
+      "allowUsToSend": "Permita que enviemos e-mails para você",
+      "cancel": "Cancelar",
+      "submitForm": "Enviar formulário",
+      "contextualAlerts": "Alertas contextuais",
+      "realWorldNotificationExamples": "Exemplos reais de notificações com contexto de negócio",
+      "subscriptionUpdate": "Atualização da assinatura",
+      "yourSubscriptionIsUp": "Sua assinatura está em dia. Próxima data de cobrança: 1º de junho de 2024.",
+      "paymentDue": "Pagamento pendente",
+      "yourPaymentMethodWill": "Seu método de pagamento será cobrado em 3 dias. Atualize seus dados de cobrança, se necessário.",
+      "upgradeSuccessful": "Upgrade concluído",
+      "yourSubscriptionHasBeen": "Sua assinatura foi atualizada para o Pro. Aproveite os novos recursos!"
+    }
   }
 }

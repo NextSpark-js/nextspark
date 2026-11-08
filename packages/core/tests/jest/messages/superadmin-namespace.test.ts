@@ -28,10 +28,16 @@ function flat(node: unknown, prefix = ''): Record<string, string> {
 const placeholders = (text: string) =>
   [...text.matchAll(/(?<!\b(?:one|other|few|many|zero|two) )\{(\w+)[,}]|<(\w+)>/g)].map(m => m[1] ?? `<${m[2]}>`).sort()
 
-const ENGLISH = flat(en.superadmin)
+// the namespaces of the area: `superadmin`, and `devtools.gallery` (the style galleries that live in components/superadmin)
+const SECTIONS: Array<[string, (catalog: Record<string, any>) => unknown]> = [
+  ['superadmin', catalog => catalog.superadmin],
+  ['devtools.gallery', catalog => catalog.devtools.gallery],
+]
+const ENGLISH_OF: Record<string, Record<string, string>> = Object.fromEntries(SECTIONS.map(([name, pick]) => [name, flat(pick(en))]))
 
-describe.each(Object.keys(LOCALES))('%s superadmin messages', locale => {
-  const messages = flat(LOCALES[locale].superadmin)
+describe.each(Object.keys(LOCALES).flatMap(locale => SECTIONS.map(([section, pick]) => [locale, section, pick] as const)))('%s %s messages', (locale, section, pick) => {
+  const messages = flat(pick(LOCALES[locale]))
+  const ENGLISH = ENGLISH_OF[section]
 
   test('hold every key of the English catalog', () => {
     expect(Object.keys(ENGLISH).filter(key => !(key in messages))).toEqual([])
@@ -69,6 +75,7 @@ function walk(dir: string): string[] {
 const AREA = [
   ...walk(path.join(SRC, 'components/superadmin')),
   ...walk(path.join(SRC, 'routes/superadmin')),
+  ...walk(path.join(SRC, 'components/users')),
   path.join(SRC, 'components/docs/superadmin-docs-sidebar.tsx'),
   path.join(SRC, 'routes/_internal/superadmin-layout.tsx'),
 ]
@@ -114,12 +121,12 @@ function fixedTexts(source: ts.SourceFile): string[] {
   return found
 }
 
-// path (relative to src) -> texts that may stay fixed
-const STAYS_FIXED: Record<string, string[]> = {
-  // the title and description of the area's layout are the static `metadata` Next reads (and the starter's app tree re-exports);
-  // a translated title needs generateMetadata in the generated tree as well
-  'routes/_internal/superadmin-layout.tsx': ['Super Admin | Super Admin Panel', 'Super administrator control panel'],
-}
+describe('the roles of a user have a name', () => {
+  // the users page and the user detail read `usersPage.roles.<role>` for what the API answers as a user's role
+  test.each(Object.keys(LOCALES))('%s', locale => {
+    for (const role of ['member', 'developer', 'suspended', 'superadmin']) expect(typeof LOCALES[locale].superadmin.usersPage.roles[role]).toBe('string')
+  })
+})
 
 describe('the area has no fixed text', () => {
   test('the scan reads the files of the area', () => {
@@ -133,8 +140,7 @@ describe('the area has no fixed text', () => {
   })
 
   test.each(AREA.map(file => [rel(file), file]))('%s', (_name, file) => {
-    const allowed = STAYS_FIXED[_name as string] ?? []
-    expect(fixedTexts(parse(file)).filter(line => !allowed.some(text => line.endsWith(`: ${text}`)))).toEqual([])
+    expect(fixedTexts(parse(file))).toEqual([])
   })
 
   test('the scan catches a fixed text, a fixed attribute and a fixed fallback', () => {
@@ -155,6 +161,7 @@ const CATALOGS: Record<string, Record<string, unknown>> = {
   superadmin: en.superadmin as Record<string, unknown>,
   teams: en.teams as Record<string, unknown>,
   common: en.common as Record<string, unknown>,
+  devtools: en.devtools as Record<string, unknown>,
 }
 const lookup = (full: string) => full.split('.').reduce<any>((node, key) => (node && typeof node === 'object' ? node[key] : undefined), CATALOGS)
 

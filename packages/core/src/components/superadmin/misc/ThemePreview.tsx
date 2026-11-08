@@ -16,7 +16,7 @@ import { useTranslations } from "next-intl";
  * Shows both light and dark mode variations with copy functionality.
  */
 export function ThemePreview() {
-  const t = useTranslations("superadmin.gallery.theme");
+  const t = useTranslations("devtools.gallery.theme");
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -313,7 +313,7 @@ interface ColorSwatchProps {
 }
 
 function ColorSwatch({ name, description, cssVar, copyValue }: ColorSwatchProps) {
-  const t = useTranslations("superadmin.gallery.theme");
+  const t = useTranslations("devtools.gallery.theme");
   return (
     <div className="flex items-center gap-3 p-3 border rounded-lg">
       <div 

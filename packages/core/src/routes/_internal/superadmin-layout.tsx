@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import { Suspense } from 'react'
 import { NextIntlClientProvider, useTranslations } from 'next-intl'
-import { getMessages } from 'next-intl/server'
+import { getMessages, getTranslations } from 'next-intl/server'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
 import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
@@ -12,11 +12,15 @@ import { Metadata } from "next";
 import { getAllPluginNavItems } from '@nextsparkjs/core/lib/plugins/nav-items'
 import { requireAreaAccess } from './area-access'
 
-export const defaultMetadata: Metadata = {
-  title: "Super Admin | Super Admin Panel",
-  description: "Super administrator control panel",
-  robots: "noindex, nofollow", // Prevent search engine indexing
-};
+/** The title and description in the language of the request; the area is never indexed. */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('superadmin.layout')
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+    robots: 'noindex, nofollow', // Prevent search engine indexing
+  }
+}
 
 export interface SuperadminLayoutProps {
   children: React.ReactNode;

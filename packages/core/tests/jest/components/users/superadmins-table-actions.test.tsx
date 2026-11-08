@@ -8,7 +8,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 let role = 'superadmin'
 const mutate = jest.fn()
 jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: 'me', role } }, isPending: false }) }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
 jest.mock('@/core/hooks/useToast', () => ({ useToast: () => ({ toast: jest.fn() }) }))
 jest.mock('@tanstack/react-query', () => ({
   // run the mutation function for real, so the test sees the request

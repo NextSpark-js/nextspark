@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -54,7 +53,8 @@ import { useCommonText } from '../../../lib/i18n/common-text';
 import { useSession, type ClientSession } from '../../../lib/auth-client';
 import type { SessionUser } from '../../../lib/auth';
 import { canActOnUser, canGrantUserRole } from '../../../lib/auth/assignable-roles';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatLocaleDate } from '../../../lib/i18n/format';
 import type { UserRole } from '../../../types/user.types';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -95,7 +95,10 @@ interface PendingAction {
 export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
   const getRoleName = useRoleTranslations();
-  const t = useTranslations('superadmin.users.actions');
+  const t = useTranslations('superadmin.users');
+  const tPage = useTranslations('superadmin.usersPage');
+  const tShared = useTranslations('superadmin.shared');
+  const locale = useLocale();
   const { data: session } = useSession();
   const viewer = (session as ClientSession | null)?.user as SessionUser | undefined;
   const viewerRole = viewer?.role;
@@ -103,7 +106,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   // The API answers 403 to anyone else: only a developer grants the developer role and acts on a developer, and
   // nobody acts on their own account
   const canGrantDeveloper = canGrantUserRole(viewerRole, 'developer');
-  const restrictedKey = (user: User) => t(user.id === viewerId ? 'ownAccount' : 'restrictedTarget');
+  const restrictedKey = (user: User) => t(user.id === viewerId ? 'actions.ownAccount' : 'actions.restrictedTarget');
   const canAct = (user: User) => user.id !== viewerId && canActOnUser(viewerRole, user.role);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -127,21 +130,21 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Action failed");
+        throw new Error(error.error || t('confirm.failed'));
       }
       return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Success",
-        description: data.message || "Action completed successfully",
+        title: t('toast.success'),
+        description: data.message || t('toast.actionCompleted'),
       });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       onRefresh?.();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('toast.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -156,21 +159,21 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Delete failed");
+        throw new Error(error.error || t('toast.deleteFailed'));
       }
       return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "User Deleted",
-        description: data.message || "User has been deleted successfully",
+        title: t('toast.deleted'),
+        description: data.message || t('toast.deletedDescription'),
       });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       onRefresh?.();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('toast.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -217,23 +220,23 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
     switch (type) {
       case "suspend":
         return {
-          title: "Suspend User",
-          description: `Are you sure you want to suspend ${name}? They will no longer be able to access the application.`,
+          title: t('confirm.suspendTitle'),
+          description: t('confirm.suspendDescription', { name }),
         };
       case "unsuspend":
         return {
-          title: "Unsuspend User",
-          description: `Are you sure you want to unsuspend ${name}? They will regain access to the application as a member.`,
+          title: t('confirm.unsuspendTitle'),
+          description: t('confirm.unsuspendDescription', { name }),
         };
       case "verify-email":
         return {
-          title: "Verify Email",
-          description: `Are you sure you want to manually verify the email for ${name}?`,
+          title: t('confirm.verifyEmailTitle'),
+          description: t('confirm.verifyEmailDescription', { name }),
         };
       case "delete":
         return {
-          title: "Delete User",
-          description: `Are you sure you want to permanently delete ${name}? This action cannot be undone. All their data, teams, and memberships will be removed.`,
+          title: t('confirm.deleteTitle'),
+          description: t('confirm.deleteDescription', { name }),
         };
       default:
         return { title: "", description: "" };
@@ -289,9 +292,9 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
     return (
       <div className="text-center py-8">
         <User className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-medium">No users found</h3>
+        <h3 className="mt-4 text-lg font-medium">{t('table.noUsers')}</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          There are no regular users in the system yet.
+          {t('table.noUsersDescription')}
         </p>
       </div>
     );
@@ -302,12 +305,12 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Joined</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t('table.user')}</TableHead>
+            <TableHead>{t('table.email')}</TableHead>
+            <TableHead>{t('table.role')}</TableHead>
+            <TableHead>{t('table.status')}</TableHead>
+            <TableHead>{t('table.joined')}</TableHead>
+            <TableHead className="text-right">{t('table.actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -329,10 +332,10 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      {user.fullName || 'No name'}
+                      {user.fullName || tPage('noName')}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ID: {user.id.slice(0, 8)}...
+                      {t('table.id', { id: `${user.id.slice(0, 8)}...` })}
                     </div>
                   </div>
                 </div>
@@ -358,11 +361,11 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                 <div className="flex items-center gap-2">
                   {user.emailVerified ? (
                     <Badge variant="default" className="bg-green-100 text-green-800">
-                      Verified
+                      {t('table.verified')}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                      Pending
+                      {t('table.pending')}
                     </Badge>
                   )}
                 </div>
@@ -372,7 +375,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
               <TableCell>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  {user.createdAt ? format(new Date(user.createdAt), 'MMM dd, yyyy') : 'Unknown'}
+                  {user.createdAt ? formatLocaleDate(user.createdAt, locale) : tShared('unknown')}
                 </div>
               </TableCell>
 
@@ -395,11 +398,11 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
                       <Link href={`/superadmin/users/${user.id}`} className="cursor-pointer">
                         <Eye className="mr-2 h-4 w-4" />
-                        View Profile
+                        {t('actions.viewProfile')}
                       </Link>
                     </DropdownMenuItem>
 
@@ -410,7 +413,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
                           <Edit className="mr-2 h-4 w-4" />
-                          Change Role
+                          {t('actions.changeRole')}
                         </DropdownMenuSubTrigger>
                         <DropdownMenuSubContent>
                           <DropdownMenuRadioGroup
@@ -418,11 +421,11 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                             onValueChange={(value: string) => handleRoleChange(user, value)}
                           >
                             <DropdownMenuRadioItem value="member">
-                              Member
+                              {tPage('roles.member')}
                             </DropdownMenuRadioItem>
                             {(canGrantDeveloper || user.role === "developer") && (
                               <DropdownMenuRadioItem value="developer">
-                                Developer
+                                {tPage('roles.developer')}
                               </DropdownMenuRadioItem>
                             )}
                           </DropdownMenuRadioGroup>
@@ -437,7 +440,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                           onClick={() => setPendingAction({ type: "verify-email", user })}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          Verify Email
+                          {t('actions.verifyEmail')}
                         </DropdownMenuItem>
                       )}
 
@@ -450,7 +453,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                           onClick={() => setPendingAction({ type: "unsuspend", user })}
                         >
                           <UserCheck className="mr-2 h-4 w-4" />
-                          Unsuspend User
+                          {t('actions.unsuspendUser')}
                         </DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem
@@ -458,7 +461,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                           onClick={() => setPendingAction({ type: "suspend", user })}
                         >
                           <Ban className="mr-2 h-4 w-4" />
-                          Suspend User
+                          {t('actions.suspendUser')}
                         </DropdownMenuItem>
                       )}
 
@@ -467,7 +470,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                         onClick={() => setPendingAction({ type: "delete", user })}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete User
+                        {t('actions.deleteUser')}
                       </DropdownMenuItem>
                       </>
                     ) : (
@@ -494,13 +497,13 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPendingAction(null)}>
-              Cancel
+              {t('confirm.cancel')}
             </Button>
             <Button
               onClick={handleActionConfirm}
               variant={pendingAction?.type === "delete" ? "destructive" : "default"}
             >
-              {pendingAction?.type === "delete" ? "Delete" : "Confirm"}
+              {pendingAction?.type === "delete" ? t('confirm.delete') : t('confirm.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

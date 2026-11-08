@@ -47,7 +47,7 @@ import { useTranslations } from "next-intl";
  * real-world usage patterns inspired by TweakCN.com - perfect for theme testing.
  */
 export function ComponentGallery() {
-  const t = useTranslations("superadmin.gallery.components");
+  const t = useTranslations("devtools.gallery.components");
   const [goalValue, setGoalValue] = useState(350);
   const [date, setDate] = useState<Date | undefined>(new Date());
 

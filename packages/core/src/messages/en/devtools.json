@@ -336,5 +336,481 @@
       "next": "Next",
       "page": "Page {page} of {total}"
     }
+  },
+  "gallery": {
+    "theme": {
+      "themeControls": {
+        "title": "Theme Controls",
+        "description": "Switch between light and dark themes to preview color variations"
+      },
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "current": "Current: {theme}",
+      "copy": "Copy {name}",
+      "groups": {
+        "primary": {
+          "title": "Primary Colors",
+          "description": "Main brand colors and accent tones"
+        },
+        "background": {
+          "title": "Background Colors",
+          "description": "Page and card background colors"
+        },
+        "interactive": {
+          "title": "Interactive Colors",
+          "description": "Buttons, links, and interactive elements"
+        },
+        "status": {
+          "title": "Status Colors",
+          "description": "Error, warning, and status indicators"
+        }
+      },
+      "colors": {
+        "primary": {
+          "name": "Primary",
+          "description": "Main brand color"
+        },
+        "primaryForeground": {
+          "name": "Primary Foreground",
+          "description": "Text on primary background"
+        },
+        "secondary": {
+          "name": "Secondary",
+          "description": "Secondary brand color"
+        },
+        "secondaryForeground": {
+          "name": "Secondary Foreground",
+          "description": "Text on secondary background"
+        },
+        "background": {
+          "name": "Background",
+          "description": "Main page background"
+        },
+        "foreground": {
+          "name": "Foreground",
+          "description": "Main text color"
+        },
+        "card": {
+          "name": "Card",
+          "description": "Card background"
+        },
+        "cardForeground": {
+          "name": "Card Foreground",
+          "description": "Text on card background"
+        },
+        "accent": {
+          "name": "Accent",
+          "description": "Accent color for highlights"
+        },
+        "accentForeground": {
+          "name": "Accent Foreground",
+          "description": "Text on accent background"
+        },
+        "muted": {
+          "name": "Muted",
+          "description": "Subtle background color"
+        },
+        "mutedForeground": {
+          "name": "Muted Foreground",
+          "description": "Subtle text color"
+        },
+        "destructive": {
+          "name": "Destructive",
+          "description": "Error and danger states"
+        },
+        "destructiveForeground": {
+          "name": "Destructive Foreground",
+          "description": "Text on destructive background"
+        },
+        "border": {
+          "name": "Border",
+          "description": "Border color"
+        },
+        "input": {
+          "name": "Input",
+          "description": "Input border color"
+        }
+      },
+      "typography": {
+        "title": "Typography",
+        "description": "Font families, sizes, and text styles",
+        "heading1": "Heading 1",
+        "heading2": "Heading 2",
+        "heading3": "Heading 3",
+        "heading4": "Heading 4",
+        "body": "Body text - This is the default body text style used throughout the application.",
+        "small": "Small text - Used for captions, help text, and secondary information.",
+        "code": "Code text - Monospace font for code snippets"
+      },
+      "radius": {
+        "title": "Border Radius",
+        "description": "Border radius tokens and examples"
+      }
+    },
+    "fieldTypes": {
+      "repeater": {
+        "label": "Repeater Field",
+        "help": "Add, remove, and reorder items",
+        "itemTitle": "Title",
+        "itemTitlePlaceholder": "Item title",
+        "itemDescription": "Description",
+        "itemDescriptionPlaceholder": "Item description...",
+        "itemLink": "Link",
+        "title": "Repeater / Array Field",
+        "description": "Dynamic list with add, remove, and reorder functionality",
+        "items": "{min}-{max} items"
+      },
+      "fields": {
+        "text": {
+          "label": "Text Field",
+          "placeholder": "Enter text...",
+          "description": "Basic text input for short strings"
+        },
+        "textarea": {
+          "label": "Textarea Field",
+          "placeholder": "Enter long text...",
+          "description": "Multi-line text input for longer content"
+        },
+        "email": {
+          "label": "Email Field",
+          "description": "Email input with validation"
+        },
+        "url": {
+          "label": "URL Field",
+          "description": "URL input with validation"
+        },
+        "phone": {
+          "label": "Phone Field",
+          "placeholder": "Phone number",
+          "description": "Phone input with country code support"
+        },
+        "number": {
+          "label": "Number Field",
+          "placeholder": "Enter number...",
+          "description": "Numeric input field"
+        },
+        "boolean": {
+          "label": "Boolean Field",
+          "description": "True/false toggle switch"
+        },
+        "date": {
+          "label": "Date Field",
+          "description": "Date picker input"
+        },
+        "datetime": {
+          "label": "DateTime Field",
+          "description": "Date and time picker input"
+        },
+        "rating": {
+          "label": "Rating Field",
+          "description": "Star rating selector"
+        },
+        "range": {
+          "label": "Range Field",
+          "description": "Slider range selector"
+        },
+        "doublerange": {
+          "label": "Double Range Field",
+          "description": "Dual slider for value ranges"
+        },
+        "select": {
+          "label": "Select Field",
+          "placeholder": "Choose an option...",
+          "description": "Single selection dropdown"
+        },
+        "multiselect": {
+          "label": "MultiSelect Field",
+          "placeholder": "Choose multiple options...",
+          "description": "Multiple selection with badges"
+        },
+        "radio": {
+          "label": "Radio Field",
+          "description": "Radio button group selection"
+        },
+        "buttongroup": {
+          "label": "Button Group Field",
+          "description": "Button group selection (styled radio)"
+        },
+        "combobox": {
+          "label": "Combobox Field",
+          "placeholder": "Search and select...",
+          "description": "Searchable dropdown selection"
+        },
+        "tags": {
+          "label": "Tags Field",
+          "placeholder": "Add tags...",
+          "description": "Dynamic tag input with creation"
+        },
+        "timezone": {
+          "label": "Timezone Field",
+          "placeholder": "Select timezone...",
+          "description": "Timezone selector with search"
+        },
+        "currency": {
+          "label": "Currency Field",
+          "placeholder": "Select currency...",
+          "description": "Currency code selector"
+        },
+        "country": {
+          "label": "Country Field",
+          "placeholder": "Select country...",
+          "description": "Country selector with search"
+        },
+        "address": {
+          "label": "Address Field",
+          "description": "Complete address input form"
+        },
+        "file": {
+          "label": "File Upload",
+          "description": "General file upload with drag & drop"
+        },
+        "image": {
+          "label": "Image Upload",
+          "description": "Image upload with preview"
+        },
+        "video": {
+          "label": "Video Upload",
+          "description": "Video file upload with thumbnail generation"
+        },
+        "audio": {
+          "label": "Audio Upload",
+          "description": "Audio file upload with player"
+        },
+        "json": {
+          "label": "JSON Field",
+          "description": "JSON data input with validation"
+        },
+        "markdown": {
+          "label": "Markdown Field",
+          "placeholder": "# Enter markdown...",
+          "description": "Markdown text editor"
+        },
+        "richtext": {
+          "label": "Rich Text Field",
+          "placeholder": "Enter rich text content...",
+          "description": "WYSIWYG editor with formatting toolbar (Bold, Italic, Links, Lists)"
+        },
+        "code": {
+          "label": "Code Field",
+          "description": "Code editor with syntax highlighting"
+        },
+        "relation": {
+          "label": "Relation Field",
+          "placeholder": "Select related items...",
+          "description": "Relationship to other entities"
+        },
+        "user": {
+          "label": "User Field",
+          "placeholder": "Select users...",
+          "description": "User selection with search"
+        }
+      },
+      "options": {
+        "option1": "Option 1",
+        "option2": "Option 2",
+        "option3": "Option 3",
+        "tag1": "Tag 1",
+        "tag2": "Tag 2",
+        "tag3": "Tag 3",
+        "tag4": "Tag 4",
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large",
+        "edit": "Edit",
+        "view": "View",
+        "delete": "Delete",
+        "react": "JavaScript library",
+        "vue": "Progressive framework",
+        "angular": "TypeScript framework",
+        "svelte": "Compile-time framework"
+      },
+      "value": "Value:",
+      "stats": {
+        "fieldTypes": "Field Types",
+        "functional": "Functional",
+        "categories": "Categories",
+        "combinations": "Combinations"
+      },
+      "tabs": {
+        "basic": "Basic",
+        "data": "Data",
+        "selection": "Selection",
+        "location": "Location",
+        "media": "Media",
+        "advanced": "Advanced"
+      },
+      "sections": {
+        "basic": {
+          "title": "Basic Text Fields",
+          "description": "Fundamental text input fields for forms and data entry"
+        },
+        "data": {
+          "title": "Data Input Fields",
+          "description": "Fields for numbers, dates, booleans and specialized data types"
+        },
+        "selection": {
+          "title": "Selection Fields",
+          "description": "Various selection mechanisms including dropdowns, radio buttons, and multi-select"
+        },
+        "location": {
+          "title": "Location & Data Selectors",
+          "description": "Geographic and data-specific selectors with built-in validation"
+        },
+        "media": {
+          "title": "Media Upload Fields",
+          "description": "File upload fields with preview and management capabilities (display only here: uploads are disabled)"
+        },
+        "advanced": {
+          "title": "Advanced Fields",
+          "description": "Complex data types and relationship fields for advanced use cases"
+        }
+      }
+    },
+    "components": {
+      "basicComponents": "Basic Components",
+      "essentialUiElementsAnd": "Essential UI elements and building blocks",
+      "buttons": "Buttons",
+      "default": "Default",
+      "small": "Small",
+      "large": "Large",
+      "disabled": "Disabled",
+      "withIcon": "With Icon",
+      "secondary": "Secondary",
+      "destructive": "Destructive",
+      "outline": "Outline",
+      "ghost": "Ghost",
+      "link": "Link",
+      "formElements": "Form Elements",
+      "textInput": "Text input...",
+      "emailInput": "Email input...",
+      "textarea": "Textarea...",
+      "selectOption": "Select option...",
+      "option1": "Option 1",
+      "option2": "Option 2",
+      "enableNotifications": "Enable notifications",
+      "iAgreeToTerms": "I agree to terms",
+      "badgesProgress": "Badges & Progress",
+      "success": "Success",
+      "warning": "Warning",
+      "slider": "Slider",
+      "defaultSlider": "Default Slider",
+      "volume25": "Volume: 25%",
+      "disabledSlider": "Disabled Slider",
+      "avatars": "Avatars",
+      "alertsNotifications": "Alerts & Notifications",
+      "differentAlertTypesAnd": "Different alert types and notification styles",
+      "information": "Information",
+      "thisIsAnInformational": "This is an informational alert with additional context.",
+      "pleaseReviewYourSettings": "Please review your settings before proceeding.",
+      "error": "Error",
+      "somethingWentWrongPlease": "Something went wrong. Please try again.",
+      "operationCompletedSuccessfully": "Operation completed successfully!",
+      "tabsNavigation": "Tabs & Navigation",
+      "tabbedInterfacesAndNavigation": "Tabbed interfaces and navigation elements",
+      "tab1": "Tab 1",
+      "tab2": "Tab 2",
+      "tab3": "Tab 3",
+      "tab1Content": "Tab 1 Content",
+      "thisIsTheContent": "This is the content for the first tab. You can put any content here.",
+      "tab2Content": "Tab 2 Content",
+      "thisIsTheContent2": "This is the content for the second tab with different information.",
+      "tab3Content": "Tab 3 Content",
+      "andThisIsThe": "And this is the content for the third tab.",
+      "accordion": "Accordion",
+      "collapsibleContentSectionsFor": "Collapsible content sections for FAQs and grouped information",
+      "singleModeCollapsible": "Single Mode (collapsible)",
+      "isItAccessible": "Is it accessible?",
+      "yesItAdheresTo": "Yes. It adheres to the WAI-ARIA design pattern for accordions.",
+      "isItStyled": "Is it styled?",
+      "yesItComesWith": "Yes. It comes with default styles that match the other components' aesthetic.",
+      "isItAnimated": "Is it animated?",
+      "yesItSAnimated": "Yes. It's animated by default, but you can disable it if you prefer.",
+      "multipleMode": "Multiple Mode",
+      "howDoIGet": "How do I get started?",
+      "cloneRepository": "Simply clone the repository and run <code>pnpm install</code> to install dependencies.",
+      "canICustomizeThe": "Can I customize the theme?",
+      "absolutelyAllComponentsUse": "Absolutely! All components use CSS variables that can be customized in your theme configuration.",
+      "isThereMobileSupport": "Is there mobile support?",
+      "nativeSupport": "Yes! All components have native React Native implementations in the @nextsparkjs/ui package.",
+      "layoutElements": "Layout Elements",
+      "separatorsDividersAndLayout": "Separators, dividers, and layout helpers",
+      "separators": "Separators",
+      "contentAbove": "Content above",
+      "contentBelow": "Content below",
+      "iconButtons": "Icon Buttons",
+      "dashboardMetrics": "Dashboard Metrics",
+      "revenueSubscriptionsAndKey": "Revenue, subscriptions, and key performance indicators",
+      "totalRevenue": "Total Revenue",
+      "fromLastMonth": "{change} from last month",
+      "subscriptions": "Subscriptions",
+      "calendarActivityTracking": "Calendar & Activity Tracking",
+      "dateSelectionAndGoal": "Date selection and goal setting interfaces",
+      "calendarComponent": "Calendar Component",
+      "goalSettingWidget": "Goal Setting Widget",
+      "moveGoal": "Move Goal",
+      "setYourDailyActivity": "Set your daily activity goal.",
+      "caloriesDay": "CALORIES/DAY",
+      "exerciseMinutes": "Exercise Minutes",
+      "setGoal": "Set Goal",
+      "dataTables": "Data Tables",
+      "complexDataVisualizationWith": "Complex data visualization with status indicators",
+      "payments": "Payments",
+      "manageYourPayments": "Manage your payments.",
+      "status": "Status",
+      "email": "Email",
+      "amount": "Amount",
+      "processing": "Processing",
+      "failed": "Failed",
+      "pending": "Pending",
+      "n0Of6Row": "0 of 6 row(s) selected.",
+      "previous": "Previous",
+      "next": "Next",
+      "pricingComponents": "Pricing Components",
+      "subscriptionPlansAndPricing": "Subscription plans and pricing tables",
+      "pricing": "Pricing",
+      "checkOutOurAffordable": "Check out our affordable pricing plans",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "plus": "Plus",
+      "forPersonalUse": "For personal use",
+      "billedAnnually": "Billed {amount} annually",
+      "upTo5Team": "Up to 5 team members",
+      "basicComponentsLibrary": "Basic components library",
+      "communitySupport": "Community support",
+      "n1gbStorageSpace": "1GB storage space",
+      "purchase": "Purchase",
+      "pro": "Pro",
+      "forProfessionals": "For professionals",
+      "mostPopular": "Most Popular",
+      "everythingInPlusAnd": "Everything in Plus, and:",
+      "unlimitedTeamMembers": "Unlimited team members",
+      "advancedComponents": "Advanced components",
+      "prioritySupport": "Priority support",
+      "unlimitedStorage": "Unlimited storage",
+      "formComponents": "Form Components",
+      "completeFormElementsAnd": "Complete form elements and validation states",
+      "password": "Password",
+      "enterYourPassword": "Enter your password",
+      "message": "Message",
+      "typeYourMessageHere": "Type your message here...",
+      "planSelection": "Plan Selection",
+      "selectAPlan": "Select a plan",
+      "starterPlan": "Starter Plan",
+      "proPlan": "Pro Plan",
+      "enterprisePlan": "Enterprise Plan",
+      "iAgreeToThe": "I agree to the terms and conditions",
+      "allowUsToSend": "Allow us to send you emails",
+      "cancel": "Cancel",
+      "submitForm": "Submit Form",
+      "contextualAlerts": "Contextual Alerts",
+      "realWorldNotificationExamples": "Real-world notification examples with business context",
+      "subscriptionUpdate": "Subscription Update",
+      "yourSubscriptionIsUp": "Your subscription is up to date. Next billing date: June 1, 2024.",
+      "paymentDue": "Payment Due",
+      "yourPaymentMethodWill": "Your payment method will be charged in 3 days. Update your billing info if needed.",
+      "upgradeSuccessful": "Upgrade Successful",
+      "yourSubscriptionHasBeen": "Your subscription has been upgraded to Pro. Enjoy the new features!"
+    }
   }
 }

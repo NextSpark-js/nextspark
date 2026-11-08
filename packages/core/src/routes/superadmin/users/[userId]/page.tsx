@@ -112,6 +112,7 @@ function UserDetailPage() {
   const tTeams = useTranslations("teams");
   const locale = useLocale();
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
+  const userRoleLabel = (role: string) => (t.has(`usersPage.roles.${role}`) ? t(`usersPage.roles.${role}`) : role);
   const params = useParams()!;
   const userId = params.userId as string;
 
@@ -272,7 +273,7 @@ function UserDetailPage() {
                   ) : (
                     <>
                       <User className="h-3 w-3 mr-1" />
-                      {user?.role || t("userDetail.userRole")}
+                      <span className="capitalize">{user?.role ? userRoleLabel(user.role) : t("userDetail.userRole")}</span>
                     </>
                   )}
                 </Badge>

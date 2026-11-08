@@ -8,7 +8,8 @@ let role = 'superadmin'
 let viewerId = 'viewer'
 jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: viewerId, role } }, isPending: false }) }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+// the table reads its texts from the English catalog
+jest.mock('next-intl', () => jest.requireActual('../../__mocks__/next-intl.js'))
 jest.mock('@tanstack/react-query', () => ({ useMutation: () => ({ mutate: jest.fn(), isPending: false }), useQueryClient: () => ({}) }))
 jest.mock('@/core/hooks/useToast', () => ({ useToast: () => ({ toast: jest.fn() }) }))
 jest.mock('@/core/lib/role-helpers', () => ({ useRoleTranslations: () => (r: string) => r }))
@@ -43,8 +44,8 @@ describe('actions on a row follow the API rule (canActOnUser)', () => {
     role = r
     render(<UsersTable users={[unverified('t', target)] as never} />)
     for (const label of menu) expect(screen.queryAllByText(label)).toHaveLength(shown ? 1 : 0)
-    expect(screen.queryAllByText('restrictedTarget')).toHaveLength(shown ? 0 : 1)
-    expect(screen.queryAllByText('ownAccount')).toHaveLength(0)
+    expect(screen.queryAllByText('Only a developer can modify this account')).toHaveLength(shown ? 0 : 1)
+    expect(screen.queryAllByText('You cannot change your own account here')).toHaveLength(0)
     expect(screen.getAllByText('View Profile')).toHaveLength(1)
   })
 
@@ -62,8 +63,8 @@ describe('actions on a row follow the API rule (canActOnUser)', () => {
     viewerId = 'me'
     render(<UsersTable users={[user('me', 'developer')] as never} />)
     expect(screen.queryAllByText('Delete User')).toHaveLength(0)
-    expect(screen.getByText('ownAccount')).toBeTruthy()
-    expect(screen.queryAllByText('restrictedTarget')).toHaveLength(0)
+    expect(screen.getByText('You cannot change your own account here')).toBeTruthy()
+    expect(screen.queryAllByText('Only a developer can modify this account')).toHaveLength(0)
     viewerId = 'viewer'
   })
 })

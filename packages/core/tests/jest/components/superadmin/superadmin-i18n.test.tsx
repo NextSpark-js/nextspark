@@ -33,11 +33,18 @@ jest.mock('next-intl', () => {
 })
 jest.mock('next/navigation', () => ({ usePathname: () => '/superadmin/users', useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('@nextsparkjs/registries/plugin-registry.client', () => ({ getPluginNavItems: () => [] }))
+jest.mock('@tanstack/react-query', () => ({ useMutation: () => ({ isPending: false, mutate: jest.fn() }), useQueryClient: () => ({ invalidateQueries: jest.fn() }) }))
+jest.mock('@nextsparkjs/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: 'viewer', role: 'developer' } } }) }))
+jest.mock('@nextsparkjs/core/hooks/useToast', () => ({ useToast: () => ({ toast: jest.fn() }) }))
+jest.mock('@nextsparkjs/core/lib/role-helpers', () => ({ useRoleTranslations: () => (role: string) => role }))
 jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children, ...rest }: React.ComponentProps<'a'>) => <a href={href as string} {...rest}>{children}</a> }))
 
 import { SuperadminSidebar } from '@/core/components/superadmin/layouts/SuperadminSidebar'
 import { SuperadminDocsSidebar } from '@/core/components/docs/superadmin-docs-sidebar'
 import { TeamsTable } from '@/core/components/superadmin/tables/TeamsTable'
+import { RolesPermissionsMatrix } from '@/core/components/superadmin/tables/RolesPermissionsMatrix'
+import { UsersTable } from '@/core/components/users/tables/UsersTable'
+import { SuperAdminsTable } from '@/core/components/users/tables/SuperAdminsTable'
 import { PaginationControls } from '@/core/components/superadmin/filters/PaginationControls'
 import { SearchInput } from '@/core/components/superadmin/filters/SearchInput'
 import { formatLocaleDate, formatLocaleNumber } from '@/core/lib/i18n/format'
@@ -103,6 +110,37 @@ describe('TeamsTable', () => {
     expect(screen.getByText('miembro')).toBeInTheDocument()
     rerender(<TeamsTable teams={[]} />)
     expect(screen.getByText(es.superadmin.teamsTable.empty.title)).toBeInTheDocument()
+  })
+})
+
+describe('RolesPermissionsMatrix', () => {
+  test('names the roles in the headers with the team roles of the locale, and a role the catalog does not know as it comes', () => {
+    render(<RolesPermissionsMatrix roles={['owner', 'auditor']} hierarchy={{ owner: 100, auditor: 5 }} permissions={{ owner: ['a.b'], auditor: [] }} allPermissions={['a.b']} />)
+    expect(screen.getByText('Propietario')).toBeInTheDocument()
+    expect(screen.getByText('auditor')).toBeInTheDocument()
+    expect(screen.getByText(es.superadmin.rolesMatrix.permission)).toBeInTheDocument()
+    expect(screen.queryByText('owner')).toBeNull()
+  })
+})
+
+describe('the users tables', () => {
+  const user = { id: 'user-0123456789', fullName: 'Luz Perez', email: 'luz@acme.test', role: 'member', emailVerified: false, createdAt: '2024-03-05T12:00:00Z' }
+
+  test('UsersTable has its columns, status and date in Spanish', () => {
+    render(<UsersTable users={[user as never]} />)
+    for (const key of ['user', 'email', 'role', 'status', 'joined', 'actions'] as const) expect(screen.getAllByText(es.superadmin.users.table[key]).length).toBeGreaterThan(0)
+    expect(screen.getByText(es.superadmin.users.table.pending)).toBeInTheDocument()
+    expect(screen.getByText(formatLocaleDate(user.createdAt, 'es'))).toBeInTheDocument()
+    expect(screen.queryByText('Joined')).toBeNull()
+    expect(screen.queryByText('Unknown')).toBeNull()
+  })
+
+  test('SuperAdminsTable has its columns, status, date and notice in Spanish', () => {
+    render(<SuperAdminsTable superadmins={[{ ...user, role: 'superadmin' } as never]} currentUserId="viewer" />)
+    for (const key of ['administrator', 'since', 'unverified'] as const) expect(screen.getAllByText(es.superadmin.users.table[key]).length).toBeGreaterThan(0)
+    expect(screen.getByText(formatLocaleDate(user.createdAt, 'es'))).toBeInTheDocument()
+    expect(screen.getByText(es.superadmin.users.security.notice)).toBeInTheDocument()
+    expect(screen.queryByText('Since')).toBeNull()
   })
 })
 

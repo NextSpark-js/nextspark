@@ -47,6 +47,7 @@ export function RolesPermissionsMatrix({
   permissionsData,
 }: RolesPermissionsMatrixProps) {
   const t = useTranslations('superadmin.rolesMatrix');
+  const tTeams = useTranslations('teams');
   // Sort roles by hierarchy (highest to lowest)
   const sortedRoles = [...roles].sort(
     (a, b) => (hierarchy[b] ?? 0) - (hierarchy[a] ?? 0)
@@ -143,7 +144,7 @@ export function RolesPermissionsMatrix({
             {sortedRoles.map((role) => (
               <TableHead key={role} className="text-center min-w-[100px]">
                 <div className="flex flex-col items-center gap-1.5">
-                  <span className="capitalize font-semibold">{role}</span>
+                  <span className="capitalize font-semibold">{tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role}</span>
                   <Badge
                     variant={getRoleBadgeVariant(role)}
                     className="text-[10px] px-1.5 py-0"
