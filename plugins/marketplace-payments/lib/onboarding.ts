@@ -27,9 +27,12 @@ export async function startSellerOnboarding(
     refreshUrl: settings,
     providerAccountId: existing?.providerAccountId,
   })
-  // A disconnected seller that onboards again is live once the provider's account.updated confirms it.
-  if (result.providerAccountId || existing?.status === 'disconnected') {
-    await upsertAccount({ teamId: input.teamId, provider: 'stripe', providerAccountId: result.providerAccountId ?? existing!.providerAccountId, status: 'pending', chargesEnabled: false, payoutsEnabled: false, country: input.country })
+  if (result.providerAccountId) {
+    await upsertAccount({ teamId: input.teamId, provider: 'stripe', providerAccountId: result.providerAccountId, status: 'pending', chargesEnabled: false, payoutsEnabled: false, country: input.country })
+  } else if (existing?.status === 'disconnected') {
+    // An account that finished onboarding sends no new account.updated: its state is read here.
+    const status = await gateway.getAccountStatus({ providerAccountId: existing.providerAccountId })
+    await upsertAccount({ teamId: input.teamId, provider: 'stripe', providerAccountId: existing.providerAccountId, ...status })
   }
   return { redirectUrl: result.redirectUrl }
 }

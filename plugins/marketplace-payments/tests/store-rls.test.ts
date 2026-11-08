@@ -30,7 +30,7 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
   const { handleStripeWebhook } = await import('../lib/webhooks/handler')
   const { webhookDedupe } = await import('../lib/runtime')
   const { createMarketplaceCheckout, SellerAccountChangedError, SellerNotReadyError, refundMarketplacePayment } = await import('../lib/checkout')
-  const { completeMercadoPagoOAuth } = await import('../lib/onboarding')
+  const { completeMercadoPagoOAuth, startSellerOnboarding } = await import('../lib/onboarding')
   const { rotateSellerTokenKeys } = await import('../lib/token-crypto')
   const { refreshExpiringMercadoPagoTokens } = await import('../lib/mercadopago/refresh')
   const { ProviderApiError } = await import('../lib/provider-error')
@@ -239,6 +239,20 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
     await store.upsertAccount({ teamId: 'team-a', provider: 'stripe', providerAccountId: 'acct_new', status: 'active', chargesEnabled: true, payoutsEnabled: true })
     await assert.rejects(refundMarketplacePayment({ paymentId, idempotencyKey: 'k2' }, gateway), SellerAccountChangedError)
     assert.equal((await store.findPayment(paymentId))?.providerAccountId, 'acct_a')
+  })
+
+  await t.test('reconnecting a disconnected Stripe seller saves the state the provider reports', async () => {
+    await store.disconnectTeamSeller('team-a', 'stripe')
+    const gateway = {
+      provider: 'stripe' as const,
+      startOnboarding: async () => ({ redirectUrl: 'https://connect.test/x' }),
+      getAccountStatus: async () => ({ status: 'active' as const, chargesEnabled: true, payoutsEnabled: true, country: 'US' }),
+      createSplitCheckout: async () => ({ checkoutUrl: '', providerCheckoutId: '' }),
+      refund: async () => ({ providerRefundId: '' }),
+    }
+    await startSellerOnboarding({ provider: 'stripe', teamId: 'team-a', userId: 'owner-a' }, gateway)
+    const account = await store.findAccount('team-a', 'stripe')
+    assert.deepEqual([account?.status, account?.chargesEnabled, account?.payoutsEnabled, account?.country], ['active', true, true, 'US'])
   })
 
   await t.test('disconnecting keeps the payments and removes the token', async () => {
