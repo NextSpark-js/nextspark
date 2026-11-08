@@ -49,6 +49,10 @@ export function SignupForm() {
   const socialMethods = readiness.availableMethods.filter(isSocialLoginMethod)
   const socialAvailable = socialMethods.length > 0
   const otpAvailable = readiness.availableMethods.includes('email-otp')
+  // An app whose only email method is the link gets the same panel, with its own wording
+  const magicLinkOnly = !otpAvailable && readiness.availableMethods.includes('magic-link')
+  const emailSignInAvailable = otpAvailable || magicLinkOnly
+  const emailSignInCopy = magicLinkOnly ? 'signup.magicLinkOnly' : 'signup.otpOnly'
 
   // Read invitation-related params from URL
   const searchParams = useSearchParams()
@@ -593,7 +597,7 @@ export function SignupForm() {
             data-cy={sel(
               inviteToken
                 ? 'auth.signup.inviteUnavailable'
-                : otpAvailable
+                : emailSignInAvailable
                   ? 'auth.signup.otpOnly'
                   : 'auth.signup.noMethods'
             )}
@@ -603,13 +607,13 @@ export function SignupForm() {
               <p>
                 {inviteToken
                   ? t('signup.inviteUnavailable')
-                  : otpAvailable
-                    ? t('signup.otpOnly.message')
+                  : emailSignInAvailable
+                    ? t(`${emailSignInCopy}.message`)
                     : t('login.readiness.unavailable')}
               </p>
-              {otpAvailable && (
+              {emailSignInAvailable && (
                 <Button asChild className="w-full" data-cy={sel('auth.signup.otpLoginLink')}>
-                  <Link href={loginHref}>{t('signup.otpOnly.loginLink')}</Link>
+                  <Link href={loginHref}>{t(`${emailSignInCopy}.loginLink`)}</Link>
                 </Button>
               )}
             </AlertDescription>

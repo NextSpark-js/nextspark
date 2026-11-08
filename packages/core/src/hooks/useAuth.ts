@@ -39,7 +39,8 @@ type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 // 2. Dashboard load: useEnsureUserMetadata hook
 
 /**
- * The page a social sign-in returns to, marked with `auth_method=<provider>`.
+ * The page a social sign-in or a sign-in link returns to, marked with
+ * `auth_method=<provider>` (`email` for the link), for the "last used" badge.
  *
  * Better Auth accepts a relative callbackURL only when its query is made of
  * word characters and `-.+/=&%@`, and no hash, so the query is written back
@@ -47,9 +48,9 @@ type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
  * sign-in with INVALID_CALLBACK_URL. Setting the marker replaces one already in
  * the query rather than adding a second.
  */
-function socialCallbackURL(provider: SocialLoginMethod, redirectTo?: string): string {
+function signInCallbackURL(method: SocialLoginMethod | 'email', redirectTo?: string): string {
   const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
-  url.searchParams.set('auth_method', provider)
+  url.searchParams.set('auth_method', method)
   return withBasePath(`${url.pathname}${url.search.replace(/\*/g, '%2A')}`)
 }
 
@@ -213,12 +214,32 @@ export function useAuthActions() {
     return data
   }
 
+  /**
+   * Passwordless by link (Better Auth magicLink plugin): the browser that opens
+   * it lands signed in, so there is no second step here. A first sign-in creates
+   * the account. Better Auth redirects by itself, outside the Next.js router, so
+   * its URLs carry the base path.
+   */
+  const handleSendMagicLink = async (email: string, redirectTo?: string) => {
+    const { data, error } = await authClient.signIn.magicLink({
+      email,
+      callbackURL: signInCallbackURL('email', redirectTo),
+      errorCallbackURL: withBasePath('/auth-error'),
+    })
+
+    if (error) {
+      throw toAuthError(error, 'Failed to send the sign-in link')
+    }
+
+    return data
+  }
+
   const handleSocialSignIn = async (provider: SocialLoginMethod, redirectTo?: string) => {
     // For OAuth, Better Auth handles the redirect automatically
     // The method will be saved on the dashboard page after successful redirect
     await authClient.signIn.social({
       provider,
-      callbackURL: socialCallbackURL(provider, redirectTo)
+      callbackURL: signInCallbackURL(provider, redirectTo)
     })
   }
 
@@ -359,6 +380,7 @@ export function useAuthActions() {
     socialSignIn: handleSocialSignIn,
     sendOtp: handleSendOtp,
     signInWithOtp: handleOtpSignIn,
+    sendMagicLink: handleSendMagicLink,
     resetPassword: handleResetPassword,
     updatePassword: handleUpdatePassword,
     changePassword: handleChangePassword,

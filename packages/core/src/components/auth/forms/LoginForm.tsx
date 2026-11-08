@@ -164,7 +164,17 @@ function buildOtpCodeSchema(t: (key: string, options?: any) => string, length: n
     })
 }
 
-type EmailMode = 'otp' | 'password'
+type EmailMode = 'otp' | 'magic-link' | 'password'
+
+/** What the form shows when a code or a link could not be requested. */
+function sendErrorMessage(err: unknown, fallback: string, t: (key: string, options?: any) => string): string {
+  const error = err instanceof Error ? err : new Error(fallback)
+  const registrationKey = registrationErrorKey((error as AuthError).code)
+  if (registrationKey) return t(registrationKey)
+  return (error as AuthError).code === 'RATE_LIMITED'
+    ? rateLimitedWaitMessage(error as AuthError, t)
+    : error.message || fallback
+}
 
 export function LoginForm() {
   const readiness = useAuthReadiness()
@@ -227,6 +237,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   // Server-validated login methods — passwordless preset by default:
   // one-time code by email + Google, no password field.
   const otpEnabled = methods.includes('email-otp')
+  const magicLinkEnabled = methods.includes('magic-link')
   // Code length and lifetime come from the same resolved config Better Auth
   // runs with, so the input size and the countdown can't drift from what the
   // server actually issues.
@@ -242,11 +253,12 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   const signupVisible =
     (registrationMode === 'open' || registrationMode === 'domain-open') && methods.includes('email-password')
   const emailLoginAllowed =
-    (registrationMode !== 'domain-restricted' || devKeyringActive) && (otpEnabled || passwordEnabled)
+    (registrationMode !== 'domain-restricted' || devKeyringActive) && (otpEnabled || magicLinkEnabled || passwordEnabled)
   // Which email form opens first: the first email method in the configured order
   const primaryEmailMode: EmailMode = (() => {
     const primary = getPrimaryEmailMethod(methods)
     if (primary === 'email-otp' && otpEnabled) return 'otp'
+    if (primary === 'magic-link') return 'magic-link'
     if (primary === 'email-password') return 'password'
     return otpEnabled ? 'otp' : 'password'
   })()
@@ -266,8 +278,10 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   // When the current code was requested, so the notice can count it down.
   const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(otpExpiresIn)
+  // Sign-in link: the email input is the code form's, the rest happens in the mailbox
+  const [magicLinkSent, setMagicLinkSent] = useState(false)
   const isProcessingRef = useRef(false)
-  const { signIn, googleSignIn, socialSignIn, sendOtp, signInWithOtp } = useAuthActions()
+  const { signIn, googleSignIn, socialSignIn, sendOtp, signInWithOtp, sendMagicLink } = useAuthActions()
   const { lastMethod, isReady } = useLastAuthMethod()
   const t = useTranslations('auth')
   const loginSchema = useMemo(() => buildLoginSchema(t), [t])
@@ -323,6 +337,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
     setOtpStep('email')
     setOtpCode('')
     setOtpSentAt(null)
+    setMagicLinkSent(false)
   }, [])
 
   /**
@@ -361,19 +376,42 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
       setOtpSecondsLeft(getOtpSecondsRemaining(sentAt, otpExpiresIn))
       setStatusMessage(t('login.messages.otpSent'))
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(t('login.messages.otpSendFailed'))
-      const registrationKey = registrationErrorKey((error as AuthError).code)
-      const errorMessage = registrationKey
-        ? t(registrationKey)
-        : (error as AuthError).code === 'RATE_LIMITED'
-          ? rateLimitedWaitMessage(error as AuthError, t)
-          : error.message || t('login.messages.otpSendFailed')
+      const errorMessage = sendErrorMessage(err, t('login.messages.otpSendFailed'), t)
       setError(errorMessage)
       setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
     } finally {
       setLoadingProvider(null)
     }
   }, [loadingProvider, otpEmail, otpEmailSchema, otpExpiresIn, sendOtp, t])
+
+  /** Sign-in link: validate the email and send it. Also used by "Resend link". */
+  const handleSendMagicLink = useCallback(async (event?: React.FormEvent) => {
+    event?.preventDefault()
+    if (loadingProvider) return
+
+    const parsed = otpEmailSchema.safeParse(otpEmail)
+    if (!parsed.success) {
+      setOtpEmailError(parsed.error.issues[0]?.message ?? t('login.errors.invalidEmail'))
+      return
+    }
+    setOtpEmailError(null)
+    setError(null)
+    setLoadingProvider('email')
+    setStatusMessage(t('login.messages.magicLinkSending'))
+
+    try {
+      await sendMagicLink(parsed.data, callbackUrl || undefined)
+      setOtpEmail(parsed.data)
+      setMagicLinkSent(true)
+      setStatusMessage(t('login.messages.magicLinkSent'))
+    } catch (err) {
+      const errorMessage = sendErrorMessage(err, t('login.messages.magicLinkSendFailed'), t)
+      setError(errorMessage)
+      setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
+    } finally {
+      setLoadingProvider(null)
+    }
+  }, [loadingProvider, otpEmail, otpEmailSchema, sendMagicLink, callbackUrl, t])
 
   /**
    * Passwordless step 2: exchange the emailed code for a session.
@@ -492,6 +530,20 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
       isProcessingRef.current = false
     }
   }, [socialSignIn, t, loadingProvider, callbackUrl])
+
+  const magicLinkSwitch = magicLinkEnabled && (
+    <div className="text-center">
+      <button
+        type="button"
+        onClick={() => switchEmailMode('magic-link')}
+        disabled={!!loadingProvider}
+        className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+        data-cy={sel('auth.login.useMagicLink')}
+      >
+        {t('login.form.useMagicLink')}
+      </button>
+    </div>
+  )
 
   return (
     <>
@@ -778,6 +830,154 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                     </>
                   )}
 
+                  {magicLinkSwitch}
+
+                  {passwordEnabled && (
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => switchEmailMode('password')}
+                        disabled={!!loadingProvider}
+                        className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+                        data-cy={sel('auth.login.usePassword')}
+                      >
+                        {t('login.form.usePassword')}
+                      </button>
+                    </div>
+                  )}
+
+                  {socialEnabled && (
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailForm(false)}
+                        className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+                        data-cy={sel('auth.login.hideEmail')}
+                      >
+                        {t('login.form.backToGoogle')}
+                      </button>
+                    </div>
+                  )}
+                </form>
+              )}
+
+              {/* Passwordless: sign-in link by email (AUTH_CONFIG.methods 'magic-link') */}
+              {emailMode === 'magic-link' && magicLinkEnabled && (
+                <form
+                  onSubmit={handleSendMagicLink}
+                  className="space-y-4"
+                  aria-labelledby="login-heading"
+                  noValidate
+                  data-cy={sel('auth.login.magicLinkForm')}
+                >
+                  {magicLinkSent ? (
+                    <Alert data-cy={sel('auth.login.magicLinkSentNotice')}>
+                      <Mail className="h-4 w-4" aria-hidden="true" />
+                      <AlertDescription>{t('login.form.magicLink.linkSent', { email: otpEmail })}</AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="magic-link-email">{t('login.form.email')}</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        <Input
+                          id="magic-link-email"
+                          type="email"
+                          autoComplete="email"
+                          inputMode="email"
+                          value={otpEmail}
+                          onChange={(e) => setOtpEmail(e.target.value)}
+                          placeholder={t('login.form.emailPlaceholder')}
+                          className={`pl-9 ${fromInvite ? 'bg-muted cursor-not-allowed' : ''}`}
+                          readOnly={fromInvite}
+                          aria-required="true"
+                          aria-describedby={otpEmailError ? 'magic-link-email-error' : 'magic-link-email-help'}
+                          aria-invalid={otpEmailError ? 'true' : 'false'}
+                          data-cy={sel('auth.login.magicLinkEmailInput')}
+                        />
+                      </div>
+                      <p id="magic-link-email-help" className="text-xs text-muted-foreground">
+                        {t('login.form.magicLink.emailHelp')}
+                      </p>
+                      {otpEmailError && (
+                        <p
+                          id="magic-link-email-error"
+                          className="text-sm text-destructive"
+                          role="alert"
+                          aria-live="assertive"
+                          data-cy={sel('auth.login.magicLinkEmailError')}
+                        >
+                          {otpEmailError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {error && (
+                    <Alert
+                      variant="destructive"
+                      role="alert"
+                      aria-live="assertive"
+                      data-cy={sel('auth.login.errorAlert')}
+                    >
+                      <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {magicLinkSent ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <button
+                        type="button"
+                        onClick={() => void handleSendMagicLink()}
+                        disabled={!!loadingProvider}
+                        className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 min-h-[44px] inline-flex items-center"
+                        data-cy={sel('auth.login.magicLinkResend')}
+                      >
+                        {t('login.form.magicLink.resendLink')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setMagicLinkSent(false); setError(null) }}
+                        disabled={!!loadingProvider}
+                        className="text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 min-h-[44px] inline-flex items-center"
+                        data-cy={sel('auth.login.magicLinkChangeEmail')}
+                      >
+                        {t('login.form.magicLink.changeEmail')}
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="submit"
+                      disabled={!!loadingProvider}
+                      className="w-full"
+                      data-cy={sel('auth.login.magicLinkSend')}
+                    >
+                      {loadingProvider === 'email' ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                          {t('login.form.magicLink.sendingLink')}
+                        </>
+                      ) : (
+                        t('login.form.magicLink.sendLink')
+                      )}
+                    </Button>
+                  )}
+
+                  {otpEnabled && (
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => switchEmailMode('otp')}
+                        disabled={!!loadingProvider}
+                        className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+                        data-cy={sel('auth.login.useOtp')}
+                      >
+                        {t('login.form.useOtp')}
+                      </button>
+                    </div>
+                  )}
+
                   {passwordEnabled && (
                     <div className="text-center">
                       <button
@@ -808,7 +1008,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
               )}
 
               {/* Classic: email + password (AUTH_CONFIG.methods 'email-password') */}
-              {(emailMode === 'password' || !otpEnabled) && passwordEnabled && (
+              {(emailMode === 'password' || (emailMode === 'otp' && !otpEnabled)) && passwordEnabled && (
               <form
             onSubmit={handleSubmit(onSubmit)}
             className="space-y-4"
@@ -955,6 +1155,8 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
                     </button>
                   </div>
                 )}
+
+                {magicLinkEnabled && <div className="mt-4">{magicLinkSwitch}</div>}
 
                 {socialEnabled && (
                   <div className="text-center mt-4">

@@ -11,6 +11,7 @@ const mockPush = jest.fn()
 const mockSignInEmail = jest.fn()
 const mockSignInEmailOtp = jest.fn()
 const mockSignInSocial = jest.fn()
+const mockSignInMagicLink = jest.fn()
 const mockRequestPasswordReset = jest.fn()
 
 jest.mock('next/navigation', () => ({
@@ -24,6 +25,7 @@ jest.mock('@/core/lib/auth-client', () => ({
       email: (...args: unknown[]) => mockSignInEmail(...args),
       emailOtp: (...args: unknown[]) => mockSignInEmailOtp(...args),
       social: (...args: unknown[]) => mockSignInSocial(...args),
+      magicLink: (...args: unknown[]) => mockSignInMagicLink(...args),
     },
     requestPasswordReset: (...args: unknown[]) => mockRequestPasswordReset(...args),
   },
@@ -43,6 +45,7 @@ beforeEach(() => {
   mockSignInEmail.mockReset().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
   mockSignInEmailOtp.mockReset().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
   mockSignInSocial.mockReset().mockResolvedValue({ data: null, error: null })
+  mockSignInMagicLink.mockReset().mockResolvedValue({ data: { status: true }, error: null })
   mockRequestPasswordReset.mockReset().mockResolvedValue({ data: { status: true }, error: null })
 })
 
@@ -91,6 +94,22 @@ describe('useAuth sign-in destinations', () => {
     expect(mockSignInSocial.mock.calls[0][0]).toEqual({ provider, callbackURL: `/reports?cols=%2A&auth_method=${provider}` })
   })
 
+  test.each([
+    ['/dashboard?at=2026-09-14T12:30:00Z', '/dashboard?at=2026-09-14T12%3A30%3A00Z&auth_method=email'],
+    ['//evil.example/phish', '/dashboard?auth_method=email'],
+    ['https://evil.example/phish', '/dashboard?auth_method=email'],
+    [undefined, '/dashboard?auth_method=email'],
+  ])('a sign-in link requested with callback %p returns to %s, and a failed one to the error page', async (redirectTo, expected) => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(async () => {
+      await result.current.sendMagicLink('a@example.com', redirectTo)
+    })
+
+    expect(mockSignInMagicLink.mock.calls[0][0]).toEqual({ email: 'a@example.com', callbackURL: expected, errorCallbackURL: '/auth-error' })
+    expect(expected).toMatch(BETTER_AUTH_RELATIVE_CALLBACK)
+  })
+
   test('the password reset email returns to the reset-password page', async () => {
     const { result } = renderHook(() => useAuth())
 
@@ -132,6 +151,17 @@ describe('useAuth sign-in destinations', () => {
       const { callbackURL } = mockSignInSocial.mock.calls[0][0] as { callbackURL: string }
       expect(callbackURL).toBe(expected)
       expect(callbackURL).toMatch(BETTER_AUTH_RELATIVE_CALLBACK)
+    })
+
+    test('a sign-in link returns to its page and to the error page, base path included', async () => {
+      const { result } = renderHook(() => useAuth())
+
+      await act(async () => {
+        await result.current.sendMagicLink('a@example.com', '/reports')
+      })
+
+      // Better Auth redirects to these as they are, outside the Next.js router
+      expect(mockSignInMagicLink.mock.calls[0][0]).toEqual({ email: 'a@example.com', callbackURL: '/base/reports?auth_method=email', errorCallbackURL: '/base/auth-error' })
     })
 
     test('the password reset email returns to the reset-password page, base path included', async () => {

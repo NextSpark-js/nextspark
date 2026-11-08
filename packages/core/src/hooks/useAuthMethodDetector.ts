@@ -16,8 +16,8 @@ export function useAuthMethodDetector() {
   useEffect(() => {
     const authMethod = searchParams.get('auth_method')
 
-    if (isSocialLoginMethod(authMethod)) {
-      // Save the auth method when coming from OAuth redirect
+    if (isSocialLoginMethod(authMethod) || authMethod === 'email') {
+      // Save the auth method when coming from an OAuth redirect or a sign-in link
       saveAuthMethod(authMethod)
 
       // Clean the URL parameter without causing a reload

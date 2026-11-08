@@ -24,10 +24,13 @@ export function AuthErrorPage() {
     || code === 'unable_to_create_session'
     || code === 'user_not_found'
 
-  const titleKey = isAccountError ? 'unable_to_create.title' : 'generic.title'
+  // A sign-in link that was already used or has expired (Better Auth's magic-link verify)
+  const isInvalidLink = code === 'invalid_token'
+
+  const titleKey = isInvalidLink ? 'magicLink.title' : isAccountError ? 'unable_to_create.title' : 'generic.title'
   const description = registrationKey
     ? tAuth(registrationKey)
-    : t(isAccountError ? 'unable_to_create.description' : 'generic.description')
+    : t(isInvalidLink ? 'magicLink.description' : isAccountError ? 'unable_to_create.description' : 'generic.description')
 
   return (
     <div className="space-y-6" data-cy="auth-error-page">
