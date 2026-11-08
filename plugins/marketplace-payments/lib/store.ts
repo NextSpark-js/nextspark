@@ -282,10 +282,11 @@ export const webhookStore: WebhookStore = {
 
 export const tokenRefreshStore: TokenRefreshStore = {
   async listMercadoPagoAccountsExpiringBefore(before, limit) {
+    // ponytail: random order, so sellers that keep failing cannot fill every batch; the renewal window is 30 days of hourly runs, so the soonest expiry gets no priority until a last-attempt column is worth adding
     const rows = await queryRows<{ accountId: string }>(
       `SELECT c."accountId" FROM public."marketplace_seller_credentials" c
        JOIN public."marketplace_accounts" a ON a.id = c."accountId"
-       WHERE a.provider = 'mercadopago' AND c."expiresAt" < $1 ORDER BY c."expiresAt" LIMIT $2`,
+       WHERE a.provider = 'mercadopago' AND c."expiresAt" < $1 ORDER BY random() LIMIT $2`,
       [before, limit]
     )
     return rows.map(row => row.accountId)

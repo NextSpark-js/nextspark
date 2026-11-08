@@ -202,6 +202,23 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
     await assert.rejects(store.saveMercadoPagoSeller('team-b', tokens('mp-a2')), store.SellerAlreadyConnectedError)
   })
 
+  await t.test('every seller due for renewal can get into a batch', async () => {
+    await owner.query(`
+      INSERT INTO teams (id, name, slug, "ownerId") SELECT 'bulk-' || n, 'Team ' || n, 'bulk-' || n, 'owner-a' FROM generate_series(1, 26) n;
+      INSERT INTO public."marketplace_accounts" (id, "teamId", provider, "providerAccountId") SELECT 'acc-' || n, 'bulk-' || n, 'mercadopago', 'bulk-mp-' || n FROM generate_series(1, 26) n;
+      INSERT INTO public."marketplace_seller_credentials" ("accountId", "accessTokenEnc", "refreshTokenEnc", "expiresAt") SELECT 'acc-' || n, 'x', 'x', timestamptz '2000-01-01' + make_interval(days => n) FROM generate_series(1, 26) n;
+    `)
+    try {
+      const seen = new Set<string>()
+      for (let draw = 0; draw < 30; draw++) {
+        for (const id of await store.tokenRefreshStore.listMercadoPagoAccountsExpiringBefore(new Date('2001-01-01'), 25)) seen.add(id)
+      }
+      assert.equal(seen.size, 26)
+    } finally {
+      await owner.query(`DELETE FROM teams WHERE id LIKE 'bulk-%'`)
+    }
+  })
+
   await t.test('a seller that fails does not fail the scheduled actions, and keeps its credential', async ctx => {
     ctx.mock.method(console, 'error', () => {})
     process.env.MARKETPLACE_MERCADOPAGO_CLIENT_ID = 'cid'
