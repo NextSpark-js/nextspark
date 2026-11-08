@@ -25,6 +25,7 @@ const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256
 
 type Step =
   | { op: 'otp'; email: string }
+  | { op: 'google'; email: string; name?: string }
   | { op: 'github'; email: string; emailVerified?: boolean; name?: string | null; noEmail?: boolean; id?: number }
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
   | { op: 'discord'; email: string; emailVerified?: boolean; id?: string }
@@ -50,6 +51,8 @@ function runSteps(databaseUrl: string, registration: string, steps: Step[], { ba
       BETTER_AUTH_URL: ORIGIN,
       NEXT_PUBLIC_APP_URL: ORIGIN,
       ...(basePath ? { __NEXT_ROUTER_BASEPATH: basePath } : {}),
+      GOOGLE_CLIENT_ID: '1234567890-socialproviders.apps.googleusercontent.com',
+      GOOGLE_CLIENT_SECRET: 'social-providers-google-secret',
       DISCORD_CLIENT_ID: 'discord-map-client',
       DISCORD_CLIENT_SECRET: 'discord-map-secret',
       GITHUB_CLIENT_ID: 'Ov23liSocialProvider',
@@ -151,6 +154,17 @@ test('invitation-only: the GitHub and Apple callbacks meet the same gate as Goog
   assert.ok(signedIn(invited), JSON.stringify(invited))
   assert.ok(signedIn(again), JSON.stringify(again))
   assert.deepEqual((await accounts(owner)).map(r => r.email), ['first@example.test', 'invited@example.test'])
+})
+
+test('a one-word name: the team is named without a stray space, with GitHub and with Google', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  const results = runSteps(ownerUrl, 'open', [
+    { op: 'github', email: 'ada@example.test', name: 'Ada', id: 8181 },
+    { op: 'google', email: 'cher@example.test', name: 'Cher' },
+  ])
+  for (const result of results) assert.ok(signedIn(result), JSON.stringify(result))
+  assert.equal((await person(owner, 'ada@example.test')).team, "Ada's Team")
+  assert.equal((await person(owner, 'cher@example.test')).team, "Cher's Team")
 })
 
 test('a provider enabled only by the map: signs up a verified address, refuses an unverified one, and meets the registration gate', { skip, timeout: 300000 }, async t => {

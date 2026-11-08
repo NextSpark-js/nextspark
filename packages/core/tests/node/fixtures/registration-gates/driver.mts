@@ -12,7 +12,7 @@ import { NextRequest } from 'next/server'
 type Step =
   | { op: 'password'; email: string; inviteToken?: string }
   | { op: 'otp'; email: string }
-  | { op: 'google'; email: string; emailVerified?: boolean }
+  | { op: 'google'; email: string; emailVerified?: boolean; name?: string }
   | { op: 'invite'; email: string; token: string }
   // emails: the /user/emails answer (none: no address at all)
   | { op: 'github'; email: string; emailVerified?: boolean; name?: string | null; noEmail?: boolean; id?: number }
@@ -52,6 +52,7 @@ async function outcome(res: Response) {
 // Google's token exchange: an unsigned id token for the address of the current step
 let googleEmail = ''
 let googleEmailVerified = true
+let googleName = 'Google User'
 let github: Extract<Step, { op: 'github' }> | null = null
 let apple: Extract<Step, { op: 'apple' }> | null = null
 // What Apple's token endpoint received as client_secret
@@ -88,7 +89,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     return jsonResponse({ keys: [{ ...jwk, kid: 'stub-apple-kid', alg: 'ES256', use: 'sig' }] })
   }
   if (url.startsWith('https://oauth2.googleapis.com/token')) {
-    const idToken = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: `google-${googleEmail}`, email: googleEmail, email_verified: googleEmailVerified, name: 'Google User', iss: 'https://accounts.google.com', aud: process.env.GOOGLE_CLIENT_ID, exp: Math.floor(Date.now() / 1000) + 600, iat: Math.floor(Date.now() / 1000) })}.`
+    const idToken = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: `google-${googleEmail}`, email: googleEmail, email_verified: googleEmailVerified, name: googleName, iss: 'https://accounts.google.com', aud: process.env.GOOGLE_CLIENT_ID, exp: Math.floor(Date.now() / 1000) + 600, iat: Math.floor(Date.now() / 1000) })}.`
     return new Response(JSON.stringify({ access_token: 'stub-access', id_token: idToken, token_type: 'Bearer', expires_in: 600, scope: 'openid email profile' }), { headers: { 'content-type': 'application/json' } })
   }
   return realFetch(input, init)
@@ -169,6 +170,7 @@ async function run(step: Step) {
     case 'google': {
       googleEmail = step.email
       googleEmailVerified = step.emailVerified ?? true
+      googleName = step.name ?? 'Google User'
       const start = await authRoute.POST(json('/api/auth/sign-in/social', { provider: 'google', callbackURL: '/dashboard' }))
       const { url } = await start.json() as { url: string }
       const state = new URL(url).searchParams.get('state')!

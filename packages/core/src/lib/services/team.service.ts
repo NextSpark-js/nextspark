@@ -339,7 +339,9 @@ export class TeamService {
     const timestamp = Date.now().toString(36)
     // The whole id (as the slug rule allows it), so two users cannot share a slug by a common prefix
     const teamSlug = `team-${timestamp}-${userId.toLowerCase().replace(/[^a-z0-9]/g, '')}`
-    const teamName = name || (user.name ? `${user.name}'s Team` : 'My Team')
+    // sync_user_name leaves a trailing space on a name without a last name, and a lone space on none
+    const ownerName = user.name?.trim()
+    const teamName = name || (ownerName ? `${ownerName}'s Team` : 'My Team')
 
     // Use a SERVICE transaction (RLS bypass) to ensure atomicity. This bootstrap
     // creates the FIRST team_members (owner) row and the team's first
