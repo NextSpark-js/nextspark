@@ -252,10 +252,15 @@ describe('shipped auth route runtime readiness integration', () => {
       expect(mockGet).not.toHaveBeenCalled()
     })
 
-    test('the same gate on the sending POST stays a JSON 503', async () => {
-      const response = await POST(nextRequest('/api/auth/sign-in/magic-link', { method: 'POST' }))
-      expect(response.status).toBe(503)
-      expect((await response.json()).code).toBe('AUTH_METHOD_UNAVAILABLE')
+    test('the same gate on the sending POST and on another GET stays a JSON 503', async () => {
+      const post = await POST(nextRequest('/api/auth/sign-in/magic-link', { method: 'POST' }))
+      expect(post.status).toBe(503)
+      expect((await post.json()).code).toBe('AUTH_METHOD_UNAVAILABLE')
+
+      mockAuthConfig.providers = { google: { enabled: false } }
+      const get = await GET(nextRequest('/api/auth/callback/google?code=c'), { params: Promise.resolve({ all: [] }) })
+      expect(get.status).toBe(503)
+      expect((await get.json()).code).toBe('AUTH_METHOD_UNAVAILABLE')
     })
   })
 
