@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Check, X, Infinity } from "lucide-react";
 import { Badge } from '../../ui/badge';
 import {
@@ -13,6 +14,7 @@ import {
 } from '../../ui/table';
 import { cn } from '../../../lib/utils';
 import { sel } from '../../../lib/test';
+import { formatLocaleDollars, formatLocaleNumber } from '../../../lib/i18n/format';
 import type { PlanDefinition, FeatureDefinition, LimitDefinition } from '../../../lib/billing/config-types';
 
 interface FeaturesMatrix {
@@ -40,6 +42,8 @@ export function PlanFeaturesMatrix({
   limits,
   matrix,
 }: PlanFeaturesMatrixProps) {
+  const t = useTranslations('superadmin.planMatrix');
+  const locale = useLocale();
   // Sort plans: free first, then paid (by price), then enterprise
   const sortedPlans = [...plans].sort((a, b) => {
     const typeOrder = { free: 0, paid: 1, enterprise: 2 };
@@ -65,25 +69,25 @@ export function PlanFeaturesMatrix({
 
   // Format price for display
   const formatPrice = (plan: PlanDefinition): string => {
-    if (plan.type === "free") return "Free";
-    if (plan.type === "enterprise") return "Contact Sales";
-    if (!plan.price) return "N/A";
-    return `$${(plan.price.monthly / 100).toFixed(0)}/mo`;
+    if (plan.type === "free") return t('free');
+    if (plan.type === "enterprise") return t('contactSales');
+    if (!plan.price) return t('notAvailable');
+    return t('perMonth', { price: formatLocaleDollars(plan.price.monthly, locale, { whole: true }) });
   };
 
   // Format limit value
   const formatLimit = (value: number, limitDef: LimitDefinition): string => {
-    if (value === -1) return "Unlimited";
+    if (value === -1) return t('unlimited');
     if (value === 0) return "—";
 
     switch (limitDef.unit) {
       case "bytes":
-        return `${value} GB`;
+        return t('gigabytes', { value: formatLocaleNumber(value, locale) });
       case "calls":
-        return value.toLocaleString();
+        return formatLocaleNumber(value, locale);
       case "count":
       default:
-        return value.toLocaleString();
+        return formatLocaleNumber(value, locale);
     }
   };
 
@@ -113,7 +117,7 @@ export function PlanFeaturesMatrix({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[280px]">Feature / Limit</TableHead>
+            <TableHead className="w-[280px]">{t('featureOrLimit')}</TableHead>
             {sortedPlans.map((plan) => (
               <TableHead key={plan.slug} className="text-center min-w-[120px]">
                 <div className="flex flex-col items-center gap-1.5">
@@ -126,7 +130,7 @@ export function PlanFeaturesMatrix({
                   </Badge>
                   {plan.visibility === "hidden" && (
                     <Badge variant="outline" className="text-[9px] px-1 py-0">
-                      hidden
+                      {t('hidden')}
                     </Badge>
                   )}
                 </div>
@@ -141,7 +145,7 @@ export function PlanFeaturesMatrix({
               colSpan={sortedPlans.length + 1}
               className="font-semibold text-sm py-3"
             >
-              Features
+              {t('features')}
             </TableCell>
           </TableRow>
 
@@ -178,7 +182,7 @@ export function PlanFeaturesMatrix({
               colSpan={sortedPlans.length + 1}
               className="font-semibold text-sm py-3"
             >
-              Limits & Quotas
+              {t('limits')}
             </TableCell>
           </TableRow>
 
@@ -195,7 +199,7 @@ export function PlanFeaturesMatrix({
                     {formatLimitLabel(limitSlug, limitDef)}
                     {limitDef.resetPeriod !== "never" && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0">
-                        {limitDef.resetPeriod}
+                        {t.has(`resetPeriods.${limitDef.resetPeriod}`) ? t(`resetPeriods.${limitDef.resetPeriod}`) : limitDef.resetPeriod}
                       </Badge>
                     )}
                   </div>

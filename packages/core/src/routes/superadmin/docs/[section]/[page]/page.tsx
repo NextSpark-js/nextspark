@@ -36,16 +36,17 @@ export async function generateMetadata({ params }: SuperadminDocsPageProps): Pro
   const resolvedParams = await params
   const { section: sectionSlug, page: pageSlug } = resolvedParams
 
+  const t = await getTranslations('superadmin.docs')
   const section = DOCS_REGISTRY.superadmin.find(s => s.slug === sectionSlug)
-  if (!section) return { title: 'Page Not Found' }
+  if (!section) return { title: t('pageNotFound') }
 
   const page = section.pages.find(p => p.slug === pageSlug)
-  if (!page) return { title: 'Page Not Found' }
+  if (!page) return { title: t('pageNotFound') }
 
   const title = page.title || pageSlug.replace(/-/g, ' ')
   return {
-    title: `${title} | Admin Docs`,
-    description: `Admin documentation for ${title}`,
+    title: t('metaTitle', { title }),
+    description: t('metaDescription', { title }),
     robots: 'noindex, nofollow'
   }
 }
@@ -64,6 +65,7 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
   const filePath = path.join(process.cwd(), page.path)
   const { metadata, html } = await parseMarkdownFile(filePath)
   const tCommon = await getTranslations('common')
+  const t = await getTranslations('superadmin.docs')
 
   return (
     <div className="flex gap-8" data-cy="superadmin-docs-page">
@@ -75,8 +77,8 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
         <DocsBreadcrumbs
           label={tCommon('a11y.breadcrumb')}
           items={[
-            { label: 'Super Admin', href: '/superadmin' },
-            { label: 'Documentation', href: '/superadmin/docs' },
+            { label: t('breadcrumbSuperAdmin'), href: '/superadmin' },
+            { label: t('breadcrumbDocs'), href: '/superadmin/docs' },
             { label: section.title },
             { label: metadata.title }
           ]}

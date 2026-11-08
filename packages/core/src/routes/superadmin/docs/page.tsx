@@ -2,15 +2,20 @@ import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { SuperadminDocsSidebar } from '@nextsparkjs/core/components/docs/superadmin-docs-sidebar'
 import Link from 'next/link'
 import { FileText, Folder } from 'lucide-react'
+import { getTranslations } from 'next-intl/server'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: 'Admin Documentation | Super Admin',
-  description: 'Administrator documentation for deployment, configuration, and management',
-  robots: 'noindex, nofollow'
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('superadmin.docs')
+  return {
+    title: t('indexMetaTitle'),
+    description: t('indexMetaDescription'),
+    robots: 'noindex, nofollow'
+  }
 }
 
-export default function SuperadminDocsPage() {
+export default async function SuperadminDocsPage() {
+  const t = await getTranslations('superadmin.docs')
   const sections = DOCS_REGISTRY.superadmin
 
   if (sections.length === 0) {
@@ -20,9 +25,9 @@ export default function SuperadminDocsPage() {
           <SuperadminDocsSidebar sections={sections} />
         </aside>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold mb-4">Admin Documentation</h1>
+          <h1 className="text-3xl font-bold mb-4">{t('indexTitle')}</h1>
           <p className="text-muted-foreground">
-            No administrator documentation available yet.
+            {t('indexEmpty')}
           </p>
         </div>
       </div>
@@ -40,9 +45,9 @@ export default function SuperadminDocsPage() {
       </aside>
 
       <div className="flex-1">
-        <h1 className="text-3xl font-bold mb-4">Admin Documentation</h1>
+        <h1 className="text-3xl font-bold mb-4">{t('indexTitle')}</h1>
         <p className="text-muted-foreground mb-8">
-          Documentation for administrators covering deployment, configuration, and system management.
+          {t('indexIntro')}
         </p>
 
         <div className="grid gap-6">

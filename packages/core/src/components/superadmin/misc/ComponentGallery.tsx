@@ -38,6 +38,7 @@ import {
   Plus
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 /**
  * Component Gallery
@@ -46,6 +47,7 @@ import { useState } from "react";
  * real-world usage patterns inspired by TweakCN.com - perfect for theme testing.
  */
 export function ComponentGallery() {
+  const t = useTranslations("superadmin.gallery.components");
   const [goalValue, setGoalValue] = useState(350);
   const [date, setDate] = useState<Date | undefined>(new Date());
 
@@ -55,61 +57,61 @@ export function ComponentGallery() {
       {/* Basic UI Components */}
       <Card>
         <CardHeader>
-          <CardTitle>Basic Components</CardTitle>
-          <CardDescription>Essential UI elements and building blocks</CardDescription>
+          <CardTitle>{t('basicComponents')}</CardTitle>
+          <CardDescription>{t('essentialUiElementsAnd')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Buttons */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Buttons</h4>
+            <h4 className="text-sm font-medium mb-3">{t('buttons')}</h4>
             <div className="space-y-3">
               <div className="flex flex-wrap gap-3">
-                <Button>Default</Button>
-                <Button size="sm">Small</Button>
-                <Button size="lg">Large</Button>
-                <Button disabled>Disabled</Button>
+                <Button>{t('default')}</Button>
+                <Button size="sm">{t('small')}</Button>
+                <Button size="lg">{t('large')}</Button>
+                <Button disabled>{t('disabled')}</Button>
                 <Button className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
-                  With Icon
+                  {t('withIcon')}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button variant="default">Default</Button>
-                <Button variant="secondary">Secondary</Button>
-                <Button variant="destructive">Destructive</Button>
-                <Button variant="outline">Outline</Button>
-                <Button variant="ghost">Ghost</Button>
-                <Button variant="link">Link</Button>
+                <Button variant="default">{t('default')}</Button>
+                <Button variant="secondary">{t('secondary')}</Button>
+                <Button variant="destructive">{t('destructive')}</Button>
+                <Button variant="outline">{t('outline')}</Button>
+                <Button variant="ghost">{t('ghost')}</Button>
+                <Button variant="link">{t('link')}</Button>
               </div>
             </div>
           </div>
 
           {/* Form Elements */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Form Elements</h4>
+            <h4 className="text-sm font-medium mb-3">{t('formElements')}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
-                <Input placeholder="Text input..." />
-                <Input type="email" placeholder="Email input..." />
-                <Textarea placeholder="Textarea..." rows={3} />
+                <Input placeholder={t('textInput')} />
+                <Input type="email" placeholder={t('emailInput')} />
+                <Textarea placeholder={t('textarea')} rows={3} />
               </div>
               <div className="space-y-3">
                 <Select>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select option..." />
+                    <SelectValue placeholder={t('selectOption')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="option1">Option 1</SelectItem>
-                    <SelectItem value="option2">Option 2</SelectItem>
+                    <SelectItem value="option1">{t('option1')}</SelectItem>
+                    <SelectItem value="option2">{t('option2')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="flex items-center space-x-2">
                   <Switch id="switch-demo" />
-                  <Label htmlFor="switch-demo">Enable notifications</Label>
+                  <Label htmlFor="switch-demo">{t('enableNotifications')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="checkbox-demo" />
-                  <Label htmlFor="checkbox-demo">I agree to terms</Label>
+                  <Label htmlFor="checkbox-demo">{t('iAgreeToTerms')}</Label>
                 </div>
               </div>
             </div>
@@ -117,15 +119,15 @@ export function ComponentGallery() {
 
           {/* Badges and Progress */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Badges & Progress</h4>
+            <h4 className="text-sm font-medium mb-3">{t('badgesProgress')}</h4>
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
-                <Badge>Default</Badge>
-                <Badge variant="secondary">Secondary</Badge>
-                <Badge variant="destructive">Destructive</Badge>
-                <Badge variant="outline">Outline</Badge>
-                <Badge className="bg-green-100 text-green-800">Success</Badge>
-                <Badge className="bg-yellow-100 text-yellow-800">Warning</Badge>
+                <Badge>{t('default')}</Badge>
+                <Badge variant="secondary">{t('secondary')}</Badge>
+                <Badge variant="destructive">{t('destructive')}</Badge>
+                <Badge variant="outline">{t('outline')}</Badge>
+                <Badge className="bg-green-100 text-green-800">{t('success')}</Badge>
+                <Badge className="bg-yellow-100 text-yellow-800">{t('warning')}</Badge>
               </div>
               <div className="space-y-2">
                 <Progress value={25} />
@@ -137,18 +139,18 @@ export function ComponentGallery() {
 
           {/* Slider */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Slider</h4>
+            <h4 className="text-sm font-medium mb-3">{t('slider')}</h4>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Default Slider</Label>
+                <Label>{t('defaultSlider')}</Label>
                 <Slider defaultValue={[50]} max={100} step={1} />
               </div>
               <div className="space-y-2">
-                <Label>Volume: 25%</Label>
+                <Label>{t('volume25')}</Label>
                 <Slider defaultValue={[25]} max={100} step={5} />
               </div>
               <div className="space-y-2">
-                <Label>Disabled Slider</Label>
+                <Label>{t('disabledSlider')}</Label>
                 <Slider defaultValue={[75]} max={100} step={1} disabled />
               </div>
             </div>
@@ -156,7 +158,7 @@ export function ComponentGallery() {
 
           {/* Avatars */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Avatars</h4>
+            <h4 className="text-sm font-medium mb-3">{t('avatars')}</h4>
             <div className="flex items-center gap-4">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="text-xs">XS</AvatarFallback>
@@ -178,39 +180,39 @@ export function ComponentGallery() {
       {/* Alerts */}
       <Card>
         <CardHeader>
-          <CardTitle>Alerts & Notifications</CardTitle>
-          <CardDescription>Different alert types and notification styles</CardDescription>
+          <CardTitle>{t('alertsNotifications')}</CardTitle>
+          <CardDescription>{t('differentAlertTypesAnd')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>Information</AlertTitle>
+            <AlertTitle>{t('information')}</AlertTitle>
             <AlertDescription>
-              This is an informational alert with additional context.
+              {t('thisIsAnInformational')}
             </AlertDescription>
           </Alert>
 
           <Alert className="border-yellow-500 bg-yellow-50">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800">Warning</AlertTitle>
+            <AlertTitle className="text-yellow-800">{t('warning')}</AlertTitle>
             <AlertDescription className="text-yellow-700">
-              Please review your settings before proceeding.
+              {t('pleaseReviewYourSettings')}
             </AlertDescription>
           </Alert>
 
           <Alert className="border-red-500 bg-red-50">
             <X className="h-4 w-4 text-red-600" />
-            <AlertTitle className="text-red-800">Error</AlertTitle>
+            <AlertTitle className="text-red-800">{t('error')}</AlertTitle>
             <AlertDescription className="text-red-700">
-              Something went wrong. Please try again.
+              {t('somethingWentWrongPlease')}
             </AlertDescription>
           </Alert>
 
           <Alert className="border-green-500 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-800">Success</AlertTitle>
+            <AlertTitle className="text-green-800">{t('success')}</AlertTitle>
             <AlertDescription className="text-green-700">
-              Operation completed successfully!
+              {t('operationCompletedSuccessfully')}
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -219,37 +221,37 @@ export function ComponentGallery() {
       {/* Tabs */}
       <Card>
         <CardHeader>
-          <CardTitle>Tabs & Navigation</CardTitle>
-          <CardDescription>Tabbed interfaces and navigation elements</CardDescription>
+          <CardTitle>{t('tabsNavigation')}</CardTitle>
+          <CardDescription>{t('tabbedInterfacesAndNavigation')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tab1" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="tab1">Tab 1</TabsTrigger>
-              <TabsTrigger value="tab2">Tab 2</TabsTrigger>
-              <TabsTrigger value="tab3">Tab 3</TabsTrigger>
+              <TabsTrigger value="tab1">{t('tab1')}</TabsTrigger>
+              <TabsTrigger value="tab2">{t('tab2')}</TabsTrigger>
+              <TabsTrigger value="tab3">{t('tab3')}</TabsTrigger>
             </TabsList>
             <TabsContent value="tab1" className="mt-4">
               <div className="p-4 border rounded-lg">
-                <h3 className="font-medium mb-2">Tab 1 Content</h3>
+                <h3 className="font-medium mb-2">{t('tab1Content')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  This is the content for the first tab. You can put any content here.
+                  {t('thisIsTheContent')}
                 </p>
               </div>
             </TabsContent>
             <TabsContent value="tab2" className="mt-4">
               <div className="p-4 border rounded-lg">
-                <h3 className="font-medium mb-2">Tab 2 Content</h3>
+                <h3 className="font-medium mb-2">{t('tab2Content')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  This is the content for the second tab with different information.
+                  {t('thisIsTheContent2')}
                 </p>
               </div>
             </TabsContent>
             <TabsContent value="tab3" className="mt-4">
               <div className="p-4 border rounded-lg">
-                <h3 className="font-medium mb-2">Tab 3 Content</h3>
+                <h3 className="font-medium mb-2">{t('tab3Content')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  And this is the content for the third tab.
+                  {t('andThisIsThe')}
                 </p>
               </div>
             </TabsContent>
@@ -260,31 +262,31 @@ export function ComponentGallery() {
       {/* Accordion */}
       <Card>
         <CardHeader>
-          <CardTitle>Accordion</CardTitle>
-          <CardDescription>Collapsible content sections for FAQs and grouped information</CardDescription>
+          <CardTitle>{t('accordion')}</CardTitle>
+          <CardDescription>{t('collapsibleContentSectionsFor')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Single Accordion */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Single Mode (collapsible)</h4>
+              <h4 className="text-sm font-medium">{t('singleModeCollapsible')}</h4>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1">
-                  <AccordionTrigger>Is it accessible?</AccordionTrigger>
+                  <AccordionTrigger>{t('isItAccessible')}</AccordionTrigger>
                   <AccordionContent>
-                    Yes. It adheres to the WAI-ARIA design pattern for accordions.
+                    {t('yesItAdheresTo')}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2">
-                  <AccordionTrigger>Is it styled?</AccordionTrigger>
+                  <AccordionTrigger>{t('isItStyled')}</AccordionTrigger>
                   <AccordionContent>
-                    Yes. It comes with default styles that match the other components&apos; aesthetic.
+                    {t('yesItComesWith')}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3">
-                  <AccordionTrigger>Is it animated?</AccordionTrigger>
+                  <AccordionTrigger>{t('isItAnimated')}</AccordionTrigger>
                   <AccordionContent>
-                    Yes. It&apos;s animated by default, but you can disable it if you prefer.
+                    {t('yesItSAnimated')}
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -292,24 +294,24 @@ export function ComponentGallery() {
 
             {/* Multiple Accordion */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Multiple Mode</h4>
+              <h4 className="text-sm font-medium">{t('multipleMode')}</h4>
               <Accordion type="multiple" className="w-full">
                 <AccordionItem value="faq-1">
-                  <AccordionTrigger>How do I get started?</AccordionTrigger>
+                  <AccordionTrigger>{t('howDoIGet')}</AccordionTrigger>
                   <AccordionContent>
-                    Simply clone the repository and run <code className="bg-muted px-1 rounded">pnpm install</code> to install dependencies.
+                    {t.rich('cloneRepository', { code: (chunks) => <code className="bg-muted px-1 rounded">{chunks}</code> })}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="faq-2">
-                  <AccordionTrigger>Can I customize the theme?</AccordionTrigger>
+                  <AccordionTrigger>{t('canICustomizeThe')}</AccordionTrigger>
                   <AccordionContent>
-                    Absolutely! All components use CSS variables that can be customized in your theme configuration.
+                    {t('absolutelyAllComponentsUse')}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="faq-3">
-                  <AccordionTrigger>Is there mobile support?</AccordionTrigger>
+                  <AccordionTrigger>{t('isThereMobileSupport')}</AccordionTrigger>
                   <AccordionContent>
-                    Yes! All components have native React Native implementations in the @nextsparkjs/ui package.
+                    {t('nativeSupport')}
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -321,23 +323,23 @@ export function ComponentGallery() {
       {/* Layout Elements */}
       <Card>
         <CardHeader>
-          <CardTitle>Layout Elements</CardTitle>
-          <CardDescription>Separators, dividers, and layout helpers</CardDescription>
+          <CardTitle>{t('layoutElements')}</CardTitle>
+          <CardDescription>{t('separatorsDividersAndLayout')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium mb-3">Separators</h4>
+            <h4 className="text-sm font-medium mb-3">{t('separators')}</h4>
             <div className="space-y-4">
               <div className="text-center">
-                <p className="text-sm">Content above</p>
+                <p className="text-sm">{t('contentAbove')}</p>
                 <Separator className="my-2" />
-                <p className="text-sm">Content below</p>
+                <p className="text-sm">{t('contentBelow')}</p>
               </div>
             </div>
           </div>
 
           <div>
-            <h4 className="text-sm font-medium mb-3">Icon Buttons</h4>
+            <h4 className="text-sm font-medium mb-3">{t('iconButtons')}</h4>
             <div className="flex gap-2">
               <Button size="sm" variant="outline">
                 <Heart className="h-4 w-4" />
@@ -359,22 +361,22 @@ export function ComponentGallery() {
       {/* Dashboard Metrics */}
       <Card>
         <CardHeader>
-          <CardTitle>Dashboard Metrics</CardTitle>
-          <CardDescription>Revenue, subscriptions, and key performance indicators</CardDescription>
+          <CardTitle>{t('dashboardMetrics')}</CardTitle>
+          <CardDescription>{t('revenueSubscriptionsAndKey')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Revenue Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('totalRevenue')}</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">$15,231.89</div>
                 <div className="flex items-center text-xs text-green-600">
                   <TrendingUp className="h-3 w-3 mr-1" />
-                  +20.1% from last month
+                  {t('fromLastMonth', { change: '+20.1%' })}
                 </div>
               </CardContent>
             </Card>
@@ -382,14 +384,14 @@ export function ComponentGallery() {
             {/* Subscriptions Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Subscriptions</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('subscriptions')}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">+2,350</div>
                 <div className="flex items-center text-xs text-green-600">
                   <TrendingUp className="h-3 w-3 mr-1" />
-                  +180.1% from last month
+                  {t('fromLastMonth', { change: '+180.1%' })}
                 </div>
                 <div className="mt-3">
                   <div className="w-full bg-secondary rounded-full h-2">
@@ -405,14 +407,14 @@ export function ComponentGallery() {
       {/* Calendar & Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Calendar & Activity Tracking</CardTitle>
-          <CardDescription>Date selection and goal setting interfaces</CardDescription>
+          <CardTitle>{t('calendarActivityTracking')}</CardTitle>
+          <CardDescription>{t('dateSelectionAndGoal')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Calendar */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Calendar Component</h4>
+              <h4 className="text-sm font-medium">{t('calendarComponent')}</h4>
               <div className="border rounded-lg p-3 bg-card">
                 <Calendar
                   mode="single"
@@ -426,11 +428,11 @@ export function ComponentGallery() {
 
             {/* Move Goal Widget */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Goal Setting Widget</h4>
+              <h4 className="text-sm font-medium">{t('goalSettingWidget')}</h4>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Move Goal</CardTitle>
-                  <CardDescription>Set your daily activity goal.</CardDescription>
+                  <CardTitle className="text-lg">{t('moveGoal')}</CardTitle>
+                  <CardDescription>{t('setYourDailyActivity')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-center space-x-4">
@@ -443,7 +445,7 @@ export function ComponentGallery() {
                     </Button>
                     <div className="text-center">
                       <div className="text-3xl font-bold">{goalValue}</div>
-                      <div className="text-sm text-muted-foreground">CALORIES/DAY</div>
+                      <div className="text-sm text-muted-foreground">{t('caloriesDay')}</div>
                     </div>
                     <Button 
                       variant="outline" 
@@ -456,7 +458,7 @@ export function ComponentGallery() {
                   
                   {/* Exercise Chart Simulation */}
                   <div className="space-y-2">
-                    <div className="text-sm font-medium">Exercise Minutes</div>
+                    <div className="text-sm font-medium">{t('exerciseMinutes')}</div>
                     <div className="flex items-end space-x-1 h-16">
                       {Array.from({ length: 14 }, (_, i) => (
                         <div
@@ -471,7 +473,7 @@ export function ComponentGallery() {
                     </div>
                   </div>
                   
-                  <Button className="w-full">Set Goal</Button>
+                  <Button className="w-full">{t('setGoal')}</Button>
                 </CardContent>
               </Card>
             </div>
@@ -482,30 +484,30 @@ export function ComponentGallery() {
       {/* Data Tables */}
       <Card>
         <CardHeader>
-          <CardTitle>Data Tables</CardTitle>
-          <CardDescription>Complex data visualization with status indicators</CardDescription>
+          <CardTitle>{t('dataTables')}</CardTitle>
+          <CardDescription>{t('complexDataVisualizationWith')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-lg font-semibold">Payments</h4>
-              <div className="text-sm text-muted-foreground">Manage your payments.</div>
+              <h4 className="text-lg font-semibold">{t('payments')}</h4>
+              <div className="text-sm text-muted-foreground">{t('manageYourPayments')}</div>
             </div>
             
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="w-[100px]">{t('status')}</TableHead>
+                    <TableHead>{t('email')}</TableHead>
+                    <TableHead className="text-right">{t('amount')}</TableHead>
                     <TableHead className="w-[70px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   <TableRow>
                     <TableCell>
-                      <Badge className="bg-green-100 text-green-800">Success</Badge>
+                      <Badge className="bg-green-100 text-green-800">{t('success')}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">ken99@example.com</TableCell>
                     <TableCell className="text-right font-medium">$316.00</TableCell>
@@ -517,7 +519,7 @@ export function ComponentGallery() {
                   </TableRow>
                   <TableRow>
                     <TableCell>
-                      <Badge className="bg-green-100 text-green-800">Success</Badge>
+                      <Badge className="bg-green-100 text-green-800">{t('success')}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">abe45@example.com</TableCell>
                     <TableCell className="text-right font-medium">$242.00</TableCell>
@@ -529,7 +531,7 @@ export function ComponentGallery() {
                   </TableRow>
                   <TableRow>
                     <TableCell>
-                      <Badge className="bg-yellow-100 text-yellow-800">Processing</Badge>
+                      <Badge className="bg-yellow-100 text-yellow-800">{t('processing')}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">monserrat44@example.com</TableCell>
                     <TableCell className="text-right font-medium">$837.00</TableCell>
@@ -541,7 +543,7 @@ export function ComponentGallery() {
                   </TableRow>
                   <TableRow>
                     <TableCell>
-                      <Badge variant="destructive">Failed</Badge>
+                      <Badge variant="destructive">{t('failed')}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">carmella@example.com</TableCell>
                     <TableCell className="text-right font-medium">$721.00</TableCell>
@@ -553,7 +555,7 @@ export function ComponentGallery() {
                   </TableRow>
                   <TableRow>
                     <TableCell>
-                      <Badge variant="outline">Pending</Badge>
+                      <Badge variant="outline">{t('pending')}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">jason78@example.com</TableCell>
                     <TableCell className="text-right font-medium">$450.00</TableCell>
@@ -565,7 +567,7 @@ export function ComponentGallery() {
                   </TableRow>
                   <TableRow>
                     <TableCell>
-                      <Badge className="bg-green-100 text-green-800">Success</Badge>
+                      <Badge className="bg-green-100 text-green-800">{t('success')}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">sarah23@example.com</TableCell>
                     <TableCell className="text-right font-medium">$1,280.00</TableCell>
@@ -580,10 +582,10 @@ export function ComponentGallery() {
             </div>
             
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div>0 of 6 row(s) selected.</div>
+              <div>{t('n0Of6Row')}</div>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" disabled>Previous</Button>
-                <Button variant="outline" size="sm">Next</Button>
+                <Button variant="outline" size="sm" disabled>{t('previous')}</Button>
+                <Button variant="outline" size="sm">{t('next')}</Button>
               </div>
             </div>
           </div>
@@ -593,18 +595,18 @@ export function ComponentGallery() {
       {/* Pricing Cards */}
       <Card>
         <CardHeader>
-          <CardTitle>Pricing Components</CardTitle>
-          <CardDescription>Subscription plans and pricing tables</CardDescription>
+          <CardTitle>{t('pricingComponents')}</CardTitle>
+          <CardDescription>{t('subscriptionPlansAndPricing')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             <div className="text-center space-y-4">
-              <h3 className="text-2xl font-bold">Pricing</h3>
-              <p className="text-muted-foreground">Check out our affordable pricing plans</p>
+              <h3 className="text-2xl font-bold">{t('pricing')}</h3>
+              <p className="text-muted-foreground">{t('checkOutOurAffordable')}</p>
               <div className="flex items-center justify-center space-x-4">
-                <span className="text-sm">Monthly</span>
+                <span className="text-sm">{t('monthly')}</span>
                 <Switch />
-                <span className="text-sm">Yearly</span>
+                <span className="text-sm">{t('yearly')}</span>
               </div>
             </div>
             
@@ -612,36 +614,36 @@ export function ComponentGallery() {
               {/* Plus Plan */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Plus</CardTitle>
-                  <CardDescription>For personal use</CardDescription>
+                  <CardTitle>{t('plus')}</CardTitle>
+                  <CardDescription>{t('forPersonalUse')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <div className="text-3xl font-bold">$19</div>
-                    <div className="text-sm text-muted-foreground">Billed $228 annually</div>
+                    <div className="text-sm text-muted-foreground">{t('billedAnnually', { amount: '$228' })}</div>
                   </div>
                   
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Up to 5 team members</span>
+                      <span className="text-sm">{t('upTo5Team')}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Basic components library</span>
+                      <span className="text-sm">{t('basicComponentsLibrary')}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Community support</span>
+                      <span className="text-sm">{t('communitySupport')}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">1GB storage space</span>
+                      <span className="text-sm">{t('n1gbStorageSpace')}</span>
                     </div>
                   </div>
                   
                   <Button className="w-full">
-                    Purchase
+                    {t('purchase')}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </CardContent>
@@ -650,38 +652,38 @@ export function ComponentGallery() {
               {/* Pro Plan */}
               <Card className="border-primary">
                 <CardHeader>
-                  <CardTitle>Pro</CardTitle>
-                  <CardDescription>For professionals</CardDescription>
-                  <Badge className="w-fit">Most Popular</Badge>
+                  <CardTitle>{t('pro')}</CardTitle>
+                  <CardDescription>{t('forProfessionals')}</CardDescription>
+                  <Badge className="w-fit">{t('mostPopular')}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <div className="text-3xl font-bold">$49</div>
-                    <div className="text-sm text-muted-foreground">Billed $588 annually</div>
+                    <div className="text-sm text-muted-foreground">{t('billedAnnually', { amount: '$588' })}</div>
                   </div>
                   
                   <div className="space-y-2">
-                    <div className="text-sm font-medium">Everything in Plus, and:</div>
+                    <div className="text-sm font-medium">{t('everythingInPlusAnd')}</div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Unlimited team members</span>
+                      <span className="text-sm">{t('unlimitedTeamMembers')}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Advanced components</span>
+                      <span className="text-sm">{t('advancedComponents')}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Priority support</span>
+                      <span className="text-sm">{t('prioritySupport')}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Unlimited storage</span>
+                      <span className="text-sm">{t('unlimitedStorage')}</span>
                     </div>
                   </div>
                   
                   <Button className="w-full">
-                    Purchase
+                    {t('purchase')}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </CardContent>
@@ -694,39 +696,39 @@ export function ComponentGallery() {
       {/* Form Components */}
       <Card>
         <CardHeader>
-          <CardTitle>Form Components</CardTitle>
-          <CardDescription>Complete form elements and validation states</CardDescription>
+          <CardTitle>{t('formComponents')}</CardTitle>
+          <CardDescription>{t('completeFormElementsAnd')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Text Inputs */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('email')}</Label>
                 <Input id="email" type="email" placeholder="name@example.com" />
               </div>
               <div>
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="Enter your password" />
+                <Label htmlFor="password">{t('password')}</Label>
+                <Input id="password" type="password" placeholder={t('enterYourPassword')} />
               </div>
               <div>
-                <Label htmlFor="message">Message</Label>
-                <Textarea id="message" placeholder="Type your message here..." />
+                <Label htmlFor="message">{t('message')}</Label>
+                <Textarea id="message" placeholder={t('typeYourMessageHere')} />
               </div>
             </div>
 
             {/* Controls and Selections */}
             <div className="space-y-4">
               <div>
-                <Label>Plan Selection</Label>
+                <Label>{t('planSelection')}</Label>
                 <Select>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a plan" />
+                    <SelectValue placeholder={t('selectAPlan')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="starter">Starter Plan</SelectItem>
-                    <SelectItem value="pro">Pro Plan</SelectItem>
-                    <SelectItem value="enterprise">Enterprise Plan</SelectItem>
+                    <SelectItem value="starter">{t('starterPlan')}</SelectItem>
+                    <SelectItem value="pro">{t('proPlan')}</SelectItem>
+                    <SelectItem value="enterprise">{t('enterprisePlan')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -734,20 +736,20 @@ export function ComponentGallery() {
               <div className="flex items-center space-x-2">
                 <Checkbox id="terms" />
                 <Label htmlFor="terms" className="text-sm">
-                  I agree to the terms and conditions
+                  {t('iAgreeToThe')}
                 </Label>
               </div>
               
               <div className="flex items-center space-x-2">
                 <Checkbox id="marketing" />
                 <Label htmlFor="marketing" className="text-sm">
-                  Allow us to send you emails
+                  {t('allowUsToSend')}
                 </Label>
               </div>
               
               <div className="flex space-x-2">
-                <Button variant="outline">Cancel</Button>
-                <Button>Submit Form</Button>
+                <Button variant="outline">{t('cancel')}</Button>
+                <Button>{t('submitForm')}</Button>
               </div>
             </div>
           </div>
@@ -757,31 +759,31 @@ export function ComponentGallery() {
       {/* Contextual Alerts */}
       <Card>
         <CardHeader>
-          <CardTitle>Contextual Alerts</CardTitle>
-          <CardDescription>Real-world notification examples with business context</CardDescription>
+          <CardTitle>{t('contextualAlerts')}</CardTitle>
+          <CardDescription>{t('realWorldNotificationExamples')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>Subscription Update</AlertTitle>
+            <AlertTitle>{t('subscriptionUpdate')}</AlertTitle>
             <AlertDescription>
-              Your subscription is up to date. Next billing date: June 1, 2024.
+              {t('yourSubscriptionIsUp')}
             </AlertDescription>
           </Alert>
 
           <Alert className="border-yellow-500 bg-yellow-50">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800">Payment Due</AlertTitle>
+            <AlertTitle className="text-yellow-800">{t('paymentDue')}</AlertTitle>
             <AlertDescription className="text-yellow-700">
-              Your payment method will be charged in 3 days. Update your billing info if needed.
+              {t('yourPaymentMethodWill')}
             </AlertDescription>
           </Alert>
 
           <Alert className="border-green-500 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-800">Upgrade Successful</AlertTitle>
+            <AlertTitle className="text-green-800">{t('upgradeSuccessful')}</AlertTitle>
             <AlertDescription className="text-green-700">
-              Your subscription has been upgraded to Pro. Enjoy the new features!
+              {t('yourSubscriptionHasBeen')}
             </AlertDescription>
           </Alert>
         </CardContent>

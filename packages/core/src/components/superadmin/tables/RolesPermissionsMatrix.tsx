@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import { useTranslations } from "next-intl";
 import { Check, X } from "lucide-react";
 import { Badge } from '../../ui/badge';
 import {
@@ -45,6 +46,7 @@ export function RolesPermissionsMatrix({
   allPermissions,
   permissionsData,
 }: RolesPermissionsMatrixProps) {
+  const t = useTranslations('superadmin.rolesMatrix');
   // Sort roles by hierarchy (highest to lowest)
   const sortedRoles = [...roles].sort(
     (a, b) => (hierarchy[b] ?? 0) - (hierarchy[a] ?? 0)
@@ -137,7 +139,7 @@ export function RolesPermissionsMatrix({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[280px]">Permission</TableHead>
+            <TableHead className="w-[280px]">{t('permission')}</TableHead>
             {sortedRoles.map((role) => (
               <TableHead key={role} className="text-center min-w-[100px]">
                 <div className="flex flex-col items-center gap-1.5">
@@ -181,7 +183,7 @@ export function RolesPermissionsMatrix({
                     </span>
                     {permissionDangerousMap.get(permission) && (
                       <Badge variant="destructive" className="ml-2 text-[10px] px-1 py-0">
-                        dangerous
+                        {t('dangerous')}
                       </Badge>
                     )}
                   </TableCell>

@@ -3,6 +3,7 @@ import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Users, BarChart3, Settings, Shield } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { sel } from "@nextsparkjs/core/lib/selectors"
 import { BusinessMetrics } from "@nextsparkjs/core/components/superadmin/misc/BusinessMetrics"
 
@@ -12,18 +13,19 @@ import { BusinessMetrics } from "@nextsparkjs/core/components/superadmin/misc/Bu
  * Main dashboard for superadmin area with quick access to all sections.
  */
 function SuperadminDashboard() {
+  const t = useTranslations("superadmin.dashboard");
   const quickActions = [
     {
-      title: "User Management",
-      description: "View and manage all users and superadministrators",
+      title: t("quickActions.userManagement.title"),
+      description: t("quickActions.userManagement.description"),
       icon: Users,
       href: "/superadmin/users",
       color: "text-blue-600",
       bgColor: "bg-blue-100",
     },
     {
-      title: "Analytics",
-      description: "Platform statistics and usage metrics",
+      title: t("quickActions.analytics.title"),
+      description: t("quickActions.analytics.description"),
       icon: BarChart3,
       href: "/superadmin/analytics",
       color: "text-green-600",
@@ -31,8 +33,8 @@ function SuperadminDashboard() {
       disabled: true, // Future feature
     },
     {
-      title: "System Config",
-      description: "Application settings and configurations",
+      title: t("quickActions.systemConfig.title"),
+      description: t("quickActions.systemConfig.description"),
       icon: Settings,
       href: "/superadmin/config",
       color: "text-orange-600",
@@ -50,9 +52,9 @@ function SuperadminDashboard() {
             <Shield className="h-6 w-6 text-red-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Super Admin Panel</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t("panelTitle")}</h1>
             <p className="text-muted-foreground">
-              Super Administrator Control Panel
+              {t("subtitle")}
             </p>
           </div>
         </div>
@@ -60,7 +62,7 @@ function SuperadminDashboard() {
         <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
           <Shield className="h-4 w-4 text-destructive" />
           <span className="text-destructive font-medium">
-            Restricted Access Area - Superadmin and Developer Only
+            {t("restrictedAccess")}
           </span>
         </div>
       </div>
@@ -100,7 +102,7 @@ function SuperadminDashboard() {
                       {action.title}
                       {action.disabled && (
                         <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
-                          Soon
+                          {t("soon")}
                         </span>
                       )}
                     </CardTitle>
@@ -113,7 +115,7 @@ function SuperadminDashboard() {
                 </CardDescription>
                 {!action.disabled && (
                   <Button variant="ghost" size="sm" className="mt-3 p-0 h-auto">
-                    Access Section →
+                    {t("accessSection")}
                   </Button>
                 )}
               </CardContent>
@@ -125,24 +127,24 @@ function SuperadminDashboard() {
       {/* System Status */}
       <Card>
         <CardHeader>
-          <CardTitle>System Status</CardTitle>
+          <CardTitle>{t("systemStatus")}</CardTitle>
           <CardDescription>
-            Current platform overview
+            {t("overview")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-green-600">Online</div>
-              <div className="text-sm text-muted-foreground">System Status</div>
+              <div className="text-2xl font-bold text-green-600">{t("status.online")}</div>
+              <div className="text-sm text-muted-foreground">{t("systemStatus")}</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold">v1.0.0</div>
-              <div className="text-sm text-muted-foreground">Platform Version</div>
+              <div className="text-2xl font-bold">{t("status.version")}</div>
+              <div className="text-sm text-muted-foreground">{t("systemVersion")}</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">Active</div>
-              <div className="text-sm text-muted-foreground">Security Level</div>
+              <div className="text-2xl font-bold text-blue-600">{t("status.active")}</div>
+              <div className="text-sm text-muted-foreground">{t("securityLevel")}</div>
             </div>
           </div>
         </CardContent>

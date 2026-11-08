@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card } from '../../ui/card'
 import { Badge } from '../../ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs'
@@ -15,6 +16,7 @@ import type { FieldDefinition } from '../../../types/blocks'
  * Displays all available entity field types with examples and variants
  */
 export function FieldTypesGallery() {
+  const t = useTranslations('superadmin.gallery.fieldTypes')
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
   const [blockEditorValues, setBlockEditorValues] = useState<Record<string, unknown[]>>({
     repeater_items: [],
@@ -32,15 +34,15 @@ export function FieldTypesGallery() {
   const repeaterFieldExample: FieldDefinition = {
     name: 'repeater_items',
     type: 'array',
-    label: 'Repeater Field',
+    label: t('repeater.label'),
     tab: 'content',
-    helpText: 'Add, remove, and reorder items',
+    helpText: t('repeater.help'),
     minItems: 0,
     maxItems: 5,
     itemFields: [
-      { name: 'title', type: 'text', label: 'Title', tab: 'content', placeholder: 'Item title', required: true },
-      { name: 'description', type: 'textarea', label: 'Description', tab: 'content', placeholder: 'Item description...', rows: 2 },
-      { name: 'url', type: 'url', label: 'Link', tab: 'content', placeholder: 'https://...' },
+      { name: 'title', type: 'text', label: t('repeater.itemTitle'), tab: 'content', placeholder: t('repeater.itemTitlePlaceholder'), required: true },
+      { name: 'description', type: 'textarea', label: t('repeater.itemDescription'), tab: 'content', placeholder: t('repeater.itemDescriptionPlaceholder'), rows: 2 },
+      { name: 'url', type: 'url', label: t('repeater.itemLink'), tab: 'content', placeholder: 'https://...' },
     ],
   }
 
@@ -51,9 +53,9 @@ export function FieldTypesGallery() {
       type: 'text',
       required: false,
       display: {
-        label: 'Text Field',
-        placeholder: 'Enter text...',
-        description: 'Basic text input for short strings',
+        label: t('fields.text.label'),
+        placeholder: t('fields.text.placeholder'),
+        description: t('fields.text.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -66,9 +68,9 @@ export function FieldTypesGallery() {
       type: 'textarea',
       required: false,
       display: {
-        label: 'Textarea Field',
-        placeholder: 'Enter long text...',
-        description: 'Multi-line text input for longer content',
+        label: t('fields.textarea.label'),
+        placeholder: t('fields.textarea.placeholder'),
+        description: t('fields.textarea.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -81,9 +83,9 @@ export function FieldTypesGallery() {
       type: 'email',
       required: false,
       display: {
-        label: 'Email Field',
+        label: t('fields.email.label'),
         placeholder: 'user@example.com',
-        description: 'Email input with validation',
+        description: t('fields.email.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -96,9 +98,9 @@ export function FieldTypesGallery() {
       type: 'url',
       required: false,
       display: {
-        label: 'URL Field',
+        label: t('fields.url.label'),
         placeholder: 'https://example.com',
-        description: 'URL input with validation',
+        description: t('fields.url.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -111,9 +113,9 @@ export function FieldTypesGallery() {
       type: 'phone',
       required: false,
       display: {
-        label: 'Phone Field',
-        placeholder: 'Phone number',
-        description: 'Phone input with country code support',
+        label: t('fields.phone.label'),
+        placeholder: t('fields.phone.placeholder'),
+        description: t('fields.phone.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -130,9 +132,9 @@ export function FieldTypesGallery() {
       type: 'number',
       required: false,
       display: {
-        label: 'Number Field',
-        placeholder: 'Enter number...',
-        description: 'Numeric input field',
+        label: t('fields.number.label'),
+        placeholder: t('fields.number.placeholder'),
+        description: t('fields.number.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -145,8 +147,8 @@ export function FieldTypesGallery() {
       type: 'boolean',
       required: false,
       display: {
-        label: 'Boolean Field',
-        description: 'True/false toggle switch',
+        label: t('fields.boolean.label'),
+        description: t('fields.boolean.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -159,8 +161,8 @@ export function FieldTypesGallery() {
       type: 'date',
       required: false,
       display: {
-        label: 'Date Field',
-        description: 'Date picker input',
+        label: t('fields.date.label'),
+        description: t('fields.date.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -173,8 +175,8 @@ export function FieldTypesGallery() {
       type: 'datetime',
       required: false,
       display: {
-        label: 'DateTime Field',
-        description: 'Date and time picker input',
+        label: t('fields.datetime.label'),
+        description: t('fields.datetime.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -187,8 +189,8 @@ export function FieldTypesGallery() {
       type: 'rating',
       required: false,
       display: {
-        label: 'Rating Field',
-        description: 'Star rating selector',
+        label: t('fields.rating.label'),
+        description: t('fields.rating.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -201,8 +203,8 @@ export function FieldTypesGallery() {
       type: 'range',
       required: false,
       display: {
-        label: 'Range Field',
-        description: 'Slider range selector',
+        label: t('fields.range.label'),
+        description: t('fields.range.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -215,8 +217,8 @@ export function FieldTypesGallery() {
       type: 'doublerange',
       required: false,
       display: {
-        label: 'Double Range Field',
-        description: 'Dual slider for value ranges',
+        label: t('fields.doublerange.label'),
+        description: t('fields.doublerange.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -233,14 +235,14 @@ export function FieldTypesGallery() {
       type: 'select',
       required: false,
       options: [
-        { value: 'option1', label: 'Option 1' },
-        { value: 'option2', label: 'Option 2' },
-        { value: 'option3', label: 'Option 3' },
+        { value: 'option1', label: t('options.option1') },
+        { value: 'option2', label: t('options.option2') },
+        { value: 'option3', label: t('options.option3') },
       ],
       display: {
-        label: 'Select Field',
-        placeholder: 'Choose an option...',
-        description: 'Single selection dropdown',
+        label: t('fields.select.label'),
+        placeholder: t('fields.select.placeholder'),
+        description: t('fields.select.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -253,15 +255,15 @@ export function FieldTypesGallery() {
       type: 'multiselect',
       required: false,
       options: [
-        { value: 'tag1', label: 'Tag 1' },
-        { value: 'tag2', label: 'Tag 2' },
-        { value: 'tag3', label: 'Tag 3' },
-        { value: 'tag4', label: 'Tag 4' },
+        { value: 'tag1', label: t('options.tag1') },
+        { value: 'tag2', label: t('options.tag2') },
+        { value: 'tag3', label: t('options.tag3') },
+        { value: 'tag4', label: t('options.tag4') },
       ],
       display: {
-        label: 'MultiSelect Field',
-        placeholder: 'Choose multiple options...',
-        description: 'Multiple selection with badges',
+        label: t('fields.multiselect.label'),
+        placeholder: t('fields.multiselect.placeholder'),
+        description: t('fields.multiselect.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -274,13 +276,13 @@ export function FieldTypesGallery() {
       type: 'radio',
       required: false,
       options: [
-        { value: 'small', label: 'Small' },
-        { value: 'medium', label: 'Medium' },
-        { value: 'large', label: 'Large' },
+        { value: 'small', label: t('options.small') },
+        { value: 'medium', label: t('options.medium') },
+        { value: 'large', label: t('options.large') },
       ],
       display: {
-        label: 'Radio Field',
-        description: 'Radio button group selection',
+        label: t('fields.radio.label'),
+        description: t('fields.radio.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -293,13 +295,13 @@ export function FieldTypesGallery() {
       type: 'buttongroup',
       required: false,
       options: [
-        { value: 'edit', label: 'Edit' },
-        { value: 'view', label: 'View' },
-        { value: 'delete', label: 'Delete' },
+        { value: 'edit', label: t('options.edit') },
+        { value: 'view', label: t('options.view') },
+        { value: 'delete', label: t('options.delete') },
       ],
       display: {
-        label: 'Button Group Field',
-        description: 'Button group selection (styled radio)',
+        label: t('fields.buttongroup.label'),
+        description: t('fields.buttongroup.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -312,15 +314,15 @@ export function FieldTypesGallery() {
       type: 'combobox',
       required: false,
       options: [
-        { value: 'react', label: 'React', description: 'JavaScript library' },
-        { value: 'vue', label: 'Vue.js', description: 'Progressive framework' },
-        { value: 'angular', label: 'Angular', description: 'TypeScript framework' },
-        { value: 'svelte', label: 'Svelte', description: 'Compile-time framework' },
+        { value: 'react', label: 'React', description: t('options.react') },
+        { value: 'vue', label: 'Vue.js', description: t('options.vue') },
+        { value: 'angular', label: 'Angular', description: t('options.angular') },
+        { value: 'svelte', label: 'Svelte', description: t('options.svelte') },
       ],
       display: {
-        label: 'Combobox Field',
-        placeholder: 'Search and select...',
-        description: 'Searchable dropdown selection',
+        label: t('fields.combobox.label'),
+        placeholder: t('fields.combobox.placeholder'),
+        description: t('fields.combobox.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -333,9 +335,9 @@ export function FieldTypesGallery() {
       type: 'tags',
       required: false,
       display: {
-        label: 'Tags Field',
-        placeholder: 'Add tags...',
-        description: 'Dynamic tag input with creation',
+        label: t('fields.tags.label'),
+        placeholder: t('fields.tags.placeholder'),
+        description: t('fields.tags.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -352,9 +354,9 @@ export function FieldTypesGallery() {
       type: 'timezone',
       required: false,
       display: {
-        label: 'Timezone Field',
-        placeholder: 'Select timezone...',
-        description: 'Timezone selector with search',
+        label: t('fields.timezone.label'),
+        placeholder: t('fields.timezone.placeholder'),
+        description: t('fields.timezone.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -367,9 +369,9 @@ export function FieldTypesGallery() {
       type: 'currency',
       required: false,
       display: {
-        label: 'Currency Field',
-        placeholder: 'Select currency...',
-        description: 'Currency code selector',
+        label: t('fields.currency.label'),
+        placeholder: t('fields.currency.placeholder'),
+        description: t('fields.currency.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -382,9 +384,9 @@ export function FieldTypesGallery() {
       type: 'country',
       required: false,
       display: {
-        label: 'Country Field',
-        placeholder: 'Select country...',
-        description: 'Country selector with search',
+        label: t('fields.country.label'),
+        placeholder: t('fields.country.placeholder'),
+        description: t('fields.country.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -397,8 +399,8 @@ export function FieldTypesGallery() {
       type: 'address',
       required: false,
       display: {
-        label: 'Address Field',
-        description: 'Complete address input form',
+        label: t('fields.address.label'),
+        description: t('fields.address.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -415,8 +417,8 @@ export function FieldTypesGallery() {
       type: 'file',
       required: false,
       display: {
-        label: 'File Upload',
-        description: 'General file upload with drag & drop',
+        label: t('fields.file.label'),
+        description: t('fields.file.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -429,8 +431,8 @@ export function FieldTypesGallery() {
       type: 'image',
       required: false,
       display: {
-        label: 'Image Upload',
-        description: 'Image upload with preview',
+        label: t('fields.image.label'),
+        description: t('fields.image.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -443,8 +445,8 @@ export function FieldTypesGallery() {
       type: 'video',
       required: false,
       display: {
-        label: 'Video Upload',
-        description: 'Video file upload with thumbnail generation',
+        label: t('fields.video.label'),
+        description: t('fields.video.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -457,8 +459,8 @@ export function FieldTypesGallery() {
       type: 'audio',
       required: false,
       display: {
-        label: 'Audio Upload',
-        description: 'Audio file upload with player',
+        label: t('fields.audio.label'),
+        description: t('fields.audio.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -475,9 +477,9 @@ export function FieldTypesGallery() {
       type: 'json',
       required: false,
       display: {
-        label: 'JSON Field',
+        label: t('fields.json.label'),
         placeholder: '{"key": "value"}',
-        description: 'JSON data input with validation',
+        description: t('fields.json.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -490,9 +492,9 @@ export function FieldTypesGallery() {
       type: 'markdown',
       required: false,
       display: {
-        label: 'Markdown Field',
-        placeholder: '# Enter markdown...',
-        description: 'Markdown text editor',
+        label: t('fields.markdown.label'),
+        placeholder: t('fields.markdown.placeholder'),
+        description: t('fields.markdown.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -505,9 +507,9 @@ export function FieldTypesGallery() {
       type: 'richtext',
       required: false,
       display: {
-        label: 'Rich Text Field',
-        placeholder: 'Enter rich text content...',
-        description: 'WYSIWYG editor with formatting toolbar (Bold, Italic, Links, Lists)',
+        label: t('fields.richtext.label'),
+        placeholder: t('fields.richtext.placeholder'),
+        description: t('fields.richtext.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -520,9 +522,9 @@ export function FieldTypesGallery() {
       type: 'code',
       required: false,
       display: {
-        label: 'Code Field',
+        label: t('fields.code.label'),
         placeholder: 'console.log("Hello World");',
-        description: 'Code editor with syntax highlighting',
+        description: t('fields.code.description'),
         showInForm: true,
         showInList: false,
         showInDetail: true,
@@ -539,9 +541,9 @@ export function FieldTypesGallery() {
         titleField: 'email',
       },
       display: {
-        label: 'Relation Field',
-        placeholder: 'Select related items...',
-        description: 'Relationship to other entities',
+        label: t('fields.relation.label'),
+        placeholder: t('fields.relation.placeholder'),
+        description: t('fields.relation.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -554,9 +556,9 @@ export function FieldTypesGallery() {
       type: 'user',
       required: false,
       display: {
-        label: 'User Field',
-        placeholder: 'Select users...',
-        description: 'User selection with search',
+        label: t('fields.user.label'),
+        placeholder: t('fields.user.placeholder'),
+        description: t('fields.user.description'),
         showInForm: true,
         showInList: true,
         showInDetail: true,
@@ -605,7 +607,7 @@ export function FieldTypesGallery() {
 
               {fieldValues[field.name] !== undefined && fieldValues[field.name] !== '' && (
                 <div className="mt-3 p-2 bg-muted rounded text-xs">
-                  <strong>Value:</strong> {JSON.stringify(fieldValues[field.name])}
+                  <strong>{t('value')}</strong> {JSON.stringify(fieldValues[field.name])}
                 </div>
               )}
             </div>
@@ -620,59 +622,59 @@ export function FieldTypesGallery() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-primary">28</div>
-          <div className="text-sm text-muted-foreground">Field Types</div>
+          <div className="text-sm text-muted-foreground">{t('stats.fieldTypes')}</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-green-600">100%</div>
-          <div className="text-sm text-muted-foreground">Functional</div>
+          <div className="text-sm text-muted-foreground">{t('stats.functional')}</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-blue-600">6</div>
-          <div className="text-sm text-muted-foreground">Categories</div>
+          <div className="text-sm text-muted-foreground">{t('stats.categories')}</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-purple-600">∞</div>
-          <div className="text-sm text-muted-foreground">Combinations</div>
+          <div className="text-sm text-muted-foreground">{t('stats.combinations')}</div>
         </Card>
       </div>
 
       <Tabs defaultValue="basic" className="space-y-4">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="basic">Basic</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
-          <TabsTrigger value="selection">Selection</TabsTrigger>
-          <TabsTrigger value="location">Location</TabsTrigger>
-          <TabsTrigger value="media">Media</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          <TabsTrigger value="basic">{t('tabs.basic')}</TabsTrigger>
+          <TabsTrigger value="data">{t('tabs.data')}</TabsTrigger>
+          <TabsTrigger value="selection">{t('tabs.selection')}</TabsTrigger>
+          <TabsTrigger value="location">{t('tabs.location')}</TabsTrigger>
+          <TabsTrigger value="media">{t('tabs.media')}</TabsTrigger>
+          <TabsTrigger value="advanced">{t('tabs.advanced')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-6">
           {renderFieldSection(
-            "Basic Text Fields",
-            "Fundamental text input fields for forms and data entry",
+            t('sections.basic.title'),
+            t('sections.basic.description'),
             basicFields
           )}
         </TabsContent>
 
         <TabsContent value="data" className="space-y-6">
           {renderFieldSection(
-            "Data Input Fields",
-            "Fields for numbers, dates, booleans and specialized data types",
+            t('sections.data.title'),
+            t('sections.data.description'),
             dataFields
           )}
 
           {/* Repeater Field */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Repeater / Array Field</h3>
-              <p className="text-sm text-muted-foreground">Dynamic list with add, remove, and reorder functionality</p>
+              <h3 className="text-lg font-semibold">{t('repeater.title')}</h3>
+              <p className="text-sm text-muted-foreground">{t('repeater.description')}</p>
             </div>
             <Card className="p-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium">{repeaterFieldExample.label}</h4>
                   <Badge variant="outline" className="text-xs">array</Badge>
-                  <Badge variant="secondary" className="text-xs">0-5 items</Badge>
+                  <Badge variant="secondary" className="text-xs">{t('repeater.items', { min: 0, max: 5 })}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">{repeaterFieldExample.helpText}</p>
                 <ArrayField
@@ -682,7 +684,7 @@ export function FieldTypesGallery() {
                 />
                 {blockEditorValues.repeater_items && blockEditorValues.repeater_items.length > 0 && (
                   <div className="mt-3 p-2 bg-muted rounded text-xs overflow-auto max-h-32">
-                    <strong>Value:</strong>
+                    <strong>{t('value')}</strong>
                     <pre className="mt-1 whitespace-pre-wrap">
                       {JSON.stringify(blockEditorValues.repeater_items, null, 2)}
                     </pre>
@@ -695,24 +697,24 @@ export function FieldTypesGallery() {
 
         <TabsContent value="selection" className="space-y-6">
           {renderFieldSection(
-            "Selection Fields",
-            "Various selection mechanisms including dropdowns, radio buttons, and multi-select",
+            t('sections.selection.title'),
+            t('sections.selection.description'),
             selectionFields
           )}
         </TabsContent>
 
         <TabsContent value="location" className="space-y-6">
           {renderFieldSection(
-            "Location & Data Selectors",
-            "Geographic and data-specific selectors with built-in validation",
+            t('sections.location.title'),
+            t('sections.location.description'),
             locationFields
           )}
         </TabsContent>
 
         <TabsContent value="media" className="space-y-6">
           {renderFieldSection(
-            "Media Upload Fields",
-            "File upload fields with preview and management capabilities (display only here: uploads are disabled)",
+            t('sections.media.title'),
+            t('sections.media.description'),
             mediaFields,
             true
           )}
@@ -720,8 +722,8 @@ export function FieldTypesGallery() {
 
         <TabsContent value="advanced" className="space-y-6">
           {renderFieldSection(
-            "Advanced Fields",
-            "Complex data types and relationship fields for advanced use cases",
+            t('sections.advanced.title'),
+            t('sections.advanced.description'),
             advancedFields
           )}
         </TabsContent>

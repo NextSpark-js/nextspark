@@ -40,7 +40,12 @@ function renderedGroups(file: string): TranslationGroup[] {
   if (relative.includes('/components/app/layouts/')) return ['public']
   if (relative.includes('/components/app/misc/ThemeToggle')) return ['dashboard']
   if (relative.includes('/components/auth/')) return ['auth']
+  // the layout of the superadmin area (its mobile header reads the namespace on the server)
+  if (relative.endsWith('/_internal/superadmin-layout.tsx')) return ['superadmin']
   if (relative.includes('/components/devtools/')) return ['devtools']
+  // the style galleries are rendered by the devtools style page, the rest of components/superadmin by the superadmin area
+  if (/\/components\/superadmin\/misc\/(ComponentGallery|FieldTypesGallery|ThemePreview)/.test(relative)) return ['devtools']
+  if (relative.includes('/components/superadmin/') || relative.includes('/components/docs/superadmin-docs-sidebar')) return ['superadmin']
   if (relative.includes('/components/docs/')) return ['public']
   if (relative.includes('/components/users/')) return ['superadmin']
   if (relative.includes('/components/app/guards/')) return ['superadmin', 'devtools']

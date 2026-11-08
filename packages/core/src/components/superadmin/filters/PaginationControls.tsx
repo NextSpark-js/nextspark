@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '../../ui/select';
 import { sel } from '../../../lib/test';
-import { useCommonText } from '../../../lib/i18n/common-text';
+import { fillText, useCommonText, useMessageText } from '../../../lib/i18n/common-text';
 
 interface PaginationControlsProps {
   page: number;
@@ -45,6 +45,10 @@ export function PaginationControls({
   const previousPageText = useCommonText('a11y', 'previousPage', 'Previous page');
   const nextPageText = useCommonText('a11y', 'nextPage', 'Next page');
   const lastPageText = useCommonText('a11y', 'lastPage', 'Last page');
+  const noResultsText = useMessageText('superadmin.pagination.noResults', 'No results');
+  const showingText = useMessageText('superadmin.pagination.showing', 'Showing {start} to {end} of {total} results');
+  const rowsPerPageText = useMessageText('superadmin.pagination.rowsPerPage', 'Rows per page:');
+  const pageOfText = useMessageText('superadmin.pagination.pageOf', 'Page {page} of {total}');
   const startItem = total === 0 ? 0 : (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, total);
 
@@ -56,13 +60,16 @@ export function PaginationControls({
       {/* Results info */}
       <div className="text-sm text-muted-foreground">
         {total === 0 ? (
-          "No results"
+          noResultsText
         ) : (
-          <>
-            Showing <span className="font-medium">{startItem}</span> to{" "}
-            <span className="font-medium">{endItem}</span> of{" "}
-            <span className="font-medium">{total}</span> results
-          </>
+          // the numbers are bold wherever the translation puts them
+          showingText.split(/(\{start\}|\{end\}|\{total\})/).map((part, i) =>
+            part === "{start}" || part === "{end}" || part === "{total}" ? (
+              <span key={i} className="font-medium">{{ "{start}": startItem, "{end}": endItem, "{total}": total }[part]}</span>
+            ) : (
+              part
+            )
+          )
         )}
       </div>
 
@@ -70,7 +77,7 @@ export function PaginationControls({
         {/* Page size selector */}
         {showPageSize && onLimitChange && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Rows per page:</span>
+            <span className="text-sm text-muted-foreground">{rowsPerPageText}</span>
             <Select
               value={String(limit)}
               onValueChange={(value: string) => onLimitChange(Number(value))}
@@ -91,7 +98,7 @@ export function PaginationControls({
 
         {/* Page info */}
         <div className="text-sm text-muted-foreground">
-          Page {page} of {totalPages || 1}
+          {fillText(pageOfText, { page, total: totalPages || 1 })}
         </div>
 
         {/* Navigation buttons */}

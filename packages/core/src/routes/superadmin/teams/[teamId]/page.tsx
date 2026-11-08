@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path"
+import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format"
 
 interface TeamOwner {
   id: string;
@@ -146,6 +147,15 @@ const roleColors = {
  * Displays detailed information about a specific team for superadmins (read-only).
  */
 function TeamDetailPage() {
+  const t = useTranslations("superadmin");
+  const tTeams = useTranslations("teams");
+  const locale = useLocale();
+  const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
+  // a status the catalog does not know (a provider's own) is shown as it comes
+  const subscriptionStatusLabel = (status: string) =>
+    t.has(`teamDetail.subscriptionStatuses.${status}`) ? t(`teamDetail.subscriptionStatuses.${status}`) : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+  const billingStatusLabel = (status: string) =>
+    t.has(`teamDetail.billingStatuses.${status}`) ? t(`teamDetail.billingStatuses.${status}`) : status.charAt(0).toUpperCase() + status.slice(1);
   const params = useParams()!;
   const teamId = params.teamId as string;
 
@@ -156,9 +166,9 @@ function TeamDetailPage() {
       const response = await fetch(withBasePath(`/api/superadmin/teams/${teamId}`));
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error("Team not found");
+          throw new Error(t("teamDetail.notFound"));
         }
-        throw new Error("Failed to fetch team data");
+        throw new Error(t("teamDetail.fetchFailed"));
       }
       return response.json();
     },
@@ -183,12 +193,12 @@ function TeamDetailPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin/teams" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Teams
+              {t("teamDetail.backToTeams")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Team Details</h1>
-            <p className="text-muted-foreground">Loading team data...</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+            <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
           </div>
         </div>
 
@@ -207,12 +217,12 @@ function TeamDetailPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin/teams" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Teams
+              {t("teamDetail.backToTeams")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Team Details</h1>
-            <p className="text-muted-foreground">Error loading data</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
           </div>
         </div>
 
@@ -220,10 +230,10 @@ function TeamDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Error Loading Team
+              {t("teamDetail.errorTitle")}
             </CardTitle>
             <CardDescription>
-              {error instanceof Error ? error.message : "Failed to load team data"}
+              {error instanceof Error ? error.message : t("teamsPage.failedToLoad")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -233,7 +243,7 @@ function TeamDetailPage() {
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Retry
+              {t("errors.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -251,13 +261,13 @@ function TeamDetailPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/superadmin/teams" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Teams
+            {t("teamDetail.backToTeams")}
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">Team Details</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
           <p className="text-muted-foreground">
-            View team information and members (read-only)
+            {t("teamDetail.subtitle")}
           </p>
         </div>
         <Button
@@ -267,7 +277,7 @@ function TeamDetailPage() {
           className="flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {t("shared.refresh")}
         </Button>
       </div>
 
@@ -285,7 +295,7 @@ function TeamDetailPage() {
                 <CardTitle className="text-2xl">{team?.name}</CardTitle>
               </div>
               <CardDescription className="mt-1">
-                ID: {team?.id}
+                {t("shared.id", { id: team?.id ?? "" })}
               </CardDescription>
             </div>
           </div>
@@ -295,7 +305,7 @@ function TeamDetailPage() {
             {/* Owner */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                Owner
+                {t("teamDetail.owner")}
               </h4>
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
@@ -315,13 +325,13 @@ function TeamDetailPage() {
             {/* Members */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                Members
+                {t("teamDetail.members")}
               </h4>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-muted-foreground" />
-                <span className="text-xl font-bold">{team?.memberCount || 0}</span>
+                <span className="text-xl font-bold">{formatLocaleNumber(team?.memberCount || 0, locale)}</span>
                 <span className="text-muted-foreground">
-                  {team?.memberCount === 1 ? "member" : "members"}
+                  {t("teamsTable.memberWord", { count: team?.memberCount ?? 0 })}
                 </span>
               </div>
             </div>
@@ -329,14 +339,14 @@ function TeamDetailPage() {
             {/* Created */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                Created
+                {t("teamDetail.created")}
               </h4>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-5 w-5" />
                 <span>
                   {team?.createdAt
-                    ? format(new Date(team.createdAt), "MMMM dd, yyyy")
-                    : "Unknown"}
+                    ? formatLocaleDate(team.createdAt, locale, "long")
+                    : t("shared.unknown")}
                 </span>
               </div>
             </div>
@@ -349,19 +359,19 @@ function TeamDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Team Members ({members.length})
+            {t("teamDetail.membersTitle", { count: members.length })}
           </CardTitle>
           <CardDescription>
-            All members of this team and their roles.
+            {t("teamDetail.membersDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {members.length === 0 ? (
             <div className="text-center py-8">
               <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No members</h3>
+              <h3 className="mt-4 text-lg font-medium">{t("teamDetail.noMembers")}</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                This team has no members yet.
+                {t("teamDetail.noMembersDescription")}
               </p>
             </div>
           ) : (
@@ -369,10 +379,10 @@ function TeamDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Joined</TableHead>
+                    <TableHead>{t("teamDetail.memberColumns.member")}</TableHead>
+                    <TableHead>{t("teamDetail.memberColumns.email")}</TableHead>
+                    <TableHead>{t("teamDetail.memberColumns.role")}</TableHead>
+                    <TableHead>{t("teamDetail.memberColumns.joined")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -396,15 +406,15 @@ function TeamDetailPage() {
                         <TableCell>
                           <Badge variant={roleColors[member.role]} className="gap-1">
                             <RoleIcon className="h-3 w-3" />
-                            {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                            {teamRoleLabel(member.role)}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
                             {member.joinedAt
-                              ? format(new Date(member.joinedAt), "MMM dd, yyyy")
-                              : "Unknown"}
+                              ? formatLocaleDate(member.joinedAt, locale)
+                              : t("shared.unknown")}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -423,10 +433,10 @@ function TeamDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Subscription
+              {t("teamDetail.subscription")}
             </CardTitle>
             <CardDescription>
-              Current subscription status and billing information.
+              {t("teamDetail.subscriptionDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -434,7 +444,7 @@ function TeamDetailPage() {
               {/* Plan */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                  Current Plan
+                  {t("teamDetail.currentPlan")}
                 </h4>
                 <div className="flex items-center gap-2">
                   <Badge variant={teamData.subscription.plan.type === 'paid' ? 'default' : 'secondary'}>
@@ -449,7 +459,7 @@ function TeamDetailPage() {
               {/* Status */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                  Status
+                  {t("teamDetail.status")}
                 </h4>
                 <Badge
                   variant={
@@ -464,22 +474,22 @@ function TeamDetailPage() {
                   {teamData.subscription.status === 'trialing' && <Clock className="h-3 w-3" />}
                   {teamData.subscription.status === 'past_due' && <AlertCircle className="h-3 w-3" />}
                   {teamData.subscription.status === 'canceled' && <XCircle className="h-3 w-3" />}
-                  {teamData.subscription.status.charAt(0).toUpperCase() + teamData.subscription.status.slice(1).replace('_', ' ')}
+                  {subscriptionStatusLabel(teamData.subscription.status)}
                 </Badge>
                 {teamData.subscription.cancelAtPeriodEnd && (
-                  <p className="text-xs text-destructive mt-1">Cancels at period end</p>
+                  <p className="text-xs text-destructive mt-1">{t("teamDetail.cancelsAtPeriodEnd")}</p>
                 )}
               </div>
 
               {/* Current Period */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                  Current Period
+                  {t("teamDetail.currentPeriod")}
                 </h4>
                 <div className="text-sm">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3 text-muted-foreground" />
-                    {format(new Date(teamData.subscription.currentPeriodStart), "MMM dd")} - {format(new Date(teamData.subscription.currentPeriodEnd), "MMM dd, yyyy")}
+                    {formatLocaleDate(teamData.subscription.currentPeriodStart, locale, "shortNoYear")} - {formatLocaleDate(teamData.subscription.currentPeriodEnd, locale)}
                   </div>
                 </div>
               </div>
@@ -489,18 +499,18 @@ function TeamDetailPage() {
                 {teamData.subscription.trialEndsAt && (
                   <>
                     <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                      Trial Ends
+                      {t("teamDetail.trialEnds")}
                     </h4>
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      {format(new Date(teamData.subscription.trialEndsAt), "MMM dd, yyyy")}
+                      {formatLocaleDate(teamData.subscription.trialEndsAt, locale)}
                     </div>
                   </>
                 )}
                 {teamData.subscription.providerDashboardUrl && (
                     <>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        {teamData.subscription.providerName || 'Payment Provider'}
+                        {teamData.subscription.providerName || t("teamDetail.paymentProvider")}
                       </h4>
                       <a
                         href={withBasePathIfInApp(teamData.subscription.providerDashboardUrl)}
@@ -508,7 +518,7 @@ function TeamDetailPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                       >
-                        View in {teamData.subscription.providerName || 'Dashboard'}
+                        {t("teamDetail.viewIn", { name: teamData.subscription.providerName || t("teamDetail.providerFallback") })}
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     </>
@@ -518,9 +528,9 @@ function TeamDetailPage() {
 
             {/* Subscription Metadata */}
             <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
-              <span>Subscription ID: {teamData.subscription.id}</span>
+              <span>{t("teamDetail.subscriptionId", { id: teamData.subscription.id })}</span>
               {teamData.subscription.externalCustomerId && (
-                <span className="ml-4">Customer ID: {teamData.subscription.externalCustomerId}</span>
+                <span className="ml-4">{t("teamDetail.customerId", { id: teamData.subscription.externalCustomerId })}</span>
               )}
             </div>
           </CardContent>
@@ -530,15 +540,15 @@ function TeamDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Subscription
+              {t("teamDetail.subscription")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
               <CreditCard className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No Subscription</h3>
+              <h3 className="mt-4 text-lg font-medium">{t("teamDetail.noSubscription")}</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                This team does not have an active subscription.
+                {t("teamDetail.noSubscriptionDescription")}
               </p>
             </div>
           </CardContent>
@@ -551,10 +561,10 @@ function TeamDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5" />
-              Billing History
+              {t("teamDetail.billingHistory")}
             </CardTitle>
             <CardDescription>
-              Recent payment events and invoices.
+              {t("teamDetail.billingHistoryDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -562,11 +572,11 @@ function TeamDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("teamDetail.billingColumns.date")}</TableHead>
+                    <TableHead>{t("teamDetail.billingColumns.type")}</TableHead>
+                    <TableHead>{t("teamDetail.billingColumns.status")}</TableHead>
+                    <TableHead className="text-right">{t("teamDetail.billingColumns.amount")}</TableHead>
+                    <TableHead>{t("teamDetail.billingColumns.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -575,7 +585,7 @@ function TeamDetailPage() {
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {format(new Date(event.createdAt), "MMM dd, yyyy")}
+                          {formatLocaleDate(event.createdAt, locale)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -594,7 +604,7 @@ function TeamDetailPage() {
                           {event.status === 'succeeded' && <CheckCircle className="h-3 w-3" />}
                           {event.status === 'pending' && <Clock className="h-3 w-3" />}
                           {event.status === 'failed' && <XCircle className="h-3 w-3" />}
-                          {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                          {billingStatusLabel(event.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono">
@@ -609,7 +619,7 @@ function TeamDetailPage() {
                               rel="noopener noreferrer"
                               className="text-primary hover:underline text-sm"
                             >
-                              Invoice
+                              {t("teamDetail.invoice")}
                             </a>
                           )}
                           {event.receiptUrl && (
@@ -619,7 +629,7 @@ function TeamDetailPage() {
                               rel="noopener noreferrer"
                               className="text-primary hover:underline text-sm"
                             >
-                              Receipt
+                              {t("teamDetail.receipt")}
                             </a>
                           )}
                         </div>
@@ -639,10 +649,10 @@ function TeamDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Current Usage
+              {t("teamDetail.usage")}
             </CardTitle>
             <CardDescription>
-              Resource usage for the current billing period.
+              {t("teamDetail.usageDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -653,10 +663,10 @@ function TeamDetailPage() {
                     {limitSlug.replace(/_/g, ' ')}
                   </div>
                   <div className="text-2xl font-bold mt-1">
-                    {usage.current.toLocaleString()}
+                    {formatLocaleNumber(usage.current, locale)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Period: {usage.periodKey}
+                    {t("teamDetail.usagePeriod", { period: usage.periodKey })}
                   </div>
                 </div>
               ))}
@@ -671,11 +681,10 @@ function TeamDetailPage() {
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                Last updated:{" "}
-                {new Date(teamData.metadata.requestedAt).toLocaleString()}
+                {t("shared.footer.lastUpdated", { date: formatLocaleDate(teamData.metadata.requestedAt, locale, "dateTime") })}
               </p>
-              <p>Requested by: {teamData.metadata.requestedBy}</p>
-              <p>Source: {teamData.metadata.source}</p>
+              <p>{t("shared.footer.requestedBy", { name: teamData.metadata.requestedBy })}</p>
+              <p>{t("shared.footer.source", { source: teamData.metadata.source })}</p>
             </div>
           </CardContent>
         </Card>

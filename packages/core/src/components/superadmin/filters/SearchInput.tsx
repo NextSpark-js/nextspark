@@ -5,7 +5,7 @@ import { Search, X } from "lucide-react";
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
-import { useCommonText } from '../../../lib/i18n/common-text';
+import { useCommonText, useMessageText } from '../../../lib/i18n/common-text';
 
 interface SearchInputProps {
   value: string;
@@ -25,11 +25,13 @@ interface SearchInputProps {
 export function SearchInput({
   value,
   onChange,
-  placeholder = "Search...",
+  placeholder: placeholderProp,
   debounceMs = 300,
   className,
   "data-cy": dataCy,
 }: SearchInputProps) {
+  const defaultPlaceholder = useMessageText('superadmin.filters.searchPlaceholder', 'Search...');
+  const placeholder = placeholderProp ?? defaultPlaceholder;
   const clearSearchText = useCommonText('search', 'clear', 'Clear search');
   const [localValue, setLocalValue] = useState(value);
 

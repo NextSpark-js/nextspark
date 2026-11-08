@@ -156,11 +156,6 @@ describe('texts only a screen reader announces in src/components', () => {
       const p = path.join(dir, e.name)
       return e.isDirectory() ? walk(p) : /\.tsx$/.test(e.name) ? [p] : []
     })
-  // path (relative to src/components) -> [text that may stay fixed, reason]
-  const allowed: Record<string, Array<[string, string]>> = {
-    'superadmin/layouts/SuperadminSidebar.tsx': [['Exit Super Admin', 'the superadmin sidebar stays English until it is translated as a whole']],
-    'docs/superadmin-docs-sidebar.tsx': [['Admin documentation navigation', 'the superadmin sidebar stays English until it is translated as a whole']],
-  }
   // `[^>{]*` and `\s*` run over line breaks: the text may sit on a line of its own
   const fixedText = [/sr-only[^>{]*>\s*[A-Z][a-z]/g, /aria-label="[A-Z][a-z]/g]
 
@@ -172,7 +167,6 @@ describe('texts only a screen reader announces in src/components', () => {
         [...source.matchAll(re)].flatMap((m) => {
           const end = source.indexOf('\n', m.index! + m[0].length)
           const found = source.slice(m.index, end < 0 ? undefined : end)
-          if ((allowed[rel] ?? []).some(([text]) => found.includes(text))) return []
           return `${rel}:${source.slice(0, m.index).split('\n').length}: ${found.replace(/\s+/g, ' ')}`
         })
       )

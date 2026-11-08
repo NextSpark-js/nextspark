@@ -7,6 +7,7 @@ import { Button } from '../../ui/button';
 import { Copy, Palette, Monitor, Sun, Moon } from "lucide-react";
 import { useTheme } from "../../../providers/theme-provider";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 /**
  * Theme Preview Component
@@ -15,6 +16,7 @@ import { useEffect, useState } from "react";
  * Shows both light and dark mode variations with copy functionality.
  */
 export function ThemePreview() {
+  const t = useTranslations("superadmin.gallery.theme");
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -51,10 +53,10 @@ export function ThemePreview() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="h-5 w-5" />
-            Theme Controls
+            {t("themeControls.title")}
           </CardTitle>
           <CardDescription>
-            Switch between light and dark themes to preview color variations
+            {t("themeControls.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -66,7 +68,7 @@ export function ThemePreview() {
               className="flex items-center gap-2"
             >
               <Sun className="h-4 w-4" />
-              Light
+              {t("light")}
             </Button>
             <Button
               variant={theme === 'dark' ? 'default' : 'outline'}
@@ -75,7 +77,7 @@ export function ThemePreview() {
               className="flex items-center gap-2"
             >
               <Moon className="h-4 w-4" />
-              Dark
+              {t("dark")}
             </Button>
             <Button
               variant={theme === 'system' ? 'default' : 'outline'}
@@ -84,10 +86,10 @@ export function ThemePreview() {
               className="flex items-center gap-2"
             >
               <Monitor className="h-4 w-4" />
-              System
+              {t("system")}
             </Button>
             <Badge variant="outline" className="ml-auto">
-              Current: {theme}
+              {t("current", { theme: t(theme) })}
             </Badge>
           </div>
         </CardContent>
@@ -98,31 +100,31 @@ export function ThemePreview() {
         {/* Primary Colors */}
         <Card>
           <CardHeader>
-            <CardTitle>Primary Colors</CardTitle>
-            <CardDescription>Main brand colors and accent tones</CardDescription>
+            <CardTitle>{t("groups.primary.title")}</CardTitle>
+            <CardDescription>{t("groups.primary.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ColorSwatch
-              name="Primary"
-              description="Main brand color"
+              name={t("colors.primary.name")}
+              description={t("colors.primary.description")}
               cssVar="--primary"
               copyValue="var(--primary)"
             />
             <ColorSwatch
-              name="Primary Foreground"
-              description="Text on primary background"
+              name={t("colors.primaryForeground.name")}
+              description={t("colors.primaryForeground.description")}
               cssVar="--primary-foreground"
               copyValue="var(--primary-foreground)"
             />
             <ColorSwatch
-              name="Secondary"
-              description="Secondary brand color"
+              name={t("colors.secondary.name")}
+              description={t("colors.secondary.description")}
               cssVar="--secondary"
               copyValue="var(--secondary)"
             />
             <ColorSwatch
-              name="Secondary Foreground"
-              description="Text on secondary background"
+              name={t("colors.secondaryForeground.name")}
+              description={t("colors.secondaryForeground.description")}
               cssVar="--secondary-foreground"
               copyValue="var(--secondary-foreground)"
             />
@@ -132,31 +134,31 @@ export function ThemePreview() {
         {/* Background Colors */}
         <Card>
           <CardHeader>
-            <CardTitle>Background Colors</CardTitle>
-            <CardDescription>Page and card background colors</CardDescription>
+            <CardTitle>{t("groups.background.title")}</CardTitle>
+            <CardDescription>{t("groups.background.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ColorSwatch
-              name="Background"
-              description="Main page background"
+              name={t("colors.background.name")}
+              description={t("colors.background.description")}
               cssVar="--background"
               copyValue="var(--background)"
             />
             <ColorSwatch
-              name="Foreground"
-              description="Main text color"
+              name={t("colors.foreground.name")}
+              description={t("colors.foreground.description")}
               cssVar="--foreground"
               copyValue="var(--foreground)"
             />
             <ColorSwatch
-              name="Card"
-              description="Card background"
+              name={t("colors.card.name")}
+              description={t("colors.card.description")}
               cssVar="--card"
               copyValue="var(--card)"
             />
             <ColorSwatch
-              name="Card Foreground"
-              description="Text on card background"
+              name={t("colors.cardForeground.name")}
+              description={t("colors.cardForeground.description")}
               cssVar="--card-foreground"
               copyValue="var(--card-foreground)"
             />
@@ -166,31 +168,31 @@ export function ThemePreview() {
         {/* Interactive Colors */}
         <Card>
           <CardHeader>
-            <CardTitle>Interactive Colors</CardTitle>
-            <CardDescription>Buttons, links, and interactive elements</CardDescription>
+            <CardTitle>{t("groups.interactive.title")}</CardTitle>
+            <CardDescription>{t("groups.interactive.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ColorSwatch
-              name="Accent"
-              description="Accent color for highlights"
+              name={t("colors.accent.name")}
+              description={t("colors.accent.description")}
               cssVar="--accent"
               copyValue="var(--accent)"
             />
             <ColorSwatch
-              name="Accent Foreground"
-              description="Text on accent background"
+              name={t("colors.accentForeground.name")}
+              description={t("colors.accentForeground.description")}
               cssVar="--accent-foreground"
               copyValue="var(--accent-foreground)"
             />
             <ColorSwatch
-              name="Muted"
-              description="Subtle background color"
+              name={t("colors.muted.name")}
+              description={t("colors.muted.description")}
               cssVar="--muted"
               copyValue="var(--muted)"
             />
             <ColorSwatch
-              name="Muted Foreground"
-              description="Subtle text color"
+              name={t("colors.mutedForeground.name")}
+              description={t("colors.mutedForeground.description")}
               cssVar="--muted-foreground"
               copyValue="var(--muted-foreground)"
             />
@@ -200,31 +202,31 @@ export function ThemePreview() {
         {/* Status Colors */}
         <Card>
           <CardHeader>
-            <CardTitle>Status Colors</CardTitle>
-            <CardDescription>Error, warning, and status indicators</CardDescription>
+            <CardTitle>{t("groups.status.title")}</CardTitle>
+            <CardDescription>{t("groups.status.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ColorSwatch
-              name="Destructive"
-              description="Error and danger states"
+              name={t("colors.destructive.name")}
+              description={t("colors.destructive.description")}
               cssVar="--destructive"
               copyValue="var(--destructive)"
             />
             <ColorSwatch
-              name="Destructive Foreground"
-              description="Text on destructive background"
+              name={t("colors.destructiveForeground.name")}
+              description={t("colors.destructiveForeground.description")}
               cssVar="--destructive-foreground"
               copyValue="var(--destructive-foreground)"
             />
             <ColorSwatch
-              name="Border"
-              description="Border color"
+              name={t("colors.border.name")}
+              description={t("colors.border.description")}
               cssVar="--border"
               copyValue="var(--border)"
             />
             <ColorSwatch
-              name="Input"
-              description="Input border color"
+              name={t("colors.input.name")}
+              description={t("colors.input.description")}
               cssVar="--input"
               copyValue="var(--input)"
             />
@@ -235,37 +237,37 @@ export function ThemePreview() {
       {/* Typography */}
       <Card>
         <CardHeader>
-          <CardTitle>Typography</CardTitle>
-          <CardDescription>Font families, sizes, and text styles</CardDescription>
+          <CardTitle>{t("typography.title")}</CardTitle>
+          <CardDescription>{t("typography.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <div>
-              <h1 className="text-4xl font-bold">Heading 1</h1>
+              <h1 className="text-4xl font-bold">{t("typography.heading1")}</h1>
               <code className="text-xs text-muted-foreground">text-4xl font-bold</code>
             </div>
             <div>
-              <h2 className="text-3xl font-bold">Heading 2</h2>
+              <h2 className="text-3xl font-bold">{t("typography.heading2")}</h2>
               <code className="text-xs text-muted-foreground">text-3xl font-bold</code>
             </div>
             <div>
-              <h3 className="text-2xl font-bold">Heading 3</h3>
+              <h3 className="text-2xl font-bold">{t("typography.heading3")}</h3>
               <code className="text-xs text-muted-foreground">text-2xl font-bold</code>
             </div>
             <div>
-              <h4 className="text-xl font-semibold">Heading 4</h4>
+              <h4 className="text-xl font-semibold">{t("typography.heading4")}</h4>
               <code className="text-xs text-muted-foreground">text-xl font-semibold</code>
             </div>
             <div>
-              <p className="text-base">Body text - This is the default body text style used throughout the application.</p>
+              <p className="text-base">{t("typography.body")}</p>
               <code className="text-xs text-muted-foreground">text-base</code>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Small text - Used for captions, help text, and secondary information.</p>
+              <p className="text-sm text-muted-foreground">{t("typography.small")}</p>
               <code className="text-xs text-muted-foreground">text-sm text-muted-foreground</code>
             </div>
             <div>
-              <code className="text-xs bg-muted px-2 py-1 rounded">Code text - Monospace font for code snippets</code>
+              <code className="text-xs bg-muted px-2 py-1 rounded">{t("typography.code")}</code>
               <code className="text-xs text-muted-foreground block mt-1">text-xs bg-muted px-2 py-1 rounded</code>
             </div>
           </div>
@@ -275,8 +277,8 @@ export function ThemePreview() {
       {/* Border Radius */}
       <Card>
         <CardHeader>
-          <CardTitle>Border Radius</CardTitle>
-          <CardDescription>Border radius tokens and examples</CardDescription>
+          <CardTitle>{t("radius.title")}</CardTitle>
+          <CardDescription>{t("radius.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -311,6 +313,7 @@ interface ColorSwatchProps {
 }
 
 function ColorSwatch({ name, description, cssVar, copyValue }: ColorSwatchProps) {
+  const t = useTranslations("superadmin.gallery.theme");
   return (
     <div className="flex items-center gap-3 p-3 border rounded-lg">
       <div 
@@ -327,6 +330,7 @@ function ColorSwatch({ name, description, cssVar, copyValue }: ColorSwatchProps)
         size="sm"
         onClick={() => navigator.clipboard.writeText(copyValue)}
         className="h-8 w-8 p-0"
+        aria-label={t("copy", { name })}
       >
         <Copy className="h-3 w-3" />
       </Button>

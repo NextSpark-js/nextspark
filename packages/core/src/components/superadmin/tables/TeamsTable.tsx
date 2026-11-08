@@ -1,8 +1,9 @@
 "use client";
 
-import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatLocaleDate } from '../../../lib/i18n/format';
 import { sel } from '../../../lib/test';
 import { useCommonText } from '../../../lib/i18n/common-text';
 import {
@@ -58,6 +59,8 @@ interface TeamsTableProps {
  */
 export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
+  const t = useTranslations('superadmin.teamsTable');
+  const locale = useLocale();
   const router = useRouter();
 
   // Navigate to team detail
@@ -96,9 +99,9 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
     return (
       <div className="text-center py-8">
         <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-medium">No teams found</h3>
+        <h3 className="mt-4 text-lg font-medium">{t('empty.title')}</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          There are no teams matching your filters.
+          {t('empty.description')}
         </p>
       </div>
     );
@@ -109,11 +112,11 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Team</TableHead>
-            <TableHead>Owner</TableHead>
-            <TableHead>Members</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t('columns.team')}</TableHead>
+            <TableHead>{t('columns.owner')}</TableHead>
+            <TableHead>{t('columns.members')}</TableHead>
+            <TableHead>{t('columns.created')}</TableHead>
+            <TableHead className="text-right">{t('columns.actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -136,7 +139,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                     <div>
                       <div className="font-medium">{team.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        ID: {team.id.slice(0, 12)}...
+                        {t('id', { id: `${team.id.slice(0, 12)}...` })}
                       </div>
                     </div>
                   </div>
@@ -165,7 +168,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{team.memberCount}</span>
                     <span className="text-muted-foreground text-sm">
-                      {team.memberCount === 1 ? "member" : "members"}
+                      {t('memberWord', { count: team.memberCount })}
                     </span>
                   </div>
                 </TableCell>
@@ -175,8 +178,8 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     {team.createdAt
-                      ? format(new Date(team.createdAt), "MMM dd, yyyy")
-                      : "Unknown"}
+                      ? formatLocaleDate(team.createdAt, locale)
+                      : t('unknown')}
                   </div>
                 </TableCell>
 
@@ -195,11 +198,11 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuLabel>{t('columns.actions')}</DropdownMenuLabel>
                       <DropdownMenuItem asChild className="cursor-pointer">
                         <Link href={`/superadmin/teams/${team.id}`}>
                           <Eye className="mr-2 h-4 w-4" />
-                          View Details
+                          {t('viewDetails')}
                         </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>

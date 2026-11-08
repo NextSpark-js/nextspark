@@ -28,6 +28,7 @@ import { cn } from '../../../lib/utils';
 import { Button } from '../../ui/button';
 import { sel } from '../../../lib/test';
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { getPluginNavItems } from "@nextsparkjs/registries/plugin-registry.client";
 import type { PluginNavItem } from "../../../types/plugin";
 
@@ -52,65 +53,66 @@ interface SidebarItem {
  */
 export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItems?: PluginNavItem[] } = {}) {
   const pathname = usePathname();
+  const t = useTranslations("superadmin.sidebar");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pluginItems = pluginItemsProp ?? getPluginNavItems('superadmin');
 
   const sidebarItems: SidebarItem[] = [
     {
-      title: "Dashboard",
+      title: t("items.dashboard.title"),
       href: "/superadmin",
       icon: LayoutDashboard,
-      description: "Main control panel overview",
+      description: t("items.dashboard.description"),
       selectorKey: "dashboard"
     },
     {
-      title: "Users",
+      title: t("items.users.title"),
       href: "/superadmin/users",
       icon: Users,
-      description: "Manage all users and superadmins",
+      description: t("items.users.description"),
       selectorKey: "users"
     },
     {
-      title: "Teams",
+      title: t("items.teams.title"),
       href: "/superadmin/teams",
       icon: Users2,
-      description: "View all teams and members",
+      description: t("items.teams.description"),
       selectorKey: "teams"
     },
     {
-      title: "Team Roles",
+      title: t("items.teamRoles.title"),
       href: "/superadmin/team-roles",
       icon: Shield,
-      description: "View roles & permissions matrix",
+      description: t("items.teamRoles.description"),
       selectorKey: "teamRoles"
     },
     {
-      title: "Documentation",
+      title: t("items.docs.title"),
       href: "/superadmin/docs",
       icon: FileText,
-      description: "Admin guides and references",
+      description: t("items.docs.description"),
       selectorKey: "docs"
     },
     {
-      title: "Subscriptions",
+      title: t("items.subscriptions.title"),
       href: "/superadmin/subscriptions",
       icon: CreditCard,
-      description: "Billing and subscription management",
+      description: t("items.subscriptions.description"),
       selectorKey: "subscriptions"
     },
     {
-      title: "Analytics",
+      title: t("items.analytics.title"),
       href: "/superadmin/analytics",
       icon: BarChart3,
-      description: "Platform statistics",
+      description: t("items.analytics.description"),
       disabled: true,
       selectorKey: "analytics"
     },
     {
-      title: "System Config",
+      title: t("items.config.title"),
       href: "/superadmin/config",
       icon: Settings,
-      description: "Application settings",
+      description: t("items.config.description"),
       disabled: true,
       selectorKey: "config"
     },
@@ -129,8 +131,8 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
               <Shield className="h-5 w-5 text-red-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-red-600">Super Admin</h2>
-              <p className="text-xs text-muted-foreground">System Panel</p>
+              <h2 className="text-lg font-bold text-red-600">{t("title")}</h2>
+              <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
             </div>
           </div>
         )}
@@ -139,7 +141,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={isCollapsed ? t("expand") : t("collapse")}
           className="ml-auto"
         >
           {isCollapsed ? (
@@ -164,7 +166,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground cursor-not-allowed opacity-60",
                   isCollapsed && "justify-center"
                 )}
-                title={isCollapsed ? `${item.title} (Coming Soon)` : item.description}
+                title={isCollapsed ? t("comingSoonTitle", { title: item.title }) : item.description}
               >
                 <IconComponent className="h-5 w-5 flex-shrink-0" />
                 {!isCollapsed && (
@@ -172,7 +174,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{item.title}</span>
                       <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                        Soon
+                        {t("soon")}
                       </span>
                     </div>
                     {item.description && (
@@ -218,7 +220,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
         <div className="px-3 pb-2 space-y-1">
           {!isCollapsed && (
             <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Plugins
+              {t("plugins")}
             </p>
           )}
           {isCollapsed && <div className="my-1 border-t border-border" />}
@@ -262,15 +264,15 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
             "hover:bg-accent hover:text-accent-foreground text-muted-foreground",
             isCollapsed && "justify-center"
           )}
-          title={isCollapsed ? "Exit Super Admin" : "Return to main dashboard"}
-          aria-label="Exit Super Admin and return to main dashboard"
+          title={isCollapsed ? t("exit.title") : t("exit.tooltip")}
+          aria-label={t("exit.label")}
           data-cy={sel('superadmin.sidebar.exitButton')}
         >
           <ArrowLeft className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && (
             <div className="flex-1">
-              <div className="text-sm font-medium">Exit Super Admin</div>
-              <p className="text-xs text-muted-foreground">Return to dashboard</p>
+              <div className="text-sm font-medium">{t("exit.title")}</div>
+              <p className="text-xs text-muted-foreground">{t("exit.description")}</p>
             </div>
           )}
         </Link>
@@ -280,10 +282,10 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
           <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center gap-2 text-red-700">
               <Shield className="h-3 w-3" />
-              <span className="text-xs font-medium">Restricted Area</span>
+              <span className="text-xs font-medium">{t("restricted.title")}</span>
             </div>
             <p className="text-xs text-red-600 mt-1">
-              Superadmin access only
+              {t("restricted.description")}
             </p>
           </div>
         )}

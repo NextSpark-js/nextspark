@@ -132,5 +132,7 @@ async function getTranslations(namespaceOrOpts) {
 
 module.exports = {
   getTranslations,
+  format,
+  loadNamespace,
   __esModule: true,
 }

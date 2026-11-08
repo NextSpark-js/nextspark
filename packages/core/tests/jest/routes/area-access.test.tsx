@@ -22,7 +22,7 @@ jest.mock('@nextsparkjs/core/lib/auth', () => ({
   auth: { api: { getSession: ({ headers, query }: { headers: Headers; query?: unknown }) => { sessionQueries.push(query); return getTypedSession(headers) } } },
 }))
 jest.mock('next-intl/server', () => ({ getMessages: () => getMessages() }))
-jest.mock('next-intl', () => ({ NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children }))
+jest.mock('next-intl', () => ({ NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children, useTranslations: () => (key: string) => key }))
 jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: () => ({}), getConfiguredClientNamespaces: () => ({ superadmin: [], dashboard: [] }) }))
 jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({ APP_CONFIG_MERGED: { i18n: { supportedLocales: ['en'], defaultLocale: 'en' } } }))
 jest.mock('@nextsparkjs/core/components/app/guards/SuperAdminGuard', () => ({ SuperAdminGuard: ({ children }: { children: React.ReactNode }) => children }))

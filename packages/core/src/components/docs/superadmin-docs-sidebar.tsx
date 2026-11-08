@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '../../lib/utils'
 import { ChevronRight, FileText, Folder, Shield } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { DocSectionMeta } from '@nextsparkjs/registries/docs-registry'
 
 interface SuperadminDocsSidebarProps {
@@ -13,6 +14,7 @@ interface SuperadminDocsSidebarProps {
 
 export function SuperadminDocsSidebar({ sections }: SuperadminDocsSidebarProps) {
   const pathname = usePathname()
+  const t = useTranslations('superadmin.docs')
 
   // Get active section from pathname
   const getActiveSection = () => {
@@ -50,16 +52,16 @@ export function SuperadminDocsSidebar({ sections }: SuperadminDocsSidebarProps) 
   return (
     <nav
       className="h-full overflow-y-auto p-4"
-      aria-label="Admin documentation navigation"
+      aria-label={t('navigation')}
       data-cy="superadmin-docs-sidebar"
     >
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Shield className="h-5 w-5 text-red-600" />
-          <h2 className="text-lg font-semibold">Admin Docs</h2>
+          <h2 className="text-lg font-semibold">{t('sidebarTitle')}</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Documentation for administrators
+          {t('sidebarSubtitle')}
         </p>
       </div>
 

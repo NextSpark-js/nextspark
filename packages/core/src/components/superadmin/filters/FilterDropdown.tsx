@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '../../ui/select';
 import { cn } from '../../../lib/utils';
+import { useMessageText } from '../../../lib/i18n/common-text';
 
 interface FilterOption {
   value: string;
@@ -37,13 +38,17 @@ export function FilterDropdown({
   value,
   onChange,
   options,
-  placeholder = "Filter",
+  placeholder: placeholderProp,
   label,
-  allLabel = "All",
+  allLabel: allLabelProp,
   showIcon = true,
   className,
   "data-cy": dataCy,
 }: FilterDropdownProps) {
+  const defaultPlaceholder = useMessageText('superadmin.filters.placeholder', 'Filter');
+  const defaultAllLabel = useMessageText('superadmin.filters.all', 'All');
+  const placeholder = placeholderProp ?? defaultPlaceholder;
+  const allLabel = allLabelProp ?? defaultAllLabel;
   // Add "All" option at the beginning
   const allOptions: FilterOption[] = [
     { value: "", label: allLabel },

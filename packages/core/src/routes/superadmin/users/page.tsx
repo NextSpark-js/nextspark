@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -38,6 +39,7 @@ import {
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/lib/selectors";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
+import { formatLocaleDate } from "@nextsparkjs/core/lib/i18n/format"
 
 interface UsersData {
   regularUsers: User[];
@@ -71,17 +73,6 @@ interface UsersData {
   };
 }
 
-const roleOptions = [
-  { value: "member", label: "Member" },
-  { value: "developer", label: "Developer" },
-  { value: "suspended", label: "Suspended" },
-];
-
-const statusOptions = [
-  { value: "verified", label: "Verified" },
-  { value: "unverified", label: "Unverified" },
-];
-
 /**
  * Users Management Page
  *
@@ -89,6 +80,19 @@ const statusOptions = [
  * Displays regular users and superadmins with search, filters, and pagination.
  */
 function UsersPage() {
+  const t = useTranslations("superadmin");
+  const tTeams = useTranslations("teams");
+  const locale = useLocale();
+  const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
+  const roleOptions = [
+    { value: "member", label: t("usersPage.roles.member") },
+    { value: "developer", label: t("usersPage.roles.developer") },
+    { value: "suspended", label: t("usersPage.roles.suspended") },
+  ];
+  const statusOptions = [
+    { value: "verified", label: t("users.table.verified") },
+    { value: "unverified", label: t("users.table.unverified") },
+  ];
   const [activeTab, setActiveTab] = useState<"users" | "superadmins">("users");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -121,7 +125,7 @@ function UsersPage() {
       const queryString = getQueryParams();
       const response = await fetch(withBasePath(`/api/superadmin/users?${queryString}`));
       if (!response.ok) {
-        throw new Error("Failed to fetch users data");
+        throw new Error(t("usersPage.fetchFailed"));
       }
       return response.json();
     },
@@ -137,13 +141,13 @@ function UsersPage() {
           ...user,
           fullName:
             [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-            "No name",
+            t("usersPage.noName"),
         })),
         superadmins: rawUsersData.superadmins.map((user) => ({
           ...user,
           fullName:
             [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-            "No name",
+            t("usersPage.noName"),
         })),
       }
     : undefined;
@@ -195,14 +199,14 @@ function UsersPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Super Admin
+              {t("shared.backToSuperAdmin")}
             </Link>
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              User Management
+              {t("users.title")}
             </h1>
-            <p className="text-muted-foreground">Loading user data...</p>
+            <p className="text-muted-foreground">{t("usersPage.loading")}</p>
           </div>
         </div>
 
@@ -221,14 +225,14 @@ function UsersPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Super Admin
+              {t("shared.backToSuperAdmin")}
             </Link>
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              User Management
+              {t("users.title")}
             </h1>
-            <p className="text-muted-foreground">Error loading data</p>
+            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
           </div>
         </div>
 
@@ -236,12 +240,12 @@ function UsersPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Error Loading Users
+              {t("errors.errorLoadingUsers")}
             </CardTitle>
             <CardDescription>
               {error instanceof Error
                 ? error.message
-                : "Failed to load user data"}
+                : t("errors.failedToLoadUserData")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -251,7 +255,7 @@ function UsersPage() {
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Retry
+              {t("errors.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -266,13 +270,13 @@ function UsersPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/superadmin" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Super Admin
+            {t("shared.backToSuperAdmin")}
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("users.title")}</h1>
           <p className="text-muted-foreground">
-            Manage all users and superadministrators
+            {t("users.subtitle")}
           </p>
         </div>
         <Button
@@ -282,7 +286,7 @@ function UsersPage() {
           className="flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {t("users.refresh")}
         </Button>
       </div>
 
@@ -290,20 +294,20 @@ function UsersPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("users.totalUsers")}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {usersData?.counts.total || 0}
             </div>
-            <p className="text-xs text-muted-foreground">All registered users</p>
+            <p className="text-xs text-muted-foreground">{t("users.allRegisteredUsers")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Work Teams</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("usersPage.workTeams")}</CardTitle>
             <Users2 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -311,51 +315,51 @@ function UsersPage() {
               {usersData?.counts.workTeams || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Collaborative work teams
+              {t("usersPage.collaborativeTeams")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Superadmins</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("users.superadmins")}</CardTitle>
             <Shield className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
               {usersData?.counts.superadmins || 0}
             </div>
-            <p className="text-xs text-muted-foreground">System administrators</p>
+            <p className="text-xs text-muted-foreground">{t("users.systemAdministrators")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Distribution</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("usersPage.distribution")}</CardTitle>
             <Badge variant="outline">
-              {Object.keys(usersData?.counts.byRole || {}).length} roles
+              {t("usersPage.rolesCount", { count: Object.keys(usersData?.counts.byRole || {}).length })}
             </Badge>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="status" className="w-full">
               <TabsList className="grid w-full grid-cols-2 h-7">
                 <TabsTrigger value="status" className="text-xs">
-                  Status
+                  {t("usersPage.statusTab")}
                 </TabsTrigger>
                 <TabsTrigger value="role" className="text-xs">
-                  Role
+                  {t("usersPage.roleTab")}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="status" className="mt-2">
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span>Verified:</span>
+                    <span>{t("usersPage.verifiedLabel")}</span>
                     <span className="font-medium text-green-600">
                       {usersData?.counts.statusDistribution?.verified || 0}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span>Unverified:</span>
+                    <span>{t("usersPage.unverifiedLabel")}</span>
                     <span className="font-medium text-yellow-600">
                       {usersData?.counts.statusDistribution?.unverified || 0}
                     </span>
@@ -367,7 +371,7 @@ function UsersPage() {
                   {Object.entries(usersData?.counts.teamRoleDistribution || {}).map(
                     ([role, count]) => (
                       <div key={role} className="flex justify-between text-xs">
-                        <span className="capitalize">{role}:</span>
+                        <span>{t("usersPage.roleEntry", { role: teamRoleLabel(role) })}</span>
                         <span className="font-medium">{count}</span>
                       </div>
                     )
@@ -384,7 +388,7 @@ function UsersPage() {
         <SearchInput
           value={search}
           onChange={handleSearchChange}
-          placeholder="Search by name or email..."
+          placeholder={t("usersPage.searchPlaceholder")}
           className="w-full max-w-sm"
           data-cy={sel('superadmin.users.filters.search')}
         />
@@ -394,8 +398,8 @@ function UsersPage() {
             value={roleFilter || "__all__"}
             onChange={handleRoleFilterChange}
             options={roleOptions}
-            label="Role"
-            allLabel="All Roles"
+            label={t("usersPage.roleFilter")}
+            allLabel={t("usersPage.allRoles")}
             showIcon={false}
             data-cy="users-role-filter"
           />
@@ -405,8 +409,8 @@ function UsersPage() {
           value={statusFilter || "__all__"}
           onChange={handleStatusFilterChange}
           options={statusOptions}
-          label="Status"
-          allLabel="All Status"
+          label={t("usersPage.statusFilter")}
+          allLabel={t("usersPage.allStatus")}
           showIcon={false}
           data-cy="users-status-filter"
         />
@@ -418,7 +422,7 @@ function UsersPage() {
             onClick={clearFilters}
             data-cy="clear-filters-btn"
           >
-            Clear filters
+            {t("usersPage.clearFilters")}
           </Button>
         )}
       </div>
@@ -432,21 +436,20 @@ function UsersPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Regular Users ({usersData?.counts.regularUsers || 0})
+            {t("usersPage.regularUsersTab", { count: usersData?.counts.regularUsers || 0 })}
           </TabsTrigger>
           <TabsTrigger value="superadmins" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            Superadmins ({usersData?.counts.superadmins || 0})
+            {t("usersPage.superadminsTab", { count: usersData?.counts.superadmins || 0 })}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Regular Users</CardTitle>
+              <CardTitle>{t("users.regularUsers")}</CardTitle>
               <CardDescription>
-                All users excluding superadministrators. Includes members,
-                colaborators, and admins.
+                {t("users.descriptions.regularUsersDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -475,11 +478,10 @@ function UsersPage() {
             <CardHeader className="bg-red-50">
               <CardTitle className="flex items-center gap-2 text-red-700">
                 <Shield className="h-5 w-5" />
-                Superadministrators
+                {t("usersPage.superadministrators")}
               </CardTitle>
               <CardDescription>
-                Users with full system access and administrative privileges.
-                Handle with extreme caution.
+                {t("users.descriptions.superadminsDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -513,11 +515,10 @@ function UsersPage() {
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                Last updated:{" "}
-                {new Date(usersData.metadata.requestedAt).toLocaleString()}
+                {t("shared.footer.lastUpdated", { date: formatLocaleDate(usersData.metadata.requestedAt, locale, "dateTime") })}
               </p>
-              <p>Requested by: {usersData.metadata.requestedBy}</p>
-              <p>Source: {usersData.metadata.source}</p>
+              <p>{t("shared.footer.requestedBy", { name: usersData.metadata.requestedBy })}</p>
+              <p>{t("shared.footer.source", { source: usersData.metadata.source })}</p>
             </div>
           </CardContent>
         </Card>

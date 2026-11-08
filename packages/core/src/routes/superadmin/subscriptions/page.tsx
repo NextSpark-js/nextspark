@@ -2,7 +2,6 @@
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState } from "react";
-import { format } from "date-fns";
 import { sel } from "@nextsparkjs/core/lib/selectors";
 import {
   Card,
@@ -43,7 +42,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path";
+import { formatLocaleDate, formatLocaleDollars, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
 import {
   SearchInput,
   PaginationControls,
@@ -124,37 +125,37 @@ interface SubscriptionsData {
 
 const statusConfig = {
   active: {
-    label: "Active",
+    labelKey: "active",
     icon: CheckCircle,
     variant: "default" as const,
     className: "bg-green-100 text-green-800 border-green-200",
   },
   trialing: {
-    label: "Trial",
+    labelKey: "trialing",
     icon: Clock,
     variant: "secondary" as const,
     className: "bg-blue-100 text-blue-800 border-blue-200",
   },
   past_due: {
-    label: "Past Due",
+    labelKey: "past_due",
     icon: AlertCircle,
     variant: "destructive" as const,
     className: "bg-yellow-100 text-yellow-800 border-yellow-200",
   },
   canceled: {
-    label: "Canceled",
+    labelKey: "canceled",
     icon: XCircle,
     variant: "outline" as const,
     className: "bg-gray-100 text-gray-800 border-gray-200",
   },
   expired: {
-    label: "Expired",
+    labelKey: "expired",
     icon: XCircle,
     variant: "outline" as const,
     className: "bg-red-100 text-red-800 border-red-200",
   },
   paused: {
-    label: "Paused",
+    labelKey: "paused",
     icon: Clock,
     variant: "secondary" as const,
     className: "bg-orange-100 text-orange-800 border-orange-200",
@@ -168,6 +169,10 @@ const statusConfig = {
  * Shows stats, MRR, plan distribution, and subscription list.
  */
 function SubscriptionsPage() {
+  const t = useTranslations("superadmin.subscriptions");
+  const tErrors = useTranslations("superadmin.errors");
+  const tShared = useTranslations("superadmin.shared");
+  const locale = useLocale();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [intervalFilter, setIntervalFilter] = useState<string>("all");
@@ -231,7 +236,7 @@ function SubscriptionsPage() {
       const url = `/api/superadmin/subscriptions${queryString ? `?${queryString}` : ""}`;
       const response = await fetch(withBasePath(url));
       if (!response.ok) {
-        throw new Error("Failed to fetch subscriptions data");
+        throw new Error(t("fetchFailed"));
       }
       return response.json();
     },
@@ -248,12 +253,12 @@ function SubscriptionsPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Super Admin
+              {tShared("backToSuperAdmin")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Subscriptions</h1>
-            <p className="text-muted-foreground">Loading subscription data...</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+            <p className="text-muted-foreground">{t("loading")}</p>
           </div>
         </div>
 
@@ -272,12 +277,12 @@ function SubscriptionsPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Super Admin
+              {tShared("backToSuperAdmin")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Subscriptions</h1>
-            <p className="text-muted-foreground">Error loading data</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+            <p className="text-muted-foreground">{tShared("errorLoadingData")}</p>
           </div>
         </div>
 
@@ -285,10 +290,10 @@ function SubscriptionsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Error Loading Subscriptions
+              {t("errorTitle")}
             </CardTitle>
             <CardDescription>
-              {error instanceof Error ? error.message : "Failed to load subscription data"}
+              {error instanceof Error ? error.message : t("failedToLoad")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -298,7 +303,7 @@ function SubscriptionsPage() {
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Retry
+              {tErrors("retry")}
             </Button>
           </CardContent>
         </Card>
@@ -316,13 +321,13 @@ function SubscriptionsPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/superadmin" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Super Admin
+            {tShared("backToSuperAdmin")}
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">Subscriptions</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Manage billing and subscription overview
+            {t("subtitle")}
           </p>
         </div>
         <Button
@@ -332,7 +337,7 @@ function SubscriptionsPage() {
           className="flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {tShared("refresh")}
         </Button>
       </div>
 
@@ -341,15 +346,15 @@ function SubscriptionsPage() {
         {/* MRR Card */}
         <Card className="border-green-200 bg-green-50/50" data-cy={sel('superadmin.subscriptions.stats.mrr')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Recurring Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.mrr")}</CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              {stats?.mrrFormatted || "$0.00"}
+              {stats?.mrrFormatted || formatLocaleDollars(0, locale)}
             </div>
             <p className="text-xs text-muted-foreground">
-              From {stats?.monthly || 0} monthly subscriptions
+              {t("stats.fromMonthly", { count: stats?.monthly || 0 })}
             </p>
           </CardContent>
         </Card>
@@ -357,15 +362,15 @@ function SubscriptionsPage() {
         {/* ARR Card */}
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Annual Recurring Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.arr")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700">
-              {stats?.arrFormatted || "$0.00"}
+              {stats?.arrFormatted || formatLocaleDollars(0, locale)}
             </div>
             <p className="text-xs text-muted-foreground">
-              From {stats?.yearly || 0} yearly subscriptions
+              {t("stats.fromYearly", { count: stats?.yearly || 0 })}
             </p>
           </CardContent>
         </Card>
@@ -373,13 +378,13 @@ function SubscriptionsPage() {
         {/* Active Subscriptions */}
         <Card data-cy={sel('superadmin.subscriptions.stats.activeCount')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.active")}</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.active || 0}</div>
+            <div className="text-2xl font-bold">{formatLocaleNumber(stats?.active || 0, locale)}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.trialing || 0} in trial
+              {t("stats.inTrial", { count: stats?.trialing || 0 })}
             </p>
           </CardContent>
         </Card>
@@ -387,13 +392,13 @@ function SubscriptionsPage() {
         {/* Total Subscriptions */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Subscriptions</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.total")}</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
+            <div className="text-2xl font-bold">{formatLocaleNumber(stats?.total || 0, locale)}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.free || 0} free, {stats?.paid || 0} paid
+              {t("stats.freeAndPaid", { free: stats?.free || 0, paid: stats?.paid || 0 })}
             </p>
           </CardContent>
         </Card>
@@ -401,13 +406,13 @@ function SubscriptionsPage() {
         {/* Issues */}
         <Card className={stats?.pastDue && stats.pastDue > 0 ? "border-yellow-200 bg-yellow-50/50" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Needs Attention</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.needsAttention")}</CardTitle>
             <AlertCircle className={`h-4 w-4 ${stats?.pastDue && stats.pastDue > 0 ? "text-yellow-600" : "text-muted-foreground"}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.pastDue || 0}</div>
+            <div className="text-2xl font-bold">{formatLocaleNumber(stats?.pastDue || 0, locale)}</div>
             <p className="text-xs text-muted-foreground">
-              Past due payments
+              {t("stats.pastDue")}
             </p>
           </CardContent>
         </Card>
@@ -419,10 +424,10 @@ function SubscriptionsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Plan Distribution
+              {t("planDistribution")}
             </CardTitle>
             <CardDescription>
-              Active subscriptions by plan
+              {t("planDistributionDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -446,41 +451,41 @@ function SubscriptionsPage() {
         <SearchInput
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search by team name or email..."
+          placeholder={t("searchPlaceholder")}
           className="w-full sm:max-w-xs"
           data-cy="subscriptions-search-input"
         />
         <Select value={statusFilter} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-full sm:w-[140px]" data-cy="status-filter">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("filters.status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="trialing">Trialing</SelectItem>
-            <SelectItem value="past_due">Past Due</SelectItem>
-            <SelectItem value="canceled">Canceled</SelectItem>
+            <SelectItem value="all">{t("filters.allStatuses")}</SelectItem>
+            <SelectItem value="active">{t("statuses.active")}</SelectItem>
+            <SelectItem value="trialing">{t("filters.trialing")}</SelectItem>
+            <SelectItem value="past_due">{t("statuses.past_due")}</SelectItem>
+            <SelectItem value="canceled">{t("statuses.canceled")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={planFilter} onValueChange={handlePlanChange}>
           <SelectTrigger className="w-full sm:w-[140px]" data-cy="plan-filter">
-            <SelectValue placeholder="Plan" />
+            <SelectValue placeholder={t("filters.plan")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Plans</SelectItem>
-            <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
-            <SelectItem value="enterprise">Enterprise</SelectItem>
+            <SelectItem value="all">{t("filters.allPlans")}</SelectItem>
+            <SelectItem value="free">{t("filters.free")}</SelectItem>
+            <SelectItem value="pro">{t("filters.pro")}</SelectItem>
+            <SelectItem value="enterprise">{t("filters.enterprise")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={intervalFilter} onValueChange={handleIntervalChange}>
           <SelectTrigger className="w-full sm:w-[140px]" data-cy="interval-filter">
-            <SelectValue placeholder="Interval" />
+            <SelectValue placeholder={t("filters.interval")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Intervals</SelectItem>
-            <SelectItem value="monthly">Monthly</SelectItem>
-            <SelectItem value="yearly">Yearly</SelectItem>
+            <SelectItem value="all">{t("filters.allIntervals")}</SelectItem>
+            <SelectItem value="monthly">{t("filters.monthly")}</SelectItem>
+            <SelectItem value="yearly">{t("filters.yearly")}</SelectItem>
           </SelectContent>
         </Select>
         {hasActiveFilters && (
@@ -490,7 +495,7 @@ function SubscriptionsPage() {
             onClick={clearAllFilters}
             data-cy="clear-filters-btn"
           >
-            Clear Filters
+            {t("clearFilters")}
           </Button>
         )}
         {isFetching && !isLoading && (
@@ -503,21 +508,21 @@ function SubscriptionsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            Subscriptions ({data?.pagination.total || 0})
+            {t("listTitle", { count: data?.pagination.total || 0 })}
           </CardTitle>
           <CardDescription>
-            All team subscriptions and their billing status
+            {t("listDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {subscriptions.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No subscriptions found</h3>
+              <h3 className="mt-4 text-lg font-medium">{t("empty.title")}</h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 {hasActiveFilters
-                  ? "Try adjusting your filters"
-                  : "No subscriptions have been created yet"}
+                  ? t("empty.adjustFilters")
+                  : t("empty.none")}
               </p>
             </div>
           ) : (
@@ -525,12 +530,12 @@ function SubscriptionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Period End</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("columns.team")}</TableHead>
+                    <TableHead>{t("columns.plan")}</TableHead>
+                    <TableHead>{t("columns.status")}</TableHead>
+                    <TableHead>{t("columns.price")}</TableHead>
+                    <TableHead>{t("columns.periodEnd")}</TableHead>
+                    <TableHead>{t("columns.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -556,11 +561,11 @@ function SubscriptionsPage() {
                         <TableCell>
                           <Badge className={statusInfo.className}>
                             <StatusIcon className="h-3 w-3 mr-1" />
-                            {statusInfo.label}
+                            {t(`statuses.${statusInfo.labelKey}`)}
                           </Badge>
                           {sub.cancelAtPeriodEnd && (
                             <div className="text-xs text-muted-foreground mt-1">
-                              Cancels at period end
+                              {t("cancelsAtPeriodEnd")}
                             </div>
                           )}
                         </TableCell>
@@ -569,19 +574,18 @@ function SubscriptionsPage() {
                             const price = sub.billingInterval === 'yearly'
                               ? sub.plan.priceYearly
                               : sub.plan.priceMonthly;
-                            const suffix = sub.billingInterval === 'yearly' ? '/yr' : '/mo';
                             return price && price > 0
-                              ? `$${(price / 100).toFixed(2)}${suffix}`
-                              : "Free";
+                              ? t(sub.billingInterval === 'yearly' ? 'pricePerYear' : 'pricePerMonth', { price: formatLocaleDollars(price, locale) })
+                              : t("filters.free");
                           })()}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {format(new Date(sub.currentPeriodEnd), "MMM dd, yyyy")}
+                            {formatLocaleDate(sub.currentPeriodEnd, locale)}
                           </div>
                           {sub.trialEndsAt && new Date(sub.trialEndsAt) > new Date() && (
                             <div className="text-xs text-blue-600">
-                              Trial ends {format(new Date(sub.trialEndsAt), "MMM dd")}
+                              {t("trialEnds", { date: formatLocaleDate(sub.trialEndsAt, locale, "shortNoYear") })}
                             </div>
                           )}
                         </TableCell>
@@ -589,7 +593,7 @@ function SubscriptionsPage() {
                           <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm" asChild>
                               <Link href={`/superadmin/teams/${sub.team.id}`}>
-                                View Team
+                                {t("viewTeam")}
                               </Link>
                             </Button>
                             {sub.providerDashboardUrl && (
@@ -641,11 +645,10 @@ function SubscriptionsPage() {
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                Last updated:{" "}
-                {new Date(data.metadata.requestedAt).toLocaleString()}
+                {tShared("footer.lastUpdated", { date: formatLocaleDate(data.metadata.requestedAt, locale, "dateTime") })}
               </p>
-              <p>Requested by: {data.metadata.requestedBy}</p>
-              <p>Source: {data.metadata.source}</p>
+              <p>{tShared("footer.requestedBy", { name: data.metadata.requestedBy })}</p>
+              <p>{tShared("footer.source", { source: data.metadata.source })}</p>
             </div>
           </CardContent>
         </Card>

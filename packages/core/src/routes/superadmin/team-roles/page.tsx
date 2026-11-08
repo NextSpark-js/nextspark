@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -28,6 +29,7 @@ import { PERMISSIONS_METADATA } from "@nextsparkjs/registries/permissions-regist
 import { getFullBillingMatrix } from "@nextsparkjs/core/lib/billing/queries";
 import { RolesPermissionsMatrix } from "@nextsparkjs/core/components/superadmin/tables/RolesPermissionsMatrix";
 import { PlanFeaturesMatrix } from "@nextsparkjs/core/components/superadmin/tables/PlanFeaturesMatrix";
+import { formatLocaleDollars } from "@nextsparkjs/core/lib/i18n/format";
 
 /**
  * Team Roles & Permissions Page
@@ -39,6 +41,12 @@ import { PlanFeaturesMatrix } from "@nextsparkjs/core/components/superadmin/tabl
  * Both use pre-computed data for O(1) runtime lookups.
  */
 function TeamRolesPage() {
+  const t = useTranslations("superadmin.teamRoles");
+  const tTeams = useTranslations("teams");
+  const tShared = useTranslations("superadmin.shared");
+  const locale = useLocale();
+  const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
+  const planTypeLabel = (type: string) => (t.has(`planTypes.${type}`) ? t(`planTypes.${type}`) : type);
   const teamRolesConfig = APP_CONFIG_MERGED.teams.roles;
   const roles = teamRolesConfig.availableTeamRoles;
   const hierarchy = teamRolesConfig.hierarchy;
@@ -90,15 +98,15 @@ function TeamRolesPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/superadmin" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Super Admin
+            {tShared("backToSuperAdmin")}
           </Link>
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">
-            Roles, Permissions & Plans
+            {t("title")}
           </h1>
           <p className="text-muted-foreground">
-            View team roles, permissions, and billing plan features
+            {t("subtitle")}
           </p>
         </div>
       </div>
@@ -108,11 +116,11 @@ function TeamRolesPage() {
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="rbac" className="flex items-center gap-2" data-cy="tab-rbac">
             <Shield className="h-4 w-4" />
-            RBAC Matrix
+            {t("tabs.rbac")}
           </TabsTrigger>
           <TabsTrigger value="plans" className="flex items-center gap-2" data-cy="tab-plans">
             <CreditCard className="h-4 w-4" />
-            Plan Features
+            {t("tabs.plans")}
           </TabsTrigger>
         </TabsList>
 
@@ -122,47 +130,51 @@ function TeamRolesPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Available Roles</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("rbac.availableRoles")}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{roles.length}</div>
-                <p className="text-xs text-muted-foreground">Team role types</p>
+                <p className="text-xs text-muted-foreground">{t("rbac.roleTypes")}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Permissions</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("rbac.totalPermissions")}</CardTitle>
                 <Key className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{PERMISSIONS_METADATA.totalPermissions}</div>
                 <p className="text-xs text-muted-foreground">
-                  {PERMISSIONS_METADATA.corePermissions} core + {PERMISSIONS_METADATA.featurePermissions} features + {PERMISSIONS_METADATA.entityPermissions} entity
+                  {t("rbac.permissionBreakdown", {
+                    core: PERMISSIONS_METADATA.corePermissions,
+                    features: PERMISSIONS_METADATA.featurePermissions,
+                    entity: PERMISSIONS_METADATA.entityPermissions,
+                  })}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Protected Role</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("rbac.protectedRole")}</CardTitle>
                 <Lock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">owner</div>
-                <p className="text-xs text-muted-foreground">Cannot be removed</p>
+                <div className="text-2xl font-bold">{teamRoleLabel("owner")}</div>
+                <p className="text-xs text-muted-foreground">{t("rbac.cannotBeRemoved")}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Default Role</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("rbac.defaultRole")}</CardTitle>
                 <Eye className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{teamRolesConfig.defaultTeamRole}</div>
-                <p className="text-xs text-muted-foreground">For invitations</p>
+                <div className="text-2xl font-bold">{teamRoleLabel(teamRolesConfig.defaultTeamRole)}</div>
+                <p className="text-xs text-muted-foreground">{t("rbac.forInvitations")}</p>
               </CardContent>
             </Card>
           </div>
@@ -172,10 +184,10 @@ function TeamRolesPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Team Roles Hierarchy
+                {t("rbac.hierarchy")}
               </CardTitle>
               <CardDescription>
-                Roles ordered by hierarchy level. Higher values have more permissions.
+                {t("rbac.hierarchyDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -190,9 +202,9 @@ function TeamRolesPage() {
                       {hierarchy[role] ?? 0}
                     </Badge>
                     <div>
-                      <div className="font-medium capitalize">{role}</div>
+                      <div className="font-medium capitalize">{teamRoleLabel(role)}</div>
                       <div className="text-xs text-muted-foreground">
-                        {permissionCounts[role]} permissions
+                        {t("rbac.permissionCount", { count: permissionCounts[role] })}
                       </div>
                     </div>
                   </div>
@@ -204,9 +216,9 @@ function TeamRolesPage() {
           {/* Permissions Matrix */}
           <Card>
             <CardHeader>
-              <CardTitle>Permissions Matrix</CardTitle>
+              <CardTitle>{t("rbac.matrix")}</CardTitle>
               <CardDescription>
-                Complete view of which permissions each team role has access to.
+                {t("rbac.matrixDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -223,25 +235,25 @@ function TeamRolesPage() {
           {/* RBAC Legend */}
           <Card className="bg-muted/30">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Legend</CardTitle>
+              <CardTitle className="text-sm">{t("legend")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <Badge variant="destructive">100</Badge>
-                  <span className="text-muted-foreground">Owner (protected)</span>
+                  <span className="text-muted-foreground">{t("rbac.legendOwner")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="default">50</Badge>
-                  <span className="text-muted-foreground">Admin</span>
+                  <span className="text-muted-foreground">{teamRoleLabel("admin")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">10</Badge>
-                  <span className="text-muted-foreground">Member</span>
+                  <span className="text-muted-foreground">{teamRoleLabel("member")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">1</Badge>
-                  <span className="text-muted-foreground">Viewer</span>
+                  <span className="text-muted-foreground">{teamRoleLabel("viewer")}</span>
                 </div>
               </div>
             </CardContent>
@@ -252,22 +264,22 @@ function TeamRolesPage() {
             <CardContent className="pt-4">
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>
-                  <strong>Source:</strong> Pre-computed permissions registry (build-time)
+                  <strong>{t("sourceLabel")}</strong> {t("rbac.source")}
                 </p>
                 <p>
-                  <strong>Roles config:</strong>{" "}
+                  <strong>{t("rbac.rolesConfig")}</strong>{" "}
                   <code className="bg-background px-1 rounded">
                     APP_CONFIG_MERGED.teams.roles
                   </code>
                 </p>
                 <p>
-                  <strong>Permissions registry:</strong>{" "}
+                  <strong>{t("rbac.permissionsRegistry")}</strong>{" "}
                   <code className="bg-background px-1 rounded">
                     core/lib/registries/permissions-registry.ts
                   </code>
                 </p>
                 <p>
-                  <strong>Generated at:</strong>{" "}
+                  <strong>{t("rbac.generatedAt")}</strong>{" "}
                   {PERMISSIONS_METADATA.generatedAt}
                 </p>
               </div>
@@ -281,47 +293,47 @@ function TeamRolesPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("plans.totalPlans")}</CardTitle>
                 <Layers className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{billingData.metadata.totalPlans}</div>
                 <p className="text-xs text-muted-foreground">
-                  {billingData.metadata.publicPlans} public
+                  {t("plans.publicPlans", { count: billingData.metadata.publicPlans })}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Features</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("plans.features")}</CardTitle>
                 <Zap className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{billingData.metadata.totalFeatures}</div>
-                <p className="text-xs text-muted-foreground">Defined features</p>
+                <p className="text-xs text-muted-foreground">{t("plans.definedFeatures")}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Limits</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("plans.limits")}</CardTitle>
                 <Shield className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{billingData.metadata.totalLimits}</div>
-                <p className="text-xs text-muted-foreground">Quota types</p>
+                <p className="text-xs text-muted-foreground">{t("plans.quotaTypes")}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Theme</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("plans.theme")}</CardTitle>
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold capitalize">{billingData.metadata.theme}</div>
-                <p className="text-xs text-muted-foreground">Project theme</p>
+                <p className="text-xs text-muted-foreground">{t("plans.projectTheme")}</p>
               </CardContent>
             </Card>
           </div>
@@ -331,10 +343,10 @@ function TeamRolesPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                Available Plans
+                {t("plans.available")}
               </CardTitle>
               <CardDescription>
-                Billing plans with their pricing and trial periods.
+                {t("plans.availableDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -355,28 +367,28 @@ function TeamRolesPage() {
                       }
                       className="font-semibold capitalize"
                     >
-                      {plan.type}
+                      {planTypeLabel(plan.type)}
                     </Badge>
                     <div>
                       <div className="font-medium capitalize">{plan.slug}</div>
                       <div className="text-xs text-muted-foreground">
                         {plan.type === "free"
-                          ? "Free forever"
+                          ? t("plans.freeForever")
                           : plan.type === "enterprise"
-                          ? "Custom pricing"
+                          ? t("plans.customPricing")
                           : plan.price
-                          ? `$${(plan.price.monthly / 100).toFixed(0)}/mo`
-                          : "Contact sales"}
+                          ? t("plans.perMonth", { price: formatLocaleDollars(plan.price.monthly, locale, { whole: true }) })
+                          : t("plans.contactSales")}
                         {plan.trialDays && plan.trialDays > 0 && (
                           <span className="ml-1 text-green-600">
-                            ({plan.trialDays}d trial)
+                            {t("plans.trialDays", { days: plan.trialDays })}
                           </span>
                         )}
                       </div>
                     </div>
                     {plan.visibility === "hidden" && (
                       <Badge variant="outline" className="text-[9px]">
-                        hidden
+                        {t("plans.hidden")}
                       </Badge>
                     )}
                   </div>
@@ -388,9 +400,9 @@ function TeamRolesPage() {
           {/* Plan Features Matrix */}
           <Card>
             <CardHeader>
-              <CardTitle>Features & Limits Matrix</CardTitle>
+              <CardTitle>{t("plans.matrix")}</CardTitle>
               <CardDescription>
-                Complete view of features and quotas included in each plan.
+                {t("plans.matrixDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -406,25 +418,25 @@ function TeamRolesPage() {
           {/* Plan Legend */}
           <Card className="bg-muted/30">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Legend</CardTitle>
+              <CardTitle className="text-sm">{t("legend")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-6 text-sm">
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">free</Badge>
-                  <span className="text-muted-foreground">Free tier</span>
+                  <Badge variant="secondary">{planTypeLabel("free")}</Badge>
+                  <span className="text-muted-foreground">{t("plans.legendFree")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="default">paid</Badge>
-                  <span className="text-muted-foreground">Subscription plan</span>
+                  <Badge variant="default">{planTypeLabel("paid")}</Badge>
+                  <span className="text-muted-foreground">{t("plans.legendPaid")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="destructive">enterprise</Badge>
-                  <span className="text-muted-foreground">Custom/unlimited</span>
+                  <Badge variant="destructive">{planTypeLabel("enterprise")}</Badge>
+                  <span className="text-muted-foreground">{t("plans.legendEnterprise")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">monthly</Badge>
-                  <span className="text-muted-foreground">Resets monthly</span>
+                  <Badge variant="outline">{t("plans.monthly")}</Badge>
+                  <span className="text-muted-foreground">{t("plans.legendMonthly")}</span>
                 </div>
               </div>
             </CardContent>
@@ -435,16 +447,16 @@ function TeamRolesPage() {
             <CardContent className="pt-4">
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>
-                  <strong>Source:</strong> Pre-computed billing registry (module load)
+                  <strong>{t("sourceLabel")}</strong> {t("plans.source")}
                 </p>
                 <p>
-                  <strong>Billing config:</strong>{" "}
+                  <strong>{t("plans.billingConfig")}</strong>{" "}
                   <code className="bg-background px-1 rounded">
                     config/billing.config.ts
                   </code>
                 </p>
                 <p>
-                  <strong>Billing registry:</strong>{" "}
+                  <strong>{t("plans.billingRegistry")}</strong>{" "}
                   <code className="bg-background px-1 rounded">
                     core/lib/registries/billing-registry.ts
                   </code>
@@ -460,23 +472,23 @@ function TeamRolesPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Shield className="h-4 w-4 text-blue-600" />
-            Three-Layer Permission Model
+            {t("model.title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">
             <p className="font-mono bg-background px-2 py-1 rounded inline-block mb-2">
-              RESULT = Permission (RBAC) AND Feature (Plan) AND Quota (Limits)
+              {t("model.formula")}
             </p>
             <ul className="list-disc list-inside space-y-1 mt-2">
               <li>
-                <strong>Layer 1 - Permission (RBAC):</strong> Does the user&apos;s role allow this action?
+                <strong>{t("model.layer1Title")}</strong> {t("model.layer1")}
               </li>
               <li>
-                <strong>Layer 2 - Feature (Plan):</strong> Does the subscription plan include this feature?
+                <strong>{t("model.layer2Title")}</strong> {t("model.layer2")}
               </li>
               <li>
-                <strong>Layer 3 - Quota (Limits):</strong> Is there available quota for this action?
+                <strong>{t("model.layer3Title")}</strong> {t("model.layer3")}
               </li>
             </ul>
           </div>

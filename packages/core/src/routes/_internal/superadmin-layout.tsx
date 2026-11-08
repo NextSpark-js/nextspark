@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import { Suspense } from 'react'
-import { NextIntlClientProvider } from 'next-intl'
+import { NextIntlClientProvider, useTranslations } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
 import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
@@ -32,6 +32,7 @@ type GuardedProps = SuperadminLayoutProps & { serverChecked?: boolean }
  * Wrapped in Suspense so PPR doesn't fail during prerender.
  */
 function SuperadminContent({ children, serverChecked }: GuardedProps) {
+  const t = useTranslations('superadmin.layout')
   const pluginNavItems = getAllPluginNavItems('superadmin')
 
   return (
@@ -52,8 +53,8 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
                     <div className="h-5 w-5 bg-red-600 rounded-sm"></div>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-red-600">Super Admin</p>
-                    <p className="text-xs text-muted-foreground">Super Admin Area</p>
+                    <p className="text-lg font-bold text-red-600">{t('mobileTitle')}</p>
+                    <p className="text-xs text-muted-foreground">{t('mobileSubtitle')}</p>
                   </div>
                 </div>
               </div>

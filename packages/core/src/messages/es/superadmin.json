@@ -48,7 +48,11 @@
         "description": "{count, plural, one {# usuario nuevo} other {# usuarios nuevos}} en los últimos 30 días (UTC)"
       },
       "unavailable": "Métricas no disponibles"
-    }
+    },
+    "panelTitle": "Panel de Super Admin",
+    "soon": "Pronto",
+    "accessSection": "Acceder a la sección →",
+    "overview": "Resumen actual de la plataforma"
   },
   "users": {
     "title": "Gestión de Usuarios",
@@ -217,5 +221,901 @@
     "soon": "Pronto",
     "loading": "Cargando...",
     "error": "Error"
+  },
+  "shared": {
+    "backToSuperAdmin": "Volver a Super Admin",
+    "errorLoadingData": "Error al cargar los datos",
+    "refresh": "Actualizar",
+    "id": "ID: {id}",
+    "unknown": "Desconocido",
+    "yes": "Sí",
+    "no": "No",
+    "footer": {
+      "lastUpdated": "Última actualización: {date}",
+      "requestedBy": "Solicitado por: {name}",
+      "source": "Fuente: {source}"
+    }
+  },
+  "layout": {
+    "mobileTitle": "Super Admin",
+    "mobileSubtitle": "Área de Super Admin"
+  },
+  "sidebar": {
+    "title": "Super Admin",
+    "subtitle": "Panel del sistema",
+    "expand": "Expandir barra lateral",
+    "collapse": "Contraer barra lateral",
+    "comingSoonTitle": "{title} (Próximamente)",
+    "soon": "Pronto",
+    "plugins": "Plugins",
+    "items": {
+      "dashboard": {
+        "title": "Panel",
+        "description": "Resumen del panel de control principal"
+      },
+      "users": {
+        "title": "Usuarios",
+        "description": "Gestiona todos los usuarios y superadmins"
+      },
+      "teams": {
+        "title": "Equipos",
+        "description": "Consulta todos los equipos y miembros"
+      },
+      "teamRoles": {
+        "title": "Roles de equipo",
+        "description": "Consulta la matriz de roles y permisos"
+      },
+      "docs": {
+        "title": "Documentación",
+        "description": "Guías y referencias de administración"
+      },
+      "subscriptions": {
+        "title": "Suscripciones",
+        "description": "Gestión de facturación y suscripciones"
+      },
+      "analytics": {
+        "title": "Analítica",
+        "description": "Estadísticas de la plataforma"
+      },
+      "config": {
+        "title": "Configuración del sistema",
+        "description": "Ajustes de la aplicación"
+      }
+    },
+    "exit": {
+      "title": "Salir de Super Admin",
+      "tooltip": "Volver al panel principal",
+      "label": "Salir de Super Admin y volver al panel principal",
+      "description": "Volver al panel"
+    },
+    "restricted": {
+      "title": "Área restringida",
+      "description": "Acceso solo para superadmin"
+    }
+  },
+  "docs": {
+    "navigation": "Navegación de la documentación de administración",
+    "sidebarTitle": "Documentación de admin",
+    "sidebarSubtitle": "Documentación para administradores",
+    "pageNotFound": "Página no encontrada",
+    "metaTitle": "{title} | Documentación de admin",
+    "metaDescription": "Documentación de administración de {title}",
+    "breadcrumbSuperAdmin": "Super Admin",
+    "breadcrumbDocs": "Documentación",
+    "indexMetaTitle": "Documentación de administración | Super Admin",
+    "indexMetaDescription": "Documentación para administradores sobre despliegue, configuración y gestión",
+    "indexTitle": "Documentación de administración",
+    "indexEmpty": "Todavía no hay documentación para administradores.",
+    "indexIntro": "Documentación para administradores sobre despliegue, configuración y gestión del sistema."
+  },
+  "filters": {
+    "placeholder": "Filtrar",
+    "all": "Todos",
+    "searchPlaceholder": "Buscar..."
+  },
+  "pagination": {
+    "noResults": "Sin resultados",
+    "showing": "Mostrando {start} a {end} de {total} resultados",
+    "rowsPerPage": "Filas por página:",
+    "pageOf": "Página {page} de {total}"
+  },
+  "teamsTable": {
+    "empty": {
+      "title": "No se encontraron equipos",
+      "description": "No hay equipos que coincidan con tus filtros."
+    },
+    "columns": {
+      "team": "Equipo",
+      "owner": "Propietario",
+      "members": "Miembros",
+      "created": "Creado",
+      "actions": "Acciones"
+    },
+    "id": "ID: {id}",
+    "memberWord": "{count, plural, one {miembro} other {miembros}}",
+    "unknown": "Desconocido",
+    "viewDetails": "Ver detalles"
+  },
+  "rolesMatrix": {
+    "permission": "Permiso",
+    "dangerous": "peligroso"
+  },
+  "planMatrix": {
+    "featureOrLimit": "Función / Límite",
+    "features": "Funciones",
+    "limits": "Límites y cuotas",
+    "hidden": "oculto",
+    "free": "Gratis",
+    "contactSales": "Contactar con ventas",
+    "notAvailable": "N/D",
+    "perMonth": "{price}/mes",
+    "unlimited": "Ilimitado",
+    "gigabytes": "{value} GB",
+    "resetPeriods": {
+      "never": "nunca",
+      "daily": "diario",
+      "monthly": "mensual",
+      "yearly": "anual"
+    }
+  },
+  "usersPage": {
+    "loading": "Cargando datos de usuarios...",
+    "fetchFailed": "No se pudieron obtener los datos de usuarios",
+    "noName": "Sin nombre",
+    "roles": {
+      "member": "Miembro",
+      "developer": "Desarrollador",
+      "suspended": "Suspendido"
+    },
+    "workTeams": "Equipos de trabajo",
+    "collaborativeTeams": "Equipos de trabajo colaborativos",
+    "distribution": "Distribución",
+    "rolesCount": "{count, plural, one {# rol} other {# roles}}",
+    "statusTab": "Estado",
+    "roleTab": "Rol",
+    "verifiedLabel": "Verificados:",
+    "unverifiedLabel": "Sin verificar:",
+    "roleEntry": "{role}:",
+    "searchPlaceholder": "Buscar por nombre o correo electrónico...",
+    "roleFilter": "Rol",
+    "allRoles": "Todos los roles",
+    "statusFilter": "Estado",
+    "allStatus": "Todos los estados",
+    "clearFilters": "Borrar filtros",
+    "regularUsersTab": "Usuarios regulares ({count})",
+    "superadminsTab": "Superadmins ({count})",
+    "superadministrators": "Superadministradores"
+  },
+  "userDetail": {
+    "title": "Detalles del usuario",
+    "subtitle": "Consulta la información del usuario y sus equipos",
+    "backToUsers": "Volver a Usuarios",
+    "errorTitle": "Error al cargar el usuario",
+    "notFound": "Usuario no encontrado",
+    "fetchFailed": "No se pudieron obtener los datos del usuario",
+    "superadmin": "Superadmin",
+    "userRole": "Usuario",
+    "email": "Correo electrónico",
+    "registered": "Registrado",
+    "lastUpdated": "Última actualización",
+    "totalTeams": "Equipos en total",
+    "allMemberships": "Todas las pertenencias a equipos",
+    "ownedTeams": "Equipos propios",
+    "asOwner": "Como propietario del equipo",
+    "memberships": "Pertenencia a equipos ({count})",
+    "membershipsDescription": "Todos los equipos a los que pertenece este usuario y sus roles.",
+    "noMemberships": "Sin pertenencia a equipos",
+    "noMembershipsDescription": "Este usuario todavía no es miembro de ningún equipo.",
+    "columns": {
+      "team": "Equipo",
+      "role": "Rol",
+      "joined": "Se unió",
+      "actions": "Acciones"
+    },
+    "view": "Ver",
+    "metadata": "Metadatos del usuario ({count})",
+    "metadataDescription": "Todos los registros de metadatos guardados para este usuario.",
+    "noMetadata": "Sin metadatos",
+    "noMetadataDescription": "Este usuario todavía no tiene registros de metadatos.",
+    "metaColumns": {
+      "key": "Clave",
+      "value": "Valor",
+      "type": "Tipo",
+      "public": "Público",
+      "searchable": "Con búsqueda",
+      "updated": "Actualizado"
+    }
+  },
+  "teamsPage": {
+    "title": "Gestión de equipos",
+    "subtitle": "Consulta todos los equipos y sus miembros (solo lectura)",
+    "loading": "Cargando datos de equipos...",
+    "errorTitle": "Error al cargar los equipos",
+    "failedToLoad": "No se pudieron cargar los datos de equipos",
+    "totalTeams": "Equipos en total",
+    "allTeams": "Todos los equipos registrados",
+    "searchPlaceholder": "Buscar equipos por nombre o correo del propietario...",
+    "clear": "Borrar",
+    "userTeamsTab": "Equipos de usuarios ({count})",
+    "systemTeamsTab": "Admin del sistema ({count})",
+    "userTeams": "Equipos de usuarios",
+    "userTeamsDescription": "Equipos normales creados por usuarios para colaborar.",
+    "systemTeam": "Equipo de administración del sistema",
+    "systemTeamDescription": "Equipo especial para administradores del sistema con acceso a todos los equipos."
+  },
+  "teamDetail": {
+    "title": "Detalles del equipo",
+    "subtitle": "Consulta la información del equipo y sus miembros (solo lectura)",
+    "backToTeams": "Volver a Equipos",
+    "errorTitle": "Error al cargar el equipo",
+    "notFound": "Equipo no encontrado",
+    "fetchFailed": "No se pudieron obtener los datos del equipo",
+    "owner": "Propietario",
+    "members": "Miembros",
+    "created": "Creado",
+    "membersTitle": "Miembros del equipo ({count})",
+    "membersDescription": "Todos los miembros de este equipo y sus roles.",
+    "noMembers": "Sin miembros",
+    "noMembersDescription": "Este equipo todavía no tiene miembros.",
+    "memberColumns": {
+      "member": "Miembro",
+      "email": "Correo electrónico",
+      "role": "Rol",
+      "joined": "Se unió"
+    },
+    "subscription": "Suscripción",
+    "subscriptionDescription": "Estado actual de la suscripción e información de facturación.",
+    "currentPlan": "Plan actual",
+    "status": "Estado",
+    "cancelsAtPeriodEnd": "Se cancela al final del período",
+    "currentPeriod": "Período actual",
+    "trialEnds": "Fin de la prueba",
+    "paymentProvider": "Proveedor de pagos",
+    "providerFallback": "Panel",
+    "viewIn": "Ver en {name}",
+    "subscriptionId": "ID de suscripción: {id}",
+    "customerId": "ID de cliente: {id}",
+    "noSubscription": "Sin suscripción",
+    "noSubscriptionDescription": "Este equipo no tiene una suscripción activa.",
+    "subscriptionStatuses": {
+      "active": "Activa",
+      "trialing": "En prueba",
+      "past_due": "Vencida",
+      "canceled": "Cancelada"
+    },
+    "billingHistory": "Historial de facturación",
+    "billingHistoryDescription": "Eventos de pago y facturas recientes.",
+    "billingColumns": {
+      "date": "Fecha",
+      "type": "Tipo",
+      "status": "Estado",
+      "amount": "Importe",
+      "actions": "Acciones"
+    },
+    "billingStatuses": {
+      "succeeded": "Completado",
+      "pending": "Pendiente",
+      "failed": "Fallido"
+    },
+    "invoice": "Factura",
+    "receipt": "Recibo",
+    "usage": "Uso actual",
+    "usageDescription": "Uso de recursos durante el período de facturación actual.",
+    "usagePeriod": "Período: {period}"
+  },
+  "teamRoles": {
+    "title": "Roles, permisos y planes",
+    "subtitle": "Consulta los roles de equipo, los permisos y las funciones de los planes de facturación",
+    "tabs": {
+      "rbac": "Matriz RBAC",
+      "plans": "Funciones de los planes"
+    },
+    "legend": "Leyenda",
+    "sourceLabel": "Fuente:",
+    "planTypes": {
+      "free": "gratis",
+      "paid": "de pago",
+      "enterprise": "enterprise"
+    },
+    "rbac": {
+      "availableRoles": "Roles disponibles",
+      "roleTypes": "Tipos de rol de equipo",
+      "totalPermissions": "Permisos en total",
+      "permissionBreakdown": "{core} del núcleo + {features} de funciones + {entity} de entidades",
+      "protectedRole": "Rol protegido",
+      "cannotBeRemoved": "No se puede quitar",
+      "defaultRole": "Rol predeterminado",
+      "forInvitations": "Para invitaciones",
+      "hierarchy": "Jerarquía de roles de equipo",
+      "hierarchyDescription": "Roles ordenados por nivel jerárquico. Los valores más altos tienen más permisos.",
+      "permissionCount": "{count, plural, one {# permiso} other {# permisos}}",
+      "matrix": "Matriz de permisos",
+      "matrixDescription": "Vista completa de los permisos a los que accede cada rol de equipo.",
+      "legendOwner": "Propietario (protegido)",
+      "source": "Registro de permisos precalculado (en tiempo de compilación)",
+      "rolesConfig": "Configuración de roles:",
+      "permissionsRegistry": "Registro de permisos:",
+      "generatedAt": "Generado el:"
+    },
+    "plans": {
+      "totalPlans": "Planes en total",
+      "publicPlans": "{count} públicos",
+      "features": "Funciones",
+      "definedFeatures": "Funciones definidas",
+      "limits": "Límites",
+      "quotaTypes": "Tipos de cuota",
+      "theme": "Tema",
+      "projectTheme": "Tema del proyecto",
+      "available": "Planes disponibles",
+      "availableDescription": "Planes de facturación con sus precios y períodos de prueba.",
+      "freeForever": "Gratis para siempre",
+      "customPricing": "Precio personalizado",
+      "perMonth": "{price}/mes",
+      "contactSales": "Contactar con ventas",
+      "trialDays": "(prueba de {days} d)",
+      "hidden": "oculto",
+      "matrix": "Matriz de funciones y límites",
+      "matrixDescription": "Vista completa de las funciones y cuotas incluidas en cada plan.",
+      "legendFree": "Nivel gratuito",
+      "legendPaid": "Plan de suscripción",
+      "legendEnterprise": "Personalizado/ilimitado",
+      "monthly": "mensual",
+      "legendMonthly": "Se restablece cada mes",
+      "source": "Registro de facturación precalculado (al cargar el módulo)",
+      "billingConfig": "Configuración de facturación:",
+      "billingRegistry": "Registro de facturación:"
+    },
+    "model": {
+      "title": "Modelo de permisos de tres capas",
+      "formula": "RESULTADO = Permiso (RBAC) Y Función (Plan) Y Cuota (Límites)",
+      "layer1Title": "Capa 1 - Permiso (RBAC):",
+      "layer1": "¿El rol del usuario permite esta acción?",
+      "layer2Title": "Capa 2 - Función (Plan):",
+      "layer2": "¿El plan de suscripción incluye esta función?",
+      "layer3Title": "Capa 3 - Cuota (Límites):",
+      "layer3": "¿Hay cuota disponible para esta acción?"
+    }
+  },
+  "subscriptions": {
+    "title": "Suscripciones",
+    "subtitle": "Gestiona la facturación y el resumen de suscripciones",
+    "loading": "Cargando datos de suscripciones...",
+    "errorTitle": "Error al cargar las suscripciones",
+    "failedToLoad": "No se pudieron cargar los datos de suscripciones",
+    "fetchFailed": "No se pudieron obtener los datos de suscripciones",
+    "stats": {
+      "mrr": "Ingresos recurrentes mensuales",
+      "arr": "Ingresos recurrentes anuales",
+      "fromMonthly": "{count, plural, one {De # suscripción mensual} other {De # suscripciones mensuales}}",
+      "fromYearly": "{count, plural, one {De # suscripción anual} other {De # suscripciones anuales}}",
+      "active": "Suscripciones activas",
+      "inTrial": "{count} en prueba",
+      "total": "Suscripciones en total",
+      "freeAndPaid": "{free} gratuitas, {paid} de pago",
+      "needsAttention": "Requiere atención",
+      "pastDue": "Pagos vencidos"
+    },
+    "planDistribution": "Distribución de planes",
+    "planDistributionDescription": "Suscripciones activas por plan",
+    "searchPlaceholder": "Buscar por nombre de equipo o correo electrónico...",
+    "filters": {
+      "status": "Estado",
+      "allStatuses": "Todos los estados",
+      "trialing": "En prueba",
+      "plan": "Plan",
+      "allPlans": "Todos los planes",
+      "free": "Gratis",
+      "pro": "Pro",
+      "enterprise": "Enterprise",
+      "interval": "Intervalo",
+      "allIntervals": "Todos los intervalos",
+      "monthly": "Mensual",
+      "yearly": "Anual"
+    },
+    "clearFilters": "Borrar filtros",
+    "listTitle": "Suscripciones ({count})",
+    "listDescription": "Todas las suscripciones de equipos y su estado de facturación",
+    "empty": {
+      "title": "No se encontraron suscripciones",
+      "adjustFilters": "Prueba a ajustar los filtros",
+      "none": "Todavía no se ha creado ninguna suscripción"
+    },
+    "columns": {
+      "team": "Equipo",
+      "plan": "Plan",
+      "status": "Estado",
+      "price": "Precio",
+      "periodEnd": "Fin del período",
+      "actions": "Acciones"
+    },
+    "statuses": {
+      "active": "Activa",
+      "trialing": "Prueba",
+      "past_due": "Vencida",
+      "canceled": "Cancelada",
+      "expired": "Caducada",
+      "paused": "En pausa"
+    },
+    "cancelsAtPeriodEnd": "Se cancela al final del período",
+    "pricePerMonth": "{price}/mes",
+    "pricePerYear": "{price}/año",
+    "trialEnds": "La prueba termina el {date}",
+    "viewTeam": "Ver equipo"
+  },
+  "gallery": {
+    "theme": {
+      "themeControls": {
+        "title": "Controles del tema",
+        "description": "Cambia entre el tema claro y el oscuro para ver las variaciones de color"
+      },
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema",
+      "current": "Actual: {theme}",
+      "copy": "Copiar {name}",
+      "groups": {
+        "primary": {
+          "title": "Colores primarios",
+          "description": "Colores principales de la marca y tonos de acento"
+        },
+        "background": {
+          "title": "Colores de fondo",
+          "description": "Colores de fondo de la página y las tarjetas"
+        },
+        "interactive": {
+          "title": "Colores interactivos",
+          "description": "Botones, enlaces y elementos interactivos"
+        },
+        "status": {
+          "title": "Colores de estado",
+          "description": "Indicadores de error, advertencia y estado"
+        }
+      },
+      "colors": {
+        "primary": {
+          "name": "Primario",
+          "description": "Color principal de la marca"
+        },
+        "primaryForeground": {
+          "name": "Primario (texto)",
+          "description": "Texto sobre el fondo primario"
+        },
+        "secondary": {
+          "name": "Secundario",
+          "description": "Color secundario de la marca"
+        },
+        "secondaryForeground": {
+          "name": "Secundario (texto)",
+          "description": "Texto sobre el fondo secundario"
+        },
+        "background": {
+          "name": "Fondo",
+          "description": "Fondo principal de la página"
+        },
+        "foreground": {
+          "name": "Texto",
+          "description": "Color principal del texto"
+        },
+        "card": {
+          "name": "Tarjeta",
+          "description": "Fondo de la tarjeta"
+        },
+        "cardForeground": {
+          "name": "Tarjeta (texto)",
+          "description": "Texto sobre el fondo de la tarjeta"
+        },
+        "accent": {
+          "name": "Acento",
+          "description": "Color de acento para resaltar"
+        },
+        "accentForeground": {
+          "name": "Acento (texto)",
+          "description": "Texto sobre el fondo de acento"
+        },
+        "muted": {
+          "name": "Atenuado",
+          "description": "Color de fondo sutil"
+        },
+        "mutedForeground": {
+          "name": "Atenuado (texto)",
+          "description": "Color de texto sutil"
+        },
+        "destructive": {
+          "name": "Destructivo",
+          "description": "Estados de error y peligro"
+        },
+        "destructiveForeground": {
+          "name": "Destructivo (texto)",
+          "description": "Texto sobre el fondo destructivo"
+        },
+        "border": {
+          "name": "Borde",
+          "description": "Color del borde"
+        },
+        "input": {
+          "name": "Campo de entrada",
+          "description": "Color del borde del campo de entrada"
+        }
+      },
+      "typography": {
+        "title": "Tipografía",
+        "description": "Familias tipográficas, tamaños y estilos de texto",
+        "heading1": "Encabezado 1",
+        "heading2": "Encabezado 2",
+        "heading3": "Encabezado 3",
+        "heading4": "Encabezado 4",
+        "body": "Texto del cuerpo - Es el estilo de texto por defecto que se usa en toda la aplicación.",
+        "small": "Texto pequeño - Se usa para pies de imagen, textos de ayuda e información secundaria.",
+        "code": "Texto de código - Fuente monoespaciada para fragmentos de código"
+      },
+      "radius": {
+        "title": "Radio del borde",
+        "description": "Tokens de radio de borde y ejemplos"
+      }
+    },
+    "fieldTypes": {
+      "repeater": {
+        "label": "Campo repetidor",
+        "help": "Añade, elimina y reordena elementos",
+        "itemTitle": "Título",
+        "itemTitlePlaceholder": "Título del elemento",
+        "itemDescription": "Descripción",
+        "itemDescriptionPlaceholder": "Descripción del elemento...",
+        "itemLink": "Enlace",
+        "title": "Campo repetidor / de lista",
+        "description": "Lista dinámica con opciones para añadir, eliminar y reordenar",
+        "items": "{min}-{max} elementos"
+      },
+      "fields": {
+        "text": {
+          "label": "Campo de texto",
+          "placeholder": "Escribe un texto...",
+          "description": "Entrada de texto básica para cadenas cortas"
+        },
+        "textarea": {
+          "label": "Campo de área de texto",
+          "placeholder": "Escribe un texto largo...",
+          "description": "Entrada de texto de varias líneas para contenido largo"
+        },
+        "email": {
+          "label": "Campo de correo electrónico",
+          "description": "Entrada de correo electrónico con validación"
+        },
+        "url": {
+          "label": "Campo de URL",
+          "description": "Entrada de URL con validación"
+        },
+        "phone": {
+          "label": "Campo de teléfono",
+          "placeholder": "Número de teléfono",
+          "description": "Entrada de teléfono con código de país"
+        },
+        "number": {
+          "label": "Campo numérico",
+          "placeholder": "Escribe un número...",
+          "description": "Campo de entrada numérica"
+        },
+        "boolean": {
+          "label": "Campo booleano",
+          "description": "Interruptor de verdadero/falso"
+        },
+        "date": {
+          "label": "Campo de fecha",
+          "description": "Selector de fecha"
+        },
+        "datetime": {
+          "label": "Campo de fecha y hora",
+          "description": "Selector de fecha y hora"
+        },
+        "rating": {
+          "label": "Campo de valoración",
+          "description": "Selector de valoración con estrellas"
+        },
+        "range": {
+          "label": "Campo de rango",
+          "description": "Selector de rango con control deslizante"
+        },
+        "doublerange": {
+          "label": "Campo de rango doble",
+          "description": "Control deslizante doble para rangos de valores"
+        },
+        "select": {
+          "label": "Campo de selección",
+          "placeholder": "Elige una opción...",
+          "description": "Lista desplegable de selección única"
+        },
+        "multiselect": {
+          "label": "Campo de selección múltiple",
+          "placeholder": "Elige varias opciones...",
+          "description": "Selección múltiple con etiquetas"
+        },
+        "radio": {
+          "label": "Campo de opciones",
+          "description": "Selección con grupo de botones de opción"
+        },
+        "buttongroup": {
+          "label": "Campo de grupo de botones",
+          "description": "Selección con grupo de botones (opciones con estilo)"
+        },
+        "combobox": {
+          "label": "Campo de cuadro combinado",
+          "placeholder": "Busca y selecciona...",
+          "description": "Lista desplegable con búsqueda"
+        },
+        "tags": {
+          "label": "Campo de etiquetas",
+          "placeholder": "Añade etiquetas...",
+          "description": "Entrada dinámica de etiquetas con creación"
+        },
+        "timezone": {
+          "label": "Campo de zona horaria",
+          "placeholder": "Selecciona una zona horaria...",
+          "description": "Selector de zona horaria con búsqueda"
+        },
+        "currency": {
+          "label": "Campo de moneda",
+          "placeholder": "Selecciona una moneda...",
+          "description": "Selector de código de moneda"
+        },
+        "country": {
+          "label": "Campo de país",
+          "placeholder": "Selecciona un país...",
+          "description": "Selector de país con búsqueda"
+        },
+        "address": {
+          "label": "Campo de dirección",
+          "description": "Formulario completo de dirección"
+        },
+        "file": {
+          "label": "Carga de archivos",
+          "description": "Carga de archivos general con arrastrar y soltar"
+        },
+        "image": {
+          "label": "Carga de imágenes",
+          "description": "Carga de imágenes con vista previa"
+        },
+        "video": {
+          "label": "Carga de vídeos",
+          "description": "Carga de vídeos con generación de miniaturas"
+        },
+        "audio": {
+          "label": "Carga de audio",
+          "description": "Carga de audio con reproductor"
+        },
+        "json": {
+          "label": "Campo JSON",
+          "description": "Entrada de datos JSON con validación"
+        },
+        "markdown": {
+          "label": "Campo Markdown",
+          "placeholder": "# Escribe en Markdown...",
+          "description": "Editor de texto Markdown"
+        },
+        "richtext": {
+          "label": "Campo de texto enriquecido",
+          "placeholder": "Escribe contenido de texto enriquecido...",
+          "description": "Editor WYSIWYG con barra de formato (negrita, cursiva, enlaces, listas)"
+        },
+        "code": {
+          "label": "Campo de código",
+          "description": "Editor de código con resaltado de sintaxis"
+        },
+        "relation": {
+          "label": "Campo de relación",
+          "placeholder": "Selecciona elementos relacionados...",
+          "description": "Relación con otras entidades"
+        },
+        "user": {
+          "label": "Campo de usuario",
+          "placeholder": "Selecciona usuarios...",
+          "description": "Selección de usuarios con búsqueda"
+        }
+      },
+      "options": {
+        "option1": "Opción 1",
+        "option2": "Opción 2",
+        "option3": "Opción 3",
+        "tag1": "Etiqueta 1",
+        "tag2": "Etiqueta 2",
+        "tag3": "Etiqueta 3",
+        "tag4": "Etiqueta 4",
+        "small": "Pequeño",
+        "medium": "Mediano",
+        "large": "Grande",
+        "edit": "Editar",
+        "view": "Ver",
+        "delete": "Eliminar",
+        "react": "Biblioteca de JavaScript",
+        "vue": "Framework progresivo",
+        "angular": "Framework de TypeScript",
+        "svelte": "Framework de compilación"
+      },
+      "value": "Valor:",
+      "stats": {
+        "fieldTypes": "Tipos de campo",
+        "functional": "Funcional",
+        "categories": "Categorías",
+        "combinations": "Combinaciones"
+      },
+      "tabs": {
+        "basic": "Básicos",
+        "data": "Datos",
+        "selection": "Selección",
+        "location": "Ubicación",
+        "media": "Multimedia",
+        "advanced": "Avanzados"
+      },
+      "sections": {
+        "basic": {
+          "title": "Campos de texto básicos",
+          "description": "Campos de entrada de texto fundamentales para formularios y captura de datos"
+        },
+        "data": {
+          "title": "Campos de entrada de datos",
+          "description": "Campos para números, fechas, valores booleanos y tipos de datos especializados"
+        },
+        "selection": {
+          "title": "Campos de selección",
+          "description": "Varios mecanismos de selección: listas desplegables, botones de opción y selección múltiple"
+        },
+        "location": {
+          "title": "Selectores de ubicación y datos",
+          "description": "Selectores geográficos y de datos específicos con validación integrada"
+        },
+        "media": {
+          "title": "Campos de carga de archivos multimedia",
+          "description": "Campos de carga de archivos con vista previa y gestión (solo demostración: las cargas están desactivadas)"
+        },
+        "advanced": {
+          "title": "Campos avanzados",
+          "description": "Tipos de datos complejos y campos de relación para casos de uso avanzados"
+        }
+      }
+    },
+    "components": {
+      "basicComponents": "Componentes básicos",
+      "essentialUiElementsAnd": "Elementos de interfaz esenciales y bloques de construcción",
+      "buttons": "Botones",
+      "default": "Predeterminado",
+      "small": "Pequeño",
+      "large": "Grande",
+      "disabled": "Desactivado",
+      "withIcon": "Con icono",
+      "secondary": "Secundario",
+      "destructive": "Destructivo",
+      "outline": "Contorno",
+      "ghost": "Fantasma",
+      "link": "Enlace",
+      "formElements": "Elementos de formulario",
+      "textInput": "Entrada de texto...",
+      "emailInput": "Entrada de correo electrónico...",
+      "textarea": "Área de texto...",
+      "selectOption": "Selecciona una opción...",
+      "option1": "Opción 1",
+      "option2": "Opción 2",
+      "enableNotifications": "Activar notificaciones",
+      "iAgreeToTerms": "Acepto los términos",
+      "badgesProgress": "Insignias y progreso",
+      "success": "Correcto",
+      "warning": "Advertencia",
+      "slider": "Control deslizante",
+      "defaultSlider": "Control deslizante predeterminado",
+      "volume25": "Volumen: 25 %",
+      "disabledSlider": "Control deslizante desactivado",
+      "avatars": "Avatares",
+      "alertsNotifications": "Alertas y notificaciones",
+      "differentAlertTypesAnd": "Distintos tipos de alerta y estilos de notificación",
+      "information": "Información",
+      "thisIsAnInformational": "Esta es una alerta informativa con contexto adicional.",
+      "pleaseReviewYourSettings": "Revisa tus ajustes antes de continuar.",
+      "error": "Error",
+      "somethingWentWrongPlease": "Algo salió mal. Inténtalo de nuevo.",
+      "operationCompletedSuccessfully": "¡Operación completada correctamente!",
+      "tabsNavigation": "Pestañas y navegación",
+      "tabbedInterfacesAndNavigation": "Interfaces con pestañas y elementos de navegación",
+      "tab1": "Pestaña 1",
+      "tab2": "Pestaña 2",
+      "tab3": "Pestaña 3",
+      "tab1Content": "Contenido de la pestaña 1",
+      "thisIsTheContent": "Este es el contenido de la primera pestaña. Aquí puedes poner cualquier contenido.",
+      "tab2Content": "Contenido de la pestaña 2",
+      "thisIsTheContent2": "Este es el contenido de la segunda pestaña, con información distinta.",
+      "tab3Content": "Contenido de la pestaña 3",
+      "andThisIsThe": "Y este es el contenido de la tercera pestaña.",
+      "accordion": "Acordeón",
+      "collapsibleContentSectionsFor": "Secciones de contenido plegables para preguntas frecuentes e información agrupada",
+      "singleModeCollapsible": "Modo único (plegable)",
+      "isItAccessible": "¿Es accesible?",
+      "yesItAdheresTo": "Sí. Sigue el patrón de diseño WAI-ARIA para acordeones.",
+      "isItStyled": "¿Tiene estilos?",
+      "yesItComesWith": "Sí. Incluye estilos por defecto que combinan con la estética de los demás componentes.",
+      "isItAnimated": "¿Tiene animación?",
+      "yesItSAnimated": "Sí. Está animado por defecto, pero puedes desactivarlo si lo prefieres.",
+      "multipleMode": "Modo múltiple",
+      "howDoIGet": "¿Cómo empiezo?",
+      "cloneRepository": "Basta con clonar el repositorio y ejecutar <code>pnpm install</code> para instalar las dependencias.",
+      "canICustomizeThe": "¿Puedo personalizar el tema?",
+      "absolutelyAllComponentsUse": "¡Por supuesto! Todos los componentes usan variables CSS que se pueden personalizar en la configuración del tema.",
+      "isThereMobileSupport": "¿Hay compatibilidad con móviles?",
+      "nativeSupport": "¡Sí! Todos los componentes tienen implementaciones nativas de React Native en el paquete @nextsparkjs/ui.",
+      "layoutElements": "Elementos de diseño",
+      "separatorsDividersAndLayout": "Separadores, divisores y utilidades de diseño",
+      "separators": "Separadores",
+      "contentAbove": "Contenido superior",
+      "contentBelow": "Contenido inferior",
+      "iconButtons": "Botones con icono",
+      "dashboardMetrics": "Métricas del panel",
+      "revenueSubscriptionsAndKey": "Ingresos, suscripciones e indicadores clave de rendimiento",
+      "totalRevenue": "Ingresos totales",
+      "fromLastMonth": "{change} respecto al mes pasado",
+      "subscriptions": "Suscripciones",
+      "calendarActivityTracking": "Calendario y seguimiento de actividad",
+      "dateSelectionAndGoal": "Interfaces de selección de fechas y definición de objetivos",
+      "calendarComponent": "Componente de calendario",
+      "goalSettingWidget": "Widget de definición de objetivos",
+      "moveGoal": "Objetivo de movimiento",
+      "setYourDailyActivity": "Define tu objetivo diario de actividad.",
+      "caloriesDay": "CALORÍAS/DÍA",
+      "exerciseMinutes": "Minutos de ejercicio",
+      "setGoal": "Definir objetivo",
+      "dataTables": "Tablas de datos",
+      "complexDataVisualizationWith": "Visualización de datos compleja con indicadores de estado",
+      "payments": "Pagos",
+      "manageYourPayments": "Gestiona tus pagos.",
+      "status": "Estado",
+      "email": "Correo electrónico",
+      "amount": "Importe",
+      "processing": "Procesando",
+      "failed": "Fallido",
+      "pending": "Pendiente",
+      "n0Of6Row": "0 de 6 fila(s) seleccionada(s).",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "pricingComponents": "Componentes de precios",
+      "subscriptionPlansAndPricing": "Planes de suscripción y tablas de precios",
+      "pricing": "Precios",
+      "checkOutOurAffordable": "Descubre nuestros planes de precios asequibles",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "plus": "Plus",
+      "forPersonalUse": "Para uso personal",
+      "billedAnnually": "Facturado {amount} al año",
+      "upTo5Team": "Hasta 5 miembros de equipo",
+      "basicComponentsLibrary": "Biblioteca de componentes básicos",
+      "communitySupport": "Soporte de la comunidad",
+      "n1gbStorageSpace": "1 GB de almacenamiento",
+      "purchase": "Comprar",
+      "pro": "Pro",
+      "forProfessionals": "Para profesionales",
+      "mostPopular": "El más popular",
+      "everythingInPlusAnd": "Todo lo de Plus, y además:",
+      "unlimitedTeamMembers": "Miembros de equipo ilimitados",
+      "advancedComponents": "Componentes avanzados",
+      "prioritySupport": "Soporte prioritario",
+      "unlimitedStorage": "Almacenamiento ilimitado",
+      "formComponents": "Componentes de formulario",
+      "completeFormElementsAnd": "Elementos de formulario completos y estados de validación",
+      "password": "Contraseña",
+      "enterYourPassword": "Escribe tu contraseña",
+      "message": "Mensaje",
+      "typeYourMessageHere": "Escribe tu mensaje aquí...",
+      "planSelection": "Selección de plan",
+      "selectAPlan": "Selecciona un plan",
+      "starterPlan": "Plan Starter",
+      "proPlan": "Plan Pro",
+      "enterprisePlan": "Plan Enterprise",
+      "iAgreeToThe": "Acepto los términos y condiciones",
+      "allowUsToSend": "Permítenos enviarte correos electrónicos",
+      "cancel": "Cancelar",
+      "submitForm": "Enviar formulario",
+      "contextualAlerts": "Alertas contextuales",
+      "realWorldNotificationExamples": "Ejemplos reales de notificaciones con contexto de negocio",
+      "subscriptionUpdate": "Actualización de la suscripción",
+      "yourSubscriptionIsUp": "Tu suscripción está al día. Próxima fecha de facturación: 1 de junio de 2024.",
+      "paymentDue": "Pago pendiente",
+      "yourPaymentMethodWill": "Se cobrará a tu método de pago dentro de 3 días. Actualiza tus datos de facturación si es necesario.",
+      "upgradeSuccessful": "Mejora completada",
+      "yourSubscriptionHasBeen": "Tu suscripción se ha mejorado a Pro. ¡Disfruta de las nuevas funciones!"
+    }
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -27,6 +28,7 @@ import {
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/lib/selectors";
 import { useAdminTeams } from "@nextsparkjs/core/hooks/teams";
+import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
 
 /**
  * Teams Management Page
@@ -35,6 +37,8 @@ import { useAdminTeams } from "@nextsparkjs/core/hooks/teams";
  * Displays all teams with filtering by type.
  */
 function TeamsPage() {
+  const t = useTranslations("superadmin");
+  const locale = useLocale();
   const [activeTab, setActiveTab] = useState<"user" | "system">("user");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -82,12 +86,12 @@ function TeamsPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Super Admin
+              {t("shared.backToSuperAdmin")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
-            <p className="text-muted-foreground">Loading team data...</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
+            <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
           </div>
         </div>
 
@@ -106,12 +110,12 @@ function TeamsPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Super Admin
+              {t("shared.backToSuperAdmin")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
-            <p className="text-muted-foreground">Error loading data</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
+            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
           </div>
         </div>
 
@@ -119,10 +123,10 @@ function TeamsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Error Loading Teams
+              {t("teamsPage.errorTitle")}
             </CardTitle>
             <CardDescription>
-              {error instanceof Error ? error.message : "Failed to load team data"}
+              {error instanceof Error ? error.message : t("teamsPage.failedToLoad")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -132,7 +136,7 @@ function TeamsPage() {
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Retry
+              {t("errors.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -147,13 +151,13 @@ function TeamsPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/superadmin" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Super Admin
+            {t("shared.backToSuperAdmin")}
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
           <p className="text-muted-foreground">
-            View all teams and their members (read-only)
+            {t("teamsPage.subtitle")}
           </p>
         </div>
         <Button
@@ -163,7 +167,7 @@ function TeamsPage() {
           className="flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {t("shared.refresh")}
         </Button>
       </div>
 
@@ -171,12 +175,12 @@ function TeamsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("teamsPage.totalTeams")}</CardTitle>
             <Users2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts?.total || 0}</div>
-            <p className="text-xs text-muted-foreground">All registered teams</p>
+            <div className="text-2xl font-bold">{formatLocaleNumber(counts?.total || 0, locale)}</div>
+            <p className="text-xs text-muted-foreground">{t("teamsPage.allTeams")}</p>
           </CardContent>
         </Card>
       </div>
@@ -186,7 +190,7 @@ function TeamsPage() {
         <SearchInput
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search teams by name or owner email..."
+          placeholder={t("teamsPage.searchPlaceholder")}
           className="w-full max-w-sm"
           data-cy={sel('superadmin.teams.filters.search')}
         />
@@ -200,7 +204,7 @@ function TeamsPage() {
             }}
             data-cy={sel('superadmin.teams.filters.clearButton')}
           >
-            Clear
+            {t("teamsPage.clear")}
           </Button>
         )}
       </div>
@@ -214,11 +218,11 @@ function TeamsPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="user" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            User Teams ({counts?.user || 0})
+            {t("teamsPage.userTeamsTab", { count: counts?.user || 0 })}
           </TabsTrigger>
           <TabsTrigger value="system" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            System Admin ({counts?.system || 0})
+            {t("teamsPage.systemTeamsTab", { count: counts?.system || 0 })}
           </TabsTrigger>
         </TabsList>
 
@@ -227,10 +231,10 @@ function TeamsPage() {
             <CardHeader className="bg-primary/5">
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Users className="h-5 w-5" />
-                User Teams
+                {t("teamsPage.userTeams")}
               </CardTitle>
               <CardDescription>
-                Regular teams created by users for collaboration.
+                {t("teamsPage.userTeamsDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -255,10 +259,10 @@ function TeamsPage() {
             <CardHeader className="bg-violet-500/10">
               <CardTitle className="flex items-center gap-2 text-violet-600 dark:text-violet-400">
                 <Shield className="h-5 w-5" />
-                System Admin Team
+                {t("teamsPage.systemTeam")}
               </CardTitle>
               <CardDescription>
-                Special team for system administrators with cross-team access capabilities.
+                {t("teamsPage.systemTeamDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -285,11 +289,10 @@ function TeamsPage() {
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                Last updated:{" "}
-                {new Date(metadata.requestedAt).toLocaleString()}
+                {t("shared.footer.lastUpdated", { date: formatLocaleDate(metadata.requestedAt, locale, "dateTime") })}
               </p>
-              <p>Requested by: {metadata.requestedBy}</p>
-              <p>Source: {metadata.source}</p>
+              <p>{t("shared.footer.requestedBy", { name: metadata.requestedBy })}</p>
+              <p>{t("shared.footer.source", { source: metadata.source })}</p>
             </div>
           </CardContent>
         </Card>

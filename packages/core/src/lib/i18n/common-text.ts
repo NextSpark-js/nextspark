@@ -11,6 +11,29 @@ export function readCommonText(messages: unknown, section: string, key: string):
   return typeof value === 'string' ? value : undefined
 }
 
+/** `messages.<a>.<b>...` for a dotted path (`superadmin.pagination.noResults`) when it is a string, else undefined. */
+export function readMessageText(messages: unknown, path: string): string | undefined {
+  const value = path.split('.').reduce<unknown>((node, key) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[key] : undefined), messages)
+  return typeof value === 'string' ? value : undefined
+}
+
+/** `{name}` placeholders replaced literally, as the `a11y` texts with a name are (no ICU, so it also runs with no provider). */
+export function fillText(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (whole, name: string) => (name in values ? String(values[name]) : whole))
+}
+
+/** Like `useCommonText` for any namespace: the text at a dotted `path` in the messages in scope, else `fallback`. */
+export function useMessageText(path: string, fallback: string): string {
+  let messages: unknown
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    messages = useMessages()
+  } catch {
+    // no provider
+  }
+  return readMessageText(messages, path) ?? fallback
+}
+
 /** `override`, else the text in the messages in scope, else `fallback` (English, as the component always had). */
 export function useCommonText(section: string, key: string, fallback: string, override?: string): string {
   let messages: unknown

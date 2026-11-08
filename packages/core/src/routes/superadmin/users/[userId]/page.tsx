@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { format } from "date-fns";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
+import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format"
 
 interface TeamMembership {
   teamId: string;
@@ -107,6 +108,10 @@ const roleColors = {
  * Displays detailed information about a specific user for superadmins.
  */
 function UserDetailPage() {
+  const t = useTranslations("superadmin");
+  const tTeams = useTranslations("teams");
+  const locale = useLocale();
+  const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
   const params = useParams()!;
   const userId = params.userId as string;
 
@@ -117,9 +122,9 @@ function UserDetailPage() {
       const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`));
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error("User not found");
+          throw new Error(t("userDetail.notFound"));
         }
-        throw new Error("Failed to fetch user data");
+        throw new Error(t("userDetail.fetchFailed"));
       }
       return response.json();
     },
@@ -146,12 +151,12 @@ function UserDetailPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin/users" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Users
+              {t("userDetail.backToUsers")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">User Details</h1>
-            <p className="text-muted-foreground">Loading user data...</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("userDetail.title")}</h1>
+            <p className="text-muted-foreground">{t("usersPage.loading")}</p>
           </div>
         </div>
 
@@ -170,12 +175,12 @@ function UserDetailPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/superadmin/users" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Users
+              {t("userDetail.backToUsers")}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">User Details</h1>
-            <p className="text-muted-foreground">Error loading data</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("userDetail.title")}</h1>
+            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
           </div>
         </div>
 
@@ -183,10 +188,10 @@ function UserDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Error Loading User
+              {t("userDetail.errorTitle")}
             </CardTitle>
             <CardDescription>
-              {error instanceof Error ? error.message : "Failed to load user data"}
+              {error instanceof Error ? error.message : t("errors.failedToLoadUserData")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,7 +201,7 @@ function UserDetailPage() {
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Retry
+              {t("errors.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -216,13 +221,13 @@ function UserDetailPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/superadmin/users" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Users
+            {t("userDetail.backToUsers")}
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">User Details</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("userDetail.title")}</h1>
           <p className="text-muted-foreground">
-            View user information and team memberships
+            {t("userDetail.subtitle")}
           </p>
         </div>
         <Button
@@ -232,7 +237,7 @@ function UserDetailPage() {
           className="flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {t("shared.refresh")}
         </Button>
       </div>
 
@@ -262,12 +267,12 @@ function UserDetailPage() {
                   {user?.role === "superadmin" ? (
                     <>
                       <Shield className="h-3 w-3 mr-1" />
-                      Superadmin
+                      {t("userDetail.superadmin")}
                     </>
                   ) : (
                     <>
                       <User className="h-3 w-3 mr-1" />
-                      {user?.role || "User"}
+                      {user?.role || t("userDetail.userRole")}
                     </>
                   )}
                 </Badge>
@@ -278,17 +283,17 @@ function UserDetailPage() {
                   {user?.emailVerified ? (
                     <>
                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Verified
+                      {t("users.table.verified")}
                     </>
                   ) : (
                     <>
                       <XCircle className="h-3 w-3 mr-1" />
-                      Unverified
+                      {t("users.table.unverified")}
                     </>
                   )}
                 </Badge>
               </div>
-              <CardDescription className="mt-1">ID: {user?.id}</CardDescription>
+              <CardDescription className="mt-1">{t("shared.id", { id: user?.id ?? "" })}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -297,7 +302,7 @@ function UserDetailPage() {
             {/* Email */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                Email
+                {t("userDetail.email")}
               </h4>
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-muted-foreground" />
@@ -308,14 +313,14 @@ function UserDetailPage() {
             {/* Registered */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                Registered
+                {t("userDetail.registered")}
               </h4>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-5 w-5" />
                 <span>
                   {user?.createdAt
-                    ? format(new Date(user.createdAt), "MMMM dd, yyyy")
-                    : "Unknown"}
+                    ? formatLocaleDate(user.createdAt, locale, "long")
+                    : t("shared.unknown")}
                 </span>
               </div>
             </div>
@@ -323,14 +328,14 @@ function UserDetailPage() {
             {/* Last Updated */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                Last Updated
+                {t("userDetail.lastUpdated")}
               </h4>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-5 w-5" />
                 <span>
                   {user?.updatedAt
-                    ? format(new Date(user.updatedAt), "MMMM dd, yyyy")
-                    : "Unknown"}
+                    ? formatLocaleDate(user.updatedAt, locale, "long")
+                    : t("shared.unknown")}
                 </span>
               </div>
             </div>
@@ -342,25 +347,25 @@ function UserDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userDetail.totalTeams")}</CardTitle>
             <Users2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalTeams || 0}</div>
-            <p className="text-xs text-muted-foreground">All team memberships</p>
+            <div className="text-2xl font-bold">{formatLocaleNumber(stats?.totalTeams || 0, locale)}</div>
+            <p className="text-xs text-muted-foreground">{t("userDetail.allMemberships")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Owned Teams</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("userDetail.ownedTeams")}</CardTitle>
             <Crown className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {stats?.ownedTeams || 0}
+              {formatLocaleNumber(stats?.ownedTeams || 0, locale)}
             </div>
-            <p className="text-xs text-muted-foreground">As team owner</p>
+            <p className="text-xs text-muted-foreground">{t("userDetail.asOwner")}</p>
           </CardContent>
         </Card>
       </div>
@@ -370,19 +375,19 @@ function UserDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users2 className="h-5 w-5" />
-            Team Memberships ({teams.length})
+            {t("userDetail.memberships", { count: teams.length })}
           </CardTitle>
           <CardDescription>
-            All teams this user belongs to and their roles.
+            {t("userDetail.membershipsDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {teams.length === 0 ? (
             <div className="text-center py-8">
               <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No team memberships</h3>
+              <h3 className="mt-4 text-lg font-medium">{t("userDetail.noMemberships")}</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                This user is not a member of any teams yet.
+                {t("userDetail.noMembershipsDescription")}
               </p>
             </div>
           ) : (
@@ -390,10 +395,10 @@ function UserDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                    <TableHead>{t("userDetail.columns.team")}</TableHead>
+                    <TableHead>{t("userDetail.columns.role")}</TableHead>
+                    <TableHead>{t("userDetail.columns.joined")}</TableHead>
+                    <TableHead className="w-[80px]">{t("userDetail.columns.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -407,21 +412,21 @@ function UserDetailPage() {
                         <TableCell>
                           <Badge variant={roleColors[team.role]} className="gap-1">
                             <RoleIcon className="h-3 w-3" />
-                            {team.role.charAt(0).toUpperCase() + team.role.slice(1)}
+                            {teamRoleLabel(team.role)}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
                             {team.joinedAt
-                              ? format(new Date(team.joinedAt), "MMM dd, yyyy")
-                              : "Unknown"}
+                              ? formatLocaleDate(team.joinedAt, locale)
+                              : t("shared.unknown")}
                           </div>
                         </TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" asChild>
                             <Link href={`/superadmin/teams/${team.teamId}`}>
-                              View
+                              {t("userDetail.view")}
                             </Link>
                           </Button>
                         </TableCell>
@@ -440,19 +445,19 @@ function UserDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2" data-cy="superadmin-user-metas-title">
             <Database className="h-5 w-5" />
-            User Metadata ({userMetas.length})
+            {t("userDetail.metadata", { count: userMetas.length })}
           </CardTitle>
           <CardDescription>
-            All metadata records stored for this user.
+            {t("userDetail.metadataDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {userMetas.length === 0 ? (
             <div className="text-center py-8" data-cy="superadmin-user-metas-empty">
               <Database className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No metadata</h3>
+              <h3 className="mt-4 text-lg font-medium">{t("userDetail.noMetadata")}</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                This user has no metadata records yet.
+                {t("userDetail.noMetadataDescription")}
               </p>
             </div>
           ) : (
@@ -460,12 +465,12 @@ function UserDetailPage() {
               <Table data-cy="superadmin-user-metas-table">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Key</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Public</TableHead>
-                    <TableHead>Searchable</TableHead>
-                    <TableHead>Updated</TableHead>
+                    <TableHead>{t("userDetail.metaColumns.key")}</TableHead>
+                    <TableHead>{t("userDetail.metaColumns.value")}</TableHead>
+                    <TableHead>{t("userDetail.metaColumns.type")}</TableHead>
+                    <TableHead>{t("userDetail.metaColumns.public")}</TableHead>
+                    <TableHead>{t("userDetail.metaColumns.searchable")}</TableHead>
+                    <TableHead>{t("userDetail.metaColumns.updated")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -491,27 +496,27 @@ function UserDetailPage() {
                       <TableCell>
                         {meta.isPublic ? (
                           <Badge variant="default" className="bg-green-100 text-green-700" data-cy={`superadmin-user-meta-public-${meta.metaKey}`}>
-                            Yes
+                            {t("shared.yes")}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" data-cy={`superadmin-user-meta-public-${meta.metaKey}`}>No</Badge>
+                          <Badge variant="secondary" data-cy={`superadmin-user-meta-public-${meta.metaKey}`}>{t("shared.no")}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         {meta.isSearchable ? (
                           <Badge variant="default" className="bg-blue-100 text-blue-700" data-cy={`superadmin-user-meta-searchable-${meta.metaKey}`}>
-                            Yes
+                            {t("shared.yes")}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" data-cy={`superadmin-user-meta-searchable-${meta.metaKey}`}>No</Badge>
+                          <Badge variant="secondary" data-cy={`superadmin-user-meta-searchable-${meta.metaKey}`}>{t("shared.no")}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-4 w-4" />
                           {meta.updatedAt
-                            ? format(new Date(meta.updatedAt), "MMM dd, yyyy")
-                            : "Unknown"}
+                            ? formatLocaleDate(meta.updatedAt, locale)
+                            : t("shared.unknown")}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -529,11 +534,10 @@ function UserDetailPage() {
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                Last updated:{" "}
-                {new Date(userData.metadata.requestedAt).toLocaleString()}
+                {t("shared.footer.lastUpdated", { date: formatLocaleDate(userData.metadata.requestedAt, locale, "dateTime") })}
               </p>
-              <p>Requested by: {userData.metadata.requestedBy}</p>
-              <p>Source: {userData.metadata.source}</p>
+              <p>{t("shared.footer.requestedBy", { name: userData.metadata.requestedBy })}</p>
+              <p>{t("shared.footer.source", { source: userData.metadata.source })}</p>
             </div>
           </CardContent>
         </Card>
