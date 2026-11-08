@@ -107,6 +107,12 @@ function memoryDeps(payments: StoredPayment[] = [PAYMENT, MP_PAYMENT]) {
       if (PAYMENT_STATUS_SOURCES[status].includes(statuses.get(id)!)) statuses.set(id, status)
       if (fields?.refundedCents !== undefined) refunded.set(id, Math.max(refunded.get(id) ?? 0, fields.refundedCents))
     },
+    resolveDispute: async (id, cents = 0) => {
+      if (statuses.get(id) !== 'disputed') return
+      const total = Math.max(refunded.get(id) ?? 0, cents)
+      refunded.set(id, total)
+      statuses.set(id, total >= payments.find(p => p.id === id)!.amountCents ? 'refunded' : total > 0 ? 'partially_refunded' : 'succeeded')
+    },
     updateSellerStatus: async (_p, id, s) => void log.push(`seller:${id}:${s.status}`),
     disconnectSeller: async (_p, id) => void log.push(`disconnect:${id}`),
     getSellerAccessToken: async () => 'seller-token',
@@ -204,8 +210,12 @@ test('Stripe webhook: refunds, disputes and sellers', async () => {
   assert.equal(refunded.get('pay-1'), 2500)
   await handleStripeWebhook(event('e3', 'charge.dispute.created', { payment_intent: 'pi_1' }), deps)
   assert.equal(statuses.get('pay-1'), 'disputed')
+  // a checkout event that arrives late does not end the dispute
+  await handleStripeWebhook(stripeRequest(completed(session(), 'late-1')), deps)
+  assert.equal(statuses.get('pay-1'), 'disputed')
+  // winning it goes back to the status the refunded amount calls for
   await handleStripeWebhook(event('e4', 'charge.dispute.closed', { payment_intent: 'pi_1', status: 'won' }), deps)
-  assert.equal(statuses.get('pay-1'), 'succeeded')
+  assert.equal(statuses.get('pay-1'), 'partially_refunded')
   await handleStripeWebhook(event('e5', 'charge.refunded', { payment_intent: 'pi_1', amount: 10000, amount_refunded: 10000 }), deps)
   assert.equal(statuses.get('pay-1'), 'refunded')
   // final: a late approval changes nothing

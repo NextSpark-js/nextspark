@@ -32,6 +32,8 @@ export interface WebhookStore {
   findPaymentByProviderPaymentId(provider: MarketplaceProvider, providerPaymentId: string): Promise<StoredPayment | null>
   /** Moves the payment to `status` when PAYMENT_STATUS_SOURCES allows it; `refundedCents` never goes down. */
   transitionPayment(id: string, status: PaymentStatus, fields?: { providerPaymentId?: string; refundedCents?: number }): Promise<void>
+  /** Ends a dispute in the seller's favor: the payment goes to the status its refunded amount calls for. Only acts on a disputed payment. */
+  resolveDispute(id: string, refundedCents?: number): Promise<void>
   /** Updates a seller's status, unless it disconnected. */
   updateSellerStatus(provider: MarketplaceProvider, providerAccountId: string, status: AccountStatusResult): Promise<void>
   disconnectSeller(provider: MarketplaceProvider, providerAccountId: string): Promise<void>
@@ -168,7 +170,7 @@ async function applyStripeEvent(event: StripeEvent, store: WebhookStore): Promis
     case 'charge.dispute.closed': {
       const payment = await stripePayment(store, object, object.payment_intent)
       if (!payment) return
-      if (object.status === 'won') return store.transitionPayment(payment.id, 'succeeded')
+      if (object.status === 'won') return store.resolveDispute(payment.id)
       if (object.status === 'lost') return store.transitionPayment(payment.id, 'refunded', { refundedCents: payment.amountCents })
       return
     }
@@ -245,8 +247,9 @@ async function applyMercadoPagoPayment(remote: MercadoPagoPayment, payment: Stor
         console.warn(`[marketplace-payments] MercadoPago amount mismatch on payment ${payment.id}: not marked as paid`)
         return
       }
-      if (refundedCents > 0) return store.transitionPayment(payment.id, 'partially_refunded', { providerPaymentId: dataId, refundedCents })
-      return store.transitionPayment(payment.id, 'succeeded', { providerPaymentId: dataId })
+      await store.transitionPayment(payment.id, refundedCents > 0 ? 'partially_refunded' : 'succeeded', { providerPaymentId: dataId, refundedCents })
+      // The API's answer is the payment's current state: approved means a dispute it had is over.
+      return store.resolveDispute(payment.id, refundedCents)
     }
     case 'refunded':
       return store.transitionPayment(payment.id, 'refunded', { providerPaymentId: dataId, refundedCents: payment.amountCents })

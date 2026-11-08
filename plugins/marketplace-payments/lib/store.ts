@@ -249,6 +249,21 @@ export const webhookStore: WebhookStore = {
     )
   },
 
+  async resolveDispute(id, refundedCents = 0) {
+    await query(
+      `UPDATE public."marketplace_payments"
+       SET "refundedCents" = GREATEST("refundedCents", $2::bigint),
+           status = CASE
+             WHEN GREATEST("refundedCents", $2::bigint) >= "amountCents" THEN 'refunded'
+             WHEN GREATEST("refundedCents", $2::bigint) > 0 THEN 'partially_refunded'
+             ELSE 'succeeded'
+           END,
+           "updatedAt" = now()
+       WHERE id = $1 AND status = 'disputed'`,
+      [id, refundedCents]
+    )
+  },
+
   async updateSellerStatus(provider, providerAccountId, status: AccountStatusResult) {
     await query(
       `UPDATE public."marketplace_accounts" SET status = $3, "chargesEnabled" = $4, "payoutsEnabled" = $5, country = COALESCE($6, country), "updatedAt" = now()
