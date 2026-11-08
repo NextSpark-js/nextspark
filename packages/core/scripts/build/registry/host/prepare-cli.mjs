@@ -127,7 +127,9 @@ async function main() {
     for (const problem of result.problems.filter(problem => problem.state !== 'not-prepared')) {
       errorLines(`  ${problem.state.padEnd(8)} ${problem.path ?? ''}${problem.path ? ': ' : ''}${problem.detail}`)
     }
-    if (!notPrepared) console.error('Run nextspark prepare to regenerate.')
+    // A file prepare does not own is the one problem it cannot fix: asking to run it again would never end
+    const fixable = result.problems.some(problem => !problem.manual)
+    if (!notPrepared) console.error(fixable ? 'Run nextspark prepare to regenerate.' : 'Delete the file(s) above by hand; nextspark prepare does not touch them.')
     process.exit(1)
   }
 

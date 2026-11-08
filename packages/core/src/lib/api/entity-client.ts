@@ -6,13 +6,13 @@
  * those generated files call: `entityApi` / `fetchWithTeam` stay the transport, so authentication, the team header
  * and the base path are exactly the ones the dashboard uses.
  *
+ * Browser only: the transport carries the session cookie and the active team, which exist only there. On the server use the services.
+ *
  * No React in here: the TanStack Query hooks are in `hooks/entity-client`, so a route that only calls the client
  * does not bundle them.
  */
 
 import { entityApi, fetchWithTeam, type EntityData } from './entities'
-import { withBasePathIfInApp } from '../base-path'
-import { resolveAppUrl } from '../utils/base-url'
 
 export interface EntityListInfo {
   timestamp: string
@@ -116,9 +116,7 @@ export interface EntityChildClient<TRow, TCreate, TUpdate> {
 }
 
 async function childRequest<R>(path: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', body?: unknown): Promise<R> {
-  // On the server a relative URL has no origin to resolve against (the entity client resolves it the same way)
-  const url = withBasePathIfInApp(`/api/v1/${path}`)
-  const response = await fetchWithTeam(typeof window === 'undefined' ? new URL(url, resolveAppUrl()).toString() : url, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
+  const response = await fetchWithTeam(`/api/v1/${path}`, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
   const result = (await response.json().catch(() => ({}))) as { data?: R; error?: string; message?: string }
   if (!response.ok) throw new Error(result.error || result.message || `Request failed (${response.status})`)
   return (method === 'DELETE' ? result : result.data) as R

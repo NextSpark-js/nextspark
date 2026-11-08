@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -412,4 +413,60 @@ export const a = [api.hooks.list, api.entity.list, useHooksList, useEntityList]
     '.nextspark/registries/entity-client/hooks.ts', '.nextspark/registries/entity-client/index.client.ts',
     '.nextspark/registries/entity-client/index.hooks.ts', '.nextspark/registries/entity-client/index.ts',
   ])
+})
+
+test('--check on the command line: a file prepare does not own asks to be deleted by hand, never to run prepare again', { timeout: 300_000 }, () => {
+  const root = project()
+  try {
+    const cli = join(CORE_ROOT, 'scripts/build/registry/host/prepare-cli.mjs')
+    const ran = spawnSync(process.execPath, [cli, '--production'], { cwd: root, encoding: 'utf8' })
+    assert.equal(ran.status, 0, ran.stdout + ran.stderr)
+    write(root, '.nextspark/registries/entity-client/leftover.ts', 'export {}\n')
+    const foreign = spawnSync(process.execPath, [cli, '--check'], { cwd: root, encoding: 'utf8' })
+    assert.equal(foreign.status, 1)
+    assert.match(foreign.stderr, /leftover\.ts/)
+    assert.doesNotMatch(foreign.stderr, /Run nextspark prepare to regenerate/)
+    assert.match(foreign.stderr, /Delete the file\(s\) above by hand/)
+    // with another problem prepare can fix, it is still asked for
+    write(root, 'entities/tasks/tasks.config.ts', TASKS_CONFIG.replace("name: 'title'", "name: 'heading'"))
+    assert.match(spawnSync(process.execPath, [cli, '--check'], { cwd: root, encoding: 'utf8' }).stderr, /Run nextspark prepare to regenerate/)
+  } finally {
+    clean(root)
+  }
+})
+
+test('a child whose name carries its parent (orders_notes) is requested by that name, and named after the short one; the columns the routes own are not sent', async () => {
+  const root = project({
+    'entities/orders/children/notes/notes.config.ts': `export const orderNotesChildConfig = {
+  table: 'orders_notes',
+  showInParentView: true,
+  hasOwnRoutes: false,
+  display: { title: 'Notes' },
+  fields: [
+    { name: 'parentId', type: 'text', required: true },
+    { name: 'id', type: 'text', required: true },
+    { name: 'body', type: 'text', required: true },
+  ],
+}
+`,
+  })
+  try {
+    const planned = await plans(root)
+    const orders = planned.client.files.find(file => file.path.endsWith('/orders.client.ts')).content
+    // the route matches the registry name, whole
+    assert.match(orders, /runtime\.createEntityChildClient<OrderNoteRow, CreateOrderNoteInput, UpdateOrderNoteInput>\('orders', 'orders_notes'\)/)
+    assert.match(planned.client.files.find(file => file.path.endsWith('/orders.hooks.ts')).content, /export const useOrderNotesList =/)
+    assert.match(planned.client.files.find(file => file.path.endsWith('/index.ts')).content, /children: \{ lines: orderLinesClient, orders_notes: orderNotesClient \}/)
+    // parentId and id are the routes' columns: not in what is sent, and in the row only once, as the string the columns give
+    assert.match(orders, /export type CreateOrderNoteInput = \{ body: string \}/)
+    assert.match(orders, /export type OrderNoteRow = runtime\.EntityChildColumns & \{ body: string \}/)
+    assert.deepEqual(typeCheck(planned, `
+import { api } from './.nextspark/registries/entity-client'
+export const ok = api.orders.children.orders_notes.create('o1', { body: 'x' })
+// @ts-expect-error the routes own parentId
+export const bad = api.orders.children.orders_notes.create('o1', { body: 'x', parentId: 'p' })
+`), [])
+  } finally {
+    clean(root)
+  }
 })

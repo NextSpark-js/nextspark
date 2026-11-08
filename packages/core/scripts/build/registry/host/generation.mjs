@@ -790,7 +790,7 @@ export function checkGeneration({ hostRoot, previous, appFiles, inputs, versions
     for (const path of scanTree(hostRoot, REGISTRIES_DIR).files) {
       if (path.endsWith('.nextspark-tmp') || previous.files[path] !== undefined) continue
       if (generatedRegistries?.files.some(file => file.path === path)) continue
-      problems.push({ state: 'foreign', path, detail: `no generation record lists it, and nextspark prepare never deletes a file it does not own: delete ${path} by hand` })
+      problems.push({ state: 'foreign', manual: true, path, detail: `no generation record lists it, and nextspark prepare never deletes a file it does not own: delete ${path} by hand` })
     }
     const before = previous.inputs?.files ?? {}
     const now = inputs?.files ?? {}

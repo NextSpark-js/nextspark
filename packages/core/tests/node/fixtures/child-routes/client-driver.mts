@@ -35,6 +35,11 @@ const server = http.createServer(async (req, res) => {
 await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
 process.env.NEXT_PUBLIC_APP_URL = `http://127.0.0.1:${(server.address() as { port: number }).port}`
 
+// The client is the browser's: its URLs are relative to the page. The driver plays the page by giving them the origin of its server
+const realFetch = globalThis.fetch
+globalThis.fetch = ((input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+  realFetch(typeof input === 'string' && input.startsWith('/') ? `${process.env.NEXT_PUBLIC_APP_URL}${input}` : input, init)) as typeof fetch
+
 const { createEntityChildClient } = await import(new URL('lib/api/entity-client.ts', CORE_SRC).href)
 const notes = createEntityChildClient('customers', 'notes')
 

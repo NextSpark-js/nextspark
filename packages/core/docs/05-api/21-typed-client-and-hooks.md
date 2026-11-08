@@ -58,6 +58,8 @@ anything is written; give one of them a different `names.singular`.
 ```ts
 import { api } from '@nextsparkjs/registries/entity-client'
 
+// In the browser (a client component, an event handler): the client sends the session cookie and the active team.
+// On the server use the services (see the service layer docs); the client has no way to authenticate there.
 const { data, info } = await api.tasks.list({ limit: 20, filters: { status: 'todo', search: 'invoice' } })
 const task = await api.tasks.get(id)
 const created = await api.tasks.create({ title: 'Write the report' })
@@ -173,6 +175,7 @@ all fail the check. Run it in CI after installing, like the rest of the generate
 
 ## Limits
 
+- The generated client works from the browser only. It authenticates with the session cookie and the active team of the page; on the server (server components, route handlers, actions) call the services instead.
 - The client has the five operations for every entity; an entity that disables one in `access.api` answers 405 at run time.
 - Only entities that are in the contracts get a client: the project's and the enabled plugins' top-level entities that are enabled and
   have an external API (`access.api` is not `false`). Core's own entities (users, teams, ...) do not.
