@@ -35,7 +35,7 @@ export interface SocialProfileDefaults {
 }
 
 /** First word and the rest, the split Google's mapping has always used. */
-function nameParts(given: unknown, family: unknown, full: unknown): { firstName: string; lastName: string } {
+export function nameParts(given: unknown, family: unknown, full: unknown): { firstName: string; lastName: string } {
   const name = typeof full === 'string' ? full : ''
   return {
     firstName: (typeof given === 'string' && given) || name.split(' ')[0] || '',
@@ -82,8 +82,12 @@ export function socialProfileMapper(provider: string, defaults: SocialProfileDef
       // `name` is optional on GitHub; Better Auth falls back to the login, and so do we
       return (profile: Profile) => ({ ...nameParts(undefined, undefined, profile.name || profile.login), ...defaults })
     default:
-      // Microsoft and Apple (whose name Better Auth fills from the first consent only), and the map's other providers
-      return (profile: Profile) => ({ ...nameParts(profile.given_name, profile.family_name, profile.name), ...defaults })
+      // Microsoft and Apple (whose name Better Auth fills from the first consent only), and the map's other providers.
+      // A part the profile does not have is left out: with overrideUserInfoOnSignIn an empty one would erase the stored name.
+      return (profile: Profile) => {
+        const { firstName, lastName } = nameParts(profile.given_name, profile.family_name, profile.name)
+        return { ...(firstName ? { firstName } : {}), ...(lastName ? { lastName } : {}), ...defaults }
+      }
   }
 }
 

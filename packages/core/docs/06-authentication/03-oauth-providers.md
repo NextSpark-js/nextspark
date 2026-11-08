@@ -307,7 +307,7 @@ GITLAB_CLIENT_SECRET=...
 
 - The callback URL is `<origin><basePath>/api/auth/callback/<id>`.
 - There is no button: start the sign-in from your own UI or a client: `authClient.signIn.social({ provider: 'discord', callbackURL: '/dashboard' })`.
-- The mapping splits a `name` / `given_name` / `family_name` from the profile when there is one and assigns the default role and language; the registration gates and the unverified-email rule apply as for the built-ins.
+- The mapping splits a `name` / `given_name` / `family_name` from the profile when there is one, or else the name Better Auth read from the provider (Discord's `global_name`), and assigns the default role and language; the registration gates and the unverified-email rule apply as for the built-ins.
 - Non-secret options a provider requires go in `options`. For example `cognito` needs `{ domain, region, userPoolId }` (`providers: { cognito: { options: { domain: 'auth.example.com', region: 'eu-west-1', userPoolId: 'eu-west-1_abc123' } } }`). A provider Better Auth refuses to build with the given options is left off with a startup warning naming its id, and the rest of auth keeps working.
 - A provider that needs other credentials than a client id and secret (for example TikTok's `clientKey`) is not covered by the variable convention.
 

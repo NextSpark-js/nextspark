@@ -204,14 +204,14 @@ describe('profile mappings', () => {
     expect(map({ name: 'Grace Hopper' })).toEqual({ firstName: 'Grace', lastName: 'Hopper', language: 'en', role: 'member' })
   })
 
-  test('Apple splits the name it sends on the first consent, and maps an empty one to empty names', () => {
+  test('Apple splits the name it sends on the first consent, and leaves out the name it does not have', () => {
     const map = socialProfileMapper('apple', defaults) as (p: object) => object
     expect(map({ sub: '001', name: 'Tim Apple', email: 'x@privaterelay.appleid.com' })).toEqual({ firstName: 'Tim', lastName: 'Apple', language: 'en', role: 'member' })
-    expect(map({ sub: '001', name: '' })).toEqual({ firstName: '', lastName: '', language: 'en', role: 'member' })
+    expect(map({ sub: '001', name: '' })).toEqual({ language: 'en', role: 'member' })
   })
 
   test('another provider of the map gets the default role and language', () => {
-    expect((socialProfileMapper('discord', defaults) as (p: object) => object)({ username: 'x' })).toEqual({ firstName: '', lastName: '', language: 'en', role: 'member' })
+    expect((socialProfileMapper('discord', defaults) as (p: object) => object)({ username: 'x' })).toEqual({ language: 'en', role: 'member' })
   })
 
   test('no mapping but Google\'s sets email or emailVerified (Better Auth\'s verified flag decides linking)', () => {

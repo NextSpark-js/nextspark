@@ -28,7 +28,7 @@ import { isPasswordLoginEnabled, resolveAuthMethods } from './auth/auth-methods'
 import { sessionSecretProblem } from './auth/readiness';
 import { isRuntimeEmailAvailable } from './auth/runtime-readiness';
 import { trackCodeSend } from './auth/code-send';
-import { resolveSocialProviders, socialSignUpProvider } from './auth/social-providers';
+import { nameParts, resolveSocialProviders, socialSignUpProvider } from './auth/social-providers';
 import { getTrustedOrigins } from './utils/cors';
 import { withBasePath } from './base-path';
 import { resolveBaseUrl } from './utils/base-url';
@@ -433,6 +433,14 @@ export const auth = betterAuth({
           if (provider && provider !== 'google' && user.emailVerified !== true) {
             console.log(`[Auth] Refused a ${provider} sign-up: the provider has not verified the email address`);
             throw registrationError('SOCIAL_EMAIL_UNVERIFIED', ctx);
+          }
+
+          // The database builds `name` from firstName and lastName (sync_user_name), so a
+          // name Better Auth read from a field no mapping knows (Discord's global_name)
+          // has to reach them or it is lost. Only { data } changes what is inserted.
+          const name = typeof user.name === 'string' ? user.name.trim() : '';
+          if (name && !user.firstName && !user.lastName) {
+            return { data: { ...user, ...nameParts(undefined, undefined, name) } };
           }
 
           return user;

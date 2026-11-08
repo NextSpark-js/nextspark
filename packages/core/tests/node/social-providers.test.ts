@@ -31,10 +31,10 @@ type Step =
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
 type Result = Step & { body?: string; setsSession?: boolean; status: number; code?: string; location?: string; responseMode?: string; postStatus?: number; postLocation?: string; appleClientSecret?: string; redirectUri?: string }
 
-function runSteps(databaseUrl: string, registration: string, steps: Step[], basePath?: string): Result[] {
+function runSteps(databaseUrl: string, registration: string, steps: Step[], { basePath, discordOptions }: { basePath?: string; discordOptions?: object } = {}): Result[] {
   const appConfig = {
     teams: { mode: 'multi-tenant' },
-    auth: { registration: { mode: registration }, methods: ['email-otp', 'github', 'apple'], providers: { discord: {} } },
+    auth: { registration: { mode: registration }, methods: ['email-otp', 'github', 'apple'], providers: { discord: { options: discordOptions } } },
   }
   const run = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'driver.mts')], {
     cwd: CORE,
@@ -79,6 +79,12 @@ async function accounts(owner: pg.Client) {
     SELECT u.email, string_agg(a."providerId", ',' ORDER BY a."providerId") AS providers, u."firstName", u."lastName", u.role, u.language, u."emailVerified"
       FROM users u LEFT JOIN account a ON a."userId" = u.id GROUP BY u.id ORDER BY u.email`)
   return rows
+}
+
+async function person(owner: pg.Client, email: string) {
+  const { rows } = await owner.query<{ name: string; firstName: string | null; lastName: string | null; team: string }>(`
+    SELECT u.name, u."firstName", u."lastName", t.name AS team FROM users u JOIN teams t ON t."ownerId" = u.id WHERE u.email = $1`, [email])
+  return rows[0]
 }
 
 test('the Jest mock of better-auth/social-providers lists what the installed Better Auth knows', async () => {
@@ -155,8 +161,15 @@ test('a provider enabled only by the map: signs up a verified address, refuses a
   ])
   assert.ok(signedIn(created), JSON.stringify(created))
   assert.equal(errorOf(unverified), 'SOCIAL_EMAIL_UNVERIFIED', JSON.stringify(unverified))
-  // the map's default role and language; its name is Better Auth's business
   assert.deepEqual((await accounts(owner)).map(r => [r.email, r.providers, r.role, r.language]), [['nelly@example.test', 'discord', 'member', 'en']])
+  // Discord's name is in a field no mapping knows
+  const nelly = { name: 'Nelly Bly', firstName: 'Nelly', lastName: 'Bly', team: "Nelly Bly's Team" }
+  assert.deepEqual({ ...(await person(owner, 'nelly@example.test')) }, nelly)
+
+  // a provider that overrides the stored profile on sign-in does not erase the name
+  const [overridden] = runSteps(ownerUrl, 'open', [{ op: 'discord', email: 'nelly@example.test' }], { discordOptions: { overrideUserInfoOnSignIn: true } })
+  assert.ok(signedIn(overridden), JSON.stringify(overridden))
+  assert.deepEqual({ ...(await person(owner, 'nelly@example.test')) }, nelly)
 
   const [stranger, again] = runSteps(ownerUrl, 'invitation-only', [
     { op: 'discord', email: 'stranger@example.test', id: '80351110224678914' },
@@ -172,7 +185,7 @@ test('under a basePath: GitHub asks for the callback with the base path, complet
   const [created, unverified] = runSteps(ownerUrl, 'open', [
     { op: 'github', email: 'octo@example.test' },
     { op: 'github', email: 'unverified@example.test', emailVerified: false, id: 7171 },
-  ], '/app')
+  ], { basePath: '/app' })
   assert.equal(created.redirectUri, `${ORIGIN}/app/api/auth/callback/github`, JSON.stringify(created))
   assert.ok(signedIn(created) && created.location!.startsWith('/app/dashboard'), JSON.stringify(created))
   assert.match(unverified.location ?? '', /^(http:\/\/localhost:5173)?\/app\/auth-error\?error=SOCIAL_EMAIL_UNVERIFIED(&|$)/, JSON.stringify(unverified))
