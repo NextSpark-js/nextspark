@@ -175,6 +175,23 @@ test('single-tenant: a one-word name leaves no stray space in the global team\'s
   assert.equal((await person(owner, 'ada@example.test')).team, "Ada's Company")
 })
 
+test('any sign-up: a name alone fills firstName and lastName, a given firstName is kept, and no name stays NULL', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  const results = runSteps(ownerUrl, 'open', [
+    { op: 'password', email: 'grace@example.test', name: 'Grace Hopper' },
+    { op: 'password', email: 'given@example.test', name: 'Other Name', firstName: 'Given' },
+    { op: 'otp', email: 'code@example.test' },
+  ])
+  for (const result of results) assert.equal(result.status, 200, JSON.stringify(result))
+  const parts = async (email: string) => {
+    const { firstName, lastName } = await person(owner, email)
+    return [firstName, lastName]
+  }
+  assert.deepEqual(await parts('grace@example.test'), ['Grace', 'Hopper'])
+  assert.deepEqual(await parts('given@example.test'), ['Given', null])
+  assert.deepEqual(await parts('code@example.test'), [null, null])
+})
+
 test('a provider enabled only by the map: signs up a verified address, refuses an unverified one, and meets the registration gate', { skip, timeout: 300000 }, async t => {
   const { owner, ownerUrl } = await cutoverDatabase(t)
   const [created, unverified] = runSteps(ownerUrl, 'open', [

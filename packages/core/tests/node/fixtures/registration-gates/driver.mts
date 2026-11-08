@@ -10,7 +10,7 @@ import { createServer } from 'node:net'
 import { NextRequest } from 'next/server'
 
 type Step =
-  | { op: 'password'; email: string; inviteToken?: string }
+  | { op: 'password'; email: string; inviteToken?: string; name?: string; firstName?: string }
   | { op: 'otp'; email: string }
   | { op: 'google'; email: string; emailVerified?: boolean; name?: string }
   | { op: 'invite'; email: string; token: string }
@@ -63,6 +63,8 @@ let discord: Extract<Step, { op: 'discord' }> | null = null
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  // the verification email of a password sign-up
+  if (url.startsWith('https://api.resend.com/')) return jsonResponse({ id: 'stub-email' })
   if (url.startsWith('https://github.com/login/oauth/access_token')) {
     return jsonResponse({ access_token: 'stub-github-access', token_type: 'bearer', scope: 'read:user,user:email' })
   }
@@ -159,7 +161,7 @@ async function run(step: Step) {
     case 'password': {
       const query = step.inviteToken ? `?inviteToken=${step.inviteToken}` : ''
       const headers: Record<string, string> = step.inviteToken ? { 'x-invite-token': step.inviteToken } : {}
-      return outcome(await authRoute.POST(json(`/api/auth/sign-up/email${query}`, { email: step.email, password: PASSWORD, name: 'Password User' }, headers)))
+      return outcome(await authRoute.POST(json(`/api/auth/sign-up/email${query}`, { email: step.email, password: PASSWORD, name: step.name ?? 'Password User', ...(step.firstName ? { firstName: step.firstName } : {}) }, headers)))
     }
     case 'otp': {
       // the stored sign-in code, as send-verification-otp writes it (Better Auth stores codes in plain text by default)
