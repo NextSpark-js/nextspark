@@ -716,9 +716,12 @@ export function writeOwnedFile(hostRoot, path, content) {
  * @param {{ path: string, content: string }[]} input.appFiles - the src/app files that would be generated
  * @param {object} input.inputs - `hashInputs(...)` now
  * @param {object} input.versions - versions now
+ * @param {{ dir: string, files: { path: string, content: string }[] }|null} [input.generatedRegistries] - registry files the host
+ *   generates itself (the typed entity client, #277): they are compared one by one with what would be written, and a recorded file under
+ *   `dir` that would not be written any more is reported
  * @returns {{ ok: boolean, problems: { state: string, path?: string, detail: string }[] }}
  */
-export function checkGeneration({ hostRoot, previous, appFiles, inputs, versions }) {
+export function checkGeneration({ hostRoot, previous, appFiles, inputs, versions, generatedRegistries = null }) {
   const problems = []
   const tree = scanTree(hostRoot, APP_DIR)
   if (!previous && tree.root === 'missing') {
@@ -766,6 +769,29 @@ export function checkGeneration({ hostRoot, previous, appFiles, inputs, versions
       else if (!stat.isFile()) problems.push({ state: 'foreign', path, detail: 'not a regular file' })
       else if (sha256(readFileSync(absolute)) !== hash) problems.push({ state: 'stale', path, detail: 'registry changed since it was generated' })
     }
+    // The registry files the host itself generates are compared with what would be written; the rest of the registries are
+    // only what the registry build wrote, which the check does not run
+    if (generatedRegistries) {
+      const wanted = new Map(generatedRegistries.files.map(file => [file.path, file.content]))
+      for (const [path, content] of wanted) {
+        if (problems.some(problem => problem.path === path)) continue // the recorded-registry check above already said so
+        const stat = lstatOrNull(join(hostRoot, path))
+        if (!stat) problems.push({ state: 'missing', path, detail: 'not generated yet' })
+        else if (!stat.isFile()) problems.push({ state: 'foreign', path, detail: 'not a regular file' })
+        else if (readFileSync(join(hostRoot, path), 'utf8') !== content) problems.push({ state: 'stale', path, detail: 'differs from what prepare generates now' })
+        else if (previous.files?.[path] === undefined) problems.push({ state: 'stale', path: GENERATION_FILE, detail: `does not record ${path}; run nextspark prepare to refresh the record` })
+      }
+      for (const path of Object.keys(previous.files)) {
+        if (path.startsWith(`${generatedRegistries.dir}/`) && !wanted.has(path)) problems.push({ state: 'stale', path, detail: 'generated earlier, no longer part of the output' })
+      }
+    }
+    // A file in the registries directory that no record lists (left by hand, or by a build that did not finish) is not NextSpark's
+    // to ignore: it is imported by `@nextsparkjs/registries/*` like the rest
+    for (const path of scanTree(hostRoot, REGISTRIES_DIR).files) {
+      if (path.endsWith('.nextspark-tmp') || previous.files[path] !== undefined) continue
+      if (generatedRegistries?.files.some(file => file.path === path)) continue
+      problems.push({ state: 'foreign', path, detail: 'not recorded by the generation; nextspark prepare owns this directory' })
+    }
     const before = previous.inputs?.files ?? {}
     const now = inputs?.files ?? {}
     const changed = [...new Set([...Object.keys(before), ...Object.keys(now)])]
@@ -780,7 +806,8 @@ export function checkGeneration({ hostRoot, previous, appFiles, inputs, versions
     // The record as a whole, when nothing else is wrong: an entry of a file that is gone, another
     // generator, another order of the keys. The registries are the ones the record lists (already
     // verified against the disk above).
-    // ponytail: a registry prepare would add or drop is not seen here; compare against config.registries if that matters.
+    // ponytail: a registry the registry build would add or drop is not seen here (only the typed client, which the host renders itself, and
+    // files no record lists are); compare against config.registries if that matters.
     if (problems.length === 0) {
       const expectedRecord = generationRecord({ mode: previous.mode, versions, inputs, files: appFiles })
       const registries = Object.entries(previous.files).filter(([path]) => path.startsWith(`${REGISTRIES_DIR}/`))

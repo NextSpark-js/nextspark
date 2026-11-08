@@ -44,6 +44,7 @@ import { coreRouteManifestPath, coreRouteVariantsPath, hasCoreRouteManifest, loa
 import { discoverAllEntities } from '../discovery/all-entities.mjs'
 import { PluginCapabilityError, withDeclaredCapabilities } from '../discovery/plugin-capabilities.mjs'
 import { ContractsPublishError, checkContractsPlan, preflightContractsPlan, projectContracts, publishContractsPlan } from '../contracts/index.mjs'
+import { CLIENT_DIR, planClient } from '../client/index.mjs'
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { sitemapPlan } from './sitemap.mjs'
 import { webhookRoutes } from './webhooks.mjs'
@@ -200,6 +201,7 @@ export async function predictHost(config, { devStatus = false } = {}) {
       const plan = await config.contracts.plan()
       diagnostics.push(...plan.diagnostics)
       if (plan.diagnostics.length === 0) preflightContractsPlan({ target: config.contracts.target(), plan })
+      if (plan.diagnostics.length === 0 && config.client) diagnostics.push(...config.client.plan({ entities: plan.entities ?? [], target: config.contracts.target() }).diagnostics)
       checks.contracts = plan.diagnostics.length > 0 ? 'failed' : 'passed'
     } catch (error) {
       if (!(error instanceof ContractsPublishError || error instanceof PrepareError)) throw error
@@ -250,12 +252,13 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
   try {
     const { routes, manifest, appFiles, notices } = await renderHostFiles(config, { devStatus, cache })
     const registryFiles = config.registries ? await config.registries({ mode, hostRoot: config.hostRoot }) : []
-    const files = [...appFiles, ...registryFiles]
-    const invalid = await validateFiles(files, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
-    if (invalid.length > 0) throw new PrepareError(invalid)
-
     // The contracts module is planned and preflighted with everything else: nothing is written when any part fails
     const contracts = await planContractsStep(config)
+    // The typed entity client (#277) is generated from the same contracts and published as registry files
+    const clientFiles = planClientStep(config, contracts)
+    const files = [...appFiles, ...registryFiles, ...clientFiles]
+    const invalid = await validateFiles(files, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
+    if (invalid.length > 0) throw new PrepareError(invalid)
 
     const previous = readGeneration(config.hostRoot)
     const inputs = config.inputs ? config.inputs({ manifest }) : null
@@ -293,6 +296,14 @@ async function planContractsStep(config) {
   if (plan.diagnostics.length > 0) throw new PrepareError(plan.diagnostics)
   preflightContractsPlan({ target, plan })
   return { target, plan }
+}
+
+/** The files of the typed entity client planned from the contracts plan ([]: the host has no client step). */
+function planClientStep(config, contracts) {
+  if (!config.client || !contracts) return []
+  const { files, diagnostics } = config.client.plan({ entities: contracts.plan.entities ?? [], target: contracts.target })
+  if (diagnostics.length > 0) throw new PrepareError(diagnostics)
+  return files
 }
 
 function publishContractsStep(config, contracts) {
@@ -352,7 +363,26 @@ export async function checkHost(config, { dev = false } = {}) {
     return { ok: false, problems: error.diagnostics.map(d => ({ state: 'invalid', detail: `[${d.code}] ${d.message}` })) }
   }
   const inputs = config.inputs ? config.inputs({ manifest: rendered.manifest }) : null
-  const result = checkGeneration({ hostRoot: config.hostRoot, previous, appFiles: rendered.appFiles, inputs, versions: config.versions })
+  // The contracts plan, and the typed client planned from it (#277): the client is checked file by file
+  let contractsPlan = null
+  if (config.contracts) {
+    try {
+      contractsPlan = await config.contracts.plan()
+    } catch (error) {
+      if (!(error instanceof PrepareError)) throw error
+      contractsPlan = { diagnostics: error.diagnostics, files: [] }
+    }
+  }
+  const client = config.client && contractsPlan && contractsPlan.diagnostics.length === 0 ? config.client.plan({ entities: contractsPlan.entities ?? [], target: config.contracts.target() }) : null
+  const result = checkGeneration({
+    hostRoot: config.hostRoot,
+    previous,
+    appFiles: rendered.appFiles,
+    inputs,
+    versions: config.versions,
+    generatedRegistries: client && client.diagnostics.length === 0 ? { dir: CLIENT_DIR, files: client.files } : null,
+  })
+  if (client) result.problems.push(...client.diagnostics.map(d => ({ state: 'invalid', detail: `[${d.code}] ${d.message}` })))
   const isDevGeneration = Boolean(previous?.files?.[DEV_STATUS_FILE])
   if (previous && isDevGeneration !== dev) {
     result.problems.unshift({
@@ -366,13 +396,7 @@ export async function checkHost(config, { dev = false } = {}) {
   }
   if (config.contracts) {
     const target = config.contracts.target()
-    let plan
-    try {
-      plan = await config.contracts.plan()
-    } catch (error) {
-      if (!(error instanceof PrepareError)) throw error
-      plan = { diagnostics: error.diagnostics, files: [] }
-    }
+    const plan = contractsPlan
     if (plan.diagnostics.length > 0) {
       result.problems.push(...plan.diagnostics.map(d => ({ state: 'invalid', detail: `[${d.code}] ${d.message}` })))
     } else {
@@ -546,6 +570,8 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
     },
     // The contracts are generated with the core that runs this script (its portable sources are what the server runs too)
     contracts: projectContracts({ projectRoot: config.projectRoot, coreRoot: CORE_ROOT, currentConfig, plugins: pluginsOf }),
+    // The typed client and hooks (#277): generated from the contracts' entities, written with the registries
+    client: { plan: ({ entities, target }) => planClient({ entities, projectRoot: config.projectRoot, target }) },
     webhooks: () =>
       webhookRoutes({
         webhookExtensions: currentConfig().billing?.webhookExtensions,

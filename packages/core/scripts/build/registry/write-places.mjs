@@ -31,6 +31,8 @@ const PLACES = [
 // (template-scopes/, removed in #203) may still be there: the host's publication deletes them, so they
 // are no obstacle, and this subtree is still guarded against symlinks and files of another kind.
 const OBSOLETE_TEMPLATE_SCOPES = '.nextspark/registries/template-scopes'
+// The typed entity client (#277) is the one generated subtree: the host writes it with the registries (client/render.mjs)
+const ENTITY_CLIENT = '.nextspark/registries/entity-client'
 
 /** The Cypress fixtures the registry build writes from the project root. */
 const TEST_FIXTURES = ['tests/cypress/fixtures/entities.json', 'tests/cypress/fixtures/blocks.json']
@@ -103,7 +105,7 @@ function reportEntriesUnder(projectRoot, dir, filesOnly, report, directoryExcept
  * Something other than what goes there, which stops a run halfway, once it has written part of
  * what it writes: a file where one of those directories goes, or a directory above a path of
  * `written`; a directory where a registry - the build writes only files right in
- * .nextspark/registries - or a path of `written` goes.
+ * .nextspark/registries, besides the entity client's directory - or a path of `written` goes.
  *
  * What can't be read where the build needs to look: one of those places, or the backups or
  * registries directory. And a .gitignore of
@@ -161,7 +163,7 @@ export function unsafeWritePlaces(projectRoot, written = []) {
   }
 
   if (!reported('.nextspark') && !reported('.nextspark/registries')) {
-    reportEntriesUnder(projectRoot, '.nextspark/registries', true, report, new Set([OBSOLETE_TEMPLATE_SCOPES]))
+    reportEntriesUnder(projectRoot, '.nextspark/registries', true, report, new Set([OBSOLETE_TEMPLATE_SCOPES, ENTITY_CLIENT]))
   }
   return unsafe
 }

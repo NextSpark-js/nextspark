@@ -69,7 +69,7 @@ export function resolveContractsTarget(projectRoot) {
 }
 
 /**
- * The files of the contracts module of the project, in memory: `{ files, warnings, diagnostics }`.
+ * The files of the contracts module of the project, in memory: `{ files, warnings, diagnostics, entities }`.
  * Entities are the project's and its enabled plugins' top-level entities that have an external API;
  * core's own entities (users, teams, ...) are not part of a project's contracts.
  *
@@ -126,7 +126,8 @@ export async function planContracts({ entities, projectRoot, coreRoot, plugins =
       else seenNames.set(name, contract.slug)
     }
   }
-  return { files: diagnostics.length > 0 ? [] : renderContracts(contracts, { portable, shape }), warnings, diagnostics }
+  // `entities` ({ contract, source }, slug order) feed the typed client generated from the same contracts (client/)
+  return { files: diagnostics.length > 0 ? [] : renderContracts(contracts, { portable, shape }), warnings, diagnostics, entities: contracts }
 }
 
 /**
