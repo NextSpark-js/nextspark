@@ -2,7 +2,7 @@
  * MercadoPago webhook: signature verified in handleMercadoPagoWebhook before anything else.
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { isMercadoPagoConfigured, mercadoPagoWebhookSecrets } from '../../../lib/env'
 import { mercadoPagoGateway, webhookDedupe } from '../../../lib/runtime'
@@ -16,6 +16,6 @@ export const POST = withRateLimitTier(
       store: webhookStore,
       dedupe: webhookDedupe,
       getPayment: (paymentId, accessToken) => mercadoPagoGateway().getPayment(paymentId, accessToken),
-    }),
+    }) as Promise<NextResponse>,
   'webhook'
 )
