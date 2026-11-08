@@ -15,7 +15,7 @@
 # Exit: 0 all checks passed, 1 a step or check failed, 2 usage error or missing tool.
 #
 # USAGE: scripts/deploy/verify-standalone.sh [--packages DIR] [--work DIR] [--logs DIR] [--skip-proxy] [--keep]
-#   --packages DIR  use the 12 tarballs in DIR instead of packing (the CI job passes the ones its pack job built)
+#   --packages DIR  use the 13 tarballs in DIR instead of packing (the CI job passes the ones its pack job built)
 #   --work DIR      scratch directory (default: a new directory under $TMPDIR); removed on success unless --keep.
 #                   Must be outside this repository, or Node would resolve modules from the checkout.
 #   --logs DIR      where the logs go (default: <work>/logs)
@@ -237,7 +237,7 @@ if [[ -z "$PACKAGES" ]]; then
 fi
 COUNT=$(ls "$PACKAGES"/*.tgz 2>/dev/null | wc -l | tr -d ' ')
 log "$COUNT tarballs in $PACKAGES"
-[[ $COUNT -eq 12 ]] || die "expected 12 tarballs, found $COUNT"
+[[ $COUNT -eq 13 ]] || die "expected 13 tarballs, found $COUNT"
 rm -rf "$WORK/project"; mkdir -p "$WORK/project"; ln -sfn "$PACKAGES" "$WORK/project/.packages"
 [[ -f "$REPO_ROOT/packages/create-nextspark-app/dist/index.js" ]] || die "packages/create-nextspark-app/dist is missing (pack builds it)"
 log "creating the starter from the tarballs"

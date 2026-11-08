@@ -181,6 +181,7 @@ export function releaseAgeExclusions(): string[] {
     ...NEXTSPARK_PACKAGES,
     ...PLUGIN_PACKAGES,
     '@nextsparkjs/plugin-amplitude',
+    '@nextsparkjs/plugin-marketplace-payments',
     '@nextsparkjs/plugin-walkme',
     'create-nextspark-app',
   ].sort()
