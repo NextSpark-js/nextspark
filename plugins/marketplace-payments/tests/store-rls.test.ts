@@ -114,6 +114,9 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
     process.env.MARKETPLACE_TOKEN_KEYS = `k2:${KEY2}`
     assert.equal(await store.getSellerAccessToken(accountA), 'plain-access-mp-a')
     assert.equal((await owner.query(`SELECT count(*)::int AS n FROM public."marketplace_seller_credentials" WHERE "accessTokenEnc" LIKE 'v1.k2.%' AND "refreshTokenEnc" LIKE 'v1.k2.%'`)).rows[0].n, 2)
+    // a key id is compared whole: _ is an ordinary character in one
+    assert.equal((await store.keyRotationStore.listCredentialsNotOnKey('k_', null, 10)).length, 2)
+    assert.equal((await store.keyRotationStore.listCredentialsNotOnKey('k2', null, 10)).length, 0)
   })
 
   const statusOf = async (id: string) => (await owner.query(`SELECT status FROM public."marketplace_payments" WHERE id = $1`, [id])).rows[0].status

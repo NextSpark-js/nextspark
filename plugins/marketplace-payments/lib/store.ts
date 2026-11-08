@@ -310,12 +310,11 @@ export const tokenRefreshStore: TokenRefreshStore = {
 
 export const keyRotationStore: KeyRotationStore = {
   async listCredentialsNotOnKey(keyId, after, limit) {
-    const prefix = `v1.${keyId}.%`
     const rows = await queryRows<{ accountId: string }>(
       `SELECT "accountId" FROM public."marketplace_seller_credentials"
-       WHERE ("accessTokenEnc" NOT LIKE $1 OR "refreshTokenEnc" NOT LIKE $1) AND ($2::text IS NULL OR "accountId" > $2)
+       WHERE (split_part("accessTokenEnc", '.', 2) <> $1 OR split_part("refreshTokenEnc", '.', 2) <> $1) AND ($2::text IS NULL OR "accountId" > $2)
        ORDER BY "accountId" LIMIT $3`,
-      [prefix, after, limit]
+      [keyId, after, limit]
     )
     return rows.map(row => row.accountId)
   },
