@@ -29,11 +29,6 @@ single-user
 |---------|-------------|
 | posts | Artículos del blog con título, contenido, slug, imagen destacada, estado y categorías |
 
-## Features
-
-| Feature | Descripción | Roles |
-|---------|-------------|-------|
-
 ## Permisos
 
 | Entidad | create | read | update | delete |

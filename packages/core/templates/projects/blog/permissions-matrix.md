@@ -30,13 +30,6 @@ No teams functionality. Single user owns all content.
 
 ---
 
-## Theme Features
-
-| Feature | owner | Description |
-|---------|-------|-------------|
-
----
-
 ## Disabled Core Permissions
 
 - `teams.invite` - No invitations in single-user mode

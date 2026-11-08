@@ -5,7 +5,6 @@
  *
  * This file defines:
  * - entities: Entity CRUD permissions (posts, categories)
- * - features: Theme-specific feature permissions
  *
  * All sections use unified format: { action: '...', roles: [...] }
  *
@@ -71,18 +70,6 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
     'teams.delete',
     'settings.api_keys',
     'settings.billing',
-  ],
-
-  // ==========================================
-  // UI SECTIONS
-  // ==========================================
-  uiSections: [
-    {
-      id: 'blog-features',
-      label: 'Blog Features',
-      description: 'Permissions for blog-specific functionality',
-      categories: ['Blog'],
-    },
   ],
 }
 

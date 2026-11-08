@@ -14,13 +14,6 @@ pnpm dev
 
 ## Funcionalidades
 
-### Permisos
-
-Los permisos están configurados en `permissions.config.ts`:
-
-| Feature | Descripción | Roles |
-|---------|-------------|-------|
-
 ### Componentes
 
 ```
