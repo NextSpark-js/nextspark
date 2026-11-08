@@ -34,6 +34,7 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
   const { rotateSellerTokenKeys } = await import('../lib/token-crypto')
   const { refreshExpiringMercadoPagoTokens } = await import('../lib/mercadopago/refresh')
   const { ProviderApiError } = await import('../lib/provider-error')
+  const { runRefreshTokensAction, runRotateTokenKeysAction } = await import('../lib/scheduled-action-handlers')
   const { parseTokenKeyring } = await import('../lib/token-crypto')
   const db = await import('@nextsparkjs/core/lib/db')
   t.after(() => db.servicePool.end())
@@ -199,6 +200,30 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
 
   await t.test('a provider account already on another team is refused', async () => {
     await assert.rejects(store.saveMercadoPagoSeller('team-b', tokens('mp-a2')), store.SellerAlreadyConnectedError)
+  })
+
+  await t.test('a seller that fails does not fail the scheduled actions, and keeps its credential', async ctx => {
+    ctx.mock.method(console, 'error', () => {})
+    process.env.MARKETPLACE_MERCADOPAGO_CLIENT_ID = 'cid'
+    process.env.MARKETPLACE_MERCADOPAGO_CLIENT_SECRET = 'csecret'
+    const stored = async () => (await owner.query(`SELECT "accessTokenEnc" AS a, "refreshTokenEnc" AS r FROM public."marketplace_seller_credentials" WHERE "accountId" = $1`, [accountB])).rows[0]
+    const before = await stored()
+    try {
+      await owner.query(`UPDATE public."marketplace_seller_credentials" SET "expiresAt" = now() + interval '1 day' WHERE "accountId" = $1`, [accountB])
+      ctx.mock.method(globalThis, 'fetch', async (url: string) =>
+        String(url).endsWith('/oauth/token') ? new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 }) : new Response(JSON.stringify({ country_id: 'AR' }), { status: 200 })
+      )
+      await runRefreshTokensAction()
+      assert.deepEqual(await stored(), before)
+      assert.equal((await store.findAccount('team-b', 'mercadopago'))?.status, 'active')
+
+      await owner.query(`UPDATE public."marketplace_seller_credentials" SET "accessTokenEnc" = 'v1.gone.x.x.x' WHERE "accountId" = $1`, [accountB])
+      await runRotateTokenKeysAction()
+    } finally {
+      await owner.query(`UPDATE public."marketplace_seller_credentials" SET "accessTokenEnc" = $2 WHERE "accountId" = $1`, [accountB, before.a])
+      delete process.env.MARKETPLACE_MERCADOPAGO_CLIENT_ID
+      delete process.env.MARKETPLACE_MERCADOPAGO_CLIENT_SECRET
+    }
   })
 
   await t.test('the token refresh saves the new pair encrypted, and a revoked grant disconnects the seller', async () => {

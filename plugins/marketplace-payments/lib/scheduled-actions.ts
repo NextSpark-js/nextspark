@@ -5,31 +5,18 @@
 
 import { registerScheduledAction } from '@nextsparkjs/core/lib/scheduled-actions/registry'
 import { scheduleRecurringAction } from '@nextsparkjs/core/lib/scheduled-actions/scheduler'
-import { isMercadoPagoConfigured, tokenKeyring } from './env'
-import { REFRESH_TOKENS_ACTION, REFRESH_TOKENS_TIMEOUT_MS, refreshExpiringMercadoPagoTokens } from './mercadopago/refresh'
-import { mercadoPagoGateway } from './runtime'
-import { keyRotationStore, tokenRefreshStore } from './store'
-import { ROTATE_TOKEN_KEYS_ACTION, rotateSellerTokenKeys } from './token-crypto'
+import { REFRESH_TOKENS_ACTION, REFRESH_TOKENS_TIMEOUT_MS } from './mercadopago/refresh'
+import { runRefreshTokensAction, runRotateTokenKeysAction } from './scheduled-action-handlers'
+import { ROTATE_TOKEN_KEYS_ACTION } from './token-crypto'
 
 export function registerMarketplacePaymentsActions(): void {
-  registerScheduledAction(
-    REFRESH_TOKENS_ACTION,
-    async () => {
-      if (!isMercadoPagoConfigured()) return
-      const summary = await refreshExpiringMercadoPagoTokens(tokenRefreshStore, mercadoPagoGateway())
-      if (summary.failed > 0) throw new Error(`${summary.failed} seller token(s) could not be refreshed`)
-    },
-    { description: 'Renew MercadoPago seller tokens before they expire', timeout: REFRESH_TOKENS_TIMEOUT_MS }
-  )
-  registerScheduledAction(
-    ROTATE_TOKEN_KEYS_ACTION,
-    async () => {
-      if (!isMercadoPagoConfigured()) return
-      const summary = await rotateSellerTokenKeys(keyRotationStore, tokenKeyring())
-      if (summary.failed > 0) throw new Error(`${summary.failed} seller credential(s) could not be re-encrypted`)
-    },
-    { description: 'Re-encrypt seller tokens that are on an older key' }
-  )
+  registerScheduledAction(REFRESH_TOKENS_ACTION, runRefreshTokensAction, {
+    description: 'Renew MercadoPago seller tokens before they expire',
+    timeout: REFRESH_TOKENS_TIMEOUT_MS,
+  })
+  registerScheduledAction(ROTATE_TOKEN_KEYS_ACTION, runRotateTokenKeysAction, {
+    description: 'Re-encrypt seller tokens that are on an older key',
+  })
 }
 
 export async function scheduleMarketplacePaymentsActions(): Promise<void> {
