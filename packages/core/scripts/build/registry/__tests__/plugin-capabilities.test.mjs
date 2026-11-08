@@ -46,13 +46,13 @@ const legacyConfig = name => `export const ${name}PluginConfig = { name: '${name
 
 const sourceOf = (root, name) => ({ name, sourceDir: join(root, 'plugins', name), importBase: `@/plugins/${name}`, kind: 'local' })
 
-async function check(files, name = 'demo') {
+async function check(files, name = 'demo', apiDir) {
   const { root, cleanup } = project(files)
   try {
     const ts = await loadTypeScriptFor(root)
     const declaration = readPluginDeclaration(ts, { plugin: name, configFile: join(root, 'plugins', name, 'plugin.config.ts'), exportName: `${name}PluginConfig` })
     const plugin = { ...sourceOf(root, name), capabilities: declaration.capabilities ?? [...LEGACY_CAPABILITIES] }
-    return { declaration, diagnostics: checkPluginContributions(ts, { plugin, plugins: [plugin], projectRoot: root }), root }
+    return { declaration, diagnostics: checkPluginContributions(ts, { plugin, plugins: [plugin], projectRoot: root, apiDir }), root }
   } finally {
     cleanup()
   }
@@ -485,6 +485,23 @@ test('the project api/ and any route file are server surfaces, reached through a
     'lib/util.ts': 'export const x = 1\n',
   })
   assert.deepEqual(clean.diagnostics, [])
+})
+
+test('with apiDir set, a nested directory is the project server surface and the old api/ is not', async () => {
+  const tsconfig = JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['./*'] } } })
+  const files = target => ({
+    'tsconfig.json': tsconfig,
+    'plugins/demo/plugin.config.ts': config('demo', "['web']"),
+    'plugins/demo/components/Widget.tsx': `import { x } from '${target}'\nexport default () => x\n`,
+    'server/api/internal/helper.ts': 'export const x = 1\n',
+    'server/other/helper.ts': 'export const x = 1\n',
+    'api/old/helper.ts': 'export const x = 1\n',
+  })
+  const moved = await check(files('@/server/api/internal/helper'), 'demo', 'server/api')
+  assert.deepEqual(codes(moved.diagnostics), [PLUGIN_DIAGNOSTICS.SERVER_IN_CLIENT])
+  assert.match(moved.diagnostics[0].message, /the project server\/api\//)
+  assert.deepEqual((await check(files('@/server/other/helper'), 'demo', 'server/api')).diagnostics, [], 'only the directory itself, not its parent')
+  assert.deepEqual((await check(files('@/api/old/helper'), 'demo', 'server/api')).diagnostics, [], 'api/ is an ordinary directory once moved')
 })
 
 test('an @nextsparkjs package resolves to its runtime exports target, not its types target', async () => {

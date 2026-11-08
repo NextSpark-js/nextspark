@@ -665,7 +665,7 @@ function createResolver(ts, { projectRoot, plugin, plugins }) {
  * @param {string} [input.projectRoot] - the project whose tsconfig resolves imports (paths, baseUrl); defaults to the plugin's directory
  * @returns {object[]} diagnostics, sorted
  */
-export function checkPluginContributions(ts, { plugin, plugins = [plugin], projectRoot }) {
+export function checkPluginContributions(ts, { plugin, plugins = [plugin], projectRoot, apiDir = 'api' }) {
   const diagnostics = []
   const capabilities = capabilitiesOf(plugin)
   const root = plugin.sourceDir
@@ -718,7 +718,7 @@ export function checkPluginContributions(ts, { plugin, plugins = [plugin], proje
     const base = file.split(sep).at(-1)
     if (/\.server\.[cm]?[jt]sx?$/.test(base)) return 'a *.server module'
     if (/^route\.([^.]+\.)?[cm]?[jt]sx?$/.test(base)) return 'a Route Handler (route file)'
-    if (!owner && projectRoot && file.startsWith(projectRoot + sep) && !file.includes(`${sep}node_modules${sep}`) && relative(projectRoot, file).split(sep)[0] === 'api') return 'server code (the project api/)'
+    if (!owner && projectRoot && file.startsWith(projectRoot + sep) && !file.includes(`${sep}node_modules${sep}`) && relative(projectRoot, file).split(sep).join('/').startsWith(`${apiDir}/`)) return `server code (the project ${apiDir}/)`
     if (owner) {
       const rel = relative(owner.sourceDir, file).split(sep).join('/')
       if (rel.startsWith('api/') || rel.startsWith('plugin.pages.server') || isTemplateRoute(rel)) return `server code (${rel.split('/')[0]}/)`

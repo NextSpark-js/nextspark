@@ -155,7 +155,7 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
 
   const invalid = new Set(diagnostics.map(d => d.plugin))
   for (const plugin of plugins) {
-    if (!invalid.has(plugin.name)) diagnostics.push(...checkPluginContributions(ts, { plugin, plugins, projectRoot: config.projectRoot }))
+    if (!invalid.has(plugin.name)) diagnostics.push(...checkPluginContributions(ts, { plugin, plugins, projectRoot: config.projectRoot, apiDir: config.apiDir }))
   }
   diagnostics.push(...pluginCollisions(plugins))
   if (diagnostics.length > 0) throw new PluginCapabilityError(diagnostics)
