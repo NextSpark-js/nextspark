@@ -25,7 +25,7 @@ export default async function <name>(
 
 `locale` is the BCP47 code (e.g. `'en'`, `'es'`); use it with
 `getTranslations({ locale, namespace: 'email.<slug>' })` from `next-intl/server`
-when you want translated copy. Core's defaults already do this for the four
+when you want translated copy. Core's defaults already do this for the
 slugs below.
 
 ## Core slugs you can override
@@ -35,6 +35,7 @@ slugs below.
 | `verify-email`      | `VerificationEmailData`    | Email/password signup (when enabled)      |
 | `reset-password`    | `PasswordResetEmailData`   | Password reset request                    |
 | `otp-verification`  | `OtpVerificationEmailData` | OTP-based sign-in / verification          |
+| `magic-link`        | `MagicLinkEmailData`       | Sign-in link (method `'magic-link'`)      |
 | `team-invitation`   | `TeamInvitationEmailData`  | Adding a member to a team                 |
 
 Import the data types from `@nextsparkjs/core/lib/email/types`.

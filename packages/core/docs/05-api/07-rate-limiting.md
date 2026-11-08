@@ -238,7 +238,7 @@ The list is explicit (`lib/auth/auth-rate-limit.ts`): a route Better Auth adds l
 
 | Route (after `/api/auth/`) | `auth` (per address) | `authIdentifier` (per email) |
 |---|---|---|
-| `email-otp/send-verification-otp`, `email-otp/request-password-reset`, `forget-password/email-otp`, `request-password-reset`, `send-verification-email` | yes | yes, budget "send" |
+| `email-otp/send-verification-otp`, `email-otp/request-password-reset`, `forget-password/email-otp`, `request-password-reset`, `send-verification-email`, `sign-in/magic-link` | yes | yes, budget "send" |
 | `sign-in/email-otp`, `email-otp/check-verification-otp`, `email-otp/verify-email`, `email-otp/reset-password` | yes | yes, budget "verify" |
 | `sign-in/email` (password) | yes | yes, budget "password" |
 | `sign-up/email`, `reset-password` (token) | yes | no |

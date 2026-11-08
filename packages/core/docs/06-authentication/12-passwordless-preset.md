@@ -27,8 +27,8 @@ auth: {
 ```
 
 `auth.methods` lists the login methods the templates offer, **in priority
-order** — the first email method (`'email-otp'` or `'email-password'`) is the
-form the login opens with. Arrays replace (they do not merge), so a theme that
+order** — the first email method (`'email-otp'`, `'magic-link'` or
+`'email-password'`) is the form the login opens with. Arrays replace (they do not merge), so a theme that
 wants something else lists everything it needs:
 
 ```typescript
@@ -43,6 +43,7 @@ auth: {
 | Value | Login UI | Notes |
 |-------|----------|-------|
 | `'email-otp'` | Email → 6-digit code | Better Auth `emailOTP` plugin. Code lifetime and length are configurable (see `auth.otp` below), 5 minutes / 6 digits by default. First sign-in auto-creates the user (registration mode and domain rules still apply through the `user.create.before` hook). |
+| `'magic-link'` | Email → single-use link | Better Auth `magicLink` plugin, opt-in: only an app that lists it serves its endpoints. See [Sign-in links](#sign-in-links-magic-link). |
 | `'google'` | "Continue with Google" | Also gated by `providers.google.enabled` and `GOOGLE_CLIENT_ID`. |
 | `'email-password'` | Email + password form | Enables the `/signup` page, the signup link and forgot/reset password. |
 
@@ -140,6 +141,31 @@ minutes per IP) and the `authIdentifier` tier (5 requests / 15 minutes per email
 the OTP request and verify routes. Sign-out and session calls are not charged; see
 [Sign-in routes](../05-api/07-rate-limiting.md#sign-in-routes-the-auth-and-authidentifier-tiers).
 
+## Sign-in links (magic link)
+
+`'magic-link'` is one more passwordless method, next to the code or instead of it. It is not part of the default preset:
+
+```typescript
+auth: {
+  methods: ['magic-link', 'email-otp', 'google'], // link first, code as the alternative
+  magicLink: { expiresIn: 60 * 15 },              // seconds — default: 300 (5 minutes)
+}
+```
+
+An invalid `expiresIn` is rejected with a `console.warn` and falls back to the default.
+
+1. `LoginForm` calls `useAuth().sendMagicLink(email, callbackUrl)` → `POST /api/auth/sign-in/magic-link`. The answer is the same whether the address has an account or not. A send the provider could not do answers `503 EMAIL_SEND_FAILED`, as for a code.
+2. The email is the `magic-link` template (`emails/magic-link.ts` in a project overrides it), in the app's default language like the code email.
+3. Opening the link (`GET /api/auth/magic-link/verify`) consumes the token, creates the user if needed and redirects signed in to the page the login was going to, base path included.
+
+- **Registration gates**: the same as a code. The first use of a link creates the account through `user.create.before` with the address it just proved, so `invitation-only` admits a new address only with a pending invitation, and domain modes refuse an address outside `allowedDomains` before sending anything.
+- **Single use and expiry**: the token is consumed on the first request and is stored hashed. A used or expired link goes to `/auth-error` with `INVALID_TOKEN`, which asks for a new one. Registration refusals, a suspended account and a rejected destination go to the same page.
+- **Destination**: Better Auth refuses a `callbackURL` outside the app's trusted origins, both when the link is requested and when it is opened, and the login form only passes in-app paths.
+- **Rate limit**: the request is charged like a code request (`auth` per address, `authIdentifier` budget "send" per email, shared with codes). Better Auth also limits both routes to 5 per minute per address.
+- **Readiness**: it needs the same email provider as a code. Without a working one, `GET /api/auth/readiness` does not list it, the form does not offer it, its routes answer `503 AUTH_METHOD_UNAVAILABLE` and the server log says why.
+
+> **Mail scanners:** the link is consumed by the first `GET`. A mailbox security product that fetches links before the user does (some corporate gateways do) uses it up, and the user lands on the "link is no longer valid" page. Where that is a concern, offer `'email-otp'` next to it.
+
 ## Templates
 
 - **Web**: `components/auth/forms/LoginForm.tsx` renders Google + the OTP form
@@ -173,12 +199,17 @@ the OTP request and verify routes. Sign-out and session calls are not charged; s
   pluralized correctly in every locale.
 - `tests/jest/lib/auth-otp-email-expiry.test.ts` — the emailOTP plugin forwards
   the resolved `expiresIn` to the email template, not a hardcoded value.
+- `tests/node/magic-link.test.ts` — sign-in links through the real route and
+  Better Auth on a throwaway database: delivery over SMTP, new and existing
+  users, reuse, expiry, foreign destinations, registration gates and send failures.
+- `tests/jest/components/auth/forms/LoginForm.magic-link.test.tsx` and
+  `tests/jest/emails/magic-link.test.ts` — the form and the email in every locale.
 
 ## Runtime provider readiness
 
 The auth route evaluates the resolved server `AUTH_CONFIG` together with the runtime environment before invoking Better Auth providers. `GET /api/auth/readiness` returns only a safe status and the methods that can actually be offered (`availableMethods`); it never returns credential values or detailed credential diagnostics. Login screens use this endpoint, including the configured Next.js `basePath`, and render loading, unavailable, or error states instead of buttons that are known to fail.
 
-In production, email OTP requires a valid `RESEND_API_KEY` and a non-placeholder `EMAIL_FROM` on a verified domain; the console provider is development-only. Google requires a valid `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Requests for unavailable providers receive a non-secret `503 AUTH_METHOD_UNAVAILABLE` response before provider code runs, while the server log records safe diagnostic codes and remediation messages.
+In production, email OTP and sign-in links require a valid `RESEND_API_KEY` and a non-placeholder `EMAIL_FROM` on a verified domain; the console provider is development-only. Google requires a valid `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Requests for unavailable providers receive a non-secret `503 AUTH_METHOD_UNAVAILABLE` response before provider code runs, while the server log records safe diagnostic codes and remediation messages.
 
 `auth.methods` remains the list of methods advertised by the UI. In production it also decides the email/password API while `auth.emailAndPassword.enabled` is undeclared (see above): declare `true` to keep those endpoints or `false` to disable them everywhere, and `auth.providers.google.enabled: false` to disable Google endpoints. Session inspection and sign-out remain available even when no new login method is ready, so existing sessions can still be inspected and ended.
 

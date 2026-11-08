@@ -130,7 +130,7 @@ Registration mode restrictions are enforced at multiple layers:
 
 6. **Sign-up request** (`lib/auth/registration-guard-plugin.ts`, before `/sign-up/*` in Better Auth): refuses sign-up in `invitation-only` once the bootstrap is over, unless the request runs inside the signup context `/api/v1/auth/signup-with-invite` sets after validating the invitation on the server. A token sent by the client (header or query) is not taken as an invitation.
 
-7. **Sign-in code request** (`lib/auth/registration-guard-plugin.ts`, before `/email-otp/send-verification-otp`): in `domain-restricted` and `domain-open`, a `sign-in` code for an address outside `allowedDomains` is refused before any email is sent.
+7. **Sign-in code or link request** (`lib/auth/registration-guard-plugin.ts`, before `/email-otp/send-verification-otp` and `/sign-in/magic-link`): in `domain-restricted` and `domain-open`, a `sign-in` code or a sign-in link for an address outside `allowedDomains` is refused before any email is sent. The first use of a link creates the account through the same `user.create.before` hook as a code, so `invitation-only` applies when the link is opened: a new address without a pending invitation lands on the error page with `SIGNUP_RESTRICTED`.
 
 A sign-up that fails afterwards because the new user's team could not be created (`TEAM_CREATION_FAILED`, `500`) removes the user, but the `after` hook runs when the user is already committed: an email sign-up has already sent its verification email (its link finds no user) and set the session cookies, and the session cookie cache (when enabled) still answers for its `maxAge` (5 minutes by default) wherever it is read without skipping the cache. The API routes skip it, so every API request answers `401` at once.
 

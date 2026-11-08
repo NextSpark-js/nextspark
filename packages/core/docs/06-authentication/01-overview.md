@@ -14,6 +14,7 @@ NextSpark implements a comprehensive authentication system powered by Better Aut
 ### Authentication Methods
 
 - **Email one-time code (OTP)** - Passwordless sign-in with a 6-digit code sent by email; part of the default preset
+- **Sign-in link (magic link)** - Passwordless sign-in with a single-use link sent by email (opt-in via `auth.methods`)
 - **Google OAuth** - Social authentication with automatic profile mapping; part of the default preset
 - **Email/Password** - Traditional authentication with email verification (opt-in via `auth.methods`)
 - **API Keys** - Scope-based authentication for external API clients
