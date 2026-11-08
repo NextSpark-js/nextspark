@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The mobile template and `create-nextspark-app` declare `react-native` `0.88.1` and `react-native-safe-area-context` `~5.11.1`, the versions Expo SDK 58 now lists, and the template's `tsconfig.json` includes `nativewind-env.d.ts`, so `expo-doctor` reports nothing on a new project and does not rewrite the file. (#286)
+
 ## [0.1.0-beta.201] - 2026-11-06
 
 ### Changed

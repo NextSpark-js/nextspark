@@ -109,7 +109,7 @@ export const VERSIONS = {
   EXPO: '~58.0.14',
   REACT: '19.3.0',
   TYPES_REACT: '~19.3.0',
-  REACT_NATIVE: '0.88.0',
+  REACT_NATIVE: '0.88.1',
   TYPESCRIPT: '^5.3.0',
   // Expo SDK 58 lists typescript ~6.0.3, jest ~30.5.2 and @types/jest 30.0.0; the web project keeps TYPESCRIPT
   TYPESCRIPT_MOBILE: '~6.0.3',
@@ -133,7 +133,7 @@ export const VERSIONS = {
   // React Native modules
   RN_GESTURE_HANDLER: '~3.3.0',
   RN_REANIMATED: '4.7.1',
-  RN_SAFE_AREA: '~5.10.1',
+  RN_SAFE_AREA: '~5.11.1',
   RN_SCREENS: '~4.30.0',
   RN_SVG: '15.16.0',
   RN_WEB: '~0.21.4',
