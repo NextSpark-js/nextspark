@@ -8,13 +8,18 @@ import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 
 /**
  * The command that runs the jobs worker (#275): the core entry under tsx, which loads the project's TypeScript
- * handlers and tsconfig paths, with `server-only` resolved to its empty react-server build.
+ * handlers and tsconfig paths, with `server-only` made an empty module.
  */
 export function workerCommand(coreDir: string, projectRoot: string): { command: string; args: string[]; env: NodeJS.ProcessEnv } {
   const tsx = createRequire(import.meta.url).resolve('tsx');
   return {
     command: process.execPath,
-    args: ['--conditions=react-server', '--import', pathToFileURL(tsx).href, join(coreDir, 'scripts', 'jobs', 'worker.mjs')],
+    args: [
+      '--import', pathToFileURL(tsx).href,
+      // after tsx, so it sees `server-only` first
+      '--import', pathToFileURL(join(coreDir, 'scripts', 'jobs', 'server-only-stub.mjs')).href,
+      join(coreDir, 'scripts', 'jobs', 'worker.mjs'),
+    ],
     env: {
       ...process.env,
       NEXTSPARK_CORE_DIR: coreDir,

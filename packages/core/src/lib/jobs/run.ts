@@ -3,8 +3,8 @@
  *
  * What `nextspark worker` runs: reads the project's `jobs` config, registers the Scheduled Actions handlers,
  * starts the pg-boss worker and stops it cleanly on SIGTERM or SIGINT. Needs the project's registries to be
- * resolvable (the CLI starts it with tsx and the project tsconfig) and `server-only` to resolve to its empty
- * react-server build (`--conditions=react-server`).
+ * resolvable (the CLI starts it with tsx and the project tsconfig) and `server-only` to be an empty module
+ * (scripts/jobs/server-only-stub.mjs).
  *
  * @module core/lib/jobs/run
  */
@@ -62,7 +62,7 @@ export async function runWorkerProcess(options: RunWorkerOptions = {}): Promise<
   }
 
   let stopping = false
-  const stop = async (signal: NodeJS.Signals): Promise<void> => {
+  const stop = async (signal: (typeof SIGNALS)[number]): Promise<void> => {
     if (stopping) return
     stopping = true
     console.log(`[Jobs] ${signal} received, finishing the running jobs...`)

@@ -6,10 +6,11 @@ import { test } from 'node:test'
 
 import { workerBlocker, workerCommand } from '../src/commands/worker.js'
 
-test('the worker runs the core entry under tsx with the project tsconfig and the react-server condition', () => {
+test('the worker runs the core entry under tsx with the project tsconfig and an empty server-only', () => {
   const { args, env } = workerCommand('/core', '/project')
-  assert.ok(args.includes('--conditions=react-server'))
-  assert.equal(args[args.indexOf('--import') + 1].startsWith('file://'), true)
+  const preloads = args.filter((_, i) => args[i - 1] === '--import')
+  assert.equal(preloads.length, 2)
+  assert.ok(preloads[1].endsWith('server-only-stub.mjs'), 'the stub is registered after tsx')
   assert.equal(args.at(-1), join('/core', 'scripts', 'jobs', 'worker.mjs'))
   assert.equal(env.TSX_TSCONFIG_PATH, join('/project', 'tsconfig.json'))
   assert.equal(env.NEXTSPARK_CORE_DIR, '/core')
