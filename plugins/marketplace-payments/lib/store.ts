@@ -168,15 +168,16 @@ export async function getSellerAccessToken(accountId: string): Promise<string | 
   return row ? decryptToken(row.accessTokenEnc, tokenKeyring(), accessTokenContext(accountId)) : null
 }
 
-/** A disconnected seller keeps its row and its payments, and loses its tokens. */
+/** A disconnected seller keeps its row and its payments, and loses its tokens. One statement: atomic, in a webhook's transaction or alone. */
 async function disconnect(where: string, params: unknown[]): Promise<void> {
-  await withServiceTransaction(async () => {
-    const accounts = await queryRows<{ id: string }>(
-      `UPDATE public."marketplace_accounts" SET status = 'disconnected', "chargesEnabled" = false, "payoutsEnabled" = false, "updatedAt" = now() WHERE ${where} RETURNING id`,
-      params
-    )
-    await query(`DELETE FROM public."marketplace_seller_credentials" WHERE "accountId" = ANY($1::text[])`, [accounts.map(account => account.id)])
-  })
+  await query(
+    `WITH disconnected AS (
+       UPDATE public."marketplace_accounts" SET status = 'disconnected', "chargesEnabled" = false, "payoutsEnabled" = false, "updatedAt" = now()
+       WHERE ${where} RETURNING id
+     )
+     DELETE FROM public."marketplace_seller_credentials" WHERE "accountId" IN (SELECT id FROM disconnected)`,
+    params
+  )
 }
 
 export const disconnectTeamSeller = (teamId: string, provider: MarketplaceProvider) => disconnect(`"teamId" = $1 AND provider = $2`, [teamId, provider])

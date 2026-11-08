@@ -68,7 +68,7 @@ function logFailure(provider: string, stage: string, error: unknown): void {
   console.error(`[marketplace-payments] ${provider} webhook ${stage} failed (${error instanceof Error ? error.name : 'Error'})`)
 }
 
-/** Runs a verification; returns false on a bad signature and rethrows nothing else as success. */
+/** Runs a verification: true only when it did not throw, whatever it threw. */
 function passes(provider: string, verify: () => void): boolean {
   try {
     verify()
