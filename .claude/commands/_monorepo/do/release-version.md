@@ -20,7 +20,7 @@ Read `.claude/commands/_monorepo/how-to/releases/release-version.md` completely 
 
 - Clean git working directory
 - On main/master branch
-- `core.version.json` exists
+- `packages/core/package.json` exists (it holds the current version)
 
 ### Semantic Versioning
 
@@ -33,11 +33,11 @@ Read `.claude/commands/_monorepo/how-to/releases/release-version.md` completely 
 ### Release Commands
 
 ```bash
-# Update version file
-echo '{ "version": "X.Y.Z" }' > core.version.json
+# Bump every package version
+scripts/packages/version.sh <major|minor|patch>
 
 # Commit and tag
-git add core.version.json
+git add packages/*/package.json plugins/*/package.json
 git commit -m "chore: release vX.Y.Z"
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
 

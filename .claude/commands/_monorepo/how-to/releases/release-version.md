@@ -23,19 +23,16 @@ git rev-parse --abbrev-ref HEAD
 Must be 'main' or 'master'. If on different branch:
 > Releases must be from main/master branch.
 
-### Check 3: Version File Exists
+### Check 3: Version Source Exists
 
-Check for `core.version.json`. If doesn't exist, create:
-```json
-{ "version": "0.0.0" }
-```
+The current version is the `version` of `packages/core/package.json`. If it is missing, stop.
 
 ## Step-by-Step Process
 
 ### Step 1: Get Current Version
 
 ```bash
-cat core.version.json
+node -p "require('./packages/core/package.json').version"
 ```
 
 ### Step 2: Analyze Changes
@@ -85,11 +82,11 @@ else → PATCH
 ### Step 6: Execute Release
 
 ```bash
-# Update version file
-echo '{ "version": "X.Y.Z" }' > core.version.json
+# Bump every package version (a type, not a number)
+scripts/packages/version.sh <major|minor|patch>
 
 # Commit version change
-git add core.version.json && git commit -m "chore: release vX.Y.Z"
+git add packages/*/package.json plugins/*/package.json && git commit -m "chore: release vX.Y.Z"
 
 # Create tag
 git tag -a vX.Y.Z -m "Release vX.Y.Z"

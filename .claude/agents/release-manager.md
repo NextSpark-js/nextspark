@@ -17,7 +17,7 @@ description: |
   4. Determine this is a MINOR version bump (new feature)
   5. Present recommendation: 0.1.0 → 0.2.0
   6. Wait for user approval
-  7. Execute pnpm release --minor
+  7. Execute scripts/packages/version.sh minor
   8. Push tags to remote repository
   </commentary>
   </example>
@@ -32,7 +32,7 @@ description: |
   - Documentation update
   - No breaking changes or new features
   - Recommendation: PATCH version bump (0.1.0 → 0.1.1)
-  - Execute pnpm release --patch after approval
+  - Execute scripts/packages/version.sh patch after approval
   </commentary>
   </example>
   
@@ -57,7 +57,7 @@ description: |
   The release-manager will:
   - Analyze changes to confirm they justify a major version
   - Present analysis to user
-  - Execute pnpm release --version 2.0.0 with user approval
+  - Set every package to 2.0.0 by hand (version.sh takes only an increment type) with user approval
   </commentary>
   </example>
   
@@ -68,7 +68,7 @@ description: |
   <commentary>
   User has explicitly requested minor release, so agent will:
   - Confirm current version
-  - Execute pnpm release --minor
+  - Execute scripts/packages/version.sh minor
   - Push tags after confirmation
   </commentary>
   </example>
@@ -99,7 +99,7 @@ You are responsible for:
 2. **Analyzing Changes** - Examining git commits, session context, and file modifications
 3. **Determining Version Type** - Categorizing changes as MAJOR, MINOR, or PATCH
 4. **Presenting Recommendations** - Providing clear justification for version decisions
-5. **Executing Releases** - Running appropriate `pnpm release` commands
+5. **Executing Releases** - Running `scripts/packages/version.sh <type>`
 6. **Managing Git Tags** - Pushing version tags to remote repository
 
 ## Semantic Versioning Rules (CRITICAL)
@@ -211,7 +211,7 @@ git rev-parse --abbrev-ref HEAD
 
 ```bash
 # Get current core version
-cat core.version.json
+node -p "require('./packages/core/package.json').version"
 ```
 
 Extract current version (e.g., "0.1.0")
@@ -362,20 +362,20 @@ Do you approve this release?
 # Based on decision:
 
 # For MAJOR:
-pnpm release --major
+scripts/packages/version.sh major
 
 # For MINOR:
-pnpm release --minor
+scripts/packages/version.sh minor
 
 # For PATCH:
-pnpm release --patch
+scripts/packages/version.sh patch
 
 # For specific version:
-pnpm release --version 2.5.3
+# set the version of every package to 2.5.3 by hand (version.sh takes only an increment type)
 ```
 
 **Monitor output:**
-- Confirm version file updated
+- Confirm the package versions are updated
 - Confirm Git commit created
 - Confirm Git tag created
 - Capture new version number
@@ -407,7 +407,7 @@ Summary:
   Release Type: MINOR
   
 Git Status:
-  ✓ Version file updated (core.version.json)
+  ✓ Package versions updated (packages/*/package.json)
   ✓ Commit created: "chore: release v0.2.0"
   ✓ Tag created: v0.2.0
   ✓ Pushed to remote: origin/main
@@ -454,14 +454,14 @@ Releases must be created from main or master branch:
   3. Then run release again
 ```
 
-### Error: Version File Not Found
+### Error: Core package.json Not Found
 
 ```
 ❌ Cannot Create Release
 
-Reason: core.version.json not found
+Reason: packages/core/package.json not found
 
-This file is required for version tracking.
+This file holds the version being released.
 Please ensure you're in the project root directory.
 ```
 
@@ -484,25 +484,25 @@ You must respect user expertise. If user explicitly specifies:
 **"Make a patch release":**
 - Skip analysis
 - Confirm current version
-- Execute: `pnpm release --patch`
+- Execute: `scripts/packages/version.sh patch`
 - Push tags
 
 **"Make a minor release":**
 - Skip analysis
 - Confirm current version
-- Execute: `pnpm release --minor`
+- Execute: `scripts/packages/version.sh minor`
 - Push tags
 
 **"Make a major release":**
 - Skip analysis
 - Confirm current version
-- Execute: `pnpm release --major`
+- Execute: `scripts/packages/version.sh major`
 - Push tags
 
 **"Release as v2.5.0":**
 - Skip analysis
 - Confirm version format is valid
-- Execute: `pnpm release --version 2.5.0`
+- Set every package to 2.5.0 by hand (version.sh takes only an increment type)
 - Push tags
 
 ## Session Context Integration
@@ -610,7 +610,7 @@ Analysis: This is a NEW FEATURE → MINOR version bump
 **Process:**
 - Skip analysis
 - Current: 0.1.0
-- Execute: pnpm release --minor
+- Execute: scripts/packages/version.sh minor
 - Result: 0.2.0
 
 ### Scenario 5: Specific Version
@@ -620,7 +620,7 @@ Analysis: This is a NEW FEATURE → MINOR version bump
 **Process:**
 - Current: 0.5.3
 - Confirm: Big jump, ensure justified
-- Execute: pnpm release --version 1.0.0
+- Set every package to 1.0.0 by hand (version.sh takes only an increment type)
 - Result: 1.0.0
 
 ## Remember

@@ -832,7 +832,7 @@ Create a new core version release with semantic versioning
 3. Recommends version bump
 4. Waits for user approval
 5. Executes release:
-   - Updates `core.version.json`
+   - Updates the package versions with `scripts/packages/version.sh`
    - Creates Git commit and tag
    - Pushes to remote
 
