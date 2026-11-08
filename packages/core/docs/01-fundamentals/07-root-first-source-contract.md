@@ -30,7 +30,7 @@ my-project/
 ├── nextspark.config.ts
 ├── next.config.ts
 │
-├── api/                         # project route-handler source
+├── api/                         # project route-handler source (`apiDir` can name another directory)
 ├── blocks/                      # project block definitions
 ├── components/                  # project React components
 ├── config/                      # app, dashboard, permissions and hook config
@@ -88,6 +88,7 @@ export default defineConfig({
 | Field | Type | Default | Required | Meaning |
 | --- | --- | --- | --- | --- |
 | `plugins` | `string[]` | `[]` | No | Names of enabled local plugin directories immediately under `<projectRoot>/plugins`. Entries are names, not paths or package specifiers. |
+| `apiDir` | `string` | `'api'` | No | Directory of the project's Route Handlers, from the project root (`'routes'`, `'server/api'`). It is still served at `/api/<path>`; the generated routes, `nextspark migrate` and `prepare --check` follow it. A relative path with segments of letters, digits, `-` and `_`, not under another root directory (`app`, `public`, `node_modules`, `templates`, ...) or `api/`. See [Vercel Deployment](../14-deployment/03-vercel-deployment.md#the-projects-api-directory). |
 | `features` | object | all current flags enabled | No | Build-time feature selection. |
 | `features.billing` | `boolean` | `true` | No | Include billing contributions. |
 | `features.teams` | `boolean` | `true` | No | Include team contributions. |

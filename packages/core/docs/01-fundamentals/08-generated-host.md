@@ -18,7 +18,7 @@ The module comes from one of three layers, the higher one replacing the lower at
 | --- | --- | --- |
 | core | `@nextsparkjs/core/routes/*`, listed in core's route manifest | the framework's pages, layouts and APIs |
 | plugin | `plugins/<name>/templates/**` and `plugins/<name>/api/**` | `templates/**` at the same path; `api/**` at `/api/plugins/<name>/**` |
-| project | `templates/**` and `api/**` at the project root | `templates/**` at the same path; `api/**` at `/api/**` |
+| project | `templates/**` and `api/**` at the project root (`apiDir` in `nextspark.config.ts` names another directory for `api/`) | `templates/**` at the same path; `api/**` at `/api/**` |
 
 Next.js reads segment config (`dynamic`, `revalidate`, ...) statically from the route file itself, which is why the facade repeats it as a literal. A source module whose segment config is not a literal, or whose exports Next does not accept for that kind of file, stops generation with the file and export named.
 

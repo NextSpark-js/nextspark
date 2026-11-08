@@ -622,7 +622,7 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
 
   // Root-first route source: api/** — docs/presets live next to the route handler and follow it to
   // its URL: the project's api/ is served at /api/<path> (api/ai/usage -> /api/ai/usage).
-  const apiDir = join(config.projectSourceDir, 'api')
+  const apiDir = join(config.projectSourceDir, config.apiDir ?? 'api')
   await processTree(apiDir, (routeDir) =>
     '/api/' + normalizePath(relative(apiDir, routeDir))
   )

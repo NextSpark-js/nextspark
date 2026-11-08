@@ -12,6 +12,7 @@ describe('nextspark.config.ts source contract', () => {
       errors: [],
       config: {
         plugins: [],
+        apiDir: 'api',
         features: {
           billing: true,
           teams: true,
@@ -183,5 +184,33 @@ describe('nextspark.config.ts source contract', () => {
     ])
     expect(validateNextSparkConfig({ sitemap: 'on' })).toEqual({ valid: false, errors: ['sitemap must be an object; received string.'] })
     expect(validateNextSparkConfig({ sitemap: { urls: '/a' } })).toEqual({ valid: false, errors: ['sitemap.urls must be an array of paths; received string.'] })
+  })
+
+  it('takes apiDir as a relative directory of the project and refuses anything else', () => {
+    const accepted = (value: unknown) => validateNextSparkConfig({ apiDir: value })
+    for (const value of ['api', 'routes', 'server/api', 'my_routes/v2-api']) {
+      expect(accepted(value)).toMatchObject({ valid: true, config: { apiDir: value } })
+    }
+
+    const shape = /apiDir must be a relative path inside the project/
+    for (const value of ['', '/routes', 'routes/', 'a//b', '.', './routes', '..', '../routes', 'server/../routes', 'server\\api', 'C:/routes', '.hidden', '(group)', '[id]', 'with space']) {
+      const result = accepted(value)
+      expect(result.valid).toBe(false)
+      expect(result.errors).toEqual([expect.stringMatching(shape)])
+    }
+
+    for (const value of ['app', 'pages', 'src', 'public', 'node_modules', 'templates', 'plugins', 'lib/api', 'App', 'config/routes']) {
+      const result = accepted(value)
+      expect(result.valid).toBe(false)
+      expect(result.errors).toEqual([expect.stringMatching(/apiDir cannot be inside/)])
+    }
+
+    for (const value of ['api/routes', 'API']) {
+      const result = accepted(value)
+      expect(result.valid).toBe(false)
+      expect(result.errors).toEqual([expect.stringMatching(/apiDir cannot be a directory under "api\/"/)])
+    }
+
+    expect(accepted(3)).toEqual({ valid: false, errors: ['apiDir must be a string; received number.'] })
   })
 })

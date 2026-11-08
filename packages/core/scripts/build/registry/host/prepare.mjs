@@ -192,7 +192,7 @@ export async function predictHost(config, { devStatus = false } = {}) {
     const invalid = await validateFiles(appFiles, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
     diagnostics.push(...invalid)
     checks.grammar = invalid.length > 0 ? 'failed' : 'passed'
-    const ownership = preflight({ hostRoot: config.hostRoot, previous: readGeneration(config.hostRoot), files: appFiles })
+    const ownership = preflight({ hostRoot: config.hostRoot, previous: readGeneration(config.hostRoot), files: appFiles, apiDir: config.project?.apiDir })
     diagnostics.push(...ownership)
     checks.ownership = ownership.length > 0 ? 'failed' : 'passed'
   }
@@ -264,7 +264,7 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
     const inputs = config.inputs ? config.inputs({ manifest }) : null
     const record = generationRecord({ mode, versions: config.versions, inputs, files })
     try {
-      const published = publishGeneration({ hostRoot: config.hostRoot, previous, files, record })
+      const published = publishGeneration({ hostRoot: config.hostRoot, previous, files, record, apiDir: config.project?.apiDir })
       const contractsResult = publishContractsStep(config, contracts)
       // Once the generation is out: an unchanged copy of an earlier proxy or instrumentation template becomes the
       // current one, and the notices about what that copy lacked go with it
@@ -519,7 +519,7 @@ export function readCacheComponents(projectRoot) {
 
 /**
  * The host config of a real root-first project: core routes from the installed core's
- * manifest, enabled plugins from nextspark.config.ts, project `templates/` and `api/`,
+ * manifest, enabled plugins from nextspark.config.ts, project `templates/` and `api/` (or `apiDir`),
  * registries from the registry build.
  */
 export function projectHostConfig({ projectRoot = process.cwd(), env = process.env } = {}) {
@@ -550,7 +550,14 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
     get plugins() {
       return currentPlugins()
     },
-    project: { root: config.projectRoot, importBase: '@', label: '.' },
+    project: {
+      root: config.projectRoot,
+      importBase: '@',
+      label: '.',
+      get apiDir() {
+        return currentConfig().apiDir
+      },
+    },
     // The project's global stylesheet: the root layout imports it (a project without one has none to import).
     get stylesheet() {
       return existsSync(join(config.projectRoot, 'styles', 'globals.css')) ? '@/styles/globals.css' : undefined
@@ -586,7 +593,7 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
       const enabled = currentPlugins()
       return hashInputs({
         root: config.projectRoot,
-        dirs: [...PROJECT_INPUT_DIRS, ...enabled.filter(plugin => plugin.kind === 'local').map(plugin => relative(config.projectRoot, plugin.root))],
+        dirs: [...PROJECT_INPUT_DIRS.map(dir => (dir === 'api' ? currentConfig().apiDir : dir)), ...enabled.filter(plugin => plugin.kind === 'local').map(plugin => relative(config.projectRoot, plugin.root))],
         files: PROJECT_INPUT_FILES,
         extra: {
           'core-routes': manifest?.hash ?? 'none',
@@ -601,7 +608,8 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
     },
     watch: {
       // Not tests/cypress/e2e: a spec saved while tests run would regenerate the host; --check still sees it.
-      dirs: ['templates', 'api', 'plugins', 'entities', 'config', 'blocks', 'messages', 'emails', 'auth', 'docs/public', 'docs/superadmin'].map(dir => join(config.projectRoot, dir)),
+      // ponytail: apiDir as of the start of `nextspark dev`; a dev server follows an edited apiDir once restarted.
+      dirs: ['templates', config.apiDir, 'plugins', 'entities', 'config', 'blocks', 'messages', 'emails', 'auth', 'docs/public', 'docs/superadmin'].map(dir => join(config.projectRoot, dir)),
       files: [
         join(config.projectRoot, 'nextspark.config.ts'),
         ...[coreRouteManifestPath(coreRoot), coreRouteVariantsPath(coreRoot)].filter(Boolean),

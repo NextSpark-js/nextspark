@@ -24,6 +24,12 @@ export interface NextSparkConfig {
   /** Local plugin names or scoped package names resolved from the project. */
   plugins?: string[]
 
+  /**
+   * Directory of the project's Route Handlers, from the project root (`routes`, `server/api`). Default `api`.
+   * Vercel also builds every file of a root `api/` as a function of its own; see docs/14-deployment/03-vercel-deployment.
+   */
+  apiDir?: string
+
   /** Compiler feature flags. Omitted flags default to true. */
   features?: NextSparkFeatureConfig
 
@@ -74,9 +80,10 @@ export interface NextSparkConfig {
   }
 }
 
-export interface ResolvedNextSparkConfig extends Omit<NextSparkConfig, 'plugins' | 'features'> {
+export interface ResolvedNextSparkConfig extends Omit<NextSparkConfig, 'plugins' | 'features' | 'apiDir'> {
   plugins: string[]
   features: Required<NextSparkFeatureConfig>
+  apiDir: string
 }
 
 export type NextSparkConfigValidationResult =
@@ -90,8 +97,18 @@ const DEFAULT_FEATURES: Required<NextSparkFeatureConfig> = {
   aiChat: true,
 }
 
+const DEFAULT_API_DIR = 'api'
+
+/** Root directories with another owner (Next.js, the generated host, the project layout): `apiDir` cannot be, or live in, one of them. */
+const RESERVED_API_DIRS = new Set([
+  'app', 'pages', 'src', 'public', 'node_modules', 'dist', 'build', 'out',
+  'templates', 'entities', 'config', 'blocks', 'components', 'hooks', 'lib', 'services', 'messages', 'styles',
+  'emails', 'auth', 'plugins', 'migrations', 'scripts', 'tests', 'docs',
+])
+
 const ROOT_FIELDS = new Set([
   'plugins',
+  'apiDir',
   'features',
   'template',
   'database',
@@ -272,6 +289,25 @@ function validateSitemap(value: unknown, errors: string[]): void {
   validateSitemapPaths(value.exclude, 'sitemap.exclude', true, errors)
 }
 
+function validateApiDir(value: unknown, errors: string[]): void {
+  if (value === undefined || value === DEFAULT_API_DIR) return
+  if (typeof value !== 'string') {
+    errors.push(`apiDir must be a string; received ${receivedType(value)}.`)
+    return
+  }
+  // Letters, digits, - and _ per segment: this also leaves out absolute paths, `.` and `..`, backslashes and Next's route syntax
+  if (!/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(value)) {
+    errors.push(`apiDir must be a relative path inside the project, such as "routes" or "server/api": segments of letters, digits, - and _ separated by /, with no leading or trailing slash, "." or "..". Received ${JSON.stringify(value)}.`)
+    return
+  }
+  const first = value.split('/')[0].toLowerCase()
+  if (RESERVED_API_DIRS.has(first)) {
+    errors.push(`apiDir cannot be inside "${first}/", a project root directory with another use. Received ${JSON.stringify(value)}.`)
+  } else if (first === DEFAULT_API_DIR) {
+    errors.push(`apiDir cannot be a directory under "api/": Vercel builds everything under a root api/ as functions, which is what moving it avoids. Received ${JSON.stringify(value)}.`)
+  }
+}
+
 function validateBilling(value: unknown, errors: string[]): void {
   if (value === undefined) return
   if (!isRecord(value)) {
@@ -306,6 +342,7 @@ export function validateNextSparkConfig(value: unknown): NextSparkConfigValidati
   }
 
   validatePlugins(value.plugins, errors)
+  validateApiDir(value.apiDir, errors)
   validateFeatures(value.features, errors)
   validateTemplate(value.template, errors)
   validateDatabase(value.database, errors)
@@ -323,6 +360,7 @@ export function validateNextSparkConfig(value: unknown): NextSparkConfigValidati
     config: {
       ...config,
       plugins: [...(config.plugins ?? [])],
+      apiDir: config.apiDir ?? DEFAULT_API_DIR,
       features: { ...DEFAULT_FEATURES, ...config.features },
     },
   }

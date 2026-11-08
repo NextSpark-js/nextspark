@@ -171,6 +171,37 @@ Output Directory: .next
 Node Version: 22.x
 ```
 
+### The Project's API Directory
+
+Vercel treats a root `api/` directory as a directory of its own functions, also in a Next.js project with a custom Build Command. A project that keeps its Route Handlers in the default `api/` gets each file built twice: once by `next build`, through the generated route under `src/app/api/`, and once more as a separate function. Builds take much longer (the time grows with the number of files), and the deployment carries functions the application does not use.
+
+Any other directory name avoids it. Vercel only looks at the `api/` directory at the root of the project.
+
+To move the directory:
+
+1. Set `apiDir` in `nextspark.config.ts`:
+
+   ```ts
+   export default defineConfig({
+     apiDir: 'routes', // or 'server/api'
+   })
+   ```
+
+2. Move the files, for example with `git mv api routes`.
+3. Replace the imports of the old location (`@/api/` becomes `@/routes/`).
+4. Run `pnpm nextspark prepare`. A route file left in `api/` stops it with `NS_HOST_API_DIR_LEFTOVER`.
+5. Restart `nextspark dev` if it was running.
+
+The URLs do not change: the directory is still served at `/api/<path>`. `apiDir` is a relative path inside the project with segments of letters, digits, `-` and `_`. It cannot be, or live under, a root directory with another use (`app`, `public`, `node_modules`, `templates`, `lib` and the like), or `api/` itself.
+
+The other options of `vercel.json` do not solve this:
+
+| Option | Why not |
+| --- | --- |
+| `builds` with `@vercel/next` | It turns the detection off, but Vercel recommends against the property, it cannot be combined with `functions`, and nothing guarantees that your Build Command still runs, so a deployment could skip a step such as its migrations. |
+| `.vercelignore` with `api/` | It removes the files the generated routes under `src/app/api/` import, so the build fails. |
+| `functions` and `excludeFiles` | They configure a function that was already detected. `excludeFiles` leaves files out of its bundle. No option takes a path out of the detection. |
+
 ---
 
 ## Deployment Scopes

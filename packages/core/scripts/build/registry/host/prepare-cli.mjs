@@ -178,7 +178,7 @@ async function main() {
       else if (error?.parseError) console.error('[prepare] Next.js shows the syntax error in the browser; src/app is regenerated once the source parses again.')
     },
   })
-  console.log('[prepare] Watching templates/, api/, plugins/, entities/, config/ and nextspark.config.ts for changes.')
+  console.log(`[prepare] Watching templates/, ${config.project?.apiDir ?? 'api'}/, plugins/, entities/, config/ and nextspark.config.ts for changes.`)
   const stop = () => {
     watcher.close()
     process.exit(0)

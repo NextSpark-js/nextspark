@@ -37,6 +37,7 @@ export function getConfig(projectRoot = null) {
     pluginDirs: pluginSources.map(plugin => plugin.sourceDir),
     plugins: pluginSources.map(plugin => plugin.name),
     features: nextsparkConfig.features,
+    apiDir: nextsparkConfig.apiDir,
     billing: nextsparkConfig.billing,
     sitemap: nextsparkConfig.sitemap,
     buildMode: process.argv.includes('--build'),

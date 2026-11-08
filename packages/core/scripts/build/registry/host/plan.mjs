@@ -10,7 +10,7 @@
  *   (`definePlugin({ capabilities })`, see discovery/plugin-capabilities.mjs): pages and layouts need
  *   'web', Route Handlers need 'server'; a file in a surface the plugin did not declare is a diagnostic
  *   naming the plugin, the capability and the file;
- * - project: `templates/**` (same path) and `api/**` (target `api/**`).
+ * - project: `templates/**` (same path) and `api/**`, or the directory `apiDir` names (target `api/**`).
  *
  * A higher layer replaces a lower one at the same route file (same directory, file stem and
  * cache-mode suffix). Everything else that would put two modules at one route is a collision,
@@ -78,6 +78,7 @@ export const PLAN_DIAGNOSTICS = Object.freeze({
   PAGE_ROUTE_CONFLICT: 'NS_HOST_PAGE_ROUTE_CONFLICT',
   SOURCE_SYMLINK: 'NS_HOST_SOURCE_SYMLINK',
   API_NAMESPACE: 'NS_HOST_API_NAMESPACE',
+  API_DIR_LEFTOVER: 'NS_HOST_API_DIR_LEFTOVER',
   URL_CONFLICT: 'NS_HOST_URL_CONFLICT',
   DYNAMIC_SEGMENT_CONFLICT: 'NS_HOST_DYNAMIC_SEGMENT_CONFLICT',
 })
@@ -212,11 +213,11 @@ function describe(route) {
 
 const API_V1 = /^api\/v1(\/|$)/
 const API_PLUGINS = /^api\/plugins(\/|$)/
-const PROJECT_API_HINT =
-  'would be served in a namespace it does not own: core owns /api/v1/**, the project\'s api/ is served at /api/<path> and plugins at /api/plugins/<plugin>/**. ' +
+const projectApiHint = apiDir =>
+  `would be served in a namespace it does not own: core owns /api/v1/**, the project's ${apiDir}/ is served at /api/<path> and plugins at /api/plugins/<plugin>/**. ` +
   'Move it outside them, or to templates/api/v1/... to replace an existing core route on purpose'
-const PROJECT_TEMPLATE_V1_HINT =
-  'replaces no core route: templates/api/v1/... may only override a route core has at that path (core owns /api/v1/**, so it cannot add routes there) or, at templates/api/v1/<entity>/..., a route core serves for every entity (route.ts, [id]/route.ts, [id]/child/[childType]/route.ts, [id]/child/[childType]/[childId]/route.ts) of an entity of this project; put a new route in api/ (served at /api/<path>)'
+const projectTemplateV1Hint = apiDir =>
+  'replaces no core route: templates/api/v1/... may only override a route core has at that path (core owns /api/v1/**, so it cannot add routes there) or, at templates/api/v1/<entity>/..., a route core serves for every entity (route.ts, [id]/route.ts, [id]/child/[childType]/route.ts, [id]/child/[childType]/[childId]/route.ts) of an entity of this project; put a new route in ' + `${apiDir}/ (served at /api/<path>)`
 /** The first segments core serves under `api/v1/` (`users`, `billing`, ...): its API namespaces, never an entity's. */
 export const coreApiNamespaces = coreRoutes => new Set(coreRoutes.map(route => /^api\/v1\/([^/[][^/]*)\//.exec(route.target)?.[1]).filter(Boolean))
 export const coreApiCollisionHint = name =>
@@ -250,7 +251,7 @@ function dynamicKind(segment) {
  *   Route Handler at one of their item URLs (`<basePath>/<one dynamic segment>`, any route group, cache mode or param name) is left out, with a notice
  * @param {{ name: string, root: string, importBase: string, capabilities?: string[] }[]} [input.plugins] - enabled plugins; a plugin
  *   that declares no `capabilities` is legacy (server + web + build)
- * @param {{ root: string, importBase?: string, label?: string }} input.project - project source root
+ * @param {{ root: string, importBase?: string, label?: string, apiDir?: string }} input.project - project source root; `apiDir` is its Route Handler directory (default `api`)
  * @param {string[]} [input.modes] - cache-mode file suffixes the host understands (`page.isr.tsx`)
  * @param {string[]} [input.extensions] - source extensions
  * @param {Record<string, object>} [input.webhooks] - composed webhook routes by target (`webhookRoutes`)
@@ -316,6 +317,7 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], with
   const servedSlots = new Set(candidates.map(route => slotOf(route)))
   const projectBase = project?.importBase ?? '@'
   const projectLabel = project?.label ?? '.'
+  const apiDir = project?.apiDir ?? 'api'
   // The names core serves its own API under (`api/v1/<name>/...`, `[entity]` is the generic handler): an entity cannot take them
   const coreApiNames = coreApiNamespaces(coreRoutes)
   // `api/v1/<entity>/<rest>` where `<rest>` is a route core serves under `[entity]`: the project's per-entity override
@@ -329,9 +331,20 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], with
   }
   const projectRoutes = !project?.root ? [] : [
     ...surfaceRoutes({ dir: join(project.root, 'templates'), importBase: projectBase, surface: 'templates', toTarget: path => path, layer: 'project', label: projectLabel, pattern, diagnostics,
-      namespace: (target, path, mode) => (API_PLUGINS.test(target) && !servedSlots.has(slotKey(target, mode)) ? PROJECT_PLUGINS_HINT : API_V1.test(target) && !servedSlots.has(slotKey(target, mode)) && !entityApiOf(target, mode) ? entityApiRefusal(target) ?? PROJECT_TEMPLATE_V1_HINT : null) }),
-    ...surfaceRoutes({ dir: join(project.root, 'api'), importBase: projectBase, surface: 'api', toTarget: path => `api/${path}`, layer: 'project', label: projectLabel, pattern, diagnostics, namespace: target => (API_V1.test(target) || API_PLUGINS.test(target) ? PROJECT_API_HINT : null) }),
+      namespace: (target, path, mode) => (API_PLUGINS.test(target) && !servedSlots.has(slotKey(target, mode)) ? PROJECT_PLUGINS_HINT : API_V1.test(target) && !servedSlots.has(slotKey(target, mode)) && !entityApiOf(target, mode) ? entityApiRefusal(target) ?? projectTemplateV1Hint(apiDir) : null) }),
+    ...surfaceRoutes({ dir: join(project.root, apiDir), importBase: projectBase, surface: apiDir, toTarget: path => `api/${path}`, layer: 'project', label: projectLabel, pattern, diagnostics, namespace: target => (API_V1.test(target) || API_PLUGINS.test(target) ? projectApiHint(apiDir) : null) }),
   ]
+  // A moved API directory with routes left in api/ would serve none of them, while Vercel keeps building them as functions
+  if (project?.root && apiDir !== 'api') {
+    const leftover = walk(join(project.root, 'api')).files.filter(path => kindForFileStem(pattern.exec(path.split('/').at(-1))?.groups.name))
+    if (leftover.length > 0) {
+      diagnostics.push({
+        code: PLAN_DIAGNOSTICS.API_DIR_LEFTOVER,
+        sources: leftover.map(path => `api/${path}`),
+        message: `nextspark.config.ts sets apiDir to "${apiDir}", but api/ still has route files (${leftover.map(path => `api/${path}`).join(', ')}): move them to ${apiDir}/ or remove them`,
+      })
+    }
+  }
   for (const route of projectRoutes) route.source = route.source.replace(/^\.\//, '')
   projectRoutes.splice(0, projectRoutes.length, ...projectRoutes.filter(route => !leaveOut(route)))
   notices.push(...replaceEntityDashboards(candidates, projectRoutes.filter(route => route.specifier.startsWith(`${projectBase}/templates/`))))

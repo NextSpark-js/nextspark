@@ -27,8 +27,9 @@ export async function discoverThemes(config = DEFAULT_CONFIG) {
   const entities = existsSync(themeEntitiesPath)
     ? await discoverNestedEntities(config, themeEntitiesPath, '', 0, null, { type: 'project', name: themeName })
     : []
-  const apiPath = join(root, 'api')
-  const routeFiles = existsSync(apiPath) ? await discoverThemeRouteFiles(apiPath, themeName) : []
+  const apiDir = config.apiDir ?? 'api'
+  const apiPath = join(root, apiDir)
+  const routeFiles = existsSync(apiPath) ? await discoverThemeRouteFiles(apiPath, themeName, apiDir) : []
 
   async function optionalConfig(name, patterns) {
     const path = join(root, 'config', name)
@@ -84,7 +85,7 @@ export async function discoverThemes(config = DEFAULT_CONFIG) {
   return [theme]
 }
 
-export async function discoverThemeRouteFiles(apiPath, themeName) {
+export async function discoverThemeRouteFiles(apiPath, themeName, apiDir = 'api') {
   const routeFiles = []
   async function scanDirectory(dir, relativePath = '') {
     try {
@@ -96,7 +97,7 @@ export async function discoverThemeRouteFiles(apiPath, themeName) {
           const routePath = relativePath || '/'
           routeFiles.push({
             path: `/theme/${themeName}${routePath === '/' ? '' : `/${routePath}`}`,
-            filePath: projectImport(`api${routePath === '/' ? '/route' : `/${routePath}/route`}`),
+            filePath: projectImport(`${apiDir}${routePath === '/' ? '/route' : `/${routePath}/route`}`),
             relativePath: routePath,
             methods: await extractHttpMethods(fullPath),
             isRouteFile: true,
