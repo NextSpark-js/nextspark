@@ -7,6 +7,7 @@
 
 // Import icon names type (will be created in next step)
 import type { IconName } from './icon-map'
+import type { JobsConfig } from '../jobs/types'
 
 /** A source `i18n.detectionStrategy` can turn on. */
 export type LocaleDetectionSource = 'user_database' | 'cookie' | 'header' | 'default'
@@ -863,6 +864,9 @@ export interface AppConfig {
 
   /** Scheduled actions system configuration */
   scheduledActions?: ScheduledActionsConfig
+
+  /** Optional pg-boss worker (`nextspark worker`) on the same Postgres. Off unless `jobs.enabled` is true (#275). */
+  jobs?: JobsConfig
 
   /** Media library configuration */
   media?: MediaConfig

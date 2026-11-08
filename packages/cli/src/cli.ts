@@ -31,6 +31,7 @@ import { setupAICommand } from './commands/setup-ai.js';
 import { syncAICommand } from './commands/sync-ai.js';
 import { skillsGetCommand, skillsListCommand } from './commands/skills.js';
 import { migrateCommand } from './commands/migrate.js';
+import { workerStartCommand } from './commands/worker.js';
 
 // Read version from package.json dynamically
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -231,6 +232,12 @@ program
   .description('Run migrations with the sample data, development only (alias)')
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
   .action((opts: { envFile: boolean }) => dbSeedCommand({ envFile: opts.envFile }));
+
+// Optional pg-boss worker (a second process; off unless jobs.enabled)
+program
+  .command('worker')
+  .description('Run the optional pg-boss worker on the project database (needs pg-boss and jobs.enabled; run it next to the app)')
+  .action(workerStartCommand);
 
 // Setup AI workflow
 program
