@@ -4,7 +4,7 @@
  *
  * Idempotency: every event goes through `dedupe` (core's processWebhookEventOnce in production), which runs it at most
  * once. A Stripe event is keyed by its id. MercadoPago's body is unsigned, so its key is built from what the API
- * answered: the payment id, its status and the refunded amount. A repeated notification of the same state is a
+ * answered: the payment id, its status, the refunded amount and when it last changed. A repeated notification of the same state is a
  * duplicate, and a later change of state is new.
  */
 
@@ -213,7 +213,7 @@ export async function handleMercadoPagoWebhook(request: Request, deps: MercadoPa
     }
 
     const refunded = remote.transaction_amount_refunded ?? 0
-    const eventId = `payment:${dataId}:${remote.status}:${refunded}`
+    const eventId = `payment:${dataId}:${remote.status}:${refunded}:${remote.date_last_updated ?? ''}`
     return await deps.dedupe('marketplace:mercadopago', eventId, 'payment', () => applyMercadoPagoPayment(remote, payment, dataId, deps.store))
   } catch (error) {
     logFailure('mercadopago', 'processing', error)

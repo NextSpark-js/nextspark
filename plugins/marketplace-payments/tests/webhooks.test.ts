@@ -238,6 +238,7 @@ function mpRequest({ dataId = '555', ref = 'pay-2', type = 'payment', signature 
 const remote = (over: Partial<MercadoPagoPayment> = {}): MercadoPagoPayment => ({
   id: 555,
   status: 'approved',
+  date_last_updated: '2026-01-01T00:00:00.000Z',
   external_reference: 'pay-2',
   collector_id: 42,
   transaction_amount: 100,
@@ -270,7 +271,21 @@ test('MercadoPago webhook: the payment is read with the seller token, and a repe
   assert.equal(statuses.get('pay-2'), 'succeeded')
   await handleMercadoPagoWebhook(mpRequest(), deps)
   assert.equal(log.filter(entry => entry.startsWith('transition')).length, 1)
-  assert.deepEqual(log.filter(entry => entry.startsWith('dedupe')), ['dedupe:marketplace:mercadopago:payment:555:approved:0', 'dedupe:marketplace:mercadopago:payment:555:approved:0'])
+  assert.deepEqual(log.filter(entry => entry.startsWith('dedupe')), ['dedupe:marketplace:mercadopago:payment:555:approved:0:2026-01-01T00:00:00.000Z', 'dedupe:marketplace:mercadopago:payment:555:approved:0:2026-01-01T00:00:00.000Z'])
+})
+
+test('MercadoPago webhook: a payment that returns to a status it had is processed again', async () => {
+  let current = remote()
+  const { deps, statuses } = mpDeps()
+  deps.getPayment = async () => current
+  await handleMercadoPagoWebhook(mpRequest(), deps)
+  assert.equal(statuses.get('pay-2'), 'succeeded')
+  current = remote({ status: 'in_mediation', date_last_updated: '2026-01-02T00:00:00.000Z' })
+  await handleMercadoPagoWebhook(mpRequest(), deps)
+  assert.equal(statuses.get('pay-2'), 'disputed')
+  current = remote({ date_last_updated: '2026-01-03T00:00:00.000Z' })
+  await handleMercadoPagoWebhook(mpRequest(), deps)
+  assert.equal(statuses.get('pay-2'), 'succeeded')
 })
 
 test('MercadoPago webhook: another notification of a new state is processed', async () => {

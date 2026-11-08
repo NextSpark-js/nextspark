@@ -42,6 +42,7 @@ export interface MercadoPagoTokens {
 export interface MercadoPagoPayment {
   id: number | string
   status: string
+  date_last_updated?: string | null
   external_reference?: string | null
   collector_id?: number | string | null
   transaction_amount?: number
