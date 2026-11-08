@@ -5,14 +5,13 @@
  *
  * This file defines:
  * - entities: Entity CRUD permissions (posts, categories)
- * - features: Theme-specific feature permissions (export, import)
+ * - features: Theme-specific feature permissions
  *
  * All sections use unified format: { action: '...', roles: [...] }
  *
  * Single-user blog permissions:
  * - Owner has all permissions
  * - Team collaboration features are disabled
- * - Export/Import features enabled
  *
  * Use PermissionService.canDoAction(role, action) to check any permission.
  */

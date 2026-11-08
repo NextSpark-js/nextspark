@@ -54,8 +54,6 @@ No teams functionality. Single user owns all content.
 
 1. ✅ Can create, edit, delete posts
 2. ✅ Can publish/unpublish posts
-3. ✅ Can export posts to JSON
-4. ✅ Can import posts from JSON
-5. ✅ Cannot invite other users
-6. ✅ No team switcher visible
+3. ✅ Cannot invite other users
+4. ✅ No team switcher visible
 

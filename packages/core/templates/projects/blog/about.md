@@ -69,8 +69,6 @@ single-user
 | Analytics | ❌ | Básicas | Avanzadas |
 | SEO tools | ❌ | ❌ | ✅ |
 | Branding plataforma | ✅ | ✅ | ❌ |
-| Export JSON | ❌ | ✅ | ✅ |
-| Import JSON | ❌ | ❌ | ✅ |
 
 ### Facturación
 

@@ -47,7 +47,7 @@ export const postEntityConfig: EntityConfig = {
       sortable: true,
       filterable: true,
       bulkOperations: true,
-      importExport: true     // Export/Import feature enabled
+      importExport: false
     }
   },
   
