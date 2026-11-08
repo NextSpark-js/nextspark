@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public."marketplace_payments" (
   "teamId"             TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
   "accountId"          TEXT NOT NULL REFERENCES public."marketplace_accounts"(id) ON DELETE CASCADE,
   provider             TEXT NOT NULL CHECK (provider IN ('stripe', 'mercadopago')),
+  "providerAccountId"  TEXT NOT NULL,
   "providerCheckoutId" TEXT,
   "providerPaymentId"  TEXT,
   "amountCents"        BIGINT NOT NULL CHECK ("amountCents" > 0),

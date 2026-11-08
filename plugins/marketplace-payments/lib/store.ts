@@ -59,7 +59,7 @@ export class SellerAlreadyConnectedError extends Error {
 const ACCOUNT_COLUMNS = `id, "teamId", provider, "providerAccountId", status, "chargesEnabled", "payoutsEnabled", country, "createdAt"`
 const PAYMENT_COLUMNS = `id, provider, "amountCents"::float8 AS "amountCents", "commissionCents"::float8 AS "commissionCents", "refundedCents"::float8 AS "refundedCents", currency, description, status, "createdAt"`
 const STORED_PAYMENT = `
-  SELECT p.id, p.provider, p."accountId", a."providerAccountId", p."amountCents"::float8 AS "amountCents",
+  SELECT p.id, p.provider, p."accountId", p."providerAccountId", a."providerAccountId" AS "currentProviderAccountId", p."amountCents"::float8 AS "amountCents",
          p."commissionCents"::float8 AS "commissionCents", p.currency
   FROM public."marketplace_payments" p
   JOIN public."marketplace_accounts" a ON a.id = p."accountId"`
@@ -213,11 +213,11 @@ export async function consumeOAuthState(state: string, userId: string): Promise<
 // Payments
 // ---------------------------------------------------------------------------
 
-export async function createPendingPayment(input: { teamId: string; accountId: string; provider: MarketplaceProvider; amountCents: number; commissionCents: number; currency: string; description: string }): Promise<string> {
+export async function createPendingPayment(input: { teamId: string; accountId: string; provider: MarketplaceProvider; providerAccountId: string; amountCents: number; commissionCents: number; currency: string; description: string }): Promise<string> {
   const row = await queryOne<{ id: string }>(
-    `INSERT INTO public."marketplace_payments" ("teamId", "accountId", provider, "amountCents", "commissionCents", currency, description)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-    [input.teamId, input.accountId, input.provider, input.amountCents, input.commissionCents, input.currency.toUpperCase(), input.description]
+    `INSERT INTO public."marketplace_payments" ("teamId", "accountId", provider, "providerAccountId", "amountCents", "commissionCents", currency, description)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+    [input.teamId, input.accountId, input.provider, input.providerAccountId, input.amountCents, input.commissionCents, input.currency.toUpperCase(), input.description]
   )
   return row!.id
 }

@@ -29,7 +29,7 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
   const store = await import('../lib/store')
   const { handleStripeWebhook } = await import('../lib/webhooks/handler')
   const { webhookDedupe } = await import('../lib/runtime')
-  const { createMarketplaceCheckout, SellerNotReadyError, refundMarketplacePayment } = await import('../lib/checkout')
+  const { createMarketplaceCheckout, SellerAccountChangedError, SellerNotReadyError, refundMarketplacePayment } = await import('../lib/checkout')
   const { completeMercadoPagoOAuth } = await import('../lib/onboarding')
   const { rotateSellerTokenKeys } = await import('../lib/token-crypto')
   const { refreshExpiringMercadoPagoTokens } = await import('../lib/mercadopago/refresh')
@@ -52,8 +52,8 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
   const accountA = await store.saveMercadoPagoSeller('team-a', tokens('mp-a'))
   const accountB = await store.saveMercadoPagoSeller('team-b', tokens('mp-b'))
   const stripeA = await store.upsertAccount({ teamId: 'team-a', provider: 'stripe', providerAccountId: 'acct_a', status: 'active', chargesEnabled: true, payoutsEnabled: true })
-  const payA = await store.createPendingPayment({ teamId: 'team-a', accountId: stripeA, provider: 'stripe', amountCents: 10000, commissionCents: 1500, currency: 'usd', description: 'x' })
-  const payB = await store.createPendingPayment({ teamId: 'team-b', accountId: accountB, provider: 'mercadopago', amountCents: 2000, commissionCents: 200, currency: 'ars', description: 'y' })
+  const payA = await store.createPendingPayment({ teamId: 'team-a', accountId: stripeA, provider: 'stripe', providerAccountId: 'acct_a', amountCents: 10000, commissionCents: 1500, currency: 'usd', description: 'x' })
+  const payB = await store.createPendingPayment({ teamId: 'team-b', accountId: accountB, provider: 'mercadopago', providerAccountId: 'mp-b', amountCents: 2000, commissionCents: 200, currency: 'ars', description: 'y' })
 
   const as = asUser(app)
   const count = async (user: string, table: string) => (await as(user, `SELECT count(*)::int AS n FROM public."${table}"`)).rows[0].n
@@ -80,7 +80,7 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
 
   await t.test('nobody writes through RLS', async () => {
     for (const user of ['owner-a', 'super']) {
-      await assert.rejects(as(user, `INSERT INTO public."marketplace_payments" ("teamId", "accountId", provider, "amountCents", "commissionCents", currency, description) VALUES ('team-a', '${stripeA}', 'stripe', 1, 0, 'USD', 'z')`), /row-level security/, user)
+      await assert.rejects(as(user, `INSERT INTO public."marketplace_payments" ("teamId", "accountId", provider, "providerAccountId", "amountCents", "commissionCents", currency, description) VALUES ('team-a', '${stripeA}', 'stripe', 'acct_a', 1, 0, 'USD', 'z')`), /row-level security/, user)
       assert.equal((await as(user, `UPDATE public."marketplace_payments" SET status = 'succeeded' WHERE id = '${payA}'`)).rowCount, 0, user)
       assert.equal((await as(user, `DELETE FROM public."marketplace_payments" WHERE id = '${payA}'`)).rowCount, 0, user)
       assert.equal((await as(user, `UPDATE public."marketplace_accounts" SET status = 'active'`)).rowCount, 0, user)
@@ -233,6 +233,12 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
     assert.equal((await owner.query(`SELECT count(*)::int AS n FROM public."marketplace_payments" WHERE "teamId" = 'team-a' AND status = 'failed'`)).rows[0].n, 1)
 
     await assert.rejects(refundMarketplacePayment({ paymentId, idempotencyKey: 'k' }, gateway), /cannot be refunded yet/)
+
+    await owner.query(`UPDATE public."marketplace_payments" SET "providerPaymentId" = 'pi_refund' WHERE id = $1`, [paymentId])
+    assert.deepEqual(await refundMarketplacePayment({ paymentId, idempotencyKey: 'k' }, gateway), { providerRefundId: 're_1' })
+    await store.upsertAccount({ teamId: 'team-a', provider: 'stripe', providerAccountId: 'acct_new', status: 'active', chargesEnabled: true, payoutsEnabled: true })
+    await assert.rejects(refundMarketplacePayment({ paymentId, idempotencyKey: 'k2' }, gateway), SellerAccountChangedError)
+    assert.equal((await store.findPayment(paymentId))?.providerAccountId, 'acct_a')
   })
 
   await t.test('disconnecting keeps the payments and removes the token', async () => {

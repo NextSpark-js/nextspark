@@ -18,7 +18,10 @@ export interface StoredPayment {
   id: string
   provider: MarketplaceProvider
   accountId: string
+  /** The provider account the payment was created for. */
   providerAccountId: string
+  /** The provider account the team has connected now. */
+  currentProviderAccountId: string
   amountCents: number
   commissionCents: number
   currency: string
@@ -200,6 +203,10 @@ export async function handleMercadoPagoWebhook(request: Request, deps: MercadoPa
   try {
     const payment = await deps.store.findPayment(ref)
     if (!payment || payment.provider !== 'mercadopago') return ignored()
+    if (payment.providerAccountId !== payment.currentProviderAccountId) {
+      console.warn(`[marketplace-payments] MercadoPago event for payment ${payment.id} of a seller account that is no longer connected`)
+      return ignored()
+    }
     const token = await deps.store.getSellerAccessToken(payment.accountId)
     if (!token) {
       console.warn(`[marketplace-payments] MercadoPago event for payment ${payment.id} of a seller without a token`)

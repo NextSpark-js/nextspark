@@ -91,8 +91,8 @@ test('an error never holds the secret or the signature', () => {
   )
 })
 
-const PAYMENT: StoredPayment = { id: 'pay-1', provider: 'stripe', accountId: 'acc-1', providerAccountId: 'acct_1', amountCents: 10000, commissionCents: 1500, currency: 'USD' }
-const MP_PAYMENT: StoredPayment = { ...PAYMENT, id: 'pay-2', provider: 'mercadopago', providerAccountId: '42', currency: 'ARS' }
+const PAYMENT: StoredPayment = { id: 'pay-1', provider: 'stripe', accountId: 'acc-1', providerAccountId: 'acct_1', currentProviderAccountId: 'acct_1', amountCents: 10000, commissionCents: 1500, currency: 'USD' }
+const MP_PAYMENT: StoredPayment = { ...PAYMENT, id: 'pay-2', provider: 'mercadopago', providerAccountId: '42', currentProviderAccountId: '42', currency: 'ARS' }
 
 function memoryDeps(payments: StoredPayment[] = [PAYMENT, MP_PAYMENT]) {
   const statuses = new Map<string, PaymentStatus>(payments.map(p => [p.id, 'pending']))
@@ -317,6 +317,16 @@ test('MercadoPago webhook: a payment that is not ours for this reference, amount
     assert.equal((await handleMercadoPagoWebhook(mpRequest(), deps)).status, 200)
     assert.equal(statuses.get('pay-2'), 'pending', JSON.stringify(payment))
   }
+})
+
+test('MercadoPago webhook: a payment whose seller connected another account is not read with the new token', async t => {
+  silenced(t as never)
+  const memory = memoryDeps([{ ...MP_PAYMENT, currentProviderAccountId: '99' }])
+  const fetched: string[] = []
+  const response = await handleMercadoPagoWebhook(mpRequest(), { secrets: [SECRET], store: memory.store, dedupe: memory.dedupe, getPayment: async id => { fetched.push(id); return remote({ collector_id: 42 }) } })
+  assert.deepEqual(await response.json(), { received: true, status: 'ignored' })
+  assert.deepEqual(fetched, [])
+  assert.equal(memory.statuses.get('pay-2'), 'pending')
 })
 
 test('MercadoPago webhook: other types, a missing reference and an unknown or foreign payment are acknowledged and ignored', async () => {

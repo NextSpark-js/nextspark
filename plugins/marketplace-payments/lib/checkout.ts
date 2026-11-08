@@ -16,6 +16,13 @@ export class SellerNotReadyError extends Error {
   }
 }
 
+export class SellerAccountChangedError extends Error {
+  constructor() {
+    super('The payment was made to a provider account the seller no longer has connected')
+    this.name = 'SellerAccountChangedError'
+  }
+}
+
 export interface MarketplaceCheckoutParams {
   sellerTeamId: string
   provider: MarketplaceProvider
@@ -46,6 +53,7 @@ export async function createMarketplaceCheckout(params: MarketplaceCheckoutParam
     teamId: params.sellerTeamId,
     accountId: account.id,
     provider: params.provider,
+    providerAccountId: account.providerAccountId,
     amountCents: params.amountCents,
     commissionCents,
     currency: params.currency,
@@ -81,6 +89,7 @@ export async function refundMarketplacePayment(
 ): Promise<RefundResult> {
   const payment = await getPaymentForRefund(params.paymentId)
   if (!payment?.providerPaymentId) throw new Error('The payment cannot be refunded yet')
+  if (payment.providerAccountId !== payment.currentProviderAccountId) throw new SellerAccountChangedError()
   const seller = await sellerRef({ id: payment.accountId, providerAccountId: payment.providerAccountId }, payment.provider)
   return (gateway ?? gatewayFor(payment.provider)).refund(
     { providerPaymentId: payment.providerPaymentId, amountCents: params.amountCents, currency: payment.currency, idempotencyKey: params.idempotencyKey },
