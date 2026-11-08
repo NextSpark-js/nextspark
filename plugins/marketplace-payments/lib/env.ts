@@ -24,6 +24,7 @@ function required(name: string): string {
 }
 
 export const stripeSecretKey = () => required('MARKETPLACE_STRIPE_SECRET_KEY')
+export const stripeLiveMode = () => /^(sk|rk)_live_/.test(env().MARKETPLACE_STRIPE_SECRET_KEY?.trim() ?? '')
 /** Comma-separated: the platform endpoint's secret, the connected-accounts endpoint's, and any being rotated. */
 export const stripeWebhookSecrets = () => list(env().MARKETPLACE_STRIPE_WEBHOOK_SECRETS)
 export const mercadoPagoClientId = () => required('MARKETPLACE_MERCADOPAGO_CLIENT_ID')

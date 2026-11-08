@@ -4,12 +4,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { stripeWebhookSecrets } from '../../../lib/env'
+import { stripeLiveMode, stripeWebhookSecrets } from '../../../lib/env'
 import { webhookDedupe } from '../../../lib/runtime'
 import { webhookStore } from '../../../lib/store'
 import { handleStripeWebhook } from '../../../lib/webhooks/handler'
 
 export const POST = withRateLimitTier(
-  (request: NextRequest) => handleStripeWebhook(request, { secrets: stripeWebhookSecrets(), store: webhookStore, dedupe: webhookDedupe }) as Promise<NextResponse>,
+  (request: NextRequest) => handleStripeWebhook(request, { secrets: stripeWebhookSecrets(), livemode: stripeLiveMode(), store: webhookStore, dedupe: webhookDedupe }) as Promise<NextResponse>,
   'webhook'
 )

@@ -119,13 +119,13 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
   const statusOf = async (id: string) => (await owner.query(`SELECT status FROM public."marketplace_payments" WHERE id = $1`, [id])).rows[0].status
 
   await t.test('a repeated or concurrent Stripe event is applied once, through core deduplication', async () => {
-    const event = (id: string) => JSON.stringify({ id, type: 'checkout.session.completed', data: { object: { payment_status: 'paid', amount_total: 10000, currency: 'usd', payment_intent: 'pi_a', metadata: { marketplacePaymentId: payA } } } })
+    const event = (id: string) => JSON.stringify({ id, livemode: false, type: 'checkout.session.completed', data: { object: { payment_status: 'paid', amount_total: 10000, currency: 'usd', payment_intent: 'pi_a', metadata: { marketplacePaymentId: payA } } } })
     const request = (id: string) => {
       const body = event(id)
       const ts = Math.floor(Date.now() / 1000)
       return new Request('https://app.test/hook', { method: 'POST', body, headers: { 'stripe-signature': `t=${ts},v1=${createHmac('sha256', WH).update(`${ts}.${body}`).digest('hex')}` } })
     }
-    const deps = { secrets: [WH], store: store.webhookStore, dedupe: webhookDedupe }
+    const deps = { secrets: [WH], livemode: false, store: store.webhookStore, dedupe: webhookDedupe }
     let applied = 0
     const counted = { ...deps, store: { ...store.webhookStore, transitionPayment: async (...args: Parameters<typeof store.webhookStore.transitionPayment>) => { applied++; return store.webhookStore.transitionPayment(...args) } } }
 
@@ -141,15 +141,15 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
   })
 
   await t.test('a handler that fails releases the event so the retry processes it', async () => {
-    const body = JSON.stringify({ id: 'evt_fail', type: 'charge.dispute.created', data: { object: { payment_intent: 'pi_a' } } })
+    const body = JSON.stringify({ id: 'evt_fail', livemode: false, type: 'charge.dispute.created', data: { object: { payment_intent: 'pi_a' } } })
     const sign = () => {
       const ts = Math.floor(Date.now() / 1000)
       return new Request('https://app.test/hook', { method: 'POST', body, headers: { 'stripe-signature': `t=${ts},v1=${createHmac('sha256', WH).update(`${ts}.${body}`).digest('hex')}` } })
     }
     t.mock.method(console, 'error', () => {})
-    const broken = { secrets: [WH], store: { ...store.webhookStore, transitionPayment: async () => { throw new Error('down') } }, dedupe: webhookDedupe }
+    const broken = { secrets: [WH], livemode: false, store: { ...store.webhookStore, transitionPayment: async () => { throw new Error('down') } }, dedupe: webhookDedupe }
     assert.equal((await handleStripeWebhook(sign(), broken)).status, 500)
-    assert.equal((await handleStripeWebhook(sign(), { secrets: [WH], store: store.webhookStore, dedupe: webhookDedupe })).status, 200)
+    assert.equal((await handleStripeWebhook(sign(), { secrets: [WH], livemode: false, store: store.webhookStore, dedupe: webhookDedupe })).status, 200)
     assert.equal(await statusOf(payA), 'disputed')
   })
 

@@ -123,7 +123,7 @@ function memoryDeps(payments: StoredPayment[] = [PAYMENT, MP_PAYMENT]) {
 }
 
 function stripeRequest(event: object, headerFor: (body: string) => string = stripeHeader) {
-  const body = JSON.stringify(event)
+  const body = JSON.stringify({ livemode: false, ...event })
   return new Request('https://app.test/hook', { method: 'POST', body, headers: { 'stripe-signature': headerFor(body) } })
 }
 
@@ -144,15 +144,15 @@ test('Stripe webhook: a bad signature stops before the store and the dedupe', as
     stripeRequest(completed(), body => stripeHeader(body, { t: nowS() - STRIPE_SIGNATURE_TOLERANCE_SECONDS - 5 })),
     new Request('https://app.test/hook', { method: 'POST', body: '{}' }),
   ]) {
-    assert.equal((await handleStripeWebhook(request, { secrets: [SECRET], store, dedupe })).status, 400)
+    assert.equal((await handleStripeWebhook(request, { secrets: [SECRET], livemode: false, store, dedupe })).status, 400)
   }
-  assert.equal((await handleStripeWebhook(stripeRequest(completed()), { secrets: [], store, dedupe })).status, 400)
+  assert.equal((await handleStripeWebhook(stripeRequest(completed()), { secrets: [], livemode: false, store, dedupe })).status, 400)
   assert.deepEqual(log, [])
 })
 
 test('Stripe webhook: a paid checkout completes the payment and a repeated event does nothing', async () => {
   const { store, dedupe, log, statuses } = memoryDeps()
-  const deps = { secrets: [SECRET], store, dedupe }
+  const deps = { secrets: [SECRET], livemode: false, store, dedupe }
   assert.equal((await handleStripeWebhook(stripeRequest(completed()), deps)).status, 200)
   assert.equal(statuses.get('pay-1'), 'succeeded')
   const second = await handleStripeWebhook(stripeRequest(completed()), deps)
@@ -164,14 +164,30 @@ test('Stripe webhook: an amount or currency other than the server computed is no
   silenced(t as never)
   for (const object of [session({ amount_total: 1 }), session({ currency: 'eur' })]) {
     const { store, dedupe, statuses } = memoryDeps()
-    await handleStripeWebhook(stripeRequest(completed(object)), { secrets: [SECRET], store, dedupe })
+    await handleStripeWebhook(stripeRequest(completed(object)), { secrets: [SECRET], livemode: false, store, dedupe })
     assert.equal(statuses.get('pay-1'), 'pending', JSON.stringify(object))
   }
 })
 
+test('Stripe webhook: an event of another environment, or a payment event with an account, changes nothing', async () => {
+  const { store, dedupe, log, statuses } = memoryDeps()
+  const deps = { secrets: [SECRET], livemode: false, store, dedupe }
+  for (const event of [{ ...completed(), livemode: true }, { ...completed(), account: 'acct_other' }, { id: 'e9', type: 'charge.refunded', account: 'acct_other', data: { object: { payment_intent: 'pi_1', amount: 10000, amount_refunded: 10000 } } }]) {
+    assert.deepEqual(await (await handleStripeWebhook(stripeRequest(event), deps)).json(), { received: true, status: 'ignored' }, JSON.stringify(event))
+  }
+  assert.deepEqual(log, [])
+  assert.equal(statuses.get('pay-1'), 'pending')
+  // the same event on a live deployment
+  await handleStripeWebhook(stripeRequest({ ...completed(), livemode: true }), { ...deps, livemode: true })
+  assert.equal(statuses.get('pay-1'), 'succeeded')
+  // a seller lifecycle event still carries its account
+  await handleStripeWebhook(stripeRequest({ id: 'e10', type: 'account.application.deauthorized', account: 'acct_1', data: { object: {} } }), deps)
+  assert.ok(log.includes('disconnect:acct_1'))
+})
+
 test('Stripe webhook: an unpaid checkout waits for the async result', async () => {
   const { store, dedupe, statuses } = memoryDeps()
-  const deps = { secrets: [SECRET], store, dedupe }
+  const deps = { secrets: [SECRET], livemode: false, store, dedupe }
   await handleStripeWebhook(stripeRequest(completed(session({ payment_status: 'unpaid' }))), deps)
   assert.equal(statuses.get('pay-1'), 'pending')
   await handleStripeWebhook(stripeRequest({ id: 'e2', type: 'checkout.session.async_payment_failed', data: { object: session() } }), deps)
@@ -180,7 +196,7 @@ test('Stripe webhook: an unpaid checkout waits for the async result', async () =
 
 test('Stripe webhook: refunds, disputes and sellers', async () => {
   const { store, dedupe, statuses, refunded, log } = memoryDeps()
-  const deps = { secrets: [SECRET], store, dedupe }
+  const deps = { secrets: [SECRET], livemode: false, store, dedupe }
   const event = (id: string, type: string, object: object, extra = {}) => stripeRequest({ id, type, data: { object }, ...extra })
   await handleStripeWebhook(stripeRequest(completed()), deps)
   await handleStripeWebhook(event('e2', 'charge.refunded', { payment_intent: 'pi_1', amount: 10000, amount_refunded: 2500 }), deps)
@@ -206,7 +222,7 @@ test('Stripe webhook: a failure in processing answers 500 without the error text
   silenced(t as never)
   const { store, dedupe } = memoryDeps()
   const broken = { ...store, transitionPayment: async () => { throw new Error('token sk_live_x') } }
-  const response = await handleStripeWebhook(stripeRequest(completed()), { secrets: [SECRET], store: broken, dedupe })
+  const response = await handleStripeWebhook(stripeRequest(completed()), { secrets: [SECRET], livemode: false, store: broken, dedupe })
   assert.equal(response.status, 500)
   assert.ok(!(await response.text()).includes('sk_live_x'))
 })
@@ -233,7 +249,7 @@ const remote = (over: Partial<MercadoPagoPayment> = {}): MercadoPagoPayment => (
 function mpDeps(payment = remote()) {
   const memory = memoryDeps()
   const fetched: [string, string][] = []
-  return { ...memory, fetched, deps: { secrets: [SECRET], store: memory.store, dedupe: memory.dedupe, getPayment: async (id: string, token: string) => { fetched.push([id, token]); return payment } } }
+  return { ...memory, fetched, deps: { secrets: [SECRET], livemode: false, store: memory.store, dedupe: memory.dedupe, getPayment: async (id: string, token: string) => { fetched.push([id, token]); return payment } } }
 }
 
 test('MercadoPago webhook: a bad signature stops before the API, the store and the dedupe', async t => {

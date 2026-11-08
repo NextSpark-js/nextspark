@@ -40,6 +40,8 @@ export type WebhookDedupe = (gateway: string, eventId: string, eventType: string
 
 export interface StripeWebhookDeps {
   secrets: string[]
+  /** Whether the configured secret key is a live one. */
+  livemode: boolean
   store: WebhookStore
   dedupe: WebhookDedupe
 }
@@ -86,6 +88,7 @@ function passes(provider: string, verify: () => void): boolean {
 interface StripeEvent {
   id: string
   type: string
+  livemode?: boolean
   account?: string
   data: { object: Record<string, any> }
 }
@@ -103,6 +106,11 @@ export async function handleStripeWebhook(request: Request, deps: StripeWebhookD
   if (typeof event?.id !== 'string' || typeof event?.type !== 'string' || !event.data?.object) {
     return Response.json({ error: 'Invalid payload' }, { status: 400 })
   }
+
+  // Only an event of this environment counts, and a destination charge's events belong to the platform's account:
+  // `account` is only expected on the seller lifecycle events.
+  if (event.livemode !== deps.livemode) return ignored()
+  if (event.account && !event.type.startsWith('account.')) return ignored()
 
   try {
     return await deps.dedupe('marketplace:stripe', event.id, event.type, () => applyStripeEvent(event, deps.store))
