@@ -51,7 +51,7 @@ describe('the client is a thin typed layer over entityApi', () => {
     mockApi.get.mockResolvedValue({ id: 't1' })
     mockApi.create.mockResolvedValue({ id: 't2' })
     mockApi.update.mockResolvedValue({ id: 't1' })
-    mockApi.delete.mockResolvedValue({ deleted: true, id: 't1' })
+    mockApi.delete.mockResolvedValue({ success: true, id: 't1' })
     await tasks.list({ limit: 5, filters: { title: 'x' } })
     await tasks.get('t1')
     await tasks.create({ title: 'a' })
@@ -177,8 +177,8 @@ describe('invalidation rules', () => {
     expect(queryClient.getQueryState(keys.unrelated)?.isInvalidated).toBe(false)
   })
 
-  test('delete removes the item query, so it is not refetched, and invalidates the rest', async () => {
-    mockApi.delete.mockResolvedValue({ deleted: true, id: 't1' })
+  test('delete drops the cached item query (an observer still mounted on it may ask again) and invalidates the rest', async () => {
+    mockApi.delete.mockResolvedValue({ success: true, id: 't1' })
     const { wrapper, queryClient, keys } = seeded()
     const { result } = renderHook(() => useEntityDelete(tasks), { wrapper })
     await act(async () => { await result.current.mutateAsync('t1') })

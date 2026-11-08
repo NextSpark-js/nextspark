@@ -11,6 +11,8 @@
  */
 
 import { entityApi, fetchWithTeam, type EntityData } from './entities'
+import { withBasePathIfInApp } from '../base-path'
+import { resolveAppUrl } from '../utils/base-url'
 
 export interface EntityListInfo {
   timestamp: string
@@ -67,6 +69,12 @@ export function entityQueryKeys(slug: string): EntityQueryKeys {
   }
 }
 
+/** What a delete answers, for entities and for child rows alike: `{ success: true, id }`. */
+export interface EntityDeleteResult {
+  success: true
+  id: string
+}
+
 export interface EntityClient<T, TCreate, TUpdate> {
   readonly slug: string
   readonly keys: EntityQueryKeys
@@ -74,7 +82,7 @@ export interface EntityClient<T, TCreate, TUpdate> {
   get(id: string): Promise<T>
   create(data: TCreate): Promise<T>
   update(id: string, data: TUpdate): Promise<T>
-  delete(id: string): Promise<{ deleted: boolean; id: string }>
+  delete(id: string): Promise<EntityDeleteResult>
 }
 
 export function createEntityClient<T, TCreate, TUpdate>(slug: string): EntityClient<T, TCreate, TUpdate> {
@@ -85,7 +93,7 @@ export function createEntityClient<T, TCreate, TUpdate>(slug: string): EntityCli
     get: id => entityApi.get(slug, id) as unknown as Promise<T>,
     create: data => entityApi.create(slug, data as EntityData) as unknown as Promise<T>,
     update: (id, data) => entityApi.update(slug, id, data as Partial<EntityData>) as unknown as Promise<T>,
-    delete: id => entityApi.delete(slug, id),
+    delete: id => entityApi.delete(slug, id) as unknown as Promise<EntityDeleteResult>,
   }
 }
 
@@ -104,11 +112,13 @@ export interface EntityChildClient<TRow, TCreate, TUpdate> {
   list(parentId: string): Promise<TRow[]>
   create(parentId: string, data: TCreate): Promise<TRow>
   update(parentId: string, id: string, data: TUpdate): Promise<TRow>
-  delete(parentId: string, id: string): Promise<{ id: string }>
+  delete(parentId: string, id: string): Promise<EntityDeleteResult>
 }
 
 async function childRequest<R>(path: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', body?: unknown): Promise<R> {
-  const response = await fetchWithTeam(`/api/v1/${path}`, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
+  // On the server a relative URL has no origin to resolve against (the entity client resolves it the same way)
+  const url = withBasePathIfInApp(`/api/v1/${path}`)
+  const response = await fetchWithTeam(typeof window === 'undefined' ? new URL(url, resolveAppUrl()).toString() : url, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
   const result = (await response.json().catch(() => ({}))) as { data?: R; error?: string; message?: string }
   if (!response.ok) throw new Error(result.error || result.message || `Request failed (${response.status})`)
   return (method === 'DELETE' ? result : result.data) as R
@@ -124,6 +134,6 @@ export function createEntityChildClient<TRow, TCreate, TUpdate>(slug: string, ch
     list: parentId => childRequest<TRow[]>(base(parentId), 'GET'),
     create: (parentId, data) => childRequest<TRow>(base(parentId), 'POST', data),
     update: (parentId, id, data) => childRequest<TRow>(`${base(parentId)}/${encodeURIComponent(id)}`, 'PUT', data),
-    delete: (parentId, id) => childRequest<{ id: string }>(`${base(parentId)}/${encodeURIComponent(id)}`, 'DELETE'),
+    delete: (parentId, id) => childRequest<EntityDeleteResult>(`${base(parentId)}/${encodeURIComponent(id)}`, 'DELETE'),
   }
 }

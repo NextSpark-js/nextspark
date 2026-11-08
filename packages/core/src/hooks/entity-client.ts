@@ -10,12 +10,13 @@
  *   invalidates `client.keys.all`, i.e. every query under `['entity', slug]`: lists, items, child lists and the
  *   dashboard's own lists of that entity. The mutation settles when those queries have been refetched;
  * - update also writes the returned row into the item's cache, so an open detail view updates at once;
- * - delete also removes the deleted item's query, so it is not refetched into a 404.
+ * - delete also removes the deleted item's cached query. A component that still has that item mounted
+ *   (`useTask(id)`) observes it again and may request it, so unmount or disable it (`enabled: false`) when you delete.
  */
 
 import { useMutation, useQuery, useQueryClient, type UseMutationOptions, type UseQueryOptions } from '@tanstack/react-query'
 import { useOptionalTeamContext } from '../contexts/TeamContext'
-import type { EntityChildClient, EntityClient, EntityClientListParams, EntityListResult } from '../lib/api/entity-client'
+import type { EntityChildClient, EntityClient, EntityClientListParams, EntityDeleteResult, EntityListResult } from '../lib/api/entity-client'
 
 export type EntityQueryOptions<TData> = Omit<UseQueryOptions<TData, Error>, 'queryKey' | 'queryFn'>
 export type EntityMutationOptions<TData, TVariables> = Omit<UseMutationOptions<TData, Error, TVariables>, 'mutationFn'>
@@ -79,12 +80,13 @@ export function useEntityUpdate<T, TCreate, TUpdate>(client: EntityClient<T, TCr
   })
 }
 
-export function useEntityDelete<T, TCreate, TUpdate>(client: EntityClient<T, TCreate, TUpdate>, options?: EntityMutationOptions<{ deleted: boolean; id: string }, string>) {
+export function useEntityDelete<T, TCreate, TUpdate>(client: EntityClient<T, TCreate, TUpdate>, options?: EntityMutationOptions<EntityDeleteResult, string>) {
   const queryClient = useQueryClient()
-  return useMutation<{ deleted: boolean; id: string }, Error, string>({
+  return useMutation<EntityDeleteResult, Error, string>({
     ...options,
     mutationFn: async id => {
       const deleted = await client.delete(id)
+      // Drops the cached item; an observer still mounted on it re-creates the query (see the rules above)
       queryClient.removeQueries({ queryKey: client.keys.detail(id) })
       await queryClient.invalidateQueries({ queryKey: client.keys.all })
       return deleted
@@ -131,9 +133,9 @@ export function useEntityChildUpdate<TRow, TCreate, TUpdate>(client: EntityChild
   })
 }
 
-export function useEntityChildDelete<TRow, TCreate, TUpdate>(client: EntityChildClient<TRow, TCreate, TUpdate>, options?: EntityMutationOptions<{ id: string }, { parentId: string; id: string }>) {
+export function useEntityChildDelete<TRow, TCreate, TUpdate>(client: EntityChildClient<TRow, TCreate, TUpdate>, options?: EntityMutationOptions<EntityDeleteResult, { parentId: string; id: string }>) {
   const queryClient = useQueryClient()
-  return useMutation<{ id: string }, Error, { parentId: string; id: string }>({
+  return useMutation<EntityDeleteResult, Error, { parentId: string; id: string }>({
     ...options,
     mutationFn: async ({ parentId, id }) => {
       const deleted = await client.delete(parentId, id)
