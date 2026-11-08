@@ -23,5 +23,12 @@
     }
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    // Route modules (#203) import the registries a project generates (@nextsparkjs/registries/*),
+    // which core only declares loosely (src/nextspark-registries.d.ts); their types exist only in
+    // the host app, where they are checked (apps/dev tsc). Same exclusion as tsconfig.dts.json.
+    "src/routes/**"
+  ]
 }

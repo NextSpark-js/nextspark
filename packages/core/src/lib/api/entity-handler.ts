@@ -281,7 +281,7 @@ export function createEntityListHandlers(
       }
 
       // Handle metadata if provided
-      const metadataWasProvided = metas && typeof metas === 'object' && Object.keys(metas).length > 0;
+      const metadataWasProvided = Boolean(metas && typeof metas === 'object' && Object.keys(metas).length > 0);
       if (metadataWasProvided && options.allowMetadata) {
         await processEntityMetadata(entityName, (createdItem as { id: string }).id, metas, user.id);
       }
@@ -430,7 +430,7 @@ export function createEntityDetailHandlers(
       }
 
       // Handle metadata if provided
-      const metadataWasProvided = metas && typeof metas === 'object' && Object.keys(metas).length > 0;
+      const metadataWasProvided = Boolean(metas && typeof metas === 'object' && Object.keys(metas).length > 0);
       if (metadataWasProvided && options.allowMetadata) {
         await processEntityMetadata(entityName, id, metas, user.id);
       }

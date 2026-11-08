@@ -12,7 +12,7 @@
  * does not bundle them.
  */
 
-import { entityApi, fetchWithTeam, type EntityData } from './entities'
+import { entityApi, fetchWithTeam, type EntityData, type EntityListParams } from './entities'
 
 export interface EntityListInfo {
   timestamp: string
@@ -89,7 +89,7 @@ export function createEntityClient<T, TCreate, TUpdate>(slug: string): EntityCli
   return {
     slug,
     keys: entityQueryKeys(slug),
-    list: params => entityApi.list(slug, params) as unknown as Promise<EntityListResult<T>>,
+    list: params => entityApi.list(slug, params as EntityListParams | undefined) as unknown as Promise<EntityListResult<T>>,
     get: id => entityApi.get(slug, id) as unknown as Promise<T>,
     create: data => entityApi.create(slug, data as EntityData) as unknown as Promise<T>,
     update: (id, data) => entityApi.update(slug, id, data as Partial<EntityData>) as unknown as Promise<T>,
