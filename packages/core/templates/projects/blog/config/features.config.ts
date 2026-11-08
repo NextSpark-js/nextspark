@@ -65,31 +65,6 @@ export default defineFeatures({
   },
 
   // ===========================================================================
-  // IMPORT/EXPORT FEATURES
-  // Data management tools
-  // ===========================================================================
-
-  'post-export': {
-    name: 'Export Posts',
-    description: 'Export posts to JSON format for backup or migration',
-    category: 'settings',
-    icon: 'download',
-    entities: ['posts'],
-    permissions: ['blog.export'],
-    docs: [],
-  },
-
-  'post-import': {
-    name: 'Import Posts',
-    description: 'Import posts from JSON file',
-    category: 'settings',
-    icon: 'upload',
-    entities: ['posts'],
-    permissions: ['blog.import'],
-    docs: [],
-  },
-
-  // ===========================================================================
   // PUBLIC FEATURES
   // Public-facing blog features
   // ===========================================================================

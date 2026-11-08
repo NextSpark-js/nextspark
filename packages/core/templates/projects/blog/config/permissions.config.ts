@@ -62,28 +62,6 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   },
 
   // ==========================================
-  // FEATURE PERMISSIONS
-  // ==========================================
-  // Unified format: uses 'action' instead of 'id'
-  features: [
-    {
-      action: 'blog.export',
-      label: 'Export posts',
-      description: 'Export all posts to JSON format for backup or migration',
-      category: 'Blog',
-      roles: ['owner'],
-    },
-    {
-      action: 'blog.import',
-      label: 'Import posts',
-      description: 'Import posts from JSON file',
-      category: 'Blog',
-      roles: ['owner'],
-      dangerous: true,
-    },
-  ],
-
-  // ==========================================
   // DISABLED FEATURES
   // ==========================================
   // These don't apply in single-user mode
