@@ -81,6 +81,15 @@ describe('SignupForm runtime readiness', () => {
     expect(mockSocialSignIn).toHaveBeenCalledWith('github', undefined)
   })
 
+  test('a provider without a known button (one the map enabled) draws nothing', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['discord' as never, 'github']
+    render(<SignupForm />)
+
+    expect(byCy('auth.signup.githubButton')).toBeInTheDocument()
+    expect(byCy('auth.signup.discordButton')).not.toBeInTheDocument()
+  })
+
   test('a social provider alone is enough to offer sign-up, as Google alone was', () => {
     readiness.state = 'ready'
     readiness.availableMethods = ['microsoft']

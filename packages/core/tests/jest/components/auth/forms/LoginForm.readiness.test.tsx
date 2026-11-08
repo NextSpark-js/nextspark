@@ -117,4 +117,12 @@ describe('LoginForm runtime readiness states', () => {
     expect(mockSocialSignIn).toHaveBeenCalledWith('microsoft', undefined)
     expect(mockGoogleSignIn).not.toHaveBeenCalled()
   })
+
+  test('a provider without a known button (one the map enabled) draws nothing', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['discord' as never, 'github']
+    render(<LoginForm />)
+
+    expect(Array.from(document.querySelectorAll('[data-cy$="Signin"]')).map((el) => el.getAttribute('data-cy'))).toEqual(['auth.login.githubSignin'])
+  })
 })
