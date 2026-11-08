@@ -187,6 +187,7 @@ export const QUERY_MODULES = new Set([
   'hooks/teams/useAdminTeams',
   'hooks/teams/useTeamSearch',
   'hooks/teams/useUserTeams',
+  'hooks/useDisplayUrls',
   'hooks/useEnsureUserMetadata',
   'hooks/useEntity',
   'hooks/useEntityMutations',
