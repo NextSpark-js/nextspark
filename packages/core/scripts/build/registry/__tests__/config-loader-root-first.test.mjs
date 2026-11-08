@@ -15,6 +15,7 @@ test('loads defineConfig and applies root-first defaults', async () => {
   try {
     assert.deepEqual(loadNextSparkConfigSync(root), {
       plugins: ['local'],
+      apiDir: 'api',
       features: { billing: true, teams: true, superadmin: true, aiChat: true },
     })
   } finally {
