@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url'
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const BINS = [
   path.join(PACKAGE_ROOT, 'bin/index.js'),
-  path.join(PACKAGE_ROOT, 'create-nextspark/bin/create-nextspark-app.js'),
 ]
 
 function runWithNodeVersion(bin: string, version: string) {
