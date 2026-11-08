@@ -4,7 +4,7 @@
  * What `nextspark worker` runs: reads the project's `jobs` config, registers the Scheduled Actions handlers,
  * starts the pg-boss worker and stops it cleanly on SIGTERM or SIGINT. Needs the project's registries to be
  * resolvable (the CLI starts it with tsx and the project tsconfig) and `server-only` to be an empty module
- * (scripts/jobs/server-only-stub.mjs).
+ * (scripts/jobs/preload.mjs).
  *
  * @module core/lib/jobs/run
  */
@@ -49,17 +49,20 @@ export async function runWorkerProcess(options: RunWorkerOptions = {}): Promise<
     throw new Error('[Jobs] The worker is off. Set `jobs.enabled: true` (and declare `jobs.queues`) in the project app config.')
   }
 
-  const worker = await startJobsWorker({
+  // Take lib/db's handlers over before the worker takes its first job: a signal in between would close the pools
+  // under a running job
+  const closers = new Map(SIGNALS.map(signal => [signal, process.listeners(signal)]))
+  for (const signal of SIGNALS) {
+    for (const listener of closers.get(signal)!) process.removeListener(signal, listener)
+  }
+
+  const starting = startJobsWorker({
     connectionString: db.stripSSLParams(connectionString),
     ssl: db.parseSSLConfig(connectionString),
     config,
     getHandler,
   })
-
-  const closers = new Map(SIGNALS.map(signal => [signal, process.listeners(signal)]))
-  for (const signal of SIGNALS) {
-    for (const listener of closers.get(signal)!) process.removeListener(signal, listener)
-  }
+  starting.catch(() => {}) // reported by the await below; a signal while starting must not leave it unhandled
 
   let stopping = false
   const stop = async (signal: (typeof SIGNALS)[number]): Promise<void> => {
@@ -68,7 +71,7 @@ export async function runWorkerProcess(options: RunWorkerOptions = {}): Promise<
     console.log(`[Jobs] ${signal} received, finishing the running jobs...`)
     let code = 0
     try {
-      await worker.stop()
+      await (await starting).stop()
     } catch (error) {
       console.error('[Jobs] Error while stopping:', error)
       code = 1
@@ -78,4 +81,6 @@ export async function runWorkerProcess(options: RunWorkerOptions = {}): Promise<
     process.exit(code)
   }
   for (const signal of SIGNALS) process.on(signal, () => void stop(signal))
+
+  await starting
 }

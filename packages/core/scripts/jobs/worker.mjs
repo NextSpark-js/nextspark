@@ -1,6 +1,6 @@
 /**
  * Entry of `nextspark worker` (#275). The CLI starts it with tsx (the project's handlers and registries are
- * TypeScript behind the project tsconfig paths) and `--conditions=react-server` (so `server-only` is empty).
+ * TypeScript) and preload.mjs (an empty `server-only`, and the `@nextsparkjs/registries` alias).
  */
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'

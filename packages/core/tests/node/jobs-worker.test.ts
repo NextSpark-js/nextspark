@@ -36,6 +36,8 @@ test('resolveJobsConfig: off unless enabled, and says what is wrong', () => {
   assert.throws(() => resolveJobsConfig({ enabled: true, queues: { a: { retryLimit: -1 } } }), /retryLimit/)
   assert.throws(() => resolveJobsConfig({ enabled: true, queues: { a: {} }, schedules: [{ queue: 'b', cron: '* * * * *' }] }), /not declared/)
   assert.throws(() => resolveJobsConfig({ enabled: true, queues: { a: {} }, schedules: [{ queue: 'a', cron: '* * *' }] }), /five-field/)
+  assert.throws(() => resolveJobsConfig({ enabled: true, schema: 'my-schema', queues: { a: {} } }), /jobs\.schema/)
+  assert.throws(() => resolveJobsConfig({ enabled: true, schema: '1jobs', queues: { a: {} } }), /jobs\.schema/)
   const ok = resolveJobsConfig({ enabled: true, queues: { 'purge-teams': { handler: 'teams:purge-deleted' } } })
   assert.equal(ok.queues[0].handler, 'teams:purge-deleted')
   assert.equal(ok.queues[0].retryLimit, 2)
@@ -77,12 +79,12 @@ test('the jobs worker against a real PostgreSQL', { skip: !HAS_POSTGRES, timeout
     shutdownTimeout: 10,
     queues: {
       hello: { handler: 'test:hello' },
-      flaky: { handler: 'test:flaky', retryLimit: 2, retryDelay: 1, retryBackoff: true },
+      flaky: { handler: 'test:flaky', retryLimit: 3, retryDelay: 1, retryBackoff: true, retryDelayMax: 30, timeout: 77 },
       ticker: { handler: 'test:ticker' },
     },
     schedules: [{ queue: 'ticker', cron: '* * * * *', data: { from: 'cron' } }],
   }
-  failTimes['test:flaky'] = 2
+  failTimes['test:flaky'] = 3
 
   const worker = await startJobsWorker({ connectionString: url('owner'), ssl: false, config, getHandler: handlers, log: quiet })
   t.after(() => worker.stop())
@@ -99,14 +101,32 @@ test('the jobs worker against a real PostgreSQL', { skip: !HAS_POSTGRES, timeout
     await until('the job completed', async () => ((await jobState('hello')).includes('completed') ? true : undefined))
   })
 
+  const queueRow = async (name: string) =>
+    (await owner.query(`SELECT retry_limit, retry_delay, retry_backoff, retry_delay_max, expire_seconds FROM pgboss.queue WHERE name = $1`, [name])).rows[0]
+
+  await t.test('declares the queue with the configured retry policy and timeout', async () => {
+    assert.deepEqual(await queueRow('flaky'), { retry_limit: 3, retry_delay: 1, retry_backoff: true, retry_delay_max: 30, expire_seconds: 77 })
+  })
+
   await t.test('retries a failing job with backoff, then completes it', async () => {
     await sender.send('flaky', { x: 1 })
-    await until('three attempts', () => (calls['test:flaky']?.length === 3 ? true : undefined))
-    const [first, second, third] = calls['test:flaky']
-    assert.deepEqual([first.action.attempts, second.action.attempts, third.action.attempts], [1, 2, 3])
+    await until('four attempts', () => (calls['test:flaky']?.length === 4 ? true : undefined))
+    const [first, second, third, fourth] = calls['test:flaky']
+    assert.deepEqual([first, second, third, fourth].map(c => c.action.attempts), [1, 2, 3, 4])
+    // retryDelay 1 with backoff: about 1-2 s, then 2-4 s, then 4-8 s (a fixed delay would stay near 1 s)
     assert.ok(second.at - first.at >= 900, `waited ${second.at - first.at} ms before the first retry`)
     assert.ok(third.at - second.at >= 1900, `backoff grew: ${third.at - second.at} ms before the second retry`)
+    assert.ok(fourth.at - third.at >= 3900, `backoff grew: ${fourth.at - third.at} ms before the third retry`)
     await until('the job completed', async () => ((await jobState('flaky')).includes('completed') ? true : undefined))
+  })
+
+  await t.test('a changed config reaches an existing queue, and a removed retryDelayMax is cleared', async () => {
+    const changed = await startJobsWorker({
+      connectionString: url('owner'), ssl: false, getHandler: handlers, log: quiet,
+      config: { ...config, queues: { ...config.queues, flaky: { handler: 'test:flaky', retryLimit: 4, retryDelay: 2, timeout: 88 } } },
+    })
+    assert.deepEqual(await queueRow('flaky'), { retry_limit: 4, retry_delay: 2, retry_backoff: false, retry_delay_max: null, expire_seconds: 88 })
+    await changed.stop()
   })
 
   await t.test('a job that keeps failing is marked failed once the retries are used', async () => {
@@ -126,6 +146,23 @@ test('the jobs worker against a real PostgreSQL', { skip: !HAS_POSTGRES, timeout
     const rows = await owner.query(`SELECT count(*)::int AS n FROM pgboss.schedule`)
     assert.equal(rows.rows[0].n, 0)
     await other.stop()
+  })
+
+  await t.test('a job still running when shutdownTimeout ends is marked failed, and lost with retryLimit 0', { timeout: 60000 }, async () => {
+    let started = false
+    const slow = (name: string) =>
+      name === 'test:overrun' ? { name, handler: async () => { started = true; await sleep(5000) } } : undefined
+    const short = await startJobsWorker({
+      connectionString: url('owner'), ssl: false, getHandler: slow, log: quiet,
+      config: { enabled: true, shutdownTimeout: 1, queues: { overrun: { handler: 'test:overrun', retryLimit: 0 } } },
+    })
+    try {
+      await sender.send('overrun', {})
+      await until('the job to start', () => (started ? true : undefined))
+    } finally {
+      await short.stop()
+    }
+    assert.deepEqual(await jobState('overrun'), ['failed'])
   })
 
   await t.test('executes a cron schedule', { timeout: 180000 }, async () => {

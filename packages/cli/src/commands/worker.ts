@@ -17,7 +17,7 @@ export function workerCommand(coreDir: string, projectRoot: string): { command: 
     args: [
       '--import', pathToFileURL(tsx).href,
       // after tsx, so it sees `server-only` first
-      '--import', pathToFileURL(join(coreDir, 'scripts', 'jobs', 'server-only-stub.mjs')).href,
+      '--import', pathToFileURL(join(coreDir, 'scripts', 'jobs', 'preload.mjs')).href,
       join(coreDir, 'scripts', 'jobs', 'worker.mjs'),
     ],
     env: {

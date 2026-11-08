@@ -10,7 +10,7 @@ test('the worker runs the core entry under tsx with the project tsconfig and an 
   const { args, env } = workerCommand('/core', '/project')
   const preloads = args.filter((_, i) => args[i - 1] === '--import')
   assert.equal(preloads.length, 2)
-  assert.ok(preloads[1].endsWith('server-only-stub.mjs'), 'the stub is registered after tsx')
+  assert.ok(preloads[1].endsWith('preload.mjs'), 'the stub is registered after tsx')
   assert.equal(args.at(-1), join('/core', 'scripts', 'jobs', 'worker.mjs'))
   assert.equal(env.TSX_TSCONFIG_PATH, join('/project', 'tsconfig.json'))
   assert.equal(env.NEXTSPARK_CORE_DIR, '/core')

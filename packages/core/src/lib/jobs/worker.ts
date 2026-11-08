@@ -45,7 +45,11 @@ export interface JobsWorkerOptions {
 }
 
 export interface JobsWorker {
-  /** Stops taking jobs and waits up to `jobs.shutdownTimeout` seconds for the running ones. A job still running then is retried by pg-boss. */
+  /**
+   * Stops taking jobs and waits up to `jobs.shutdownTimeout` seconds for the running ones. A job still running after
+   * that is marked failed by pg-boss at once: it is retried only if the queue has retries left, so with `retryLimit: 0`
+   * it is lost. Give the supervisor a grace period longer than `shutdownTimeout`.
+   */
   stop(): Promise<void>
 }
 
@@ -114,12 +118,14 @@ export async function startJobsWorker(options: JobsWorkerOptions): Promise<JobsW
         retryDelay: queue.retryDelay,
         retryBackoff: queue.retryBackoff,
         expireInSeconds: queue.timeout,
-        // pg-boss rejects the key itself when backoff is off, even as undefined
-        ...(queue.retryDelayMax !== undefined && queue.retryBackoff ? { retryDelayMax: queue.retryDelayMax } : {}),
       }
-      // createQueue keeps an existing queue as it is: a changed config reaches it through updateQueue
-      if (await boss.getQueue(queue.name)) await boss.updateQueue(queue.name, queueOptions)
-      else await boss.createQueue(queue.name, queueOptions)
+      // createQueue keeps an existing queue as it is: a changed config reaches it through updateQueue, which also
+      // clears a retryDelayMax the config no longer sets. createQueue rejects the key itself without backoff.
+      if (await boss.getQueue(queue.name)) {
+        await boss.updateQueue(queue.name, { ...queueOptions, retryDelayMax: queue.retryBackoff ? (queue.retryDelayMax ?? null) : null })
+      } else {
+        await boss.createQueue(queue.name, { ...queueOptions, ...(queue.retryBackoff && queue.retryDelayMax !== undefined ? { retryDelayMax: queue.retryDelayMax } : {}) })
+      }
 
       await boss.work(queue.name, { localConcurrency: queue.concurrency }, async jobs => {
         for (const job of jobs) {

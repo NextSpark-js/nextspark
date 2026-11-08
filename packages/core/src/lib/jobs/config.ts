@@ -47,7 +47,8 @@ export function resolveJobsConfig(raw: JobsConfig | undefined): ResolvedJobsConf
   if (!raw?.enabled) fail('`jobs.enabled` is not true, so the worker has nothing to do')
   if (!raw.queues || typeof raw.queues !== 'object') fail('`jobs.queues` is required')
   const schema = raw.schema ?? 'pgboss'
-  if (!NAME.test(schema)) fail('`jobs.schema` can only hold letters, digits, `_`, `-`, `.` and `/`')
+  // what pg-boss accepts for an unquoted schema
+  if (!/^[A-Za-z_]\w{0,49}$/.test(schema)) fail('`jobs.schema` can only hold letters, digits and `_`, cannot start with a digit and takes up to 50 characters')
 
   const queues = Object.entries(raw.queues).map(([name, queue]): ResolvedQueue => {
     if (!NAME.test(name)) fail(`queue "${name}": a queue name can only hold letters, digits, "_", "-", "." and "/" (put the action type in \`handler\`)`)

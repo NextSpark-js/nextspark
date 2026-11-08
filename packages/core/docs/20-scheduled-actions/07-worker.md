@@ -66,15 +66,15 @@ The two can coexist: the worker only runs the queues you declare in `jobs`, and 
    | Option | Default | Meaning |
    |---|---|---|
    | `enabled` | `false` | The worker refuses to start unless `true` |
-   | `schema` | `pgboss` | Postgres schema pg-boss creates |
-   | `shutdownTimeout` | `30` | Seconds to wait for running jobs on SIGTERM |
+   | `schema` | `pgboss` | Postgres schema pg-boss creates: letters, digits and `_`, not starting with a digit, up to 50 characters |
+   | `shutdownTimeout` | `30` | Seconds to wait for running jobs on SIGTERM (see [Shutdown](#shutdown)) |
    | `queues.<name>.handler` | the queue name | Scheduled Actions action type that runs each job |
    | `queues.<name>.concurrency` | `1` | Jobs of the queue run at once |
    | `queues.<name>.retryLimit` | `2` | Retries after a failure (attempts = retryLimit + 1) |
    | `queues.<name>.retryDelay` | `0` | Seconds before a retry |
    | `queues.<name>.retryBackoff` | `false` | Exponential delay with jitter |
    | `queues.<name>.retryDelayMax` | none | Longest delay with backoff, in seconds |
-   | `queues.<name>.timeout` | `900` | Seconds a job may run |
+   | `queues.<name>.timeout` | `900` | Seconds a job may run before pg-boss fails it (and retries it if retries are left). It does not cancel the handler, and the `timeout` option of `registerScheduledAction` is ignored by the worker: this one decides |
    | `schedules[].queue / cron / tz / data / key` | | Five-field cron, time zone (default UTC), payload, key to tell apart several schedules on one queue |
 
 3. Register the handlers as for any Scheduled Action (`registerAllHandlers` of the project, or a core handler). A queue whose handler is not registered stops the worker at start with a message naming it.
@@ -110,7 +110,13 @@ pg-boss creates and migrates its own schema (`pgboss` by default). The app role 
 
 ## Shutdown
 
-On SIGTERM or SIGINT the worker stops taking jobs and waits up to `shutdownTimeout` seconds for the running ones, then closes the database pools. A job still running after that stays active in pg-boss until its `timeout` expires and is then retried, so it is not lost (make handlers idempotent). `nextspark worker` exits 0 after a clean stop.
+On SIGTERM or SIGINT the worker stops taking jobs and waits up to `shutdownTimeout` seconds for the running ones, then closes the database pools. `nextspark worker` exits 0 after a clean stop.
+
+A job still running when `shutdownTimeout` ends is **marked failed by pg-boss at once**. It is tried again only if its queue has retries left; **with `retryLimit: 0` it is lost** (it stays `failed` in `pgboss.job`). Make handlers idempotent, keep `retryLimit` above 0 for work you cannot lose, and set the supervisor's grace period above `shutdownTimeout` (Docker `stop_grace_period`, systemd `TimeoutStopSec`, Kubernetes `terminationGracePeriodSeconds`), or it kills the worker before it can finish.
+
+## Enqueueing jobs
+
+Jobs enter a queue from the cron `schedules` you declare, or from code that opens its own `PgBoss` on the same database with the migration role (`MIGRATE_DATABASE_URL`) and calls `send`. The app role has no permission on the `pgboss` schema, so the app itself, its API routes and its handlers cannot enqueue through pg-boss. To enqueue work from the app, use `scheduleAction` (Scheduled Actions) as before.
 
 ## Without the worker
 

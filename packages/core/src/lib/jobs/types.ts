@@ -23,7 +23,7 @@ export interface JobQueueConfig {
   retryBackoff?: boolean
   /** Longest wait between retries, in seconds, when `retryBackoff` is on. Default: no limit. */
   retryDelayMax?: number
-  /** Seconds a job may run before pg-boss gives it up and retries it. Default 900. */
+  /** Seconds a job may run before pg-boss fails it (and retries it if retries are left). It does not cancel the handler. The handler's own `timeout` option of registerScheduledAction is ignored here. Default 900. */
   timeout?: number
 }
 
@@ -46,7 +46,11 @@ export interface JobsConfig {
   enabled?: boolean
   /** Postgres schema pg-boss creates for its tables. Default `pgboss`. */
   schema?: string
-  /** Seconds `nextspark worker` waits for running jobs on SIGTERM before it stops them. Default 30. */
+  /**
+   * Seconds `nextspark worker` waits for running jobs on SIGTERM. A job still running then is marked failed by pg-boss
+   * and retried only if its queue has `retryLimit` left (with `retryLimit: 0` it is lost). Set the supervisor's grace
+   * period (Docker `stop_grace_period`, systemd `TimeoutStopSec`) above this. Default 30.
+   */
   shutdownTimeout?: number
   queues: Record<string, JobQueueConfig>
   schedules?: JobScheduleConfig[]
