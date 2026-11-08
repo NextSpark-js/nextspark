@@ -89,7 +89,7 @@ export function ThemePreview() {
               {t("system")}
             </Button>
             <Badge variant="outline" className="ml-auto">
-              {t("current", { theme: t(theme) })}
+              {t("current", { theme: t(theme ?? 'system') })}
             </Badge>
           </div>
         </CardContent>
