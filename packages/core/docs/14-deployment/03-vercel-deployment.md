@@ -175,7 +175,7 @@ Node Version: 22.x
 
 Vercel treats a root `api/` directory as a directory of its own functions, also in a Next.js project with a custom Build Command. A project that keeps its Route Handlers in the default `api/` gets each file built twice: once by `next build`, through the generated route under `src/app/api/`, and once more as a separate function. Builds take much longer (the time grows with the number of files), and the deployment carries functions the application does not use.
 
-Any other directory name avoids it. Vercel only looks at the `api/` directory at the root of the project.
+Any other directory name avoids it. Vercel only looks at the `api/` directory at the root of the project. While the routes stay in `api/`, `nextspark prepare` logs `NS_HOST_VERCEL_API_DIR` on Vercel builds.
 
 To move the directory:
 

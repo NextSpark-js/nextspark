@@ -8,8 +8,10 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { getConfig } from '../../config.mjs'
+import { discoverPlugins } from '../../discovery/plugins.mjs'
 import { discoverThemes } from '../../discovery/themes.mjs'
-import { PLAN_DIAGNOSTICS, planHost } from '../plan.mjs'
+import { PLAN_DIAGNOSTICS, PLAN_NOTICES, planHost } from '../plan.mjs'
 import { checkHost, predictHost, prepareHost, projectHostConfig } from '../prepare.mjs'
 import { foreignFilesDiagnostic } from '../generation.mjs'
 import { loadFixtureCoreRoutes } from '../../../../../tests/fixtures/host-conformance/plan.mjs'
@@ -130,6 +132,46 @@ test('a real project with the directory moved: the facade is the default one but
   } finally {
     fallback.cleanup()
     moved.cleanup()
+  }
+})
+
+test('on Vercel with routes in api/, prepare adds a notice and writes the same files; otherwise there is no notice', { timeout: 300_000 }, async () => {
+  const code = PLAN_NOTICES.VERCEL_API_DIR
+  const has = result => result.notices.some(notice => notice.code === code)
+  const configOf = (root, VERCEL) => ({ ...projectHostConfig({ projectRoot: root, env: { ...process.env, VERCEL } }), loadCoreRoutes: loadFixtureCoreRoutes })
+  const fallback = project()
+  const moved = project('routes')
+  try {
+    const plain = await prepareHost(configOf(fallback.root, undefined))
+    assert.equal(has(plain), false, 'not on Vercel')
+    const vercel = await prepareHost(configOf(fallback.root, '1'))
+    assert.equal(has(vercel), true)
+    const notice = vercel.notices.find(item => item.code === code)
+    assert.match(notice.message, /adds build time and duplicates them/)
+    assert.match(notice.message, /\(1 route here\)/)
+    assert.deepEqual(vercel.files.map(file => [file.path, file.content]), plain.files.map(file => [file.path, file.content]))
+
+    assert.equal(has(await prepareHost(configOf(moved.root, '1'))), false, 'the directory is already moved')
+
+    rmSync(join(fallback.root, 'api'), { recursive: true })
+    assert.equal(has(await prepareHost(configOf(fallback.root, '1'))), false, 'no routes in api/')
+  } finally {
+    fallback.cleanup()
+    moved.cleanup()
+  }
+})
+
+test('the plugin discovery passes apiDir to the server and client check', { timeout: 60_000 }, async () => {
+  const { root, cleanup } = project('server/api')
+  try {
+    write(root, 'nextspark.config.ts', "export default { plugins: ['demo'], apiDir: 'server/api' }\n")
+    write(root, 'tsconfig.json', JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['./*'] } } }))
+    write(root, 'server/api/ping/helper.ts', 'export const x = 1\n')
+    write(root, 'plugins/demo/plugin.config.ts', "export const demoPluginConfig = { name: 'demo', capabilities: ['web'] }\nexport default demoPluginConfig\n")
+    write(root, 'plugins/demo/components/Widget.tsx', "import { x } from '@/server/api/ping/helper'\nexport default () => x\n")
+    await assert.rejects(discoverPlugins(getConfig(root)), /the project server\/api\//)
+  } finally {
+    cleanup()
   }
 })
 

@@ -52,7 +52,7 @@ import { coreRouteRateLimit } from './rate-limit.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
 import { proxyPathDiagnostics } from './proxy-paths.mjs'
 import { ENTRY_NOT_REPLACED, INSTRUMENTATION_MOVED, INSTRUMENTATION_NOT_LOADED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
-import { HostPlanError, compareTargets, planHost } from './plan.mjs'
+import { HostPlanError, PLAN_NOTICES, compareTargets, planHost } from './plan.mjs'
 import { findQueryHooksWithoutProvider, queryHookNotice } from '../../../maintenance/query-providers.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
 import {
@@ -100,6 +100,17 @@ function describeDiagnostic(diagnostic) {
  * Plan and render the host in memory: `{ routes, appFiles }` or a PrepareError with every
  * planning and emission diagnostic.
  */
+/** A log line for a build running on Vercel with the project's routes still under the default api/ directory. */
+function vercelApiDirNotice(config, routes) {
+  if (!config.onVercel || config.project?.apiDir !== 'api') return []
+  const count = routes.filter(route => route.source?.startsWith('api/')).length
+  if (count === 0) return []
+  return [{
+    code: PLAN_NOTICES.VERCEL_API_DIR,
+    message: `Vercel also builds the root api/ directory as separate functions (${count} route${count === 1 ? '' : 's'} here), which adds build time and duplicates them. Set apiDir in nextspark.config.ts to move it; see "The Project's API Directory" in the Vercel deployment guide.`,
+  }]
+}
+
 export async function renderHostFiles(config, { devStatus = false, cache } = {}) {
   const transpile = packagedPluginTranspile({ projectRoot: config.project?.root ?? config.projectRoot, plugins: config.plugins ?? [] })
   if (transpile.diagnostics.length > 0) throw Object.assign(new PrepareError(transpile.diagnostics), { notices: transpile.notices, stage: 'plan' })
@@ -128,7 +139,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
   })
   const { routes } = planned
   const queryNotice = queryHookNotice(findQueryHooksWithoutProvider({ projectRoot: config.project?.root ?? config.projectRoot, plugins: declared.plugins, routes }))
-  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : [])]
+  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : []), ...vercelApiDirNotice(config, routes)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({
@@ -550,6 +561,7 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
     get plugins() {
       return currentPlugins()
     },
+    onVercel: env.VERCEL === '1',
     project: {
       root: config.projectRoot,
       importBase: '@',

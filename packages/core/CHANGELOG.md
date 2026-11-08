@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`apiDir` in `nextspark.config.ts` names the directory of the project's Route Handlers.** The default stays `api`, so a project that sets nothing does not change. The generated routes, the API docs and presets, `nextspark migrate`, `nextspark prepare --check` and the messages of the CLI follow it, and the routes are still served at `/api/<path>`. The value is a relative path inside the project, outside the root directories with another use. With `apiDir` set, a route file left in `api/` stops `nextspark prepare` (`NS_HOST_API_DIR_LEFTOVER`). The Vercel guide explains why a project deployed there should move the directory, and how (#415).
+- **`apiDir` in `nextspark.config.ts` names the directory of the project's Route Handlers.** The default stays `api`, so a project that sets nothing does not change. The generated routes, the API docs and presets, `nextspark migrate`, `nextspark prepare --check` and the messages of the CLI follow it, and the routes are still served at `/api/<path>`. The value is a relative path inside the project, outside the root directories with another use. With `apiDir` set, a route file left in `api/` stops `nextspark prepare` (`NS_HOST_API_DIR_LEFTOVER`). The Vercel guide explains why a project deployed there should move the directory, and how, and a build on Vercel with routes still in `api/` logs a notice about it (`NS_HOST_VERCEL_API_DIR`) (#415).
 
 ### Fixed
 
