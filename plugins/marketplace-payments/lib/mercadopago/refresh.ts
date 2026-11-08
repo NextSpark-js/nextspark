@@ -3,18 +3,23 @@
  * the old one stops working, so each seller is renewed under a row lock: two runs cannot spend the same refresh token.
  */
 
-import { ProviderApiError } from '../provider-error'
+import { PROVIDER_TIMEOUT_MS, ProviderApiError } from '../provider-error'
+import type { AccountStatusResult, SellerRef } from '../gateway'
 import type { MercadoPagoTokens } from './gateway'
 
 export const REFRESH_TOKENS_ACTION = 'marketplace-payments:refresh-mercadopago-tokens'
 
 /** Tokens last 180 days; renewing 30 days ahead leaves time for a provider outage. */
 const REFRESH_AHEAD_MS = 30 * 24 * 60 * 60 * 1000
-// ponytail: 200 sellers per run; the action is hourly, so raise it past ~4800 sellers renewing on one day
-const BATCH = 200
+// ponytail: 25 sellers per run; the action is hourly, so raise it (and the timeout follows) past ~600 sellers renewing on one day
+const BATCH = 25
+/** Long enough for every seller of a run to use both of its provider calls: a run must not be cut with a new token unsaved. */
+export const REFRESH_TOKENS_TIMEOUT_MS = (BATCH + 1) * 2 * PROVIDER_TIMEOUT_MS
 
 export interface LockedCredential {
   accountId: string
+  providerAccountId: string
+  accessToken: string
   refreshToken: string
   expiresAt: Date
 }
@@ -29,6 +34,7 @@ export interface TokenRefreshStore {
 
 export interface TokenRefresher {
   refreshAccessToken(refreshToken: string): Promise<MercadoPagoTokens>
+  getAccountStatus(seller: SellerRef): Promise<AccountStatusResult>
 }
 
 export interface RefreshSummary {
@@ -51,11 +57,12 @@ export async function refreshExpiringMercadoPagoTokens(store: TokenRefreshStore,
           summary.refreshed++
           return { tokens }
         } catch (error) {
-          if (error instanceof ProviderApiError && error.code === 'invalid_grant') {
-            summary.revoked++
-            return 'revoked'
-          }
-          throw error
+          if (!(error instanceof ProviderApiError && error.code === 'invalid_grant')) throw error
+          // the seller loses its tokens only when the access token is refused too
+          const { status } = await gateway.getAccountStatus({ providerAccountId: current.providerAccountId, accessToken: current.accessToken })
+          if (status !== 'disconnected') throw error
+          summary.revoked++
+          return 'revoked'
         }
       })
     } catch (error) {

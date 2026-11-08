@@ -279,12 +279,21 @@ export const tokenRefreshStore: TokenRefreshStore = {
   async updateLockedCredential(accountId, decide: (current: LockedCredential) => Promise<CredentialUpdate>) {
     let revoked = false
     await withServiceTransaction(async () => {
-      const row = await queryOne<{ refreshTokenEnc: string; expiresAt: Date }>(
-        `SELECT "refreshTokenEnc", "expiresAt" FROM public."marketplace_seller_credentials" WHERE "accountId" = $1 FOR UPDATE SKIP LOCKED`,
+      const row = await queryOne<{ accessTokenEnc: string; refreshTokenEnc: string; expiresAt: Date; providerAccountId: string }>(
+        `SELECT c."accessTokenEnc", c."refreshTokenEnc", c."expiresAt", a."providerAccountId"
+         FROM public."marketplace_seller_credentials" c JOIN public."marketplace_accounts" a ON a.id = c."accountId"
+         WHERE c."accountId" = $1 FOR UPDATE OF c SKIP LOCKED`,
         [accountId]
       )
       if (!row) return
-      const update = await decide({ accountId, refreshToken: decryptToken(row.refreshTokenEnc, tokenKeyring(), refreshTokenContext(accountId)), expiresAt: row.expiresAt })
+      const keyring = tokenKeyring()
+      const update = await decide({
+        accountId,
+        providerAccountId: row.providerAccountId,
+        accessToken: decryptToken(row.accessTokenEnc, keyring, accessTokenContext(accountId)),
+        refreshToken: decryptToken(row.refreshTokenEnc, keyring, refreshTokenContext(accountId)),
+        expiresAt: row.expiresAt,
+      })
       if (update === 'revoked') {
         revoked = true
       } else if (update) {

@@ -195,6 +195,11 @@ test('marketplace tables: RLS, encryption at rest, idempotency, OAuth state and 
         if (token.includes('mp-b')) throw new ProviderApiError('mercadopago', 400, 'invalid_grant')
         return renewed
       },
+      getAccountStatus: async seller => {
+        assert.equal(seller.accessToken, 'plain-access-mp-b')
+        assert.equal(seller.providerAccountId, 'mp-b')
+        return { status: 'disconnected', chargesEnabled: false, payoutsEnabled: false }
+      },
     })
     assert.deepEqual(summary, { refreshed: 1, revoked: 1, failed: 0 })
     assert.equal(await store.getSellerAccessToken(accountA), 'plain-new')

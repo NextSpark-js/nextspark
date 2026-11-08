@@ -6,7 +6,7 @@
 import { registerScheduledAction } from '@nextsparkjs/core/lib/scheduled-actions/registry'
 import { scheduleRecurringAction } from '@nextsparkjs/core/lib/scheduled-actions/scheduler'
 import { isMercadoPagoConfigured, tokenKeyring } from './env'
-import { REFRESH_TOKENS_ACTION, refreshExpiringMercadoPagoTokens } from './mercadopago/refresh'
+import { REFRESH_TOKENS_ACTION, REFRESH_TOKENS_TIMEOUT_MS, refreshExpiringMercadoPagoTokens } from './mercadopago/refresh'
 import { mercadoPagoGateway } from './runtime'
 import { keyRotationStore, tokenRefreshStore } from './store'
 import { ROTATE_TOKEN_KEYS_ACTION, rotateSellerTokenKeys } from './token-crypto'
@@ -19,7 +19,7 @@ export function registerMarketplacePaymentsActions(): void {
       const summary = await refreshExpiringMercadoPagoTokens(tokenRefreshStore, mercadoPagoGateway())
       if (summary.failed > 0) throw new Error(`${summary.failed} seller token(s) could not be refreshed`)
     },
-    { description: 'Renew MercadoPago seller tokens before they expire' }
+    { description: 'Renew MercadoPago seller tokens before they expire', timeout: REFRESH_TOKENS_TIMEOUT_MS }
   )
   registerScheduledAction(
     ROTATE_TOKEN_KEYS_ACTION,

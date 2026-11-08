@@ -1,8 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createMercadoPagoGateway } from '../lib/mercadopago/gateway'
-import { refreshExpiringMercadoPagoTokens, type CredentialUpdate, type LockedCredential, type TokenRefreshStore } from '../lib/mercadopago/refresh'
-import { ProviderApiError } from '../lib/provider-error'
+import { REFRESH_TOKENS_TIMEOUT_MS, refreshExpiringMercadoPagoTokens, type CredentialUpdate, type LockedCredential, type TokenRefreshStore } from '../lib/mercadopago/refresh'
+import { PROVIDER_TIMEOUT_MS, ProviderApiError } from '../lib/provider-error'
 import { majorToMinor, minorToMajor } from '../lib/money'
 
 function fakeFetch(responses: { status?: number; body: unknown }[]) {
@@ -125,33 +128,62 @@ const NOW = new Date('2026-01-01T00:00:00Z')
 const soon = new Date('2026-01-10T00:00:00Z')
 const tokens = { accessToken: 'new', refreshToken: 'new-r', providerAccountId: '1', expiresAt: new Date('2026-06-01T00:00:00Z') }
 
-test('the refresh renews what is expiring, and a revoked grant disconnects only that seller', async () => {
-  const { store, updates } = memoryStore([
-    { accountId: 'a', refreshToken: 'ok', expiresAt: soon },
-    { accountId: 'b', refreshToken: 'revoked', expiresAt: soon },
-  ])
+const credential = (accountId: string, refreshToken: string, expiresAt = soon): LockedCredential => ({ accountId, providerAccountId: `mp-${accountId}`, accessToken: `access-${accountId}`, refreshToken, expiresAt })
+const invalidGrant = () => new ProviderApiError('mercadopago', 400, 'invalid_grant')
+const active = async () => ({ status: 'active' as const, chargesEnabled: true, payoutsEnabled: true })
+const refused = async () => ({ status: 'disconnected' as const, chargesEnabled: false, payoutsEnabled: false })
+
+test('the refresh renews what is expiring, and a grant refused along with the access token disconnects only that seller', async () => {
+  const { store, updates } = memoryStore([credential('a', 'ok'), credential('b', 'revoked')])
+  const asked: string[] = []
   const summary = await refreshExpiringMercadoPagoTokens(
     store,
-    { refreshAccessToken: async token => { if (token === 'revoked') throw new ProviderApiError('mercadopago', 400, 'invalid_grant'); return tokens } },
+    {
+      refreshAccessToken: async token => { if (token === 'revoked') throw invalidGrant(); return tokens },
+      getAccountStatus: async seller => { asked.push(`${seller.providerAccountId}:${seller.accessToken}`); return refused() },
+    },
     NOW
   )
   assert.deepEqual(summary, { refreshed: 1, revoked: 1, failed: 0 })
   assert.deepEqual(updates.a, { tokens })
   assert.equal(updates.b, 'revoked')
+  assert.deepEqual(asked, ['mp-b:access-b'])
+})
+
+test('a refused grant with a working access token keeps the seller and is counted as failed', async t => {
+  t.mock.method(console, 'error', () => {})
+  const { store, updates } = memoryStore([credential('a', 'x')])
+  const summary = await refreshExpiringMercadoPagoTokens(store, { refreshAccessToken: async () => { throw invalidGrant() }, getAccountStatus: active }, NOW)
+  assert.deepEqual(summary, { refreshed: 0, revoked: 0, failed: 1 })
+  assert.equal('a' in updates, false)
+})
+
+test('a refused grant whose confirmation fails keeps the seller and is counted as failed', async t => {
+  t.mock.method(console, 'error', () => {})
+  const { store, updates } = memoryStore([credential('a', 'x')])
+  const summary = await refreshExpiringMercadoPagoTokens(store, { refreshAccessToken: async () => { throw invalidGrant() }, getAccountStatus: async () => { throw new ProviderApiError('mercadopago', 503) } }, NOW)
+  assert.deepEqual(summary, { refreshed: 0, revoked: 0, failed: 1 })
+  assert.equal('a' in updates, false)
+})
+
+test('the refresh action declares a timeout that covers a whole run', () => {
+  assert.ok(REFRESH_TOKENS_TIMEOUT_MS >= 25 * 2 * PROVIDER_TIMEOUT_MS)
+  const source = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/scheduled-actions.ts'), 'utf8')
+  assert.match(source, /timeout: REFRESH_TOKENS_TIMEOUT_MS/)
 })
 
 test('a provider outage keeps the seller connected and is counted as failed, not revoked', async (t) => {
   t.mock.method(console, 'error', () => {})
-  const { store, updates } = memoryStore([{ accountId: 'a', refreshToken: 'x', expiresAt: soon }])
-  const summary = await refreshExpiringMercadoPagoTokens(store, { refreshAccessToken: async () => { throw new ProviderApiError('mercadopago', 503) } }, NOW)
+  const { store, updates } = memoryStore([credential('a', 'x')])
+  const summary = await refreshExpiringMercadoPagoTokens(store, { refreshAccessToken: async () => { throw new ProviderApiError('mercadopago', 503) }, getAccountStatus: refused }, NOW)
   assert.deepEqual(summary, { refreshed: 0, revoked: 0, failed: 1 })
   assert.equal('a' in updates, false)
 })
 
 test('a credential another run already renewed is left alone', async () => {
-  const { store, updates } = memoryStore([{ accountId: 'a', refreshToken: 'x', expiresAt: new Date('2026-05-01T00:00:00Z') }])
+  const { store, updates } = memoryStore([credential('a', 'x', new Date('2026-05-01T00:00:00Z'))])
   let called = 0
-  const summary = await refreshExpiringMercadoPagoTokens(store, { refreshAccessToken: async () => { called++; return tokens } }, NOW)
+  const summary = await refreshExpiringMercadoPagoTokens(store, { refreshAccessToken: async () => { called++; return tokens }, getAccountStatus: active }, NOW)
   assert.equal(called, 0)
   assert.equal(updates.a, null)
   assert.deepEqual(summary, { refreshed: 0, revoked: 0, failed: 0 })
