@@ -73,6 +73,8 @@ Unlike in-process job queues, Scheduled Actions use an external cron trigger bec
 - **Scalable:** Can handle varying loads
 - **Recoverable:** Pending actions survive restarts
 
+On a host that keeps processes running you can instead run the optional pg-boss worker as a second process; see [Worker (pg-boss)](./07-worker.md).
+
 ## Database Schema
 
 The `scheduled_actions` table stores all scheduled tasks:

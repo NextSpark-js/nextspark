@@ -78,6 +78,7 @@ Commands:
   db:seed           Seed sample data
   prepare           Generate src/app and the registries (--check compares, --watch watches)
   migrate           Move a 0.x project to the root-first layout and the generated src/app
+  worker            Run the optional pg-boss worker as a second process (needs pg-boss and jobs.enabled)
 
 Options:
   -h, --help    Show help message

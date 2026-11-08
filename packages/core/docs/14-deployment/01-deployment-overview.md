@@ -98,6 +98,12 @@ Vercel Project: your-app
 
 ---
 
+## Background jobs: external cron or a worker process
+
+Scheduled Actions run from an external cron that calls the cron endpoint; that is the path on Vercel and other serverless hosts. On a host that keeps processes running (a VM, a container, a self-hosted deploy) you can instead run the optional pg-boss worker, `nextspark worker`, **as a second process next to the app**, with the same image and environment variables. Deploy and restart it together with the app. See [Worker (pg-boss)](../20-scheduled-actions/07-worker.md) for when to choose each.
+
+---
+
 ## Automated Deployment Script
 
 ### What It Does

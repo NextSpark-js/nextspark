@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The blog template no longer declares the permissions, features and flows of an export and import it does not implement.** `blog.export` and `blog.import`, the `post-export` and `post-import` features and the `export-content` and `import-content` flows had no code behind them (the button and the dialog were removed in the previous release) and were listed in the permission and feature catalogs of a project created from the template. A project that copied them can delete them from its `permissions.config.ts`, `features.config.ts` and `flows.config.ts`.
 - **The unused `scripts/deploy/release-version.mjs` is retired, and the release docs describe `scripts/packages/version.sh`.** Nothing invoked it. The `core.version.json` that `update-core` writes in a project is not affected.
+### Added
+
+- **An optional worker on pg-boss, `nextspark worker`, runs queues, retries with backoff and cron schedules on the project's own Postgres.** It is off unless `jobs.enabled` is true in the app config, needs `pg-boss` installed in the project (an optional peer dependency, loaded only by the worker) and runs as a second process next to the app. Each queue runs a Scheduled Actions handler, so handlers are registered as before and keep using the app role under RLS; pg-boss itself connects with `MIGRATE_DATABASE_URL` (or `DATABASE_URL`) to manage its own schema. SIGTERM finishes the running jobs before it exits. The external-cron mode of Scheduled Actions does not change and stays the path for serverless hosts. See `docs/20-scheduled-actions/07-worker.md` (#275)
 
 ## [0.1.0-beta.201] - 2026-11-06
 
