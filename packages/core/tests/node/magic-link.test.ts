@@ -110,9 +110,12 @@ test('a link delivered through SMTP signs in a new and an existing user, once, a
   // a new user gets a team as any other sign-up
   assert.equal((await owner.query(`SELECT count(*)::int AS n FROM teams t JOIN users u ON u.id = t."ownerId" WHERE u.email = 'new@example.test'`)).rows[0].n, 1)
 
-  // the token is stored hashed and consumed
-  const token = new URL(sentKnown.link!).searchParams.get('token')!
-  assert.equal((await owner.query(`SELECT count(*)::int AS n FROM verification WHERE identifier LIKE '%' || $1 || '%'`, [token])).rows[0].n, 0)
+  // while it waits to be used, the database holds a hash of the token and not the token
+  const [pending] = runSteps(ownerUrl, LINK, [{ op: 'magic-send', email: 'known@example.test', provider: 'ok' }])
+  const token = new URL(pending.link!).searchParams.get('token')!
+  const { rows: stored } = await owner.query<{ identifier: string }>(`SELECT identifier FROM verification WHERE identifier LIKE 'magic-link:%'`)
+  assert.equal(stored.length, 1)
+  assert.ok(!stored[0].identifier.includes(token), 'the token is not stored in clear')
 
   // Better Auth skips its origin check when NODE_ENV is test
   const development = { nodeEnv: 'development' }

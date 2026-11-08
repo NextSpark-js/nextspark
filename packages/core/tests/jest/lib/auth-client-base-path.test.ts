@@ -13,6 +13,7 @@ jest.mock('better-auth/react', () => ({
 jest.mock('better-auth/client/plugins', () => ({
   inferAdditionalFields: jest.fn(() => ({ id: 'infer-additional-fields' })),
   emailOTPClient: jest.fn(() => ({ id: 'email-otp-client' })),
+  magicLinkClient: jest.fn(() => ({ id: 'magic-link-client' })),
 }), { virtual: true })
 
 const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
