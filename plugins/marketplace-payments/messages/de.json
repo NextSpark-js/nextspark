@@ -31,7 +31,7 @@
     "connected": "Dein Konto ist verbunden.",
     "invalid_state": "Die Verbindung konnte nicht bestätigt werden. Bitte beginne von vorn.",
     "forbidden": "Du hast keine Berechtigung, für dieses Team ein Konto zu verbinden.",
-    "already_connected": "Dieses Konto ist bereits mit einem anderen Team verbunden.",
+    "already_connected": "Dieses Konto ist mit einem anderen Team verknüpft, auch wenn es dort getrennt wurde.",
     "error": "Die Verbindung ist fehlgeschlagen. Bitte versuche es erneut."
   },
   "payments": {

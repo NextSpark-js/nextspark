@@ -51,7 +51,7 @@ export interface PaymentRow {
 
 export class SellerAlreadyConnectedError extends Error {
   constructor() {
-    super('This provider account is already connected to another team')
+    super('This provider account is linked to another team, even if it was disconnected there')
     this.name = 'SellerAlreadyConnectedError'
   }
 }

@@ -31,7 +31,7 @@
     "connected": "Your account is connected.",
     "invalid_state": "The connection could not be verified. Please start again.",
     "forbidden": "You do not have permission to connect an account for this team.",
-    "already_connected": "That account is already connected to another team.",
+    "already_connected": "That account is linked to another team, even if it was disconnected there.",
     "error": "The connection failed. Please try again."
   },
   "payments": {

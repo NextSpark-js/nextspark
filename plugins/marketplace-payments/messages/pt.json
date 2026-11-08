@@ -31,7 +31,7 @@
     "connected": "Sua conta está conectada.",
     "invalid_state": "Não foi possível verificar a conexão. Comece novamente.",
     "forbidden": "Você não tem permissão para conectar uma conta neste time.",
-    "already_connected": "Essa conta já está conectada a outro time.",
+    "already_connected": "Essa conta está vinculada a outro time, mesmo que tenha sido desconectada lá.",
     "error": "A conexão falhou. Tente novamente."
   },
   "payments": {

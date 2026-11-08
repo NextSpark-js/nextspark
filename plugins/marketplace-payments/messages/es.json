@@ -31,7 +31,7 @@
     "connected": "Tu cuenta quedó conectada.",
     "invalid_state": "No se pudo verificar la conexión. Empezá de nuevo.",
     "forbidden": "No tenés permiso para conectar una cuenta en este equipo.",
-    "already_connected": "Esa cuenta ya está conectada a otro equipo.",
+    "already_connected": "Esa cuenta está vinculada a otro equipo, aunque allí se haya desconectado.",
     "error": "La conexión falló. Probá de nuevo."
   },
   "payments": {

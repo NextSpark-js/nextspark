@@ -42,7 +42,11 @@ Split a payment between the platform and a connected seller: the buyer pays, the
    }
    ```
 
+   A run renews up to 25 sellers and can take several minutes if the provider is slow, so run the processor where a request may last that long.
+
 5. Link to the seller page, `/dashboard/settings/marketplace`, from your navigation: core's settings sidebar only lists its own pages. The superadmin page, `/superadmin/marketplace`, adds itself to the superadmin sidebar.
+
+6. Check that your team roles have the `team.billing.manage` permission: the seller page and its routes require it and answer 403 without it. Not every template declares it (the blog template does not), so a project may need to add it to its permissions config.
 
 ## Charging a buyer
 
@@ -122,8 +126,8 @@ Needs the variables above with test credentials, and a public HTTPS URL for the 
 
 1. Create test users for the seller and the buyer. As a team owner, sign in to MercadoPago as the seller and connect it from the settings page.
 2. Create a checkout for that team, and pay as the buyer with a test card.
-3. Check: the payment is *Paid*, and the `application_fee` the plugin compares (`fee_details`) is on the payment as this plugin expects. If `init_point` is refused for test users, set `MARKETPLACE_MERCADOPAGO_SANDBOX=true`.
-4. Check that a request from MercadoPago carries `x-signature` and `x-request-id` (the handler refuses it otherwise). Check that `marketplace-payments:refresh-mercadopago-tokens` renews a token: set its `expiresAt` close in a test database.
+3. Check: the payment is *Paid*, and confirm the value of `fee_details[].type` on the payment: the plugin compares the entry whose type is `application_fee`. If `init_point` is refused for test users, set `MARKETPLACE_MERCADOPAGO_SANDBOX=true`.
+4. Confirm that a notification sent to the `notification_url` of a single payment carries `x-signature` and `x-request-id` (the handler refuses it otherwise). Check that `marketplace-payments:refresh-mercadopago-tokens` renews a token: set its `expiresAt` close in a test database.
 
 ## What it does not cover
 
@@ -134,4 +138,5 @@ Needs the variables above with test credentials, and a public HTTPS URL for the 
 - A refund button in the UI: `refundMarketplacePayment` is for your server code.
 - A seller's MercadoPago deauthorization is noticed at the next token refresh, not when it happens, because the request's body is not signed.
 - Deleting a team deletes its marketplace rows, like its other data.
-- MercadoPago's signature has no timestamp window here: a replay only makes the handler re-read the payment from the API.
+- After a MercadoPago seller is disconnected, its earlier payments are no longer updated and cannot be refunded from here, because that needs the seller's token. A payment made to another provider account than the one connected now is in the same situation.
+- A disconnected account stays linked to its team: it cannot be connected to another team.

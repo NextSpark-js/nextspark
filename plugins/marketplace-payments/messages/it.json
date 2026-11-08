@@ -31,7 +31,7 @@
     "connected": "Il tuo account è collegato.",
     "invalid_state": "Non è stato possibile verificare il collegamento. Ricomincia.",
     "forbidden": "Non hai il permesso di collegare un account per questo team.",
-    "already_connected": "Questo account è già collegato a un altro team.",
+    "already_connected": "Questo account è associato a un altro team, anche se lì è stato scollegato.",
     "error": "Il collegamento non è riuscito. Riprova."
   },
   "payments": {

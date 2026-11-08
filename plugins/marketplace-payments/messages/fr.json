@@ -31,7 +31,7 @@
     "connected": "Votre compte est connecté.",
     "invalid_state": "La connexion n'a pas pu être vérifiée. Veuillez recommencer.",
     "forbidden": "Vous n'avez pas l'autorisation de connecter un compte pour cette équipe.",
-    "already_connected": "Ce compte est déjà connecté à une autre équipe.",
+    "already_connected": "Ce compte est lié à une autre équipe, même s'il y a été déconnecté.",
     "error": "La connexion a échoué. Veuillez réessayer."
   },
   "payments": {
