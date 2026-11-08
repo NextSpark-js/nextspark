@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocale, useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@nextsparkjs/core/components/ui/table'
-import { apiCall, formatDate, formatMoney } from './shared'
+import { apiCall, formatDate, formatMoney, useMarketplaceTranslations } from './shared'
 
 type Provider = 'stripe' | 'mercadopago'
 
@@ -39,7 +39,7 @@ const RESULTS = ['connected', 'invalid_state', 'forbidden', 'already_connected',
 const ACCOUNT_KEY = ['marketplace-payments', 'account']
 
 function ProviderCard({ provider, account, configured }: { provider: Provider; account?: Account; configured: boolean }) {
-  const t = useTranslations()
+  const t = useMarketplaceTranslations()
   const queryClient = useQueryClient()
 
   const connect = useMutation({
@@ -111,7 +111,7 @@ function ProviderCard({ provider, account, configured }: { provider: Provider; a
 }
 
 function PaymentHistory() {
-  const t = useTranslations()
+  const t = useMarketplaceTranslations()
   const locale = useLocale()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
@@ -200,7 +200,7 @@ function PaymentHistory() {
 }
 
 export function SellerSettings() {
-  const t = useTranslations()
+  const t = useMarketplaceTranslations()
   const result = useSearchParams().get('result')
   const known = RESULTS.find(value => value === result)
   const { data, isError } = useQuery({

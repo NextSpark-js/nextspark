@@ -119,6 +119,11 @@ function unallowlistedDynamicCalls(file: string, contents?: string): string[] {
 }
 
 const DYNAMIC_TRANSLATION_ALLOWLIST: Record<string, { groups: TranslationGroup[], namespaces: string, reason: string }> = {
+  'plugins/marketplace-payments/components/shared.tsx:29': {
+    groups: ['dashboard', 'superadmin'],
+    namespaces: 'the top-level keys of the plugin\'s own messages/ catalogs',
+    reason: 'the bare call reads the catalog of the plugin\'s own NextIntlClientProvider (MarketplaceMessages), not the route group\'s messages.',
+  },
   'packages/core/src/hooks/useContentTranslation.ts:18': {
     groups: ['dashboard'],
     namespaces: 'every ENTITY_REGISTRY key',

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { requireTeamManager } from '../../lib/api-auth'
 import { listTeamPayments } from '../../lib/store'
@@ -23,3 +24,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const { payments, total } = await listTeamPayments(manager.teamId, manager.userId, { limit, offset: (page - 1) * limit, status })
   return NextResponse.json({ success: true, data: { payments, pagination: { page, limit, total } } })
 }, 'read')
+
+export const OPTIONS = corsPreflight

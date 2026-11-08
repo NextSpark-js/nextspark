@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { canManageTeamBilling } from '../../../../lib/api-auth'
 import { completeMercadoPagoOAuth } from '../../../../lib/onboarding'
@@ -34,3 +35,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     return back('error')
   }
 }, 'api')
+
+export const OPTIONS = corsPreflight

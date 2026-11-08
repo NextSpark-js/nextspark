@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { requireTeamManager } from '../../lib/api-auth'
 import { MarketplaceNotConfiguredError } from '../../lib/env'
@@ -37,3 +38,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     throw error
   }
 }, 'write')
+
+export const OPTIONS = corsPreflight

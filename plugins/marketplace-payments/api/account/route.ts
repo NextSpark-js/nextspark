@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { requireTeamManager } from '../../lib/api-auth'
 import { isMercadoPagoConfigured, isStripeConfigured } from '../../lib/env'
@@ -31,3 +32,5 @@ export const DELETE = withRateLimitTier(async (request: NextRequest) => {
   await disconnectTeamSeller(manager.teamId, parsed.data.provider)
   return NextResponse.json({ success: true })
 }, 'write')
+
+export const OPTIONS = corsPreflight

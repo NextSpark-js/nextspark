@@ -3,6 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { marketplaceOverview } from '../../../lib/store'
@@ -17,3 +18,5 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const limit = 50
   return NextResponse.json({ success: true, data: await marketplaceOverview({ limit, offset: (page - 1) * limit }) })
 }, 'read')
+
+export const OPTIONS = corsPreflight

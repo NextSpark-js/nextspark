@@ -1,11 +1,11 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useLocale, useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@nextsparkjs/core/components/ui/table'
-import { apiCall, formatDate, formatMoney } from './shared'
+import { apiCall, formatDate, formatMoney, useMarketplaceTranslations } from './shared'
 
 interface Overview {
   totals: { provider: 'stripe' | 'mercadopago'; currency: string; payments: number; volumeCents: number; commissionCents: number }[]
@@ -21,7 +21,7 @@ interface Overview {
 }
 
 export function SuperadminOverview() {
-  const t = useTranslations()
+  const t = useMarketplaceTranslations()
   const locale = useLocale()
   const { data, isError } = useQuery({
     queryKey: ['marketplace-payments', 'overview'],

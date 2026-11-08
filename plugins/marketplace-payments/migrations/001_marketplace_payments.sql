@@ -82,22 +82,23 @@ ALTER TABLE public."marketplace_oauth_states" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "marketplace_accounts_select_policy" ON public."marketplace_accounts";
 CREATE POLICY "marketplace_accounts_select_policy" ON public."marketplace_accounts"
   FOR SELECT TO authenticated
-  USING (public.can_bypass_rls() OR public.auth_team_role("teamId") IN ('owner', 'admin'));
+  USING ((SELECT public.can_bypass_rls()) OR public.auth_team_role("teamId") IN ('owner', 'admin'));
 
 DROP POLICY IF EXISTS "marketplace_payments_select_policy" ON public."marketplace_payments";
 CREATE POLICY "marketplace_payments_select_policy" ON public."marketplace_payments"
   FOR SELECT TO authenticated
-  USING (public.can_bypass_rls() OR public.auth_team_role("teamId") IN ('owner', 'admin'));
+  USING ((SELECT public.can_bypass_rls()) OR public.auth_team_role("teamId") IN ('owner', 'admin'));
 
 -- Migration 022's default privileges grant new tables to the runtime roles. These two stay out of their reach.
 DO $$
-DECLARE
-  role_name TEXT;
 BEGIN
-  FOREACH role_name IN ARRAY ARRAY['nextspark_app', 'authenticated', 'anon'] LOOP
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = role_name) THEN
-      EXECUTE format('REVOKE ALL ON public."marketplace_seller_credentials" FROM %I', role_name);
-      EXECUTE format('REVOKE ALL ON public."marketplace_oauth_states" FROM %I', role_name);
-    END IF;
-  END LOOP;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nextspark_app') THEN
+    REVOKE ALL ON public."marketplace_seller_credentials", public."marketplace_oauth_states" FROM nextspark_app;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    REVOKE ALL ON public."marketplace_seller_credentials", public."marketplace_oauth_states" FROM authenticated;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    REVOKE ALL ON public."marketplace_seller_credentials", public."marketplace_oauth_states" FROM anon;
+  END IF;
 END $$;

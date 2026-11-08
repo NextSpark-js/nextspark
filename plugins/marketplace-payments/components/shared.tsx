@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { NextIntlClientProvider, useLocale, useTimeZone } from 'next-intl'
+import { NextIntlClientProvider, useLocale, useTimeZone, useTranslations } from 'next-intl'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import de from '../messages/de.json'
 import en from '../messages/en.json'
@@ -22,6 +22,11 @@ export function MarketplaceMessages({ children }: { children: ReactNode }) {
       {children}
     </NextIntlClientProvider>
   )
+}
+
+/** The whole catalog of MarketplaceMessages, which is the only thing this provider holds. */
+export function useMarketplaceTranslations() {
+  return useTranslations()
 }
 
 const API = '/api/plugins/marketplace-payments'
