@@ -20,7 +20,7 @@ export function collectHttpUrls(value: unknown, found: Set<string> = new Set()):
 /** A copy of `value` where each string that is a key of `map` is replaced by its value; the rest is shared as it is. */
 export function replaceUrls<T>(value: T, map: Record<string, string>): T {
   const walk = (node: unknown): unknown => {
-    if (typeof node === 'string') return map[node] ?? node
+    if (typeof node === 'string') return Object.hasOwn(map, node) ? map[node] : node
     if (Array.isArray(node)) return node.map(walk)
     if (node && typeof node === 'object') return Object.fromEntries(Object.entries(node).map(([key, item]) => [key, walk(item)]))
     return node

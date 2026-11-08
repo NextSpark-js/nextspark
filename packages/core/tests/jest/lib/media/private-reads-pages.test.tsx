@@ -90,6 +90,15 @@ describe('signBlocksMedia', () => {
     expect(mockQuery).not.toHaveBeenCalled()
   })
 
+  it('keeps text such as constructor, toString and __proto__, and still signs the file next to it', async () => {
+    const texts = ['constructor', 'toString', '__proto__', 'hasOwnProperty']
+    const [out] = await signBlocksMedia([block({ image: mine, title: 'constructor', subtitle: 'toString', list: texts, note: '__proto__' })], 'team-a')
+    const props = out.props as { image: string; title: string; subtitle: string; list: string[]; note: string }
+    expect(props.image).toContain('X-Amz-Signature=')
+    expect([props.title, props.subtitle, props.note]).toEqual(['constructor', 'toString', '__proto__'])
+    expect(props.list).toEqual(texts)
+  })
+
   it('does not query when no URL is an own object', async () => {
     const blocks = [block({ image: external, title: 'x' })]
     expect((await signBlocksMedia(blocks, 'team-a'))[0].props.image).toBe(external)

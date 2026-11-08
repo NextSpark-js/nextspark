@@ -6,7 +6,7 @@
 // nothing is asked and nothing changes.
 import * as React from 'react'
 import { render, renderHook, screen, waitFor, act } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query'
 import { useDisplayUrls, useSignedProps } from '@/core/hooks/useDisplayUrls'
 import { ImageUpload } from '@/core/components/ui/image-upload'
 import { VideoUpload } from '@/core/components/ui/video-upload'
@@ -144,5 +144,54 @@ describe('the field components', () => {
     )
     await waitFor(() => expect(srcs()).toContain(signedOf(stored)))
     expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('names that exist on every object', () => {
+  const names = ['constructor', 'toString', '__proto__', 'hasOwnProperty']
+
+  it('are not read from the prototype: they stay as they are, and the page still renders', async () => {
+    serve({ privateReads: true })
+    const props = { image: stored, ...Object.fromEntries(names.map((name, i) => [`t${i}`, name])), list: names }
+    const { result } = renderHook(() => ({ props: useSignedProps(props), display: useDisplayUrls([stored]) }), { wrapper })
+    await waitFor(() => expect(result.current.props.image).toBe(signedOf(stored)))
+    names.forEach((name, i) => expect((result.current.props as Record<string, unknown>)[`t${i}`]).toBe(name))
+    expect(result.current.props.list).toEqual(names)
+    names.forEach((name) => expect(result.current.display(name)).toBe(name))
+  })
+})
+
+describe('refreshing and typing', () => {
+  it('asks again when the window gets the focus back, although the app turns that off for its queries', async () => {
+    serve({ privateReads: true })
+    const wrapperNoFocus = ({ children }: { children: React.ReactNode }) => {
+      const [client] = React.useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } }))
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    }
+    const { result } = renderHook(() => useDisplayUrls([stored]), { wrapper: wrapperNoFocus })
+    await waitFor(() => expect(result.current(stored)).toBe(signedOf(stored)))
+    expect(signCalls()).toHaveLength(1)
+    // Only the clock moves: past the 30 s the signed set stays fresh
+    jest.useFakeTimers({ now: Date.now(), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask', 'performance', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback'] })
+    jest.setSystemTime(Date.now() + 31_000)
+    act(() => { focusManager.setFocused(false); focusManager.setFocused(true) })
+    try {
+      await waitFor(() => expect(signCalls()).toHaveLength(2))
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('does not ask for every key typed in a URL: one request when it settles', async () => {
+    serve({ privateReads: true })
+    const typed = (n: number) => `${stored}?v=${n}`
+    const { result, rerender } = renderHook(({ n }) => useSignedProps({ image: typed(n) }), { wrapper, initialProps: { n: 1 } })
+    await waitFor(() => expect(signCalls()).toHaveLength(1))
+    for (const n of [2, 3, 4, 5]) rerender({ n })
+    await waitFor(() => expect(signCalls()).toHaveLength(2))
+    await act(async () => { await new Promise((r) => setTimeout(r, 600)) })
+    expect(signCalls()).toHaveLength(2)
+    expect(JSON.parse(signCalls()[1][1].body)).toEqual({ urls: [typed(5)] })
+    expect(result.current.image).toBe(signedOf(typed(5)))
   })
 })

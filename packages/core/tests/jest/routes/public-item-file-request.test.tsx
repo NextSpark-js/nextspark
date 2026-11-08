@@ -53,6 +53,16 @@ describe('public item route and a request for a file', () => {
     expect(resolveBlocks).toHaveBeenCalledWith(blocks, 'team-A')
   })
 
+  it('hands PageRenderer the page with the resolved blocks and the team of the item (#361)', async () => {
+    const resolved = [{ id: 'b1', blockSlug: 'hero', props: {} }]
+    const source = {
+      fetchItem: jest.fn().mockResolvedValue({ id: '1', title: 'T', slug: 'x', blocks: [], locale: 'es', teamId: 'team-A' }),
+      resolveBlocks: jest.fn().mockResolvedValue(resolved),
+    }
+    const element = (await bindPublicItemRoutes(source as never).createPublicItemRoute(config)(props('x'))) as { props: { children: { props: { page: unknown } } } }
+    expect(element.props.children.props.page).toEqual({ id: '1', title: 'T', slug: 'x', blocks: resolved, locale: 'es', teamId: 'team-A' })
+  })
+
   it('runs a project template for a slug with a dot', async () => {
     const Template = jest.fn(() => null)
     const element = (await createPublicItemRoute(config, Template)(props('release-1.0'))) as { type: unknown; props: { params: Promise<{ slug: string }> } }

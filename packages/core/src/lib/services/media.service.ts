@@ -29,6 +29,9 @@ const insertParams = (userId: string, teamId: string, data: CreateMediaInput) =>
   data.title ?? null, data.alt ?? null, data.caption ?? null,
 ]
 
+/** Which of $1 (URLs) are active files of team $2. Exported so a test can run it on a real database. */
+export const TEAM_URLS_SQL = `SELECT url FROM "media" WHERE url = ANY($1) AND "teamId" = $2 AND status = 'active'`
+
 export class MediaService {
   // ============================================
   // QUERIES
@@ -226,10 +229,9 @@ export class MediaService {
    */
   static async teamUrls(urls: string[], teamId: string, userId: string | null): Promise<Set<string>> {
     if (urls.length === 0) return new Set()
-    const sql = `SELECT url FROM "media" WHERE url = ANY($1) AND "teamId" = $2 AND status = 'active'`
     const rows = userId
-      ? await queryWithRLS<{ url: string }>(sql, [urls, teamId], userId)
-      : (await query<{ url: string }>(sql, [urls, teamId])).rows
+      ? await queryWithRLS<{ url: string }>(TEAM_URLS_SQL, [urls, teamId], userId)
+      : (await query<{ url: string }>(TEAM_URLS_SQL, [urls, teamId])).rows
     return new Set(rows.map(row => row.url))
   }
 
