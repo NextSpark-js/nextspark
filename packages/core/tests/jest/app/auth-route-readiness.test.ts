@@ -33,8 +33,7 @@ jest.mock('@nextsparkjs/core/lib/auth-context', () => ({ withSignupContext: jest
 jest.mock('@nextsparkjs/core/lib/auth/security-notifications', () => ({
   dispatchSecurityNotificationsForRequest: jest.fn(async () => undefined),
 }))
-jest.mock('@nextsparkjs/core/lib/auth/verify-email-link', () => ({ verifyEmailPageUrl: jest.fn(() => null) }))
-jest.mock('@nextsparkjs/core/lib/base-path', () => ({ withBasePathRequest: (request: Request) => request }))
+jest.mock('@nextsparkjs/core/lib/base-path', () => ({ withBasePath: (path: string) => path, withBasePathRequest: (request: Request) => request }))
 
 import { generateKeyPairSync } from 'node:crypto'
 import { GET, POST } from '@/app/api/auth/[...all]/route'
@@ -221,6 +220,31 @@ describe('shipped auth route runtime readiness integration', () => {
       capabilities: { invitationSignup: true, invitationPasswordSignup: true, passwordRecovery: false },
     })
     expect(mockGet).not.toHaveBeenCalled()
+  })
+
+  // nextRequest() builds another host than the public one: nothing of it may reach the Location
+  describe('links opened in a browser', () => {
+    const usableEmail = {
+      EMAIL_PROVIDER: 'resend',
+      RESEND_API_KEY: 're_1234567890abcdefghijklmnop',
+      RESEND_FROM_EMAIL: 'auth@example.com',
+    }
+
+    test('a verification link goes on to its page with a relative Location', async () => {
+      const response = await GET(nextRequest('/api/auth/verify-email?token=abc&callbackURL=%2F'), { params: Promise.resolve({ all: [] }) })
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe('/verify-email?token=abc&callbackURL=%2F')
+      expect(mockGet).not.toHaveBeenCalled()
+    })
+
+    test('a sign-in link Better Auth refused with JSON goes to the error page with a relative Location', async () => {
+      setProductionEnv(usableEmail)
+      mockGet.mockResolvedValueOnce(new Response(JSON.stringify({ code: 'ACCOUNT_SUSPENDED' }), { status: 403 }))
+      const response = await GET(nextRequest('/api/auth/magic-link/verify?token=abc'), { params: Promise.resolve({ all: [] }) })
+      expect(response.status).toBe(302)
+      expect(response.headers.get('location')).toBe('/auth-error?error=ACCOUNT_SUSPENDED')
+    })
+
   })
 
   test.each([

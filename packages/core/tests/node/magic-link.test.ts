@@ -134,7 +134,7 @@ test('a link delivered through SMTP signs in a new and an existing user, once, a
   ], development)
   for (const r of rewritten.slice(1, -1)) {
     assert.equal(r.status, 302, JSON.stringify(r))
-    assert.match(r.location ?? '', /^http:\/\/localhost:5173\/auth-error/, JSON.stringify(r))
+    assert.match(r.location ?? '', /^\/auth-error(\?|$)/, JSON.stringify(r))
     assert.equal(r.setsSession, false, JSON.stringify(r))
   }
   signedIn(rewritten.at(-1)!)

@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A clicked email verification link stays on the public address behind a proxy.** The redirect to the verify-email page is relative, instead of built from the host the server received. (#276)
 - **`nextspark prepare --check` also sees the files of the typed client that are new, left over or different, and any file in `.nextspark/registries` that no record lists.** The check compared each registry only with the hash the record held, so a client file that changed together with its record, a file left by an entity that was removed, or a file added by hand passed. It now compares the client file by file with what `prepare` would write, reports a recorded file the output no longer contains, and reports a file in `.nextspark/registries` that the generation does not record (`prepare` never deletes a file it does not own, so the message asks for it to be deleted by hand), so CI fails when the generated output is not what `prepare` produces (#277).
 
 ## [0.1.0-beta.201] - 2026-11-06

@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
     // This is from an email link, redirect to the UI verification page
     const redirectUrl = verifyEmailPageUrl(req.url);
     if (redirectUrl) {
-      return NextResponse.redirect(redirectUrl);
+      return new Response(null, { status: 307, headers: { location: redirectUrl } });
     }
   }
 
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
       : () => handlers.GET(authReq),
     req
   );
-  return isMagicLinkVerify ? magicLinkFailurePage(response, req.url) : response;
+  return isMagicLinkVerify ? magicLinkFailurePage(response) : response;
 }
 
 // Intercept signup requests to validate registration mode

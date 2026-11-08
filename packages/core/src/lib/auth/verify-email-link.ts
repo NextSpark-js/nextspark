@@ -8,15 +8,18 @@
 
 import { withBasePath } from '../base-path'
 
-/** The verify-email page for the URL of a clicked email link, or null when it carries no token. */
-export function verifyEmailPageUrl(linkUrl: string): URL | null {
+/**
+ * The verify-email page for the URL of a clicked email link, or null when it
+ * carries no token. Relative: behind a proxy the request's URL carries the
+ * internal host, and the browser resolves this against the address it opened.
+ */
+export function verifyEmailPageUrl(linkUrl: string): string | null {
   const link = new URL(linkUrl)
   const token = link.searchParams.get('token')
   if (!token) return null
 
-  const page = new URL(withBasePath('/verify-email'), link)
-  page.searchParams.set('token', token)
+  const query = new URLSearchParams({ token })
   const callbackURL = link.searchParams.get('callbackURL')
-  if (callbackURL) page.searchParams.set('callbackURL', callbackURL)
-  return page
+  if (callbackURL) query.set('callbackURL', callbackURL)
+  return `${withBasePath('/verify-email')}?${query}`
 }
