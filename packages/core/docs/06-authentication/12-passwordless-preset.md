@@ -164,7 +164,10 @@ An invalid `expiresIn` is rejected with a `console.warn` and falls back to the d
 - **Rate limit**: the request is charged like a code request (`auth` per address, `authIdentifier` budget "send" per email, shared with codes). Better Auth also limits both routes to 5 per minute per address.
 - **Readiness**: it needs the same email provider as a code. Without a working one, `GET /api/auth/readiness` does not list it, the form does not offer it, its routes answer `503 AUTH_METHOD_UNAVAILABLE` and the server log says why.
 
-> **Mail scanners:** the link is consumed by the first `GET`. A mailbox security product that fetches links before the user does (some corporate gateways do) uses it up, and the user lands on the "link is no longer valid" page. Where that is a concern, offer `'email-otp'` next to it.
+- **Several links**: requesting a new link does not invalidate an earlier one. Each stays valid until it is used or expires.
+- **Security notifications**: opening a link does not trigger the `newDeviceLogin` email, as with OAuth sign-ins. That event only follows the password and code routes.
+
+> **Mail scanners:** the link is consumed by the first `GET`, whoever makes it. A mailbox security product that fetches links before the user does (some corporate gateways do) uses it up, and the user lands on the "link is no longer valid" page. On an address with no account that same `GET` also creates the account, under the registration gates. Where that is a concern, offer `'email-otp'` next to it.
 
 ## Templates
 
