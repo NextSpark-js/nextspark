@@ -10,8 +10,50 @@ import {
   declareWebhookExtensions,
   isGeneratorLoader,
   lineDiff,
+  planAppConversion,
   rewriteMovedImports,
 } from '../src/utils/app-tree.js'
+
+for (const apiDir of ['server/api', undefined]) {
+  test(`planAppConversion serves a project Route Handler at /api/<path> from ${apiDir ?? 'the default api'}, and keeps pages in templates/`, async () => {
+    const hostRoot = mkdtempSync(join(tmpdir(), 'nextspark-app-tree-api-dir-'))
+    try {
+      mkdirSync(join(hostRoot, 'src/app/api/custom'), { recursive: true })
+      mkdirSync(join(hostRoot, 'src/app/pricing'), { recursive: true })
+      writeFileSync(join(hostRoot, 'src/app/api/custom/route.ts'), 'export async function GET() { return Response.json({}) }\n')
+      writeFileSync(join(hostRoot, 'src/app/pricing/page.tsx'), 'export default function Page() { return null }\n')
+      const emitted: { target: string, specifier: string }[] = []
+      const plan = await planAppConversion({
+        hostRoot,
+        root: 'src/app',
+        files: ['api/custom/route.ts', 'pricing/page.tsx'],
+        generated: new Map(),
+        baselineFor: () => undefined,
+        core: {
+          host: {
+            routes: new Map(),
+            emit: async ({ target, specifier }) => { emitted.push({ target, specifier }); return { content: '' } },
+            kindForFileStem: stem => (stem === 'route' || stem === 'page' ? stem : null),
+          },
+        },
+        reserved: new Set(),
+        coreTemplates: null,
+        ...(apiDir ? { apiDir } : {}),
+      })
+      const base = apiDir ?? 'api'
+      assert.deepEqual(emitted, [
+        { target: 'api/custom/route.ts', specifier: `@/${base}/custom/route` },
+        { target: 'pricing/page.tsx', specifier: '@/templates/pricing/page' },
+      ])
+      assert.deepEqual(plan.files.map(file => [file.path, file.fate.kind, 'destination' in file.fate ? file.fate.destination : null]), [
+        ['api/custom/route.ts', 'project', `${base}/custom/route.ts`],
+        ['pricing/page.tsx', 'project', 'templates/pricing/page.tsx'],
+      ])
+    } finally {
+      rmSync(hostRoot, { recursive: true, force: true })
+    }
+  })
+}
 
 test('declareWebhookExtensions adds billing to the config object and keeps its comments', () => {
   const config = `import { defineConfig } from '@nextsparkjs/core/lib/config'

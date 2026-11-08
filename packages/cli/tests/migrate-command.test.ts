@@ -3081,6 +3081,24 @@ test('migrate moves a theme api/ to apiDir and points the imports of it there', 
   }
 })
 
+test('migrate reports a theme api/ file that collides with one already in apiDir', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await write(root, 'nextspark.config.ts', "export default { plugins: ['local'], apiDir: 'routes' }\n")
+    await write(root, 'node_modules/@nextsparkjs/core/scripts/build/config-loader.mjs', "export function loadNextSparkConfigSync() { return { apiDir: 'routes' } }\n")
+    await write(root, 'contents/themes/acme/api/widget/route.ts', 'export const a = 1\n')
+    await write(root, 'routes/widget/route.ts', 'export const b = 2\n')
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.collisions.files.filter((file: { path: string }) => file.path === 'api/widget/route.ts'), [{ path: 'api/widget/route.ts', identical: false }])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate stops with the reason when a config that sets apiDir cannot be read', async () => {
   const root = await rootFirstFixture({
     'nextspark.config.ts': "export default { plugins: [], apiDir: '../outside' }\n",
