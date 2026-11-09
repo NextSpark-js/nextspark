@@ -458,6 +458,9 @@ ${(() => {
     t => t.themeName === config.projectName && t.locale === defaultLocale
   )
   if (!defaultThemeTranslation) {
+    if (detectLocales(join(config.projectSourceDir, 'messages')).some(({ locale }) => locale === defaultLocale)) {
+      throw new Error(`i18n.defaultLocale in config/app.config.ts is "${defaultLocale}" and messages/${defaultLocale} exists, but "${defaultLocale}" is not in i18n.supportedLocales (${supportedLocales.join(', ')}): add it there, or point defaultLocale at a supported locale`)
+    }
     throw new Error(`i18n.defaultLocale in config/app.config.ts is "${defaultLocale}" but the project has no messages/${defaultLocale} folder (or messages/${defaultLocale}.json): a Cache Components host needs the catalog of the default locale to render its static shell. Add messages/${defaultLocale}/, or point defaultLocale at a locale that has one`)
   }
 

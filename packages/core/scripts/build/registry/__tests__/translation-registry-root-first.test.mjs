@@ -47,6 +47,10 @@ test('a Cache Components host fails with a clear message when the default locale
     await writeFile(join(root, 'next.config.mjs'), 'export default { cacheComponents: true }\n')
     const config = { projectRoot: root, projectSourceDir: root, projectName: 'project', pluginsDir: join(root, 'plugins'), plugins: [], pluginSources: [] }
     assert.throws(() => generateTranslationRegistry([{ name: 'project' }], config), /defaultLocale.*"es".*messages\/es/)
+    // the catalog exists but the locale is not supported: the message says so
+    await writeFile(join(root, 'messages', 'es.json'), '{}\n')
+    await writeFile(join(root, 'config', 'app.config.ts'), "export default { i18n: { defaultLocale: 'es', supportedLocales: ['en'] } }\n")
+    assert.throws(() => generateTranslationRegistry([{ name: 'project' }], config), /not in i18n\.supportedLocales/)
     await rm(join(root, 'next.config.mjs'))
     assert.doesNotThrow(() => generateTranslationRegistry([{ name: 'project' }], config))
   } finally {
