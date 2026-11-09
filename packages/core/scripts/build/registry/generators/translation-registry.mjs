@@ -457,7 +457,9 @@ ${(() => {
   const defaultThemeTranslation = themeTranslations.find(
     t => t.themeName === config.projectName && t.locale === defaultLocale
   )
-  if (!defaultThemeTranslation) return '// PPR: No static messages generated (no theme translation found for default locale)'
+  if (!defaultThemeTranslation) {
+    throw new Error(`i18n.defaultLocale in config/app.config.ts is "${defaultLocale}" but the project has no messages/${defaultLocale} folder (or messages/${defaultLocale}.json): a Cache Components host needs the catalog of the default locale to render its static shell. Add messages/${defaultLocale}/, or point defaultLocale at a locale that has one`)
+  }
 
   console.log(`[TranslationRegistry] PPR enabled — generating static exports for locale '${defaultLocale}'`)
 
