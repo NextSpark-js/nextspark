@@ -15,8 +15,10 @@ await runWorkerProcess({
     shutdownTimeout: 20,
     queues: { slow: { handler: 'test:slow', retryLimit: 0 } },
   },
-  getHandler: name =>
-    name === 'test:slow'
+  getHandler: name => {
+    // the worker takes lib/db's signal handlers over before it asks for its first handler: none is left by then
+    mark(`listeners:${process.listenerCount('SIGTERM')}`)
+    return name === 'test:slow'
       ? {
           name,
           handler: async () => {
@@ -27,6 +29,7 @@ await runWorkerProcess({
             mark(`done:${rows[0].role}`)
           },
         }
-      : undefined,
+      : undefined
+  },
 })
 mark('ready')

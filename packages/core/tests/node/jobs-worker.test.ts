@@ -209,7 +209,9 @@ test('SIGTERM finishes the running job before the worker exits', { skip: !HAS_PO
 
   child.kill('SIGTERM')
   const code = await exited
-  assert.deepEqual(read().filter(m => m !== 'ready'), ['started', 'done:app_login'], `the job ran to its end as the app role.\n${output}`)
+  const seen = read().filter(m => m !== 'ready')
+  assert.equal(seen[0], 'listeners:0', 'lib/db\'s SIGTERM handler is taken over before the worker takes its first job')
+  assert.deepEqual(seen.filter(m => !m.startsWith('listeners:')), ['started', 'done:app_login'], `the job ran to its end as the app role.\n${output}`)
   assert.equal(code, 0, `exit code. ${output}`)
   const states = (await owner.query(`SELECT state FROM pgboss.job WHERE name = 'slow'`)).rows.map(r => r.state)
   assert.deepEqual(states, ['completed'], 'the job is completed, not lost or left active')
