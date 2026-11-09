@@ -50,11 +50,13 @@ exec ${JSON.stringify(real)} "\${args[@]}"
   return () => fs.readFileSync(ports, 'utf8').trim().split('\n')
 }
 
-const clustersLeft = () => fs.readdirSync(os.tmpdir()).filter(name => name.startsWith('throwaway-test-'))
+// one prefix per process: suites running in parallel start clusters of their own, and the count below is of this one's
+const PREFIX = `throwaway-test-${process.pid}`
+const clustersLeft = () => fs.readdirSync(os.tmpdir()).filter(name => name.startsWith(`${PREFIX}-`))
 
 test('a port taken between picking it and binding it is retried on another port', { skip, timeout: 120000 }, async t => {
   const portsAsked = fakePgCtl(t, 1, 'FATAL:  could not create any TCP/IP sockets\nLOG:  could not bind IPv4 address "127.0.0.1": Address already in use')
-  const cluster = await startCluster('throwaway-test')
+  const cluster = await startCluster(PREFIX)
   t.after(cluster.stop)
   const ports = portsAsked()
   assert.equal(ports.length, 2, 'one refused start and one that worked')
@@ -64,7 +66,7 @@ test('a port taken between picking it and binding it is retried on another port'
 test('a cluster that cannot start throws the server log, and leaves no directory behind', { skip, timeout: 120000 }, async t => {
   const before = clustersLeft().length
   fakePgCtl(t, 99, 'FATAL:  data directory has wrong ownership')
-  await assert.rejects(startCluster('throwaway-test'), (error: Error) => {
+  await assert.rejects(startCluster(PREFIX), (error: Error) => {
     assert.match(error.message, /did not start/)
     assert.match(error.message, /data directory has wrong ownership/)
     return true
@@ -74,6 +76,6 @@ test('a cluster that cannot start throws the server log, and leaves no directory
 
 test('a start that fails for another reason than a taken port is not retried', { skip, timeout: 120000 }, async t => {
   const portsAsked = fakePgCtl(t, 99, 'FATAL:  data directory has wrong ownership')
-  await assert.rejects(startCluster('throwaway-test'), /wrong ownership/)
+  await assert.rejects(startCluster(PREFIX), /wrong ownership/)
   assert.equal(portsAsked().length, 1)
 })
