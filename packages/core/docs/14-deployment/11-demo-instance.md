@@ -16,7 +16,7 @@ This is an operations note for whoever runs such an instance. Never set the vari
 | Billing | The server runs as `provider: 'none'`: checkout, portal and cancellation answer 501, and the provider webhook routes answer 404. A browser still shows the buttons of the configured provider. |
 | Uploads | Only `STORAGE_DRIVER=local` works; any other driver answers 503. The reset empties `UPLOADS_DIR`. |
 | Sign-up | No account can be created by password, code, sign-in link, social provider or invitation, and `/signup` redirects to `/login`. |
-| Login | Only email and password, whatever `auth.methods` says. The page lists the `devKeyring` users of `config/dev.config.ts`, with their passwords. |
+| Login | Only email and password, whatever `auth.methods` says. The page lists the `devKeyring` users of `config/dev.config.ts`, with their passwords, which cannot be changed. |
 
 The server **refuses to start** in demo mode, and the reset refuses to run, when the environment could reach a real service. The message names the variables, never their values:
 
@@ -30,7 +30,7 @@ The server **refuses to start** in demo mode, and the reset refuses to run, when
 ## Requirements
 
 - **One long-running server with the project on its disk**: a VM or a single container, not a serverless platform. The reset needs the migration files, and it empties the same `UPLOADS_DIR` the server writes to, so it has to run on that host.
-- **An empty PostgreSQL database used for nothing else**. The reset drops its `public` schema, so the role of `MIGRATE_DATABASE_URL` (or `DATABASE_URL` without it) must own that schema. Use a direct connection, not a transaction-mode pooler.
+- **An empty PostgreSQL database used for nothing else**. The reset drops its `public` schema, so the role of `MIGRATE_DATABASE_URL` (or `DATABASE_URL` without it) must own that schema. The migrations create the roles `authenticated`, `anon`, `service_role` and `nextspark_app`, so that role also needs `CREATEROLE`, unless they already exist in the cluster. Use a direct connection, not a transaction-mode pooler.
 
 The environment of the server and of the reset:
 
