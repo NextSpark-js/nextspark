@@ -7,9 +7,10 @@
  * - `@nextsparkjs/registries` and `@nextsparkjs/registries/<name>` are a Next/tsconfig alias for the generated
  *   `<project>/.nextspark/registries/<name>.ts`.
  *
- * It is done twice, because the project's `.ts` files load as ES modules or as CommonJS depending on its package.json
- * `type`: an ESM resolve hook (module.register, which exists in every supported Node; registerHooks does not) and a
- * patch of `Module._resolveFilename` for `require`. The registries live under the directory the worker starts in.
+ * The project's `.ts` files load as ES modules or as CommonJS depending on its package.json `type`, so `server-only` is
+ * handled by an ESM resolve hook (module.register, which exists in every supported Node; registerHooks does not) and by
+ * a patch of `Module._resolveFilename` for `require`. The registries alias is only imported by core's ES modules, so
+ * only the ESM hook maps it. The registries live under the directory the worker starts in.
  */
 import Module, { register } from 'node:module'
 import path from 'node:path'
@@ -19,18 +20,10 @@ const REGISTRIES_DIR = path.join(process.cwd(), '.nextspark', 'registries')
 const ALIAS = '@nextsparkjs/registries'
 const EMPTY_FILE = fileURLToPath(new URL('./empty.cjs', import.meta.url))
 
-/** The generated file an `@nextsparkjs/registries` specifier stands for, or null for any other specifier. */
-function registryFile(specifier) {
-  if (specifier === ALIAS) return path.join(REGISTRIES_DIR, 'index.ts')
-  if (!specifier.startsWith(`${ALIAS}/`)) return null
-  const name = specifier.slice(ALIAS.length + 1)
-  return path.join(REGISTRIES_DIR, /\.[cm]?[jt]s$/.test(name) ? name : `${name}.ts`)
-}
-
 const resolveFilename = Module._resolveFilename
 Module._resolveFilename = function patchedResolveFilename(request, ...rest) {
   if (request === 'server-only') return EMPTY_FILE
-  return registryFile(request) ?? resolveFilename.call(this, request, ...rest)
+  return resolveFilename.call(this, request, ...rest)
 }
 
 register(
