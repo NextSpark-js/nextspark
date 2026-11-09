@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals'
 import { fireEvent, render } from '@testing-library/react'
 
-const readiness: { state: 'loading' | 'ready' | 'unavailable' | 'error'; availableMethods: string[] } = {
+const readiness: { state: 'loading' | 'ready' | 'unavailable' | 'error'; availableMethods: string[]; demoAccounts?: Array<{ name: string; email: string; password: string }> } = {
   state: 'loading',
   availableMethods: [],
 }
@@ -47,6 +47,7 @@ describe('LoginForm runtime readiness states', () => {
   beforeEach(() => {
     readiness.state = 'loading'
     readiness.availableMethods = []
+    delete readiness.demoAccounts
   })
 
   test('shows a loading state without auth buttons while methods are checked', () => {
@@ -124,5 +125,25 @@ describe('LoginForm runtime readiness states', () => {
     render(<LoginForm />)
 
     expect(Array.from(document.querySelectorAll('[data-cy$="Signin"]')).map((el) => el.getAttribute('data-cy'))).toEqual(['auth.login.githubSignin'])
+  })
+
+  test('a demo shows its sample accounts and no way to sign up', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['email-password']
+    readiness.demoAccounts = [{ name: 'Sample', email: 'sample@example.test', password: 'Pandora1234' }]
+    render(<LoginForm />)
+
+    expect(byCy('auth.login.demoAccounts')).toHaveTextContent('sample@example.test')
+    expect(byCy('auth.login.demoAccounts')).toHaveTextContent('Pandora1234')
+    expect(byCy('auth.login.signupLink')).not.toBeInTheDocument()
+  })
+
+  test('without demo accounts the panel is absent and sign-up stays', () => {
+    readiness.state = 'ready'
+    readiness.availableMethods = ['email-password']
+    render(<LoginForm />)
+
+    expect(byCy('auth.login.demoAccounts')).not.toBeInTheDocument()
+    expect(byCy('auth.login.signupLink')).toBeInTheDocument()
   })
 })

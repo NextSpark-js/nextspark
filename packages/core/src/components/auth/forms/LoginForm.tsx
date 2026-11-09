@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useAuthActions } from '../../../hooks/useAuth'
 import { useAuthReadiness } from '../../../hooks/useAuthReadiness'
+import type { ClientDemoAccount } from '../../../hooks/useAuthReadiness'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { useLastAuthMethod } from '../../../hooks/useLastAuthMethod'
 import { Button } from '../../ui/button'
@@ -224,10 +225,10 @@ export function LoginForm() {
     )
   }
 
-  return <ReadyLoginForm methods={readiness.availableMethods} />
+  return <ReadyLoginForm methods={readiness.availableMethods} demoAccounts={readiness.demoAccounts} />
 }
 
-function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
+function ReadyLoginForm({ methods, demoAccounts }: { methods: AuthLoginMethod[]; demoAccounts?: ClientDemoAccount[] }) {
   // Non-secret UI settings remain static; login methods come from the runtime
   // readiness endpoint so unavailable providers are never advertised.
   const registrationMode = PUBLIC_AUTH_CONFIG.registration.mode
@@ -250,7 +251,7 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
   const devKeyringActive = !!devKeyringConfig?.enabled
   const passwordEnabled = methods.includes('email-password') || devKeyringActive
   // The signup page only exists for the password flow (OTP creates the account on first sign-in)
-  const signupVisible =
+  const signupVisible = !demoAccounts &&
     (registrationMode === 'open' || registrationMode === 'domain-open') && methods.includes('email-password')
   const emailLoginAllowed =
     (registrationMode !== 'domain-restricted' || devKeyringActive) && (otpEnabled || magicLinkEnabled || passwordEnabled)
@@ -585,6 +586,22 @@ function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
               <Users className="h-4 w-4" />
               <AlertDescription>
                 {t('login.inviteBanner')}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {demoAccounts && (
+            <Alert className="mb-4" data-cy={sel('auth.login.demoAccounts')}>
+              <Users className="h-4 w-4" aria-hidden="true" />
+              <AlertDescription>
+                <p>{t('login.demo.description')}</p>
+                <ul className="mt-2 space-y-1">
+                  {demoAccounts.map((account) => (
+                    <li key={account.email}>
+                      {account.name}: <code>{account.email}</code> / <code>{account.password}</code>
+                    </li>
+                  ))}
+                </ul>
               </AlertDescription>
             </Alert>
           )}

@@ -63,6 +63,7 @@ export const AUTH_SELECTORS = {
     readinessLoading: 'login-readiness-loading',
     readinessError: 'login-readiness-error',
     noMethods: 'login-no-methods',
+    demoAccounts: 'login-demo-accounts',
   },
   signup: {
     form: 'signup-form',

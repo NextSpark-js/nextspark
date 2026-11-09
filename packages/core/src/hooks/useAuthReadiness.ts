@@ -14,10 +14,18 @@ export interface ClientAuthCapabilities {
   passwordRecovery: boolean
 }
 
+export interface ClientDemoAccount {
+  name: string
+  email: string
+  password: string
+}
+
 export interface ClientAuthReadiness {
   state: AuthReadinessState
   availableMethods: AuthLoginMethod[]
   capabilities: ClientAuthCapabilities
+  /** Present only in demo mode: the sample accounts to show on the login page. */
+  demoAccounts?: ClientDemoAccount[]
 }
 
 const NO_CAPABILITIES: ClientAuthCapabilities = {
@@ -28,7 +36,7 @@ const NO_CAPABILITIES: ClientAuthCapabilities = {
 
 function parseReadiness(value: unknown): ClientAuthReadiness {
   if (!value || typeof value !== 'object') throw new Error('Invalid auth readiness response')
-  const candidate = value as { status?: unknown; availableMethods?: unknown; capabilities?: unknown }
+  const candidate = value as { status?: unknown; availableMethods?: unknown; capabilities?: unknown; demoAccounts?: unknown }
   if (candidate.status !== 'ready' && candidate.status !== 'unavailable') {
     throw new Error('Invalid auth readiness status')
   }
@@ -56,6 +64,7 @@ function parseReadiness(value: unknown): ClientAuthReadiness {
       invitationPasswordSignup: capabilities.invitationPasswordSignup,
       passwordRecovery: capabilities.passwordRecovery,
     },
+    ...(Array.isArray(candidate.demoAccounts) ? { demoAccounts: candidate.demoAccounts as ClientDemoAccount[] } : {}),
   }
 }
 
