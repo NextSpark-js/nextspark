@@ -254,7 +254,7 @@ function ReadyLoginForm({ methods, demoAccounts }: { methods: AuthLoginMethod[];
   const signupVisible = !demoAccounts &&
     (registrationMode === 'open' || registrationMode === 'domain-open') && methods.includes('email-password')
   const emailLoginAllowed =
-    (registrationMode !== 'domain-restricted' || devKeyringActive) && (otpEnabled || magicLinkEnabled || passwordEnabled)
+    (registrationMode !== 'domain-restricted' || devKeyringActive || !!demoAccounts) && (otpEnabled || magicLinkEnabled || passwordEnabled)
   // Which email form opens first: the first email method in the configured order
   const primaryEmailMode: EmailMode = (() => {
     const primary = getPrimaryEmailMethod(methods)

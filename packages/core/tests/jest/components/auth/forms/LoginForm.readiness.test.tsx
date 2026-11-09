@@ -1,5 +1,5 @@
 /** @jest-environment jsdom */
-import { beforeEach, describe, expect, jest, test } from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
 import { fireEvent, render } from '@testing-library/react'
 
 const readiness: { state: 'loading' | 'ready' | 'unavailable' | 'error'; availableMethods: string[]; demoAccounts?: Array<{ name: string; email: string; password: string }> } = {
@@ -11,6 +11,10 @@ const mockSocialSignIn = jest.fn(async () => {})
 const mockGoogleSignIn = jest.fn(async () => {})
 
 jest.mock('@/core/hooks/useAuthReadiness', () => ({ useAuthReadiness: () => readiness }))
+jest.mock('@nextsparkjs/registries/dev-keyring.client', () => ({ DEV_KEYRING_CONFIG: undefined }))
+jest.mock('@/core/lib/config/public-config-client', () => ({
+  PUBLIC_AUTH_CONFIG: { registration: { mode: 'open' }, otp: { expiresIn: 300, otpLength: 6 } },
+}))
 jest.mock('@/core/hooks/useAuth', () => ({
   useAuthActions: () => ({ signIn: jest.fn(), googleSignIn: mockGoogleSignIn, socialSignIn: mockSocialSignIn, sendOtp: jest.fn(), signInWithOtp: jest.fn() }),
 }))
@@ -136,6 +140,29 @@ describe('LoginForm runtime readiness states', () => {
     expect(byCy('auth.login.demoAccounts')).toHaveTextContent('sample@example.test')
     expect(byCy('auth.login.demoAccounts')).toHaveTextContent('Pandora1234')
     expect(byCy('auth.login.signupLink')).not.toBeInTheDocument()
+  })
+
+  describe('in a domain-restricted project', () => {
+    const { PUBLIC_AUTH_CONFIG } = jest.requireMock('@/core/lib/config/public-config-client') as { PUBLIC_AUTH_CONFIG: { registration: { mode: string } } }
+    beforeEach(() => { PUBLIC_AUTH_CONFIG.registration.mode = 'domain-restricted' })
+    afterEach(() => { PUBLIC_AUTH_CONFIG.registration.mode = 'open' })
+
+    test('a demo still shows the password form', () => {
+      readiness.state = 'ready'
+      readiness.availableMethods = ['email-password']
+      readiness.demoAccounts = [{ name: 'Sample', email: 'sample@example.test', password: 'Pandora1234' }]
+      render(<LoginForm />)
+
+      expect(document.querySelector('input[type="password"]')).toBeInTheDocument()
+    })
+
+    test('without demo accounts the email form stays hidden', () => {
+      readiness.state = 'ready'
+      readiness.availableMethods = ['email-password']
+      render(<LoginForm />)
+
+      expect(document.querySelector('input[type="password"]')).not.toBeInTheDocument()
+    })
   })
 
   test('without demo accounts the panel is absent and sign-up stays', () => {
