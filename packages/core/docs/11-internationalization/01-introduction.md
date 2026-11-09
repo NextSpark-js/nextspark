@@ -190,7 +190,7 @@ core/messages/
 
 #### 2. **Theme Translations** (Customization Layer)
 
-**Location**: `messages/{locale}.json`
+**Location**: `messages/{locale}/` (one directory per locale, a JSON file per namespace and an `index.ts` that exports them). A flat `messages/{locale}.json` file also works, as the `crm` template uses.
 
 Theme translations customize and extend core strings:
 - Theme-specific pages
@@ -202,11 +202,15 @@ Theme translations customize and extend core strings:
 **Structure**:
 ```text
 messages/
-├── en.json     # English theme translations
-└── es.json     # Spanish theme translations
+├── en/
+│   ├── common.json
+│   ├── navigation.json
+│   ├── home.json
+│   └── index.ts    # export default { common, navigation, home, ... }
+└── es/             # same files in Spanish
 ```
 
-**Example** (`en.json`):
+**Example** (the namespaces below, each in its own file under `messages/en/`):
 ```json
 {
   "navigation": {

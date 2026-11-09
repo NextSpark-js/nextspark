@@ -248,7 +248,7 @@ Don't add to core when:
 
 Theme translations provide theme-specific content and branding, allowing complete UI customization without modifying core translations.
 
-**Location**: `messages/{locale}.json`
+**Location**: `messages/{locale}/` (one directory per locale, a JSON file per namespace and an `index.ts` that exports them). A flat `messages/{locale}.json` file also works, as the `crm` template uses.
 
 **Purpose**:
 - Theme-specific pages
@@ -262,14 +262,17 @@ Theme translations provide theme-specific content and branding, allowing complet
 
 ```text
 messages/
-├── en.json                      # English theme translations
-├── es.json                      # Spanish theme translations
-└── README.md                    # Optional: translation guidelines
+├── en/
+│   ├── common.json              # one file per namespace
+│   ├── navigation.json
+│   ├── home.json
+│   └── index.ts                 # export default { common, navigation, home, ... }
+└── es/                          # same files in Spanish
 ```
 
 ### Theme Translation Example
 
-**File**: `messages/en.json`
+**Files**: `messages/en/*.json` (the example below joins several namespaces in one listing)
 
 ```json
 {

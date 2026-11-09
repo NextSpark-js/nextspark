@@ -98,7 +98,7 @@ supportedLocales: ['en', 'es', 'fr', 'de']
 1. Add the locale code to `supportedLocales`
 2. Create translation files for the locale:
    - `core/messages/{locale}/` - Core namespaces
-   - `messages/{locale}.json` - Theme translations
+   - `messages/{locale}/` - Project translations (a JSON file per namespace and an `index.ts`; a flat `messages/{locale}.json` also works)
 3. Rebuild the registry: `cd apps/dev && node ../../packages/cli/dist/cli.js prepare`
 
 ### Default Locale
