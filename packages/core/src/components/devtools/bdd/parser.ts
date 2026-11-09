@@ -56,7 +56,7 @@ function parseFeature(frontmatter: Record<string, unknown>, body: string): BDDFe
   }
 
   return {
-    title: (frontmatter.feature as string) || titleMatch?.[1] || 'Untitled Feature',
+    title: (frontmatter.feature as string) || titleMatch?.[1] || '',
     description: descMatch?.[1] || '',
     priority: frontmatter.priority as BDDFeature['priority'],
     tags: frontmatter.tags as string[],

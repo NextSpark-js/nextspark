@@ -63,7 +63,7 @@
     "fileTree": "Arquivos de Teste",
     "fileTreeDescription": "Navegar documentação de testes",
     "fileNotFound": "Arquivo Não Encontrado",
-    "fileNotFoundDescription": "O arquivo '{path}' não existe",
+    "fileNotFoundDescription": "O arquivo “{path}” não existe",
     "backToList": "Voltar para lista",
     "selectFile": "Selecione um arquivo",
     "selectFileDescription": "Escolha um arquivo de teste da árvore para ver seu conteúdo",
@@ -97,7 +97,9 @@
       "priority": "{level, select, high {Prioridade alta} medium {Prioridade média} low {Prioridade baixa} other {Prioridade {level}}}",
       "testCases": "Casos de teste",
       "clickToCopy": "Clique para copiar",
-      "expectedResults": "Resultados esperados"
+      "expectedResults": "Resultados esperados",
+      "clickToCopyCommand": "Clique para copiar: {command}",
+      "untitledFeature": "Funcionalidade sem título"
     }
   },
   "api": {
@@ -154,7 +156,8 @@
       "requestBody": "Corpo da requisição",
       "sessionConfig": "Configuração da sessão",
       "tags": "Tags"
-    }
+    },
+    "resizePanels": "Redimensionar os painéis"
   },
   "apiTester": {
     "backToList": "Voltar para Endpoints",
@@ -195,7 +198,8 @@
     "responseStates": {
       "idle": "Envie um request para ver a resposta",
       "loading": "Enviando request...",
-      "error": "Ocorreu um erro"
+      "error": "Ocorreu um erro",
+      "cancelled": "Requisição cancelada"
     },
     "tabs": {
       "session": "Sessão",
@@ -423,12 +427,14 @@
     "retry": {
       "button": "Tentar novamente",
       "success": "Ação agendada para nova tentativa",
-      "error": "Falha ao tentar novamente a ação: {message}"
+      "error": "Falha ao tentar novamente a ação: {message}",
+      "fallback": "Falha ao tentar novamente"
     },
     "run": {
       "button": "Executar agora",
       "success": "Ação executada com sucesso",
-      "error": "Falha ao executar a ação: {message}"
+      "error": "Falha ao executar a ação: {message}",
+      "fallback": "Falha ao executar"
     },
     "status": {
       "pending": "Pendente",
@@ -441,7 +447,6 @@
       "next": "Próximo",
       "page": "Página {page} de {total}"
     },
-    "unknownError": "Erro desconhecido",
     "fetchFailed": "Não foi possível obter as ações agendadas",
     "errorMessage": "Erro: {message}"
   },

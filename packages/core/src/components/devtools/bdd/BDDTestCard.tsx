@@ -209,7 +209,7 @@ export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTest
                     key={tag}
                     className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
                     onClick={() => copyGrepCommand(tag)}
-                    title={`Click to copy: pnpm cy:tags "${tag}"`}
+                    title={t("clickToCopyCommand", { command: `pnpm cy:tags "${tag}"` })}
                   >
                     {tag}
                   </Badge>

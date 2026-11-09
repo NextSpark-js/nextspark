@@ -27,7 +27,7 @@ export default function DevStylePage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/dev" className="flex items-center gap-2">
+          <Link href="/devtools" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             {t("back")}
           </Link>

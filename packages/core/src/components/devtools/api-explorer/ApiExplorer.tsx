@@ -519,6 +519,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
               value={splitPercent}
               onChange={handleSplitChange}
               containerRef={splitRowRef}
+              label={t('resizePanels')}
             />
 
             {/* Response Panel - Bottom on mobile, Right on desktop */}

@@ -96,20 +96,9 @@ function StatCard({ icon, label, value, percentage, dataCy, subtext }: StatCardP
   );
 }
 
-// Helper to get translated category name with fallback
-const TAG_CATEGORY_MAP: Record<string, string> = {
-  layers: "Layers",
-  priorities: "Priorities",
-  features: "Features",
-  flows: "Flows",
-  blocks: "Blocks",
-  roles: "Roles",
-  operations: "Operations",
-  other: "Other",
-};
-
 export function TestCoverageDashboard() {
   const t = useTranslations("devtools.tests.dashboard");
+  const tCategories = useTranslations("devtools.tags.categories");
   const [data, setData] = useState<CoverageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -321,7 +310,7 @@ export function TestCoverageDashboard() {
                     {count}
                   </p>
                   <p className="text-sm text-muted-foreground capitalize">
-                    {TAG_CATEGORY_MAP[category] || category}
+                    {tCategories.has(category) ? tCategories(category) : category}
                   </p>
                 </div>
               ))}

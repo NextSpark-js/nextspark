@@ -63,7 +63,7 @@
     "fileTree": "Archivos de Test",
     "fileTreeDescription": "Navegar documentación de tests",
     "fileNotFound": "Archivo No Encontrado",
-    "fileNotFoundDescription": "El archivo '{path}' no existe",
+    "fileNotFoundDescription": "El archivo “{path}” no existe",
     "backToList": "Volver a la lista",
     "selectFile": "Selecciona un archivo",
     "selectFileDescription": "Elige un archivo de test del árbol para ver su contenido",
@@ -97,7 +97,9 @@
       "priority": "{level, select, high {Prioridad alta} medium {Prioridad media} low {Prioridad baja} other {Prioridad {level}}}",
       "testCases": "Casos de prueba",
       "clickToCopy": "Clic para copiar",
-      "expectedResults": "Resultados esperados"
+      "expectedResults": "Resultados esperados",
+      "clickToCopyCommand": "Clic para copiar: {command}",
+      "untitledFeature": "Funcionalidad sin título"
     }
   },
   "api": {
@@ -154,17 +156,18 @@
       "requestBody": "Cuerpo de la petición",
       "sessionConfig": "Configuración de sesión",
       "tags": "Etiquetas"
-    }
+    },
+    "resizePanels": "Cambiar el tamaño de los paneles"
   },
   "apiTester": {
     "backToList": "Volver a Endpoints",
-    "method": "Metodo HTTP",
+    "method": "Método HTTP",
     "urlPreview": "Vista previa de URL",
-    "pathParams": "Parametros de Ruta",
-    "queryParams": "Parametros de Query",
+    "pathParams": "Parámetros de ruta",
+    "queryParams": "Parámetros de query",
     "headers": "Headers Personalizados",
     "headersInfo": "Content-Type se establece automaticamente. Agrega headers personalizados abajo.",
-    "authentication": "Autenticacion",
+    "authentication": "Autenticación",
     "requestBody": "Cuerpo del Request (JSON)",
     "sendRequest": "Enviar Request",
     "sending": "Enviando...",
@@ -172,9 +175,9 @@
     "response": "Respuesta",
     "responseBody": "Cuerpo",
     "responseHeaders": "Headers",
-    "noResponse": "Envia un request para ver la respuesta",
+    "noResponse": "Envía un request para ver la respuesta",
     "auth": {
-      "useSession": "Usar sesion actual",
+      "useSession": "Usar sesión actual",
       "useApiKey": "Usar API key",
       "apiKeyPlaceholder": "Ingresa tu API key...",
       "adminBypass": "Acceso cross-team",
@@ -193,9 +196,10 @@
       "enterPlaceholder": "Ingresa {name}..."
     },
     "responseStates": {
-      "idle": "Envia un request para ver la respuesta",
+      "idle": "Envía un request para ver la respuesta",
       "loading": "Enviando request...",
-      "error": "Ocurrio un error"
+      "error": "Ocurrio un error",
+      "cancelled": "Petición cancelada"
     },
     "tabs": {
       "session": "Sesión",
@@ -421,12 +425,14 @@
     "retry": {
       "button": "Reintentar",
       "success": "Acción programada para reintentar",
-      "error": "Error al reintentar acción: {message}"
+      "error": "Error al reintentar acción: {message}",
+      "fallback": "No se pudo reintentar"
     },
     "run": {
       "button": "Ejecutar",
       "success": "Acción ejecutada exitosamente",
-      "error": "Error al ejecutar acción: {message}"
+      "error": "Error al ejecutar acción: {message}",
+      "fallback": "No se pudo ejecutar"
     },
     "failedNotification": "{count, plural, one {# acción ha fallado} other {# acciones han fallado}} en las últimas 24 horas",
     "viewFailed": "Ver Fallidas",
@@ -441,7 +447,6 @@
       "next": "Siguiente",
       "page": "Página {page} de {total}"
     },
-    "unknownError": "Error desconocido",
     "fetchFailed": "No se pudieron obtener las acciones programadas",
     "errorMessage": "Error: {message}"
   },

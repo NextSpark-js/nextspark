@@ -42,7 +42,7 @@ export function BDDHeader({ feature, testCount, language, onLanguageChange, hasM
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <TestTube2 className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-            <h1 className="text-2xl font-bold">{feature.title}</h1>
+            <h1 className="text-2xl font-bold">{feature.title || t("untitledFeature")}</h1>
           </div>
           {feature.description && (
             <p className="text-muted-foreground">{feature.description}</p>

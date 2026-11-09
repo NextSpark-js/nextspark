@@ -146,7 +146,7 @@
     "fileTree": "Test Files",
     "fileTreeDescription": "Browse test documentation",
     "fileNotFound": "File Not Found",
-    "fileNotFoundDescription": "The file '{path}' does not exist",
+    "fileNotFoundDescription": "The file “{path}” does not exist",
     "backToList": "Back to list",
     "selectFile": "Select a file",
     "selectFileDescription": "Choose a test file from the tree to view its content",
@@ -180,7 +180,9 @@
       "priority": "{level, select, high {High priority} medium {Medium priority} low {Low priority} other {Priority {level}}}",
       "testCases": "Test Cases",
       "clickToCopy": "Click to copy",
-      "expectedResults": "Expected Results"
+      "expectedResults": "Expected Results",
+      "clickToCopyCommand": "Click to copy: {command}",
+      "untitledFeature": "Untitled Feature"
     }
   },
   "api": {
@@ -237,7 +239,8 @@
       "requestBody": "Request Body",
       "sessionConfig": "Session Config",
       "tags": "Tags"
-    }
+    },
+    "resizePanels": "Resize panels"
   },
   "apiTester": {
     "backToList": "Back to Endpoints",
@@ -278,7 +281,8 @@
     "responseStates": {
       "idle": "Send a request to see the response",
       "loading": "Sending request...",
-      "error": "An error occurred"
+      "error": "An error occurred",
+      "cancelled": "Request cancelled"
     },
     "tabs": {
       "session": "Session",
@@ -506,12 +510,14 @@
     "retry": {
       "button": "Retry",
       "success": "Action scheduled for retry",
-      "error": "Failed to retry action: {message}"
+      "error": "Failed to retry action: {message}",
+      "fallback": "Failed to retry"
     },
     "run": {
       "button": "Run Now",
       "success": "Action executed successfully",
-      "error": "Failed to run action: {message}"
+      "error": "Failed to run action: {message}",
+      "fallback": "Failed to run"
     },
     "status": {
       "pending": "Pending",
@@ -524,7 +530,6 @@
       "next": "Next",
       "page": "Page {page} of {total}"
     },
-    "unknownError": "Unknown error",
     "fetchFailed": "Failed to fetch scheduled actions",
     "errorMessage": "Error: {message}"
   },

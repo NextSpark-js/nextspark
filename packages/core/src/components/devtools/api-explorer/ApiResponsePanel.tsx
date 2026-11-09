@@ -62,7 +62,7 @@ export function ApiResponsePanel({ status, response, error }: ApiResponsePanelPr
           <h3 className="text-sm font-medium">{t("response")}</h3>
         </div>
         <div className="flex-1 flex items-center justify-center text-destructive text-sm p-4 text-center">
-          {error || t('responseStates.error')}
+          {status === 'cancelled' ? t('responseStates.cancelled') : error || t('responseStates.error')}
         </div>
       </div>
     )

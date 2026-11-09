@@ -54,7 +54,7 @@ export function ResponseViewer({ status, response, error }: ResponseViewerProps)
       <Card data-cy="api-tester-response-error">
         <CardContent className="pt-6">
           <p className="text-center text-destructive">
-            {error || t('responseStates.error')}
+            {status === 'cancelled' ? t('responseStates.cancelled') : error || t('responseStates.error')}
           </p>
         </CardContent>
       </Card>

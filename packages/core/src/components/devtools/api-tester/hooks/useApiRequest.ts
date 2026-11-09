@@ -87,14 +87,14 @@ export function useApiRequest(): UseApiRequestResult {
       if (err instanceof Error) {
         if (err.name === 'AbortError') {
           setStatus('cancelled')
-          setError('Request cancelled')
+          setError(null)
         } else {
           setStatus('error')
           setError(err.message)
         }
       } else {
         setStatus('error')
-        setError('Unknown error occurred')
+        setError(null)
       }
     }
   }, [])

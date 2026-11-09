@@ -5,7 +5,8 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleDate } from '../../../lib/i18n/format'
 import { Fragment, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Badge } from '../../ui/badge'
@@ -66,12 +67,13 @@ async function runAction(actionId: string, fallbackError: string): Promise<{ suc
 
 export function ActionsTable({ actions }: ActionsTableProps) {
   const t = useTranslations('devtools.scheduledActions')
+  const locale = useLocale()
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const queryClient = useQueryClient()
 
   // Retry mutation
   const retryMutation = useMutation({
-    mutationFn: (actionId: string) => retryAction(actionId, t('unknownError')),
+    mutationFn: (actionId: string) => retryAction(actionId, t('retry.fallback')),
     onSuccess: () => {
       toast.success(t('retry.success'))
       queryClient.invalidateQueries({ queryKey: ['scheduled-actions'] })
@@ -83,7 +85,7 @@ export function ActionsTable({ actions }: ActionsTableProps) {
 
   // Run mutation
   const runMutation = useMutation({
-    mutationFn: (actionId: string) => runAction(actionId, t('unknownError')),
+    mutationFn: (actionId: string) => runAction(actionId, t('run.fallback')),
     onSuccess: () => {
       toast.success(t('run.success'))
       queryClient.invalidateQueries({ queryKey: ['scheduled-actions'] })
@@ -123,14 +125,7 @@ export function ActionsTable({ actions }: ActionsTableProps) {
   }
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
+    return formatLocaleDate(date, locale, 'dateTime')
   }
 
   const calculateDuration = (startedAt: Date | null, completedAt: Date | null) => {

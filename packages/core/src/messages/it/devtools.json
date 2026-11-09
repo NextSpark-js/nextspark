@@ -63,7 +63,7 @@
     "fileTree": "File di Test",
     "fileTreeDescription": "Naviga documentazione test",
     "fileNotFound": "File Non Trovato",
-    "fileNotFoundDescription": "Il file '{path}' non esiste",
+    "fileNotFoundDescription": "Il file “{path}” non esiste",
     "backToList": "Torna alla lista",
     "selectFile": "Seleziona un file",
     "selectFileDescription": "Scegli un file di test dall'albero per visualizzarne il contenuto",
@@ -97,7 +97,9 @@
       "priority": "{level, select, high {Priorità alta} medium {Priorità media} low {Priorità bassa} other {Priorità {level}}}",
       "testCases": "Casi di test",
       "clickToCopy": "Clicca per copiare",
-      "expectedResults": "Risultati attesi"
+      "expectedResults": "Risultati attesi",
+      "clickToCopyCommand": "Clicca per copiare: {command}",
+      "untitledFeature": "Funzionalità senza titolo"
     }
   },
   "api": {
@@ -154,7 +156,8 @@
       "requestBody": "Corpo della richiesta",
       "sessionConfig": "Configurazione della sessione",
       "tags": "Tag"
-    }
+    },
+    "resizePanels": "Ridimensiona i pannelli"
   },
   "apiTester": {
     "backToList": "Torna agli Endpoint",
@@ -195,7 +198,8 @@
     "responseStates": {
       "idle": "Invia una request per vedere la risposta",
       "loading": "Invio request...",
-      "error": "Si è verificato un errore"
+      "error": "Si è verificato un errore",
+      "cancelled": "Richiesta annullata"
     },
     "tabs": {
       "session": "Sessione",
@@ -423,12 +427,14 @@
     "retry": {
       "button": "Riprova",
       "success": "Azione programmata per il ritentativo",
-      "error": "Errore nel ritentativo dell'azione: {message}"
+      "error": "Errore nel ritentativo dell'azione: {message}",
+      "fallback": "Nuovo tentativo non riuscito"
     },
     "run": {
       "button": "Esegui ora",
       "success": "Azione eseguita con successo",
-      "error": "Errore nell'esecuzione dell'azione: {message}"
+      "error": "Errore nell'esecuzione dell'azione: {message}",
+      "fallback": "Esecuzione non riuscita"
     },
     "status": {
       "pending": "In Attesa",
@@ -441,7 +447,6 @@
       "next": "Successivo",
       "page": "Pagina {page} di {total}"
     },
-    "unknownError": "Errore sconosciuto",
     "fetchFailed": "Impossibile recuperare le azioni pianificate",
     "errorMessage": "Errore: {message}"
   },

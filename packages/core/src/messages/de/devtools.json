@@ -63,7 +63,7 @@
     "fileTree": "Testdateien",
     "fileTreeDescription": "Testdokumentation durchsuchen",
     "fileNotFound": "Datei nicht gefunden",
-    "fileNotFoundDescription": "Die Datei '{path}' existiert nicht",
+    "fileNotFoundDescription": "Die Datei „{path}“ existiert nicht",
     "backToList": "Zurück zur Liste",
     "selectFile": "Datei auswählen",
     "selectFileDescription": "Wählen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
@@ -97,7 +97,9 @@
       "priority": "{level, select, high {Hohe Priorität} medium {Mittlere Priorität} low {Niedrige Priorität} other {Priorität {level}}}",
       "testCases": "Testfälle",
       "clickToCopy": "Zum Kopieren klicken",
-      "expectedResults": "Erwartete Ergebnisse"
+      "expectedResults": "Erwartete Ergebnisse",
+      "clickToCopyCommand": "Zum Kopieren klicken: {command}",
+      "untitledFeature": "Feature ohne Titel"
     }
   },
   "api": {
@@ -154,7 +156,8 @@
       "requestBody": "Request-Body",
       "sessionConfig": "Sitzungskonfiguration",
       "tags": "Tags"
-    }
+    },
+    "resizePanels": "Panelgröße ändern"
   },
   "apiTester": {
     "backToList": "Zurück zu Endpunkten",
@@ -195,7 +198,8 @@
     "responseStates": {
       "idle": "Senden Sie einen Request, um die Antwort zu sehen",
       "loading": "Request wird gesendet...",
-      "error": "Ein Fehler ist aufgetreten"
+      "error": "Ein Fehler ist aufgetreten",
+      "cancelled": "Anfrage abgebrochen"
     },
     "tabs": {
       "session": "Sitzung",
@@ -423,12 +427,14 @@
     "retry": {
       "button": "Wiederholen",
       "success": "Aktion zur Wiederholung geplant",
-      "error": "Fehler beim Wiederholen der Aktion: {message}"
+      "error": "Fehler beim Wiederholen der Aktion: {message}",
+      "fallback": "Wiederholung fehlgeschlagen"
     },
     "run": {
       "button": "Jetzt ausführen",
       "success": "Aktion erfolgreich ausgeführt",
-      "error": "Fehler beim Ausführen der Aktion: {message}"
+      "error": "Fehler beim Ausführen der Aktion: {message}",
+      "fallback": "Ausführung fehlgeschlagen"
     },
     "status": {
       "pending": "Ausstehend",
@@ -441,7 +447,6 @@
       "next": "Weiter",
       "page": "Seite {page} von {total}"
     },
-    "unknownError": "Unbekannter Fehler",
     "fetchFailed": "Die geplanten Aktionen konnten nicht abgerufen werden",
     "errorMessage": "Fehler: {message}"
   },

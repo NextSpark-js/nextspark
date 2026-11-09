@@ -34,7 +34,7 @@ export function PanelDivider({
   containerRef,
   min = 25,
   max = 75,
-  label = 'Resize panels',
+  label,
 }: PanelDividerProps) {
   const draggingRef = useRef(false)
 
