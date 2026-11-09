@@ -146,7 +146,7 @@ describe('the scan catches', () => {
 
 describe('the messages check catches', () => {
   test('a quoted placeholder and a broken ICU message', () => {
-    expect(brokenMessages({ a: "The file '{path}' does not exist", b: 'Hello {name', c: 'Hello {name}' }, 'en').map(line => line.split(':')[0])).toEqual(['a', 'b'])
+    expect(brokenMessages({ a: "The file '{path}' does not exist", b: 'Hello {name', c: 'Hello {name}', d: "Documentation d'{name}" }, 'en').map(line => line.split(':')[0])).toEqual(['a', 'b', 'd'])
   })
 })
 

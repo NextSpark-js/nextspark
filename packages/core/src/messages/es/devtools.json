@@ -198,7 +198,7 @@
     "responseStates": {
       "idle": "Envía un request para ver la respuesta",
       "loading": "Enviando request...",
-      "error": "Ocurrio un error",
+      "error": "Ocurrió un error",
       "cancelled": "Petición cancelada"
     },
     "tabs": {

@@ -169,7 +169,8 @@ export const lookupKey = (catalogs: Record<string, unknown>, full: string) =>
 // so a child node process loads it (Jest here runs CommonJS) from where `use-intl` resolves it.
 const ICU_CHECK = `
 import { pathToFileURL } from 'node:url'
-const { messages, locale, path } = JSON.parse(process.argv[1])
+import { readFileSync } from 'node:fs'
+const { messages, locale, path } = JSON.parse(readFileSync(0, 'utf8'))
 const { IntlMessageFormat } = await import(pathToFileURL(path).href)
 const errors = {}
 for (const [key, text] of Object.entries(messages)) {
@@ -179,16 +180,17 @@ process.stdout.write(JSON.stringify(errors))
 `
 
 /**
- * The messages that are not valid ICU, or that quote a placeholder: ICU reads `'{path}'` as the literal text
- * "{path}", so the person sees the braces.
+ * The messages that are not valid ICU, or that quote a placeholder: ICU reads `'{path}'` (and `d'{name}`) as
+ * literal text, so the person sees the braces.
  */
 export function brokenMessages(messages: Record<string, string>, locale: string): string[] {
   const resolved = createRequire(require.resolve('use-intl')).resolve('intl-messageformat')
-  const run = spawnSync(process.execPath, ['--input-type=module', '-e', ICU_CHECK, JSON.stringify({ messages, locale, path: resolved })], { encoding: 'utf8' })
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', ICU_CHECK], { encoding: 'utf8', input: JSON.stringify({ messages, locale, path: resolved }), maxBuffer: 64 * 1024 * 1024 })
   if (run.status !== 0) throw new Error(`the ICU check did not run: ${run.stderr}`)
   const parseErrors = JSON.parse(run.stdout) as Record<string, string>
   return Object.entries(messages).flatMap(([key, text]) => {
-    if (/'\{[^}]*\}'/.test(text)) return [`${key}: a quoted placeholder reads as literal text`]
+    // an apostrophe before a brace opens a quote: everything up to the next apostrophe reads as literal text (`d'{name}`, `'{path}'`)
+    if (/'\{/.test(text)) return [`${key}: an apostrophe before a placeholder reads it as literal text`]
     return key in parseErrors ? [`${key}: ${parseErrors[key]}`] : []
   })
 }

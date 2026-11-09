@@ -12,7 +12,7 @@ interface PanelDividerProps {
   containerRef: React.RefObject<HTMLElement | null>
   min?: number
   max?: number
-  label?: string
+  label: string
 }
 
 /**
