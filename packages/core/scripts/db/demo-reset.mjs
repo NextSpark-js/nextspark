@@ -6,7 +6,7 @@
  *
  * Destructive, so it refuses to run unless all of this holds, before connecting or changing anything:
  * - NEXTSPARK_DEMO_MODE is exactly `true` and the environment has no real email, payment or storage service;
- * - the database is empty, or an earlier reset marked it (a `_nextspark_demo` table). A database with tables and
+ * - the database has no table or view in any schema, or an earlier reset marked it (a `_nextspark_demo` table). A database with tables and
  *   no mark is someone's data, so there is no flag to override it.
  *
  * It is a command for a cron on the demo's host, not a scheduled action: those live in the tables it drops, and the
@@ -67,8 +67,10 @@ async function status() {
 async function clearDatabase() {
   const mark = await readMark();
   if (!mark) {
-    const { rows: [{ tables }] } = await client.query(`SELECT count(*)::int AS tables FROM pg_tables WHERE schemaname = 'public'`);
-    if (tables > 0) refuse(`This database has ${tables} table(s) and was not created by db:demo-reset. Point DATABASE_URL at an empty database made for the demo.`);
+    // Every schema: DROP SCHEMA public CASCADE also takes what elsewhere depends on something in public
+    const { rows: [{ relations }] } = await client.query(`SELECT count(*)::int AS relations FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE c.relkind IN ('r', 'p', 'v', 'm', 'f') AND left(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema'`);
+    if (relations > 0) refuse(`This database has ${relations} table(s) or view(s) and was not created by db:demo-reset. Point DATABASE_URL at an empty database made for the demo.`);
   }
   // One transaction: the mark exists again the moment the tables are gone, so a reset that fails later can be run again.
   // USAGE for PUBLIC is what a new database's public schema has.

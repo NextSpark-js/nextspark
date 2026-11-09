@@ -83,6 +83,35 @@ test('every refusal leaves a database that is not a demo as it was', { skip: !HA
   assert.ok(fs.existsSync(path.join(root, 'uploads', UPLOAD)), 'the file is still there')
 })
 
+test('a table or view in any schema counts as data', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { port, stop } = await startCluster('demo-reset-relations')
+  t.after(stop)
+  const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
+  const run = runner(project(t), url)
+  const client = await connect(t, url)
+  await client.query(`CREATE SCHEMA other; CREATE FOREIGN DATA WRAPPER demo_fdw; CREATE SERVER demo_server FOREIGN DATA WRAPPER demo_fdw`)
+
+  const relations: Array<[string, string, string]> = [
+    ['a table in another schema', 'CREATE TABLE other.r (id int)', 'DROP TABLE other.r'],
+    ['a partitioned table', 'CREATE TABLE other.p (id int) PARTITION BY RANGE (id)', 'DROP TABLE other.p'],
+    ['a view', 'CREATE VIEW public.v AS SELECT 1 AS x', 'DROP VIEW public.v'],
+    ['a materialized view', 'CREATE MATERIALIZED VIEW other.m AS SELECT 1 AS x', 'DROP MATERIALIZED VIEW other.m'],
+    ['a foreign table', 'CREATE FOREIGN TABLE other.f (id int) SERVER demo_server', 'DROP FOREIGN TABLE other.f'],
+  ]
+  for (const [what, create, drop] of relations) {
+    await client.query(create)
+    const result = run()
+    assert.equal(result.status, 1, `${what}: ${result.output}`)
+    assert.match(result.output, /was not created by db:demo-reset/, what)
+    await client.query(drop)
+  }
+
+  // the column lives elsewhere, the type it needs in public
+  await client.query(`CREATE EXTENSION citext SCHEMA public; CREATE TABLE other.customers (email public.citext); INSERT INTO other.customers VALUES ('a@example.test')`)
+  assert.equal(run().status, 1)
+  assert.deepEqual((await client.query('SELECT email FROM other.customers')).rows, [{ email: 'a@example.test' }])
+})
+
 test('a reset restores the sample data, locks the sample accounts and empties the uploads', { skip: !HAS_POSTGRES, timeout: 300000 }, async t => {
   const { port, stop } = await startCluster('demo-reset-run')
   t.after(stop)
