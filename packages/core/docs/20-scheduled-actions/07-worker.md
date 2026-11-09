@@ -33,7 +33,7 @@ The two can coexist: the worker only runs the queues you declare in `jobs`, and 
 1. Install pg-boss in the project (it is an optional peer dependency of core, loaded only by the worker):
 
    ```bash
-   pnpm add pg-boss
+   pnpm add -w pg-boss # a generated project is a pnpm workspace; drop -w otherwise
    ```
 
 2. Declare the queues in the app config:
