@@ -586,7 +586,7 @@ describe('useApiRequest Hook', () => {
       })
 
       expect(result.current.status).toBe('error')
-      expect(result.current.error).toBe('Unknown error occurred')
+      expect(result.current.error).toBeNull() // the panels word it from the status
     })
 
     test('should handle 4xx errors successfully (not as error state)', async () => {
@@ -681,7 +681,7 @@ describe('useApiRequest Hook', () => {
         expect(result.current.status).toBe('cancelled')
       })
 
-      expect(result.current.error).toBe('Request cancelled')
+      expect(result.current.error).toBeNull() // the panels word it from the status
       expect(result.current.response).toBeNull()
     })
 
