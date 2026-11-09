@@ -29,15 +29,17 @@ export async function removeUnusedLanguages(config: WizardConfig): Promise<void>
 
   // Get all language folders
   const folders = await fs.readdir(messagesDir)
-  const languageFolders = folders.filter(f => {
-    const folderPath = path.join(messagesDir, f)
-    return fs.statSync(folderPath).isDirectory() && Object.keys(AVAILABLE_LOCALES).includes(f)
+  // A locale is a directory (messages/es/) or a flat file (messages/es.json): the templates use both
+  const languageEntries = folders.filter(f => {
+    const stat = fs.statSync(path.join(messagesDir, f))
+    const locale = stat.isDirectory() ? f : f.endsWith('.json') ? path.basename(f, '.json') : ''
+    return Object.keys(AVAILABLE_LOCALES).includes(locale)
   })
 
-  // Remove folders that are not in supported locales
-  for (const folder of languageFolders) {
-    if (!config.supportedLocales.includes(folder)) {
-      await fs.remove(path.join(messagesDir, folder))
+  // Remove the locales that are not supported
+  for (const entry of languageEntries) {
+    if (!config.supportedLocales.includes(path.basename(entry, '.json'))) {
+      await fs.remove(path.join(messagesDir, entry))
     }
   }
 }
@@ -110,6 +112,28 @@ export async function ensureLanguageFolders(config: WizardConfig): Promise<void>
 }
 
 /**
+ * The flat form: messages/<locale>.json and entities/<name>/messages/<locale>.json. Every supported locale gets a
+ * file, copied from the default locale's when the template has none for it.
+ */
+export async function ensureFlatLocaleFiles(config: WizardConfig): Promise<void> {
+  const root = getProjectRoot()
+  const dirs = [path.join(root, 'messages')]
+  const entitiesDir = path.join(root, 'entities')
+  if (await fs.pathExists(entitiesDir)) {
+    for (const entity of await fs.readdir(entitiesDir)) dirs.push(path.join(entitiesDir, entity, 'messages'))
+  }
+
+  for (const dir of dirs) {
+    const source = path.join(dir, `${config.defaultLocale}.json`)
+    if (!await fs.pathExists(source)) continue
+    for (const locale of config.supportedLocales) {
+      const target = path.join(dir, `${locale}.json`)
+      if (!await fs.pathExists(target)) await fs.copy(source, target)
+    }
+  }
+}
+
+/**
  * Update message files with project-specific values
  */
 export async function updateMessageFiles(config: WizardConfig): Promise<void> {
@@ -153,6 +177,7 @@ export async function processI18n(config: WizardConfig): Promise<void> {
 
   // Ensure all selected languages have folders
   await ensureLanguageFolders(config)
+  await ensureFlatLocaleFiles(config)
 
   // Update message files with project values
   await updateMessageFiles(config)
