@@ -27,7 +27,7 @@ import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
 import { addMobileCommand } from './commands/add-mobile.js';
 import { doctorCommand } from './commands/doctor.js';
-import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
+import { dbMigrateCommand, dbSeedCommand, dbDemoResetCommand } from './commands/db.js';
 import { setupAICommand } from './commands/setup-ai.js';
 import { syncAICommand } from './commands/sync-ai.js';
 import { skillsGetCommand, skillsListCommand } from './commands/skills.js';
@@ -233,6 +233,13 @@ program
   .description('Run migrations with the sample data, development only (alias)')
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
   .action((opts: { envFile: boolean }) => dbSeedCommand({ envFile: opts.envFile }));
+
+program
+  .command('db:demo-reset')
+  .description('Return a public demo to its sample data and empty its uploads (only with NEXTSPARK_DEMO_MODE=true)')
+  .option('--status', 'Print the last reset and change nothing')
+  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
+  .action((opts: { status?: boolean; envFile: boolean }) => dbDemoResetCommand({ status: opts.status, envFile: opts.envFile }));
 
 // Optional pg-boss worker (a second process; off unless jobs.enabled)
 program

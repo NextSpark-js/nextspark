@@ -3,12 +3,15 @@
 // Sample data is applied only when the run asks for it -- `--sample-data`
 // (what `nextspark db:seed` passes) or NEXTSPARK_SEED_SAMPLE_DATA=1, in the
 // environment or the project .env -- and never when NODE_ENV is production in
-// either: its accounts have a documented development password. A sample-data
+// either (a demo reset is the one exception, see sampleDataPolicy): its accounts
+// have a documented development password. A sample-data
 // file that is not applied is not recorded either, so a later run that asks
 // for it still applies it.
 
 export const SAMPLE_DATA_FLAG = '--sample-data';
 export const SAMPLE_DATA_VARIABLE = 'NEXTSPARK_SEED_SAMPLE_DATA';
+/** Passed only by demo-reset.mjs, once it has checked the environment and the database; counts only in demo mode. */
+export const DEMO_RESET_FLAG = '--demo-reset';
 /** A line that marks a migration as sample data when its name does not say so. */
 export const SAMPLE_DATA_MARKER = '-- nextspark:sample-data';
 
@@ -33,6 +36,10 @@ export function isSampleDataMigration(filename, sql = '') {
  * Returns whether sample data is applied and the line the runner prints about it.
  */
 export function sampleDataPolicy({ argv = [], env = {}, fileEnv = {} }) {
+  // The one exception to production: a demo runs as a production build and its whole data is the sample data
+  if (argv.includes(DEMO_RESET_FLAG) && env.NEXTSPARK_DEMO_MODE === 'true') {
+    return { apply: true, notice: 'Sample data is applied (demo reset).' };
+  }
   const requested = argv.includes(SAMPLE_DATA_FLAG) || [env[SAMPLE_DATA_VARIABLE], fileEnv[SAMPLE_DATA_VARIABLE]].some(isOn);
   if ([env.NODE_ENV, fileEnv.NODE_ENV].some(isProduction)) {
     return { apply: false, notice: `Sample data is not applied: NODE_ENV is production${requested ? ', which the sample-data switch does not override' : ''}.` };

@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import chalk from '../utils/colors.js';
@@ -129,4 +129,19 @@ export async function dbSeedCommand(options: { envFile?: boolean } = {}): Promis
   console.log(chalk.yellow('   Never use a database seeded this way in production: its sample accounts share a documented password.\n'));
 
   await dbMigrateCommand({ sampleData: true, envFile: options.envFile });
+}
+
+/**
+ * Return a public demo to its sample state, or print its last reset (`status`).
+ * scripts/db/demo-reset.mjs decides whether it may run: this only hands it the project's environment.
+ */
+export function dbDemoResetCommand(options: { status?: boolean; envFile?: boolean } = {}): void {
+  const coreDir = getCoreDir();
+  const projectRoot = getProjectRoot();
+  const run = spawnSync('node', [join(coreDir, 'scripts', 'db', 'demo-reset.mjs'), ...(options.status ? ['--status'] : [])], {
+    cwd: projectRoot,
+    stdio: 'inherit',
+    env: { ...resolveDbEnv(projectRoot, process.env, options), NEXTSPARK_CORE_DIR: coreDir },
+  });
+  process.exit(run.status ?? 1);
 }
