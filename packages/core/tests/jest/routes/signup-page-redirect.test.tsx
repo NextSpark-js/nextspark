@@ -70,6 +70,20 @@ test('domain-restricted, with the invite token: keeps the invitation, not the to
   expect(await redirectedTo(invite)).toBe(kept)
 })
 
+test('demo mode: an open project with passwords redirects too, invitation or not', async () => {
+  process.env.NEXTSPARK_DEMO_MODE = 'true'
+  try {
+    expect(await redirectedTo(invite)).toBe(kept)
+  } finally {
+    delete process.env.NEXTSPARK_DEMO_MODE
+  }
+})
+
+test('an open project with passwords renders the form', async () => {
+  expect(await SignupPage({ searchParams: Promise.resolve({}) })).toBeTruthy()
+  expect(redirect).not.toHaveBeenCalled()
+})
+
 test('invitation-only before the bootstrap: renders the form, no redirect', async () => {
   authConfig.registration.mode = 'invitation-only'
   isBootstrapDone.mockResolvedValue(false)
