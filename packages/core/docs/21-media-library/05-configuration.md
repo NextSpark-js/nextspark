@@ -584,6 +584,23 @@ Limits, plainly: a CDN, proxy or `Cache-Control` of your own placed in front of 
 
 Switching an existing bucket between public and private is not seamless: rows stored in the other mode are no longer recognized as this driver's objects, so they are not signed and deleting them is a no-op, which leaves the objects in the bucket. Decide the mode before uploading, or migrate the stored URLs along with the change.
 
+#### Content-Security-Policy and the bucket host
+
+A generated project ships a Content-Security-Policy that allows its own origin and a few image hosts. With `STORAGE_DRIVER=s3` the browser sends the files straight to the bucket and loads them from it (from a signed URL in private mode), so the bucket's origin has to be allowed or the dashboard cannot upload or show them: the console reports `Connecting to '<bucket url>' violates the following Content-Security-Policy directive: "connect-src 'self' ..."` and the upload fails. Add it in `next.config.extend.mjs`, which upgrades never touch:
+
+```js
+const bucket = 'https://my-bucket.s3.us-east-1.amazonaws.com' // the origin of the object URLs: scheme, host and port, no path
+export default {
+  csp: {
+    'connect-src': [bucket],                   // the browser's PUT of a direct upload
+    'img-src': [bucket],                       // images
+    'media-src': ["'self'", 'blob:', bucket], // videos; blob: is the local file a video field reads its duration and thumbnail from
+  },
+}
+```
+
+Without `blob:` in `media-src` the video field still uploads, but without duration or thumbnail. With a CDN in front (`S3_PUBLIC_URL`), allow the CDN's origin for `img-src` and `media-src`. `next/image` also needs the host in `images.remotePatterns` (and a local server on a private address needs `images.dangerouslyAllowLocalIP`, which only a development setup should turn on). The bucket's own CORS rules must allow `PUT` from the app origin for the direct upload.
+
 #### Large files
 
 Serverless platforms reject request bodies above a few MB before the app's code runs, so a large file never reaches `POST /api/v1/media/upload`. Use the direct flow instead: the browser sends the bytes to the bucket and the app only signs and verifies (the `useMediaUpload` hook and the entity upload fields already do this when the driver is `s3`). By hand:
