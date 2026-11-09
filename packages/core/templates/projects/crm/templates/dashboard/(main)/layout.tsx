@@ -1,83 +1,25 @@
 /**
  * CRM Dashboard Main Layout
- * Professional layout with custom sidebar and topbar for CRM theme
+ * Replaces core's DashboardShell, so it hydrates the client entity registry itself: the entity detail
+ * and edit pages read their config from it.
  */
 
-'use client'
+import type { ReactNode } from 'react'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
+import { serializeEntityConfig } from '@nextsparkjs/core/lib/entities/serialization'
+import { EntityRegistryHydrator } from '@nextsparkjs/core/components/dashboard/layouts/EntityRegistryHydrator'
+import CRMDashboardLayout from '@/templates/shared/CRMDashboardLayout'
 
-import { useState, ReactNode, useEffect } from 'react'
-import { CRMSidebar } from '@/templates/shared/CRMSidebar'
-import { CRMTopBar } from '@/templates/shared/CRMTopBar'
-import { CRMMobileNav } from '@/templates/shared/CRMMobileNav'
-import { SidebarContext } from '@/templates/shared/CRMSidebarContext'
-import { cn } from '@nextsparkjs/core/lib/utils'
-
-interface CRMDashboardLayoutProps {
-  children: ReactNode
-}
-
-export default function CRMDashboardLayout({ children }: CRMDashboardLayoutProps) {
-  const [expanded, setExpanded] = useState(false)
-
-  // Sync CSS variable with sidebar state
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--crm-sidebar-width',
-      expanded ? '16rem' : '4rem'
-    )
-  }, [expanded])
-
-  // Initialize CSS variable on mount
-  useEffect(() => {
-    document.documentElement.style.setProperty('--crm-sidebar-width', '4rem')
-    return () => {
-      document.documentElement.style.removeProperty('--crm-sidebar-width')
-    }
-  }, [])
+export default function CRMDashboardMainLayout({ children }: { children: ReactNode }) {
+  const entities = Object.values(ENTITY_REGISTRY)
+    .map((entry) => entry.config)
+    .filter((config): config is EntityConfig => 'slug' in config)
+    .map(serializeEntityConfig)
 
   return (
-    <SidebarContext.Provider value={{ expanded, setExpanded }}>
-      <div
-        className="min-h-screen bg-background"
-        onMouseMove={(e) => {
-          // Expand sidebar when mouse is near left edge
-          if (e.clientX < 64) {
-            setExpanded(true)
-          } else if (e.clientX > 280) {
-            setExpanded(false)
-          }
-        }}
-      >
-        {/* Desktop: Sidebar */}
-        <CRMSidebar />
-
-        {/* Desktop: TopBar */}
-        <CRMTopBar />
-
-        {/* Mobile: Navigation */}
-        <CRMMobileNav />
-
-        {/* Main Content Area */}
-        <main
-          className={cn(
-            'min-h-screen transition-all duration-300 ease-out',
-            // Mobile: padding for bottom nav
-            'pb-20',
-            // Desktop: padding for topbar
-            'lg:pb-0 lg:pt-16',
-            // Desktop: margin for collapsed sidebar (expanded handled by CSS var)
-            'lg:ml-16'
-          )}
-          style={{
-            marginLeft: undefined, // Handled by Tailwind on desktop
-          }}
-        >
-          {/* Inner wrapper with responsive padding */}
-          <div className="lg:pt-0 pt-14">
-            {children}
-          </div>
-        </main>
-      </div>
-    </SidebarContext.Provider>
+    <EntityRegistryHydrator entities={entities}>
+      <CRMDashboardLayout>{children}</CRMDashboardLayout>
+    </EntityRegistryHydrator>
   )
 }

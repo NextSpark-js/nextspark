@@ -1,32 +1,25 @@
 /**
  * Productivity Dashboard Layout
- * Clean layout with fixed sidebar for boards navigation
+ * Replaces core's DashboardShell, so it hydrates the client entity registry itself: the entity detail
+ * and edit pages read their config from it.
  */
 
-'use client'
+import type { ReactNode } from 'react'
+import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
+import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
+import { serializeEntityConfig } from '@nextsparkjs/core/lib/entities/serialization'
+import { EntityRegistryHydrator } from '@nextsparkjs/core/components/dashboard/layouts/EntityRegistryHydrator'
+import ProductivityDashboardLayout from '@/templates/shared/ProductivityDashboardLayout'
 
-import { ReactNode } from 'react'
-import { ProductivitySidebar } from '@/templates/shared/ProductivitySidebar'
-import { ProductivityMobileNav } from '@/templates/shared/ProductivityMobileNav'
+export default function ProductivityDashboardMainLayout({ children }: { children: ReactNode }) {
+  const entities = Object.values(ENTITY_REGISTRY)
+    .map((entry) => entry.config)
+    .filter((config): config is EntityConfig => 'slug' in config)
+    .map(serializeEntityConfig)
 
-interface ProductivityDashboardLayoutProps {
-    children: ReactNode
-}
-
-export default function ProductivityDashboardLayout({ children }: ProductivityDashboardLayoutProps) {
-    console.log('🎨 [ProductivityDashboardLayout] RENDERING - ProductivitySidebar should be visible')
-    return (
-        <div className="min-h-screen bg-background">
-            {/* Desktop: Fixed Sidebar */}
-            <ProductivitySidebar />
-
-            {/* Mobile: Bottom Navigation */}
-            <ProductivityMobileNav />
-
-            {/* Main Content Area */}
-            <main className="min-h-screen pb-20 lg:pb-0 lg:ml-64">
-                {children}
-            </main>
-        </div>
-    )
+  return (
+    <EntityRegistryHydrator entities={entities}>
+      <ProductivityDashboardLayout>{children}</ProductivityDashboardLayout>
+    </EntityRegistryHydrator>
+  )
 }
