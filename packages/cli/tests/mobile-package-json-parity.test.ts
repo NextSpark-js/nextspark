@@ -25,7 +25,7 @@ test('the wizard declares the same mobile packages as the shipped template', asy
     const template = JSON.parse(fs.readFileSync(path.join(TEMPLATE_DIR, 'package.json.template'), 'utf8'))
     assert.deepEqual(names(wizard), names(template))
     // Expo SDK 58 expects these exactly; expo-doctor fails otherwise
-    for (const n of ['react-native-worklets', '@types/react', 'jest', '@types/jest', 'typescript']) {
+    for (const n of ['react-native-worklets', '@types/react', 'jest', '@types/jest', 'typescript', 'react-native', 'react-native-safe-area-context', '@preeternal/react-native-cookie-manager', 'react', 'react-dom']) {
       const pick = (p: any) => p.dependencies?.[n] ?? p.devDependencies?.[n]
       assert.equal(pick(wizard), pick(template), `${n} must be pinned the same in both`)
     }
