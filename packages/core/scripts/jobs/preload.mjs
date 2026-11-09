@@ -11,6 +11,12 @@
  * handled by an ESM resolve hook (module.register, which exists in every supported Node; registerHooks does not) and by
  * a patch of `Module._resolveFilename` for `require`. The registries alias is only imported by core's ES modules, so
  * only the ESM hook maps it. The registries live under the directory the worker starts in.
+ *
+ * The same hook loads the project's own `.ts` files as ES modules, whatever its package.json `type`. Core's ES modules
+ * import names from the generated registries (`import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'`),
+ * and Node 22.14 finds the names of a CommonJS module by scanning the file on disk, which for TypeScript sees no
+ * export: "does not provide an export named". As ES modules, their names are declared in the source. (Newer Node versions
+ * read the source the loader returns, which is why Node 24 did not show it.)
  */
 import Module, { register } from 'node:module'
 import path from 'node:path'
@@ -41,5 +47,9 @@ export async function resolve(specifier, context, next) {
     return next(pathToFileURL(file).href, context)
   }
   return next(specifier, context)
+}
+export async function load(url, context, next) {
+  if (/\\.tsx?$/.test(url) && url.startsWith('file:') && !url.includes('/node_modules/')) return next(url, { ...context, format: 'module' })
+  return next(url, context)
 }`)
 )
