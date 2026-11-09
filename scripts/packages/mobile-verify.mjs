@@ -712,6 +712,7 @@ async function main() {
     ['The core tarball ships its routes and no app tree (node:test)', nodeTest('pack-templates.test.mjs')],
     ['pack.sh tarballs are installable and leak nothing maintainer-local (node:test)', nodeTest('verify-tarballs.test.mjs')],
     ['The template configs load only packages its package.json declares (node:test)', nodeTest('mobile-template-deps.test.mjs')],
+    ['apps/mobile resolves one React for the packages it bundles from source (node:test)', nodeTest('mobile-metro-singletons.test.mjs')],
     ['The mobile import boundary refuses server code, the database, registries, migrations and Node-only modules (node:test)', nodeTest('mobile-boundary.test.mjs')],
     ['publish.sh orders packages by their dependencies and lists the dist-tag commands (node:test)', nodeTest('publish-order.test.mjs')],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],

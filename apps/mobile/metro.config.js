@@ -20,8 +20,22 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// One copy of what holds state or native bindings. packages/ui and packages/mobile are bundled
+// from source, and each has its own node_modules (react, react-native, expo, react-query): Metro
+// resolves from the importing file's directory first, so their imports would load a second React
+// next to the app's, and the first hook fails with "Cannot read property 'useState' of null".
+const SINGLETONS = /^(react|react-dom|react-native|expo|expo-[^/]+|@expo\/[^/]+|@preeternal\/[^/]+|@tanstack\/[^/]+)(\/|$)/;
+const APP_ORIGIN = path.join(projectRoot, 'index.js');
+
 // Resolve @nextsparkjs packages
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (SINGLETONS.test(moduleName) && !context.originModulePath.startsWith(path.join(projectRoot, 'node_modules'))) {
+    try {
+      return context.resolveRequest({ ...context, originModulePath: APP_ORIGIN }, moduleName, platform);
+    } catch {
+      // not a dependency of the app: resolve it the usual way
+    }
+  }
   // For @nextsparkjs/ui, redirect to the native source (for development,
   // same as @nextsparkjs/mobile below) so bundling never depends on a
   // `packages/ui` build having run first

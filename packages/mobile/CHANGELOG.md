@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The repository's development app (`apps/mobile`) resolves one copy of React, React Native, Expo and React Query for the packages it bundles from source. Before, it loaded a second React from `packages/mobile/node_modules` and failed at the first hook ("Cannot read property 'useState' of null") on a device or simulator. Projects generated from the template install the packages from npm and were not affected. (#286)
+
 ### Changed
 
 - The README notes that with Xcode 26.3 a freshly generated project does not build, because `expo-modules-jsi` 58.0.22 fails to compile; it needs a patch release of Expo's package or a newer Xcode. (#286)
