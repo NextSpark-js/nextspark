@@ -25,6 +25,7 @@ import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveMagicLinkExpiresIn, resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled, resolveAuthMethods } from './auth/auth-methods';
+import { isDemoMode } from './demo/mode';
 import { sessionSecretProblem } from './auth/readiness';
 import { isRuntimeEmailAvailable } from './auth/runtime-readiness';
 import { trackCodeSend } from './auth/code-send';
@@ -399,6 +400,9 @@ export const auth = betterAuth({
         // Validate registration mode before creating user
         // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         before: async (user: { email: string; [key: string]: unknown }, ctx?: { path?: string } | null) => {
+          // A demo has only its sample accounts: every way of creating a user ends here, invitations included
+          if (isDemoMode()) throw registrationError('SIGNUP_RESTRICTED', ctx);
+
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
           // In 'invitation-only' mode, a new user needs the invitation flow

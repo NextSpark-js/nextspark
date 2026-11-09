@@ -11,6 +11,7 @@
  */
 
 import type { AuthConfig, AuthLoginMethod, AuthPreset, SocialLoginMethod } from '../config/types'
+import { isDemoMode } from '../demo/mode'
 
 /** The built-in social providers: a button, a readiness check and a profile mapping each. */
 export const SOCIAL_LOGIN_METHODS: readonly SocialLoginMethod[] = ['google', 'github', 'microsoft', 'apple']
@@ -117,12 +118,14 @@ export function matchAuthPreset(methods: readonly AuthLoginMethod[]): AuthPreset
  * An explicit `emailAndPassword.enabled` decides. Otherwise they are on when
  * `methods` lists `'email-password'`, and outside production (so the dev
  * keyring, `db:seed` users and Cypress sign in with a password); a production
- * app on the passwordless preset serves no password endpoint.
+ * app on the passwordless preset serves no password endpoint. Demo mode always serves them.
  */
 export function isPasswordLoginEnabled(
   authConfig?: Pick<AuthConfig, 'methods' | 'emailAndPassword'> | null,
   nodeEnv: string | undefined = process.env.NODE_ENV
 ): boolean {
+  // A demo's visitors sign in with the sample accounts, by password
+  if (isDemoMode()) return true
   const declared = authConfig?.emailAndPassword?.enabled
   if (typeof declared === 'boolean') return declared
   return (authConfig?.methods ?? []).includes('email-password') || nodeEnv !== 'production'

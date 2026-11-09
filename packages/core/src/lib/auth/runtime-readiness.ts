@@ -1,6 +1,7 @@
 import 'server-only'
 
-import { AUTH_CONFIG } from '../config'
+import { AUTH_CONFIG, DEV_CONFIG } from '../config'
+import { isDemoMode } from '../demo/mode'
 import type { AuthConfig, AuthLoginMethod, SocialLoginMethod } from '../config/types'
 import { SOCIAL_PROVIDER_LABELS, isPasswordLoginEnabled, isSocialLoginMethod } from './auth-methods'
 import { warnClientIpSourceAtStartup } from '../api/client-ip'
@@ -36,11 +37,23 @@ export interface PublicAuthCapabilities {
   passwordRecovery: boolean
 }
 
+/** A sample account the login page of a demo shows, password included: it is public by design. */
+export interface DemoAccount {
+  name: string
+  email: string
+  password: string
+}
+
 export interface PublicAuthReadiness {
   status: 'ready' | 'unavailable'
   availableMethods: AuthLoginMethod[]
   capabilities: PublicAuthCapabilities
+  /** Only in demo mode. */
+  demoAccounts?: DemoAccount[]
 }
+
+/** A demo signs in only with the sample accounts, whatever login methods the project has. */
+const DEMO_AUTH_CONFIG = { methods: ['email-password'] } satisfies Pick<AuthConfig, 'methods'>
 
 function runtimeInput(options: RuntimeAuthReadinessOptions = {}) {
   const env = options.env ?? process.env
@@ -48,7 +61,7 @@ function runtimeInput(options: RuntimeAuthReadinessOptions = {}) {
     profile: 'web-local-auth' as const,
     stage: 'runtime' as const,
     environment: env.NODE_ENV === 'production' ? 'production' as const : 'development' as const,
-    authConfig: options.authConfig === undefined ? AUTH_CONFIG : options.authConfig,
+    authConfig: isDemoMode(env) ? DEMO_AUTH_CONFIG : options.authConfig === undefined ? AUTH_CONFIG : options.authConfig,
     configuration: withAppleKeyCheck(authReadinessConfigurationFromEnv(env), env),
   }
 }
@@ -61,7 +74,10 @@ function withAppleKeyCheck(configuration: ReturnType<typeof authReadinessConfigu
 
 /** Server-owned runtime adapter for the pure readiness evaluator. */
 export function getRuntimeAuthReadiness(options: RuntimeAuthReadinessOptions = {}): AuthReadinessResult {
-  return evaluateAuthReadiness(runtimeInput(options))
+  const input = runtimeInput(options)
+  // Passwords need a real email provider in production, for recovery. A demo has none on purpose, and no recovery:
+  // the operations that send email still go through evaluateProvider, as production
+  return evaluateAuthReadiness(isDemoMode(options.env ?? process.env) ? { ...input, environment: 'development' } : input)
 }
 
 /**
@@ -108,6 +124,9 @@ export function getPublicAuthReadiness(options: RuntimeAuthReadinessOptions = {}
       invitationPasswordSignup: passwordBackend,
       passwordRecovery: passwordBackend && isRuntimeEmailAvailable(options),
     },
+    ...(isDemoMode(options.env ?? process.env)
+      ? { demoAccounts: (DEV_CONFIG?.devKeyring?.users ?? []).map(({ name, email, password }) => ({ name, email, password })) }
+      : {}),
   }
 }
 

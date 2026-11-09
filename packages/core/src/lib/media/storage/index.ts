@@ -14,6 +14,7 @@ import { join } from 'path'
 import { parseS3Config, S3StorageDriver } from './s3'
 import { LocalStorageDriver } from './local'
 import { VercelBlobStorageDriver, isVercelBlobToken } from './vercel-blob'
+import { isDemoMode } from '../../demo/mode'
 
 export { newObjectName, isObjectName, PRESIGN_EXPIRES_SECONDS } from './names'
 export { PendingObjectChangedError } from './errors'
@@ -83,6 +84,9 @@ const misconfigured = (label: string, problems: string[], variables: string[]): 
 export function selectStorageDriver(env: NodeJS.ProcessEnv = process.env): StorageSelection {
   const choice = env.STORAGE_DRIVER?.trim().toLowerCase()
   const production = env.NODE_ENV === 'production'
+
+  // A demo's uploads stay on the disk its reset empties
+  if (isDemoMode(env) && choice !== 'local') return misconfigured('Demo mode storage', ['STORAGE_DRIVER must be local'], ['STORAGE_DRIVER'])
 
   switch (choice) {
     case undefined:

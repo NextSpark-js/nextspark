@@ -16,6 +16,7 @@ import { TeamService } from '../services/team.service';
 import { shouldSkipTeamCreation } from '../auth-context';
 import { isDomainAllowed } from './registration-helpers';
 import { registrationError } from './registration-errors';
+import { isDemoMode } from '../demo/mode';
 import type { BetterAuthPlugin } from 'better-auth';
 
 export const registrationGuardPlugin = (): BetterAuthPlugin => {
@@ -27,6 +28,8 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
           // Sign-up endpoints (/sign-up/email); never an OAuth callback, which may be an existing user's sign-in
           matcher: (ctx) => (ctx.path || '').includes('/sign-up'),
           handler: async (ctx) => {
+            if (isDemoMode()) throw registrationError('SIGNUP_RESTRICTED');
+
             const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
             // In invitation-only mode, sign-up needs the invitation flow: the

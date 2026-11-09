@@ -5,6 +5,7 @@
 
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { getRegisteredBillingGateway } from './registry'
+import { isDemoMode } from '../../demo/mode'
 
 const BUILT_IN_PROVIDERS = ['stripe', 'polar', 'lemonsqueezy', 'paddle']
 
@@ -16,6 +17,7 @@ const BUILT_IN_PROVIDERS = ['stripe', 'polar', 'lemonsqueezy', 'paddle']
  * keeps the behavior it had: a route that does not match fails signature verification with a 400.
  */
 export function builtInWebhookRouteClosed(route: string): boolean {
+  if (isDemoMode()) return true
   const provider = BILLING_REGISTRY.provider
   if (typeof provider !== 'string') return false
   if (!BUILT_IN_PROVIDERS.includes(provider)) return true

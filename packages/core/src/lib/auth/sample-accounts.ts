@@ -1,3 +1,5 @@
+import { isDemoMode } from '../demo/mode'
+
 /**
  * The password hashes the sample data ships with (core's 090_sample_data.sql and
  * the project templates' sample data). A "credential" account that still holds
@@ -20,7 +22,7 @@ export async function warnSampleAccountsAtStartup(
   env: Record<string, string | undefined> = process.env,
   queryRows?: QueryRows,
 ): Promise<void> {
-  if (env.NODE_ENV !== 'production') return
+  if (env.NODE_ENV !== 'production' || isDemoMode(env)) return
   try {
     const run = queryRows ?? (await import('../db')).queryRows as QueryRows
     const [row] = await run(

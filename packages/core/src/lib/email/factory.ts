@@ -4,6 +4,7 @@ import { ConsoleProvider } from './providers/console';
 import { SmtpProvider } from './providers/smtp';
 import { parseSmtpConfig, smtpEnvironmentFrom } from './smtp-config';
 import { defaultFromHeader } from './sender';
+import { isDemoMode } from '../demo/mode';
 
 export type EmailProviderType = 'resend' | 'smtp' | 'console' | 'auto';
 
@@ -38,6 +39,12 @@ export class EmailFactory {
   private static instance: EmailProvider | null = null;
 
   static create(options: EmailFactoryOptions = {}): EmailProvider {
+    // A demo never sends, whatever the caller or the environment asks for
+    if (isDemoMode()) {
+      this.instance = new ConsoleProvider(options.consoleOptions);
+      return this.instance;
+    }
+
     // Read provider from environment if not specified in options
     const envProvider = process.env.EMAIL_PROVIDER as EmailProviderType | undefined;
 

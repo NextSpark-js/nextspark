@@ -9,6 +9,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
 import path from 'node:path'
 import pg from 'pg'
 import { CORE, HAS_POSTGRES, cutoverDatabase } from './_pg-cutover'
@@ -17,13 +18,13 @@ const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
 const FIXTURE = path.join(CORE, 'tests/node/fixtures/registration-gates')
 const ORIGIN = 'http://localhost:5173'
 
-type Step = { op: 'password'; email: string; inviteToken?: string } | { op: 'otp'; email: string } | { op: 'google'; email: string; emailVerified?: boolean } | { op: 'invite'; email: string; token: string }
+type Step = { op: 'password'; email: string; inviteToken?: string } | { op: 'signin'; email: string; password: string } | { op: 'otp'; email: string } | { op: 'google'; email: string; emailVerified?: boolean } | { op: 'invite'; email: string; token: string }
 type Result = Step & { status: number; code?: string; location?: string }
 
-function runSteps(databaseUrl: string, teams: string, steps: Step[]): Result[] {
+function runSteps(databaseUrl: string, teams: string, steps: Step[], demo?: { auth: object }, auth?: object): Result[] {
   const appConfig = {
     teams: { mode: teams },
-    auth: {
+    auth: auth ?? demo?.auth ?? {
       registration: { mode: 'invitation-only' },
       methods: ['email-otp', 'email-password', 'google'],
       emailAndPassword: { enabled: true },
@@ -50,6 +51,7 @@ function runSteps(databaseUrl: string, teams: string, steps: Step[]): Result[] {
       DISABLE_RATE_LIMITING: 'true',
       REGISTRATION_GATES_APP_CONFIG: JSON.stringify(appConfig),
       REGISTRATION_GATES_STEPS: JSON.stringify(steps),
+      ...(demo ? { NEXTSPARK_DEMO_MODE: 'true' } : {}),
     },
   })
   const results = run.stdout.split('\n').filter(l => l.startsWith('RESULT ')).map(l => JSON.parse(l.slice(7)) as Result)
@@ -174,3 +176,30 @@ for (const teams of ['single-tenant', 'multi-tenant']) {
     assert.equal((await owner.query(`SELECT count(*)::int AS n FROM session s JOIN users u ON u.id = s."userId" WHERE u.email = 'first@example.test'`)).rows[0].n, 2)
   })
 }
+
+test('demo mode: no way of creating an account works, the sample accounts sign in by password', { skip, timeout: 300000 }, async t => {
+  const { owner, ownerUrl } = await cutoverDatabase(t)
+  await owner.query("SELECT set_config('nextspark.seed_sample_data', 'on', false)")
+  await owner.query(fs.readFileSync(path.join(CORE, 'migrations/090_sample_data.sql'), 'utf8'))
+  await invite(owner, 'invited@example.test', 'token-demo')
+  const before = await users(owner)
+
+  // an open project on the passwordless preset, the case a demo has to close and to open
+  const open = { registration: { mode: 'open' }, methods: ['email-otp', 'google'] }
+  const demo = { auth: open }
+  const results = runSteps(ownerUrl, 'multi-tenant', [
+    { op: 'password', email: 'stranger-password@example.test' },
+    { op: 'otp', email: 'stranger-otp@example.test' },
+    { op: 'google', email: 'stranger-google@example.test' },
+    { op: 'invite', email: 'invited@example.test', token: 'token-demo' },
+    { op: 'signin', email: 'superadmin@nextspark.dev', password: 'Pandora1234' },
+  ], demo)
+  for (const r of results.slice(0, 4)) assert.ok(refused(r) || r.status >= 400, `refused: ${JSON.stringify(r)}`)
+  assert.deepEqual(await users(owner), before)
+  assert.equal(results[4].status, 200, JSON.stringify(results[4]))
+
+  // without the variable the same project creates the account
+  const normal = runSteps(ownerUrl, 'multi-tenant', [{ op: 'otp', email: 'stranger-otp@example.test' }], undefined, open)
+  assert.equal(normal[0].status, 200, JSON.stringify(normal[0]))
+  assert.ok((await users(owner)).includes('stranger-otp@example.test'))
+})

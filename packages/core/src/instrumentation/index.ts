@@ -16,6 +16,16 @@ export async function register(): Promise<void> {
   // Only run on server (not during build or in edge runtime). Kept as an if block, not
   // an early return, so the bundler drops the imports below from the edge build.
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // A demo never starts next to credentials of a real service. Names only, never a value
+    if (process.env.NEXT_PHASE !== 'phase-production-build') {
+      const { demoModeRefusal } = await import('../lib/demo/mode')
+      const refusal = demoModeRefusal(process.env)
+      if (refusal) {
+        console.error(`[demo-mode] ${refusal} The server will not start.`)
+        process.exit(1)
+      }
+    }
+
     // Sessions are signed with the secret the auth library resolves from BETTER_AUTH_SECRETS, BETTER_AUTH_SECRET or
     // AUTH_SECRET: a production server never starts without one, or with a template value or a short one. The next
     // build collects page data with NODE_ENV=production too, and the build's own readiness check judges it there.

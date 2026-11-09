@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { SignupForm } from '@nextsparkjs/core/components/auth/forms/SignupForm'
 import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
 import { resolveAuthMethods } from '@nextsparkjs/core/lib/auth/auth-methods'
+import { isDemoMode } from '@nextsparkjs/core/lib/demo/mode'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 import { safeCallbackPath } from '@nextsparkjs/core/lib/auth/callback-url'
 import { authPageMetadata } from '@nextsparkjs/core/routes/_internal/auth-metadata'
@@ -36,6 +37,8 @@ function loginUrl(params: SignupSearchParams = {}) {
 async function SignupPage({ searchParams }: { searchParams?: Promise<SignupSearchParams> }) {
   const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
   const params = (await searchParams) ?? {}
+  // A demo has only its sample accounts
+  if (isDemoMode()) redirect(loginUrl(params))
   // An invitation link registers through signup-with-invite, with or without a password
   const invited = typeof params.inviteToken === 'string'
 
