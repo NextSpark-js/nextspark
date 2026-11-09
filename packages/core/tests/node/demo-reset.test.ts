@@ -79,6 +79,9 @@ test('every refusal leaves a database that is not a demo as it was', { skip: !HA
     assert.match(result.output, /Nothing was changed/, why)
     assert.ok(!result.output.includes(SECRET), `${why}: a value was printed`)
   }
+  const typo = run({ NEXTSPARK_DEMO_MODE: 'true' }, ['--stauts'])
+  assert.equal(typo.status, 1, typo.output)
+  assert.match(typo.output, /Unknown argument/)
   assert.deepEqual((await client.query('SELECT id FROM customers')).rows, [{ id: 1 }])
   assert.ok(fs.existsSync(path.join(root, 'uploads', UPLOAD)), 'the file is still there')
 })
@@ -151,6 +154,8 @@ test('a reset restores the sample data, locks the sample accounts and empties th
   const firstReset = await lastReset()
   assert.ok(firstReset instanceof Date)
   assert.match(run({}, ['--status']).output, new RegExp(`Last reset: ${firstReset.toISOString().slice(0, 16)}`))
+  assert.equal(run({}, ['--stauts']).status, 1)
+  assert.equal((await lastReset()).getTime(), firstReset.getTime(), 'a mistyped flag resets nothing')
 
   const accounts = (await client.query(`SELECT u.email, u.role, a.password IS NOT NULL AS "hasPassword", count(tm.*)::int AS teams FROM users u JOIN account a ON a."userId" = u.id AND a."providerId" = 'credential' LEFT JOIN team_members tm ON tm."userId" = u.id GROUP BY 1, 2, 3 ORDER BY 1`)).rows
   assert.deepEqual(accounts.map(a => a.email), ['developer@nextspark.dev', 'superadmin@nextspark.dev'])

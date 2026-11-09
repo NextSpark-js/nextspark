@@ -30,6 +30,9 @@ function refuse(message) {
   process.exit(1);
 }
 
+const unknown = process.argv.slice(2).find(argument => argument !== '--status');
+if (unknown) refuse(`Unknown argument: ${JSON.stringify(unknown)}. The only one is --status.`);
+
 let demoMode, storageNames;
 try {
   demoMode = await import(pathToFileURL(path.join(CORE, 'dist/lib/demo/mode.js')).href);
