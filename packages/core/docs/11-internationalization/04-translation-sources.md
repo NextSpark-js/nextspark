@@ -943,10 +943,13 @@ core/messages/
 
 ```text
 messages/
-├── en.json                      # All theme translations
-├── es.json                      # Spanish translations
-└── README.md                    # Translation guidelines
+├── en/                          # One directory per locale, as the starter has it
+│   ├── common.json              # A JSON file per namespace
+│   └── index.ts                 # export default { common, ... }
+└── es/                          # Spanish translations
 ```
+
+A flat `messages/en.json` and `messages/es.json` pair also works, as in the `crm` template.
 
 ### Plugin Translations Structure
 
