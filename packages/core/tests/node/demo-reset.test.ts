@@ -112,6 +112,27 @@ test('a table or view in any schema counts as data', { skip: !HAS_POSTGRES, time
   assert.deepEqual((await client.query('SELECT email FROM other.customers')).rows, [{ email: 'a@example.test' }])
 })
 
+test('a failed reset leaves an empty database, marked unfinished, and can be run again', { skip: !HAS_POSTGRES, timeout: 300000 }, async t => {
+  const { port, stop } = await startCluster('demo-reset-fail')
+  t.after(stop)
+  const url = `postgresql://owner@127.0.0.1:${port}/postgres?sslmode=disable`
+  const root = project(t)
+  const run = runner(root, url)
+  const after = path.join(root, 'migrations/900_after_the_sample_data.sql')
+  fs.mkdirSync(path.dirname(after))
+  fs.writeFileSync(after, 'SELECT 1 / 0;')
+
+  assert.equal(run().status, 1)
+  const client = await connect(t, url)
+  assert.equal((await client.query(`SELECT to_regclass('public.users') AS users`)).rows[0].users, null, 'no sample account stays behind')
+  assert.equal((await client.query('SELECT last_reset_at FROM _nextspark_demo')).rows[0].last_reset_at, null)
+  assert.match(run({}, ['--status']).output, /Last reset: unfinished/)
+
+  fs.rmSync(after)
+  const again = run()
+  assert.equal(again.status, 0, again.output)
+})
+
 test('a reset restores the sample data, locks the sample accounts and empties the uploads', { skip: !HAS_POSTGRES, timeout: 300000 }, async t => {
   const { port, stop } = await startCluster('demo-reset-run')
   t.after(stop)

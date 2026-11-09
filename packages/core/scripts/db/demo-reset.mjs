@@ -116,8 +116,14 @@ try {
     await status();
   } else {
     await clearDatabase();
-    migrateWithSampleData();
-    await lockSampleAccounts();
+    try {
+      migrateWithSampleData();
+      await lockSampleAccounts();
+    } catch (error) {
+      // The sample accounts may be in and not locked yet: an empty database is the only safe thing to leave
+      await clearDatabase();
+      throw error;
+    }
     const removed = clearUploads();
     await client.query(`UPDATE "${MARK}" SET last_reset_at = now()`);
     console.log(`\n✅ Demo reset: sample data restored, ${removed} upload(s) removed.`);
