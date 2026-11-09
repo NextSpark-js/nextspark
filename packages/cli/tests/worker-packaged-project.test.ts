@@ -26,7 +26,7 @@ test('the worker runs from a project generated from the packed tarballs', { skip
   const run = (cmd: string, args: string[], env: Record<string, string> = {}) =>
     spawnSync(cmd, args, { cwd: project, env: { ...process.env, ...env }, encoding: 'utf8' })
 
-  const migrated = run('pnpm', ['exec', 'nextspark', 'db:migrate', '--no-env-file'], { DATABASE_URL: url('owner') })
+  const migrated = run('pnpm', ['exec', 'nextspark', 'db:migrate', '--no-env-file'], { DATABASE_URL: url('owner'), MIGRATE_DATABASE_URL: url('owner') })
   assert.equal(migrated.status, 0, migrated.stdout + migrated.stderr)
   const role = spawnSync('psql', [url('owner'), '-c', 'CREATE ROLE app_login LOGIN NOSUPERUSER NOBYPASSRLS INHERIT IN ROLE nextspark_app'], { encoding: 'utf8' })
   assert.equal(role.status, 0, role.stderr)

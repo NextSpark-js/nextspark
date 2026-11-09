@@ -155,6 +155,19 @@ jobs:
           path: ${{ runner.temp }}/project/axe-report.json
           if-no-files-found: ignore
 
+      # The optional pg-boss worker (#275) from the project as a user has it: installed from the tarballs, CommonJS,
+      # with the generated registries. Last, so its extra dependency and config reach neither the build nor the scans.
+      - name: Run nextspark worker from the generated project
+        if: matrix.theme == 'starter' && matrix.node == env.NODE_OLDEST
+        working-directory: ${{ runner.temp }}/project/app
+        run: |
+          pnpm add pg-boss@12.37.1
+          sed -i "s#^export const APP_CONFIG_OVERRIDES = {#&\n  jobs: { enabled: true, shutdownTimeout: 10, queues: { 'purge-teams': { handler: 'teams:purge-deleted' } } },#" config/app.config.ts
+          grep -q "'purge-teams'" config/app.config.ts
+          test -x /usr/lib/postgresql/16/bin/initdb || { echo "::error::PostgreSQL 16 binaries not found at /usr/lib/postgresql/16/bin"; exit 1; }
+          cd "$GITHUB_WORKSPACE"
+          PATH="$PATH:/usr/lib/postgresql/16/bin" NEXTSPARK_PACKED_PROJECT="$PROJECT/app" pnpm exec tsx --test packages/cli/tests/worker-packaged-project.test.ts
+
   # Better Auth as the starter ships it, not as core's Jest sees it (Jest maps `better-auth` to a mock, so a Better Auth
   # upgrade can break every auth request with every suite green). The starter is built in domain-open mode, started with
   # a stand-in for Resend, and driven over HTTP: sign-in by email OTP, get-session, a blocked domain, sign-out and the
