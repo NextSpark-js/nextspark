@@ -17,7 +17,7 @@ export async function register(): Promise<void> {
   // an early return, so the bundler drops the imports below from the edge build.
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     // A demo never starts next to credentials of a real service. Names only, never a value
-    if (process.env.NEXT_PHASE !== 'phase-production-build') {
+    if (process.env.NEXTSPARK_DEMO_MODE && process.env.NEXT_PHASE !== 'phase-production-build') {
       const { demoModeRefusal } = await import('../lib/demo/mode')
       const refusal = demoModeRefusal(process.env)
       if (refusal) {
