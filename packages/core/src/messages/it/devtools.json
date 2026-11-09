@@ -21,7 +21,10 @@
     "api": "Esploratore API",
     "apiDescription": "Naviga tutti gli endpoint API",
     "expandSidebar": "Espandi barra laterale",
-    "collapseSidebar": "Comprimi barra laterale"
+    "collapseSidebar": "Comprimi barra laterale",
+    "scheduledActions": "Azioni pianificate",
+    "scheduledActionsDescription": "Monitora le attività in background",
+    "plugins": "Plugin"
   },
   "exitToDashboard": "Esci da DevTools",
   "exitToDashboardDescription": "Torna al pannello principale",
@@ -44,7 +47,10 @@
     "entitiesTitle": "Registro Entità",
     "entitiesDescription": "{count} entità registrate",
     "copied": "Copiato!",
-    "copy": "Copia"
+    "copy": "Copia",
+    "loadThemeFailed": "Impossibile caricare la configurazione del tema",
+    "loadEntitiesFailed": "Impossibile caricare le entità",
+    "fieldsCount": "{count, plural, one {# campo} other {# campi}}"
   },
   "tests": {
     "title": "Casi di Test",
@@ -81,7 +87,17 @@
         "content": "Contenuto",
         "settings": "Impostazioni",
         "admin": "Admin"
-      }
+      },
+      "loadFailed": "Impossibile caricare i dati di copertura"
+    },
+    "loadFilesFailed": "Impossibile caricare i file di test",
+    "loadFileFailed": "Impossibile caricare il file",
+    "bdd": {
+      "loading": "Caricamento...",
+      "priority": "{level, select, high {Priorità alta} medium {Priorità media} low {Priorità bassa} other {Priorità {level}}}",
+      "testCases": "Casi di test",
+      "clickToCopy": "Clicca per copiare",
+      "expectedResults": "Risultati attesi"
     }
   },
   "api": {
@@ -90,7 +106,55 @@
     "endpointsInCategory": "endpoint in questa categoria",
     "noRoutesInCategory": "Nessuna route in questa categoria",
     "noRoutesMessage": "Non sono state registrate route personalizzate per questa categoria.",
-    "generatedAt": "Registro generato il"
+    "generatedAt": "Registro generato il",
+    "noEndpointSelected": "Nessun endpoint selezionato",
+    "selectEndpoint": "Seleziona un endpoint dalla barra laterale per iniziare",
+    "noEndpoints": "Nessun endpoint API disponibile",
+    "docs": {
+      "loadFailed": "Impossibile caricare la documentazione",
+      "loadError": "Errore durante il caricamento della documentazione",
+      "button": "Doc",
+      "empty": "Nessuna documentazione disponibile"
+    },
+    "sidebar": {
+      "title": "Endpoint",
+      "search": "Cerca endpoint...",
+      "emptyCategory": "Nessun endpoint in questa categoria",
+      "categories": {
+        "core": "Core",
+        "entities": "Entità",
+        "theme": "Tema",
+        "plugins": "Plugin"
+      }
+    },
+    "json": {
+      "format": "Formatta",
+      "formatTitle": "Formatta JSON",
+      "copy": "Copia",
+      "copyTitle": "Copia negli appunti",
+      "invalid": "JSON non valido",
+      "expand": "Espandi",
+      "collapse": "Comprimi"
+    },
+    "presets": {
+      "run": "Esecuzione",
+      "newRun": "Nuova esecuzione",
+      "runHint": "Ogni {token} di questi preset assume questo valore. Avvia una nuova esecuzione per inviare valori mai usati prima.",
+      "empty": "Nessun preset disponibile per questo endpoint",
+      "createIn": "Crea i preset in <path>devtools/api/</path>",
+      "noneForMethod": "Nessun preset per il metodo <strong>{method}</strong>.",
+      "availableMethods": "Metodi disponibili:",
+      "apply": "Applica preset",
+      "moreForOtherMethods": "{count, plural, one {# altro preset disponibile per altri metodi} other {# altri preset disponibili per altri metodi}}",
+      "description": "Descrizione",
+      "method": "Metodo:",
+      "pathParams": "Parametri del percorso",
+      "queryParams": "Parametri di query",
+      "headers": "Header",
+      "requestBody": "Corpo della richiesta",
+      "sessionConfig": "Configurazione della sessione",
+      "tags": "Tag"
+    }
   },
   "apiTester": {
     "backToList": "Torna agli Endpoint",
@@ -114,7 +178,10 @@
       "useApiKey": "Usa API key",
       "apiKeyPlaceholder": "Inserisci la tua API key...",
       "adminBypass": "Accesso cross-team",
-      "adminBypassTooltip": "Abilita per accedere ai dati di qualsiasi team. Richiede appartenenza al NextSpark Team."
+      "adminBypassTooltip": "Abilita per accedere ai dati di qualsiasi team. Richiede appartenenza al NextSpark Team.",
+      "actAsUser": "Agisci come utente",
+      "actAsUserHelp": "Solo per sviluppatori. Risolve gli endpoint di sessione (es. /me/*) come l’utente indicato senza cambiare la tua sessione. Richiede il ruolo developer, un ambiente non di produzione e ALLOW_ACT_AS_USER=true. Lascia vuoto per usare la tua sessione.",
+      "actAsUserPlaceholder": "ID utente (vuoto = la tua sessione)"
     },
     "editor": {
       "keyPlaceholder": "Chiave",
@@ -129,6 +196,37 @@
       "idle": "Invia una request per vedere la risposta",
       "loading": "Invio request...",
       "error": "Si è verificato un errore"
+    },
+    "tabs": {
+      "session": "Sessione",
+      "params": "Parametri",
+      "headers": "Header",
+      "body": "Corpo",
+      "presets": "Preset",
+      "modifiedByPreset": "Modificato da un preset"
+    },
+    "summary": {
+      "apiKey": "chiave API",
+      "session": "sessione",
+      "crossTeam": "cross-team",
+      "actingAs": "come {user}"
+    },
+    "source": "Origine: {source}",
+    "sourceWithCategory": "Origine: {source} | Categoria: {category}",
+    "team": {
+      "context": "Contesto del team",
+      "select": "Seleziona un team...",
+      "required": "È richiesto un team per le richieste senza bypass",
+      "filter": "Filtra per team (facoltativo)",
+      "available": "{count, plural, one {# team disponibile} other {# team disponibili}}",
+      "crossTeam": "Cross-team (tutti i team)",
+      "selectToFilter": "Seleziona un team da filtrare...",
+      "search": "Cerca team per nome o proprietario...",
+      "searching": "Ricerca dei team...",
+      "none": "Nessun team trovato",
+      "tryOther": "Prova con un altro termine di ricerca",
+      "crossTeamHint": "Accedi ai dati di tutti i team senza filtri",
+      "members": "{count, plural, one {# membro} other {# membri}}"
     }
   },
   "features": {
@@ -190,7 +288,8 @@
       "content": "Contenuto",
       "settings": "Impostazioni",
       "admin": "Admin"
-    }
+    },
+    "noTestsWarning": "{count, plural, one {# flusso non ha copertura di test. Valuta di aggiungere test per i percorsi utente critici.} other {# flussi non hanno copertura di test. Valuta di aggiungere test per i percorsi utente critici.}}"
   },
   "blocks": {
     "title": "Registro Blocchi",
@@ -246,8 +345,27 @@
       "placeholder": "Placeholder",
       "options": "Opzioni",
       "yes": "Sì",
-      "no": "No"
-    }
+      "no": "No",
+      "loadingPreview": "Caricamento dell'anteprima del blocco...",
+      "previewFailed": "Impossibile caricare l'anteprima del blocco",
+      "componentMissing": "Componente del blocco non trovato nel registro",
+      "notFound": "Blocco non trovato",
+      "notFoundDescription": "Il blocco \"{slug}\" non esiste nel registro.",
+      "testCount": "{count, plural, one {# test} other {# test}}",
+      "noExamples": "Nessun esempio definito per questo blocco",
+      "addExamples": "Esegui <command>/block:update {slug}</command> per aggiungere esempi",
+      "fieldsCount": "{count, plural, one {# campo} other {# campi}}",
+      "blockInfo": "Informazioni sul blocco",
+      "slug": "Slug",
+      "icon": "Icona",
+      "source": "Origine",
+      "testsLabel": "test",
+      "hasCoverage": "Il blocco ha copertura di test",
+      "noTests": "Nessun test per questo blocco",
+      "testFiles": "File di test:",
+      "grepCommand": "Comando grep:"
+    },
+    "noPreview": "Nessuna anteprima"
   },
   "tags": {
     "title": "Vista Tag",
@@ -270,7 +388,8 @@
       "roles": "Ruoli",
       "operations": "Operazioni",
       "other": "Altri"
-    }
+    },
+    "viewDetails": "Vedi dettagli"
   },
   "scheduledActions": {
     "title": "Azioni Programmate",
@@ -321,7 +440,10 @@
       "previous": "Precedente",
       "next": "Successivo",
       "page": "Pagina {page} di {total}"
-    }
+    },
+    "unknownError": "Errore sconosciuto",
+    "fetchFailed": "Impossibile recuperare le azioni pianificate",
+    "errorMessage": "Errore: {message}"
   },
   "gallery": {
     "theme": {
@@ -797,6 +919,89 @@
       "yourPaymentMethodWill": "Il metodo di pagamento verrà addebitato tra 3 giorni. Aggiorna i dati di fatturazione, se necessario.",
       "upgradeSuccessful": "Upgrade completato",
       "yourSubscriptionHasBeen": "Il tuo abbonamento è stato aggiornato a Pro. Goditi le nuove funzioni!"
+    }
+  },
+  "home": {
+    "welcome": "Benvenuto in DevTools",
+    "welcomeDescription": "Il tuo hub centrale per gli strumenti di sviluppo e debug",
+    "intro": "Usa questi strumenti per esplorare la configurazione del tema, consultare la documentazione dei test, ispezionare gli endpoint dell'API e altro ancora. Ogni sezione offre funzioni specializzate per aiutarti a sviluppare ed eseguire il debug della tua applicazione.",
+    "systemInfo": "Informazioni di sistema",
+    "systemInfoDescription": "Ambiente attuale e dettagli di accesso",
+    "accessLevel": "Livello di accesso",
+    "hierarchy": "Livello gerarchico"
+  },
+  "style": {
+    "description": "Esplora gli stili dei componenti e i token di design",
+    "back": "Torna all’area sviluppatori",
+    "title": "Galleria degli stili",
+    "subtitle": "Vetrina del design system e libreria di componenti",
+    "exportTokens": "Esporta token",
+    "stats": {
+      "components": "Componenti",
+      "componentsDescription": "Componenti UI disponibili",
+      "colorTokens": "Token di colore",
+      "colorTokensDescription": "Variabili di colore del tema",
+      "themes": "Temi",
+      "themesDescription": "Modalità chiara e scura",
+      "documentation": "Documentazione",
+      "documentationDescription": "Copertura dei componenti"
+    },
+    "tabs": {
+      "components": "Componenti",
+      "fieldTypes": "Tipi di campo",
+      "theme": "Tema e colori",
+      "guidelines": "Linee guida"
+    },
+    "components": {
+      "title": "Libreria di componenti",
+      "description": "Vetrina completa di tutti i componenti UI disponibili con i diversi stati e varianti"
+    },
+    "fieldTypes": {
+      "title": "Tipi di campo delle entità",
+      "description": "Vetrina completa di tutti i tipi di campo delle entità, con esempi e varianti per lo sviluppo dei form"
+    },
+    "theme": {
+      "title": "Sistema dei temi",
+      "description": "Token di colore, tipografia e variabili del design system per i temi chiaro e scuro"
+    },
+    "principles": {
+      "title": "Principi di design",
+      "description": "Principi fondamentali che guidano il nostro design system",
+      "consistency": "Coerenza",
+      "consistencyDescription": "Mantieni la coerenza visiva e funzionale in tutti i componenti",
+      "accessibility": "Accessibilità",
+      "accessibilityDescription": "Assicurati che tutti i componenti rispettino gli standard WCAG 2.1 AA",
+      "scalability": "Scalabilità",
+      "scalabilityDescription": "Progetta componenti che funzionino a scale e in contesti diversi",
+      "performance": "Prestazioni",
+      "performanceDescription": "Ottimizza per un caricamento rapido e interazioni fluide"
+    },
+    "usage": {
+      "title": "Linee guida d’uso",
+      "description": "Come usare in modo efficace questo design system",
+      "color": "Uso del colore",
+      "colorDescription": "Usa nomi di colore semantici (primary, secondary, destructive) invece di colori specifici",
+      "typography": "Scala tipografica",
+      "typographyDescription": "Segui la scala tipografica stabilita per una gerarchia coerente",
+      "spacing": "Sistema di spaziatura",
+      "spacingDescription": "Usa la griglia da 8 px per spaziatura e allineamento coerenti",
+      "composition": "Composizione dei componenti",
+      "compositionDescription": "Combina i componenti di base per creare interfacce complesse"
+    },
+    "specs": {
+      "title": "Specifiche tecniche",
+      "description": "Dettagli di implementazione e requisiti",
+      "framework": "Framework",
+      "styling": "Stile",
+      "components": "Componenti",
+      "icons": "Icone",
+      "themeSystem": "Sistema dei temi",
+      "buildTool": "Strumento di build"
+    },
+    "resources": {
+      "title": "Risorse e link",
+      "description": "Risorse e documentazione aggiuntive",
+      "docs": "Documentazione di {name}"
     }
   }
 }

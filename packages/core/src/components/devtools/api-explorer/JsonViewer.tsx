@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { JsonView, allExpanded, collapseAllNested, defaultStyles, darkStyles } from 'react-json-view-lite'
 import 'react-json-view-lite/dist/index.css'
 import { useTheme } from '../../../providers/theme-provider'
@@ -82,6 +83,7 @@ export function JsonViewerWithControls({
   initialExpanded = 2,
   showControls = true,
 }: JsonViewerWithControlsProps) {
+  const t = useTranslations('devtools.api.json')
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
 
@@ -131,7 +133,7 @@ export function JsonViewerWithControls({
             data-cy="json-viewer-expand-all"
           >
             <ChevronsUpDown className="h-3.5 w-3.5 mr-1" />
-            Expand
+            {t('expand')}
           </Button>
           <Button
             variant="ghost"
@@ -141,18 +143,18 @@ export function JsonViewerWithControls({
             data-cy="json-viewer-collapse-all"
           >
             <ChevronsDownUp className="h-3.5 w-3.5 mr-1" />
-            Collapse
+            {t('collapse')}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleCopy}
             className="h-7 px-2 text-xs"
-            title="Copy to clipboard"
+            title={t("copyTitle")}
             data-cy="json-viewer-copy"
           >
             <Copy className="h-3.5 w-3.5 mr-1" />
-            Copy
+            {t('copy')}
           </Button>
         </div>
       )}

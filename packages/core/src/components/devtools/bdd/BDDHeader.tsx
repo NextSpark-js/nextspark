@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { TestTube2, Tag, AlertTriangle, CheckCircle2, Languages } from "lucide-react";
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
@@ -20,6 +21,7 @@ interface BDDHeaderProps {
  * Displays the feature header with title, description, and statistics.
  */
 export function BDDHeader({ feature, testCount, language, onLanguageChange, hasMultipleLanguages }: BDDHeaderProps) {
+  const t = useTranslations('devtools.tests.bdd');
   const getPriorityIcon = (priority?: string) => {
     switch (priority) {
       case 'high':
@@ -57,7 +59,7 @@ export function BDDHeader({ feature, testCount, language, onLanguageChange, hasM
             )}
           >
             {getPriorityIcon(feature.priority)}
-            <span className="ml-1">{feature.priority} priority</span>
+            <span className="ml-1">{t("priority", { level: feature.priority })}</span>
           </Badge>
         )}
       </div>
@@ -69,7 +71,7 @@ export function BDDHeader({ feature, testCount, language, onLanguageChange, hasM
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30">
               <span className="font-bold text-violet-600 dark:text-violet-400">{testCount}</span>
             </div>
-            <span className="text-muted-foreground">Test Cases</span>
+            <span className="text-muted-foreground">{t("testCases")}</span>
           </div>
 
           {feature.tags && feature.tags.length > 0 && (
@@ -97,7 +99,7 @@ export function BDDHeader({ feature, testCount, language, onLanguageChange, hasM
                       variant="outline"
                       className="text-xs font-mono bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
                       onClick={() => navigator.clipboard.writeText(displayTag)}
-                      title="Click to copy"
+                      title={t("clickToCopy")}
                     >
                       {displayTag}
                     </Badge>

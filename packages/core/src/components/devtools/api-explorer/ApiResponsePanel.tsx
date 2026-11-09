@@ -30,7 +30,7 @@ export function ApiResponsePanel({ status, response, error }: ApiResponsePanelPr
     return (
       <div className="flex flex-col h-full" data-cy={sel('devtools.apiExplorer.response.panelIdle')}>
         <div className="p-3 border-b bg-muted/30">
-          <h3 className="text-sm font-medium">Response</h3>
+          <h3 className="text-sm font-medium">{t("response")}</h3>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
           {t('responseStates.idle')}
@@ -44,7 +44,7 @@ export function ApiResponsePanel({ status, response, error }: ApiResponsePanelPr
     return (
       <div className="flex flex-col h-full" data-cy={sel('devtools.apiExplorer.response.panelLoading')}>
         <div className="p-3 border-b bg-muted/30">
-          <h3 className="text-sm font-medium">Response</h3>
+          <h3 className="text-sm font-medium">{t("response")}</h3>
         </div>
         <div className="flex-1 flex items-center justify-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -59,7 +59,7 @@ export function ApiResponsePanel({ status, response, error }: ApiResponsePanelPr
     return (
       <div className="flex flex-col h-full" data-cy={sel('devtools.apiExplorer.response.panelError')}>
         <div className="p-3 border-b bg-muted/30">
-          <h3 className="text-sm font-medium">Response</h3>
+          <h3 className="text-sm font-medium">{t("response")}</h3>
         </div>
         <div className="flex-1 flex items-center justify-center text-destructive text-sm p-4 text-center">
           {error || t('responseStates.error')}
@@ -75,7 +75,7 @@ export function ApiResponsePanel({ status, response, error }: ApiResponsePanelPr
     <div className="flex flex-col h-full" data-cy={sel('devtools.apiExplorer.response.panel')}>
       {/* Header with status */}
       <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Response</h3>
+        <h3 className="text-sm font-medium">{t("response")}</h3>
         <div className="flex items-center gap-3">
           <Badge
             variant="secondary"
@@ -106,14 +106,14 @@ export function ApiResponsePanel({ status, response, error }: ApiResponsePanelPr
               className="text-xs data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 pb-1.5"
               data-cy={sel('devtools.apiExplorer.response.tabBody')}
             >
-              Body
+              {t('responseBody')}
             </TabsTrigger>
             <TabsTrigger
               value="headers"
               className="text-xs data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 pb-1.5"
               data-cy={sel('devtools.apiExplorer.response.tabHeaders')}
             >
-              Headers ({Object.keys(response.headers).length})
+              {t('responseHeaders')} ({Object.keys(response.headers).length})
             </TabsTrigger>
           </TabsList>
         </div>

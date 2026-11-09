@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { githubLight, githubDark } from '@uiw/codemirror-theme-github'
@@ -44,6 +45,7 @@ export function JsonEditor({
   className,
   minHeight = '150px',
 }: JsonEditorProps) {
+  const t = useTranslations('devtools.api.json')
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
 
@@ -88,11 +90,11 @@ export function JsonEditor({
             onClick={handleFormat}
             className="h-7 px-2 text-xs"
             disabled={!isValidJson}
-            title="Format JSON"
+            title={t("formatTitle")}
             data-cy="json-editor-format"
           >
             <Wand2 className="h-3.5 w-3.5 mr-1" />
-            Format
+            {t('format')}
           </Button>
         )}
         <Button
@@ -100,16 +102,16 @@ export function JsonEditor({
           size="sm"
           onClick={handleCopy}
           className="h-7 px-2 text-xs"
-          title="Copy to clipboard"
+          title={t("copyTitle")}
           data-cy="json-editor-copy"
         >
           <Copy className="h-3.5 w-3.5 mr-1" />
-          Copy
+          {t('copy')}
         </Button>
         <div className="flex-1" />
         {!isValidJson && (
           <span className="text-xs text-destructive" data-cy="json-editor-error">
-            Invalid JSON
+            {t('invalid')}
           </span>
         )}
       </div>

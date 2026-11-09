@@ -28,7 +28,8 @@ import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 async function fetchScheduledActions(
   filters: ScheduledActionsFilters,
   page: number,
-  limit: number
+  limit: number,
+  fetchError: string
 ): Promise<ScheduledActionsResponse> {
   const params = new URLSearchParams()
 
@@ -46,7 +47,7 @@ async function fetchScheduledActions(
   const response = await fetch(withBasePath(`/api/v1/devtools/scheduled-actions?${params.toString()}`))
 
   if (!response.ok) {
-    throw new Error('Failed to fetch scheduled actions')
+    throw new Error(fetchError)
   }
 
   return response.json()
@@ -60,7 +61,7 @@ export default function ScheduledActionsPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['scheduled-actions', filters, page, limit],
-    queryFn: () => fetchScheduledActions(filters, page, limit),
+    queryFn: () => fetchScheduledActions(filters, page, limit, t('fetchFailed')),
   })
 
   const handleFiltersChange = (newFilters: ScheduledActionsFilters) => {
@@ -106,7 +107,7 @@ export default function ScheduledActionsPage() {
       {/* Error State */}
       {error && (
         <div className="text-center py-12 text-destructive">
-          <p>Error: {error.message}</p>
+          <p>{t('errorMessage', { message: error.message })}</p>
         </div>
       )}
 

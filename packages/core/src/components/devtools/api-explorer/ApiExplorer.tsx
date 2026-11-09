@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Code, Menu, X } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
@@ -70,6 +71,7 @@ function createEmptyRows(count = 2): KeyValuePair[] {
 }
 
 export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
+  const t = useTranslations('devtools.api')
   // Sidebar state (collapse persisted)
   const [isCollapsed, setIsCollapsed] = useState(() => loadState<boolean>('sidebarCollapsed') ?? false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -427,7 +429,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         </Button>
         <div className="flex items-center gap-2">
           <Code className="h-5 w-5 text-violet-600" />
-          <span className="font-semibold">API Explorer</span>
+          <span className="font-semibold">{t("title")}</span>
         </div>
         {selectedEndpoint && (
           <code className="text-xs text-muted-foreground truncate ml-auto">
@@ -533,11 +535,11 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">No endpoint selected</p>
+              <p className="text-lg font-medium">{t('noEndpointSelected')}</p>
               <p className="text-sm">
                 {totalRoutes > 0
-                  ? 'Select an endpoint from the sidebar to get started'
-                  : 'No API endpoints available'}
+                  ? t('selectEndpoint')
+                  : t('noEndpoints')}
               </p>
             </div>
           </div>

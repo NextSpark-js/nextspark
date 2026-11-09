@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Check,
   Copy,
@@ -48,6 +49,7 @@ interface BDDTestCardProps {
  * - Expected results list
  */
 export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTestCardProps) {
+  const t = useTranslations('devtools.tests.bdd');
   const [copied, setCopied] = useState(false);
 
   // Get scenario for current language, fallback to other language or legacy field
@@ -247,7 +249,7 @@ export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTest
             {test.expectedResults && test.expectedResults.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">
-                  Expected Results
+                  {t('expectedResults')}
                 </h4>
                 <ul className="space-y-1">
                   {test.expectedResults.map((result, idx) => (

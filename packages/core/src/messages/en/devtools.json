@@ -23,7 +23,8 @@
     "scheduledActions": "Scheduled Actions",
     "scheduledActionsDescription": "Monitor background tasks",
     "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "collapseSidebar": "Collapse sidebar",
+    "plugins": "Plugins"
   },
   "exitToDashboard": "Exit DevTools",
   "exitToDashboardDescription": "Return to main dashboard",
@@ -43,7 +44,78 @@
     "hierarchy": "Hierarchy Level"
   },
   "style": {
-    "description": "Browse component styles and design tokens"
+    "description": "Browse component styles and design tokens",
+    "back": "Back to Dev Area",
+    "title": "Style Gallery",
+    "subtitle": "Design system showcase and component library",
+    "exportTokens": "Export Tokens",
+    "stats": {
+      "components": "Components",
+      "componentsDescription": "Available UI components",
+      "colorTokens": "Color Tokens",
+      "colorTokensDescription": "Theme color variables",
+      "themes": "Themes",
+      "themesDescription": "Light & dark modes",
+      "documentation": "Documentation",
+      "documentationDescription": "Component coverage"
+    },
+    "tabs": {
+      "components": "Components",
+      "fieldTypes": "Field Types",
+      "theme": "Theme & Colors",
+      "guidelines": "Guidelines"
+    },
+    "components": {
+      "title": "Component Library",
+      "description": "Complete showcase of all available UI components with different states and variations"
+    },
+    "fieldTypes": {
+      "title": "Entity Field Types",
+      "description": "Complete showcase of all entity field types with examples and variants for form development"
+    },
+    "theme": {
+      "title": "Theme System",
+      "description": "Color tokens, typography, and design system variables for both light and dark themes"
+    },
+    "principles": {
+      "title": "Design Principles",
+      "description": "Core principles guiding our design system",
+      "consistency": "Consistency",
+      "consistencyDescription": "Maintain visual and functional consistency across all components",
+      "accessibility": "Accessibility",
+      "accessibilityDescription": "Ensure all components meet WCAG 2.1 AA standards",
+      "scalability": "Scalability",
+      "scalabilityDescription": "Design components that work at different scales and contexts",
+      "performance": "Performance",
+      "performanceDescription": "Optimize for fast loading and smooth interactions"
+    },
+    "usage": {
+      "title": "Usage Guidelines",
+      "description": "How to effectively use this design system",
+      "color": "Color Usage",
+      "colorDescription": "Use semantic color names (primary, secondary, destructive) rather than specific colors",
+      "typography": "Typography Scale",
+      "typographyDescription": "Follow the established type scale for consistent hierarchy",
+      "spacing": "Spacing System",
+      "spacingDescription": "Use the 8px grid system for consistent spacing and alignment",
+      "composition": "Component Composition",
+      "compositionDescription": "Combine base components to create complex interfaces"
+    },
+    "specs": {
+      "title": "Technical Specifications",
+      "description": "Implementation details and requirements",
+      "framework": "Framework",
+      "styling": "Styling",
+      "components": "Components",
+      "icons": "Icons",
+      "themeSystem": "Theme System",
+      "buildTool": "Build Tool"
+    },
+    "resources": {
+      "title": "Resources & Links",
+      "description": "Additional resources and documentation",
+      "docs": "{name} documentation"
+    }
   },
   "config": {
     "title": "Configuration Viewer",
@@ -58,7 +130,10 @@
     "entitiesTitle": "Entity Registry",
     "entitiesDescription": "{count} registered entities",
     "copied": "Copied!",
-    "copy": "Copy"
+    "copy": "Copy",
+    "loadThemeFailed": "Failed to load theme config",
+    "loadEntitiesFailed": "Failed to load entities",
+    "fieldsCount": "{count, plural, one {# field} other {# fields}}"
   },
   "tests": {
     "title": "Test Cases",
@@ -95,7 +170,17 @@
         "content": "Content",
         "settings": "Settings",
         "admin": "Admin"
-      }
+      },
+      "loadFailed": "Failed to load coverage data"
+    },
+    "loadFilesFailed": "Failed to load test files",
+    "loadFileFailed": "Failed to load file",
+    "bdd": {
+      "loading": "Loading...",
+      "priority": "{level, select, high {High priority} medium {Medium priority} low {Low priority} other {Priority {level}}}",
+      "testCases": "Test Cases",
+      "clickToCopy": "Click to copy",
+      "expectedResults": "Expected Results"
     }
   },
   "api": {
@@ -104,7 +189,55 @@
     "endpointsInCategory": "endpoints in this category",
     "noRoutesInCategory": "No routes in this category",
     "noRoutesMessage": "No custom routes have been registered for this category.",
-    "generatedAt": "Registry generated at"
+    "generatedAt": "Registry generated at",
+    "noEndpointSelected": "No endpoint selected",
+    "selectEndpoint": "Select an endpoint from the sidebar to get started",
+    "noEndpoints": "No API endpoints available",
+    "docs": {
+      "loadFailed": "Failed to load documentation",
+      "loadError": "Error loading documentation",
+      "button": "Docs",
+      "empty": "No documentation available"
+    },
+    "sidebar": {
+      "title": "Endpoints",
+      "search": "Search endpoints...",
+      "emptyCategory": "No endpoints in this category",
+      "categories": {
+        "core": "Core",
+        "entities": "Entities",
+        "theme": "Theme",
+        "plugins": "Plugins"
+      }
+    },
+    "json": {
+      "format": "Format",
+      "formatTitle": "Format JSON",
+      "copy": "Copy",
+      "copyTitle": "Copy to clipboard",
+      "invalid": "Invalid JSON",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "presets": {
+      "run": "Run",
+      "newRun": "New run",
+      "runHint": "Every {token} in these presets resolves to this. Start a new run to send values nothing has used before.",
+      "empty": "No presets available for this endpoint",
+      "createIn": "Create presets in <path>devtools/api/</path>",
+      "noneForMethod": "No presets for the <strong>{method}</strong> method.",
+      "availableMethods": "Available methods:",
+      "apply": "Apply Preset",
+      "moreForOtherMethods": "{count, plural, one {# more preset available for other methods} other {# more presets available for other methods}}",
+      "description": "Description",
+      "method": "Method:",
+      "pathParams": "Path Parameters",
+      "queryParams": "Query Parameters",
+      "headers": "Headers",
+      "requestBody": "Request Body",
+      "sessionConfig": "Session Config",
+      "tags": "Tags"
+    }
   },
   "apiTester": {
     "backToList": "Back to Endpoints",
@@ -128,7 +261,10 @@
       "useApiKey": "Use API key",
       "apiKeyPlaceholder": "Enter your API key...",
       "adminBypass": "Cross-team access",
-      "adminBypassTooltip": "Enable to access data from any team. Requires membership in NextSpark Team."
+      "adminBypassTooltip": "Enable to access data from any team. Requires membership in NextSpark Team.",
+      "actAsUser": "Act as user",
+      "actAsUserHelp": "Developer-only. Resolves session-scoped endpoints (e.g. /me/*) as the given user without switching your session. Requires the developer role, a non-production environment, and ALLOW_ACT_AS_USER=true. Leave empty to use your own session.",
+      "actAsUserPlaceholder": "user id (empty = your own session)"
     },
     "editor": {
       "keyPlaceholder": "Key",
@@ -143,6 +279,37 @@
       "idle": "Send a request to see the response",
       "loading": "Sending request...",
       "error": "An error occurred"
+    },
+    "tabs": {
+      "session": "Session",
+      "params": "Params",
+      "headers": "Headers",
+      "body": "Body",
+      "presets": "Presets",
+      "modifiedByPreset": "Modified by preset"
+    },
+    "summary": {
+      "apiKey": "API key",
+      "session": "session",
+      "crossTeam": "cross-team",
+      "actingAs": "as {user}"
+    },
+    "source": "Source: {source}",
+    "sourceWithCategory": "Source: {source} | Category: {category}",
+    "team": {
+      "context": "Team Context",
+      "select": "Select team...",
+      "required": "Team required for non-bypass requests",
+      "filter": "Filter by Team (optional)",
+      "available": "{count, plural, one {# team available} other {# teams available}}",
+      "crossTeam": "Cross-team (all teams)",
+      "selectToFilter": "Select team to filter...",
+      "search": "Search teams by name or owner...",
+      "searching": "Searching teams...",
+      "none": "No teams found",
+      "tryOther": "Try a different search term",
+      "crossTeamHint": "Access data from all teams without filtering",
+      "members": "{count, plural, one {# member} other {# members}}"
     }
   },
   "features": {
@@ -204,7 +371,8 @@
       "content": "Content",
       "settings": "Settings",
       "admin": "Admin"
-    }
+    },
+    "noTestsWarning": "{count, plural, one {# flow has no test coverage. Consider adding tests for critical user journeys.} other {# flows have no test coverage. Consider adding tests for critical user journeys.}}"
   },
   "blocks": {
     "title": "Blocks Registry",
@@ -260,8 +428,27 @@
       "placeholder": "Placeholder",
       "options": "Options",
       "yes": "Yes",
-      "no": "No"
-    }
+      "no": "No",
+      "loadingPreview": "Loading block preview...",
+      "previewFailed": "Failed to load block preview",
+      "componentMissing": "Block component not found in registry",
+      "notFound": "Block not found",
+      "notFoundDescription": "The block \"{slug}\" does not exist in the registry.",
+      "testCount": "{count, plural, one {# test} other {# tests}}",
+      "noExamples": "No examples defined for this block",
+      "addExamples": "Run <command>/block:update {slug}</command> to add examples",
+      "fieldsCount": "{count, plural, one {# field} other {# fields}}",
+      "blockInfo": "Block Info",
+      "slug": "Slug",
+      "icon": "Icon",
+      "source": "Source",
+      "testsLabel": "tests",
+      "hasCoverage": "Block has test coverage",
+      "noTests": "No tests for this block",
+      "testFiles": "Test files:",
+      "grepCommand": "Grep command:"
+    },
+    "noPreview": "No preview"
   },
   "tags": {
     "title": "Tags Overview",
@@ -284,7 +471,8 @@
       "roles": "Roles",
       "operations": "Operations",
       "other": "Other"
-    }
+    },
+    "viewDetails": "View details"
   },
   "scheduledActions": {
     "title": "Scheduled Actions",
@@ -335,7 +523,10 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {page} of {total}"
-    }
+    },
+    "unknownError": "Unknown error",
+    "fetchFailed": "Failed to fetch scheduled actions",
+    "errorMessage": "Error: {message}"
   },
   "gallery": {
     "theme": {

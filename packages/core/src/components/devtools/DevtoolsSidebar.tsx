@@ -256,7 +256,7 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
                   className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                   data-cy="devtools-plugins-section-label"
                 >
-                  Plugins
+                  {t('nav.plugins')}
                 </p>
               )}
               {isCollapsed && <div className="my-1 border-t border-border" />}

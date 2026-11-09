@@ -90,12 +90,12 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to load test files");
+          throw new Error(data.error || t("loadFilesFailed"));
         }
 
         setTree(data.data.tree || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load test files");
+        setError(err instanceof Error ? err.message : t("loadFilesFailed"));
       } finally {
         setIsLoadingTree(false);
       }
@@ -120,12 +120,12 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to load file");
+          throw new Error(data.error || t("loadFileFailed"));
         }
 
         setFileContent(data.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load file");
+        setError(err instanceof Error ? err.message : t("loadFileFailed"));
         setFileContent(null);
       } finally {
         setIsLoadingFile(false);

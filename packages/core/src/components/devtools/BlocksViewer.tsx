@@ -236,7 +236,7 @@ export function BlocksViewer() {
               ) : (
                 <div className="flex flex-col items-center text-muted-foreground">
                   <LayoutGrid className="h-8 w-8 mb-1" />
-                  <span className="text-xs">No preview</span>
+                  <span className="text-xs">{t("noPreview")}</span>
                 </div>
               )}
             </div>

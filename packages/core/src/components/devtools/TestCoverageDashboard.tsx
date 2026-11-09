@@ -119,10 +119,10 @@ export function TestCoverageDashboard() {
       try {
         const response = await fetch(withBasePath("/api/v1/devtools/testing"));
         const json = await response.json();
-        if (!response.ok) throw new Error(json.error || "Failed to load coverage data");
+        if (!response.ok) throw new Error(json.error || t("loadFailed"));
         setData(json);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load");
+        setError(err instanceof Error ? err.message : t("loadFailed"));
       } finally {
         setLoading(false);
       }

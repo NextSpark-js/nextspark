@@ -10,6 +10,7 @@ import { ComponentGallery } from "@nextsparkjs/core/components/superadmin/misc/C
 import { ThemePreview } from "@nextsparkjs/core/components/superadmin/misc/ThemePreview";
 import { FieldTypesGallery } from "@nextsparkjs/core/components/superadmin/misc/FieldTypesGallery";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 /**
  * Style Gallery Page - Developer Area
@@ -18,6 +19,7 @@ import { useState } from "react";
  * Displays components, themes, and design tokens for reference and testing.
  */
 export default function DevStylePage() {
+  const t = useTranslations("devtools.style");
   const [activeTab, setActiveTab] = useState("components");
 
   return (
@@ -27,18 +29,18 @@ export default function DevStylePage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/dev" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Dev Area
+            {t("back")}
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">Style Gallery</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Design system showcase and component library
+            {t("subtitle")}
           </p>
         </div>
         <Button variant="outline" size="sm" className="flex items-center gap-2">
           <Download className="h-4 w-4" />
-          Export Tokens
+          {t("exportTokens")}
         </Button>
       </div>
 
@@ -46,52 +48,52 @@ export default function DevStylePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Components</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.components")}</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">30+</div>
             <p className="text-xs text-muted-foreground">
-              Available UI components
+              {t("stats.componentsDescription")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Color Tokens</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.colorTokens")}</CardTitle>
             <Palette className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">16</div>
             <p className="text-xs text-muted-foreground">
-              Theme color variables
+              {t("stats.colorTokensDescription")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Themes</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.themes")}</CardTitle>
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">2</div>
             <p className="text-xs text-muted-foreground">
-              Light & dark modes
+              {t("stats.themesDescription")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Documentation</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.documentation")}</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">100%</div>
             <p className="text-xs text-muted-foreground">
-              Component coverage
+              {t("stats.documentationDescription")}
             </p>
           </CardContent>
         </Card>
@@ -102,19 +104,19 @@ export default function DevStylePage() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="components" className="flex items-center gap-2" data-cy="devtools-style-tab-components">
             <Package className="h-4 w-4" />
-            Components
+            {t("tabs.components")}
           </TabsTrigger>
           <TabsTrigger value="field-types" className="flex items-center gap-2" data-cy="devtools-style-tab-field-types">
             <FormInput className="h-4 w-4" />
-            Field Types
+            {t("tabs.fieldTypes")}
           </TabsTrigger>
           <TabsTrigger value="theme" className="flex items-center gap-2" data-cy="devtools-style-tab-theme">
             <Palette className="h-4 w-4" />
-            Theme & Colors
+            {t("tabs.theme")}
           </TabsTrigger>
           <TabsTrigger value="guidelines" className="flex items-center gap-2" data-cy="devtools-style-tab-guidelines">
             <BookOpen className="h-4 w-4" />
-            Guidelines
+            {t("tabs.guidelines")}
           </TabsTrigger>
         </TabsList>
 
@@ -124,10 +126,10 @@ export default function DevStylePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Component Library
+                {t("components.title")}
               </CardTitle>
               <CardDescription>
-                Complete showcase of all available UI components with different states and variations
+                {t("components.description")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -142,10 +144,10 @@ export default function DevStylePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FormInput className="h-5 w-5" />
-                Entity Field Types
+                {t("fieldTypes.title")}
               </CardTitle>
               <CardDescription>
-                Complete showcase of all entity field types with examples and variants for form development
+                {t("fieldTypes.description")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -160,10 +162,10 @@ export default function DevStylePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Theme System
+                {t("theme.title")}
               </CardTitle>
               <CardDescription>
-                Color tokens, typography, and design system variables for both light and dark themes
+                {t("theme.description")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -178,44 +180,44 @@ export default function DevStylePage() {
             {/* Design Principles */}
             <Card>
               <CardHeader>
-                <CardTitle>Design Principles</CardTitle>
-                <CardDescription>Core principles guiding our design system</CardDescription>
+                <CardTitle>{t("principles.title")}</CardTitle>
+                <CardDescription>{t("principles.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <h4 className="font-medium flex items-center gap-2">
                     <Badge variant="outline">1</Badge>
-                    Consistency
+                    {t("principles.consistency")}
                   </h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Maintain visual and functional consistency across all components
+                    {t("principles.consistencyDescription")}
                   </p>
                 </div>
                 <div>
                   <h4 className="font-medium flex items-center gap-2">
                     <Badge variant="outline">2</Badge>
-                    Accessibility
+                    {t("principles.accessibility")}
                   </h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Ensure all components meet WCAG 2.1 AA standards
+                    {t("principles.accessibilityDescription")}
                   </p>
                 </div>
                 <div>
                   <h4 className="font-medium flex items-center gap-2">
                     <Badge variant="outline">3</Badge>
-                    Scalability
+                    {t("principles.scalability")}
                   </h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Design components that work at different scales and contexts
+                    {t("principles.scalabilityDescription")}
                   </p>
                 </div>
                 <div>
                   <h4 className="font-medium flex items-center gap-2">
                     <Badge variant="outline">4</Badge>
-                    Performance
+                    {t("principles.performance")}
                   </h4>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Optimize for fast loading and smooth interactions
+                    {t("principles.performanceDescription")}
                   </p>
                 </div>
               </CardContent>
@@ -224,32 +226,32 @@ export default function DevStylePage() {
             {/* Usage Guidelines */}
             <Card>
               <CardHeader>
-                <CardTitle>Usage Guidelines</CardTitle>
-                <CardDescription>How to effectively use this design system</CardDescription>
+                <CardTitle>{t("usage.title")}</CardTitle>
+                <CardDescription>{t("usage.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-medium">Color Usage</h4>
+                  <h4 className="font-medium">{t("usage.color")}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Use semantic color names (primary, secondary, destructive) rather than specific colors
+                    {t("usage.colorDescription")}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium">Typography Scale</h4>
+                  <h4 className="font-medium">{t("usage.typography")}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Follow the established type scale for consistent hierarchy
+                    {t("usage.typographyDescription")}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium">Spacing System</h4>
+                  <h4 className="font-medium">{t("usage.spacing")}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Use the 8px grid system for consistent spacing and alignment
+                    {t("usage.spacingDescription")}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium">Component Composition</h4>
+                  <h4 className="font-medium">{t("usage.composition")}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Combine base components to create complex interfaces
+                    {t("usage.compositionDescription")}
                   </p>
                 </div>
               </CardContent>
@@ -258,32 +260,32 @@ export default function DevStylePage() {
             {/* Technical Specs */}
             <Card>
               <CardHeader>
-                <CardTitle>Technical Specifications</CardTitle>
-                <CardDescription>Implementation details and requirements</CardDescription>
+                <CardTitle>{t("specs.title")}</CardTitle>
+                <CardDescription>{t("specs.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm font-medium">Framework</span>
+                  <span className="text-sm font-medium">{t("specs.framework")}</span>
                   <Badge variant="secondary">Next.js 14</Badge>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm font-medium">Styling</span>
+                  <span className="text-sm font-medium">{t("specs.styling")}</span>
                   <Badge variant="secondary">Tailwind CSS</Badge>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm font-medium">Components</span>
+                  <span className="text-sm font-medium">{t("specs.components")}</span>
                   <Badge variant="secondary">Radix UI</Badge>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm font-medium">Icons</span>
+                  <span className="text-sm font-medium">{t("specs.icons")}</span>
                   <Badge variant="secondary">Lucide React</Badge>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm font-medium">Theme System</span>
+                  <span className="text-sm font-medium">{t("specs.themeSystem")}</span>
                   <Badge variant="secondary">CSS Variables</Badge>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm font-medium">Build Tool</span>
+                  <span className="text-sm font-medium">{t("specs.buildTool")}</span>
                   <Badge variant="secondary">Turbo</Badge>
                 </div>
               </CardContent>
@@ -292,32 +294,32 @@ export default function DevStylePage() {
             {/* Resources */}
             <Card>
               <CardHeader>
-                <CardTitle>Resources & Links</CardTitle>
-                <CardDescription>Additional resources and documentation</CardDescription>
+                <CardTitle>{t("resources.title")}</CardTitle>
+                <CardDescription>{t("resources.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <Link href="https://ui.shadcn.com" target="_blank">
                     <BookOpen className="mr-2 h-4 w-4" />
-                    Shadcn/ui Documentation
+                    {t("resources.docs", { name: "shadcn/ui" })}
                   </Link>
                 </Button>
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <Link href="https://tailwindcss.com" target="_blank">
                     <Layers className="mr-2 h-4 w-4" />
-                    Tailwind CSS Docs
+                    {t("resources.docs", { name: "Tailwind CSS" })}
                   </Link>
                 </Button>
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <Link href="https://www.radix-ui.com" target="_blank">
                     <Package className="mr-2 h-4 w-4" />
-                    Radix UI Components
+                    {t("resources.docs", { name: "Radix UI" })}
                   </Link>
                 </Button>
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <Link href="https://lucide.dev" target="_blank">
                     <Palette className="mr-2 h-4 w-4" />
-                    Lucide Icons
+                    {t("resources.docs", { name: "Lucide" })}
                   </Link>
                 </Button>
               </CardContent>

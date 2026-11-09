@@ -113,7 +113,7 @@ export function AuthSelector({
         <div className="space-y-1.5 pt-2 border-t">
           <div className="flex items-center gap-2">
             <Label htmlFor="act-as-user" className="text-sm cursor-pointer">
-              Act as user
+              {t('actAsUser')}
             </Label>
             <TooltipProvider>
               <Tooltip>
@@ -121,17 +121,14 @@ export function AuthSelector({
                   <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  Developer-only. Resolves session-scoped endpoints (e.g. /me/*) as the
-                  given user without switching your session. Requires the developer role,
-                  a non-production environment, and ALLOW_ACT_AS_USER=true. Leave empty to
-                  use your own session.
+                  {t('actAsUserHelp')}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <Input
             id="act-as-user"
-            placeholder="user id (empty = your own session)"
+            placeholder={t("actAsUserPlaceholder")}
             value={actAsUserId ?? ''}
             onChange={(e) => onActAsUserChange(e.target.value)}
             className="font-mono text-sm"

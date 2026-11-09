@@ -128,12 +128,12 @@ export function ApiRequestPanel({
 
   /** What the folded block is hiding, so closing it does not hide whether a request is scoped. */
   const sessionSummary = useMemo(() => {
-    const parts = [authType === 'apiKey' ? 'API key' : 'session']
-    if (bypassMode) parts.push('cross-team')
+    const parts = [authType === 'apiKey' ? t('summary.apiKey') : t('summary.session')]
+    if (bypassMode) parts.push(t('summary.crossTeam'))
     if (selectedTeamId) parts.push(selectedTeamId)
-    if (actAsUserId.trim()) parts.push(`as ${actAsUserId.trim()}`)
+    if (actAsUserId.trim()) parts.push(t('summary.actingAs', { user: actAsUserId.trim() }))
     return parts.join(' · ')
-  }, [authType, bypassMode, selectedTeamId, actAsUserId])
+  }, [authType, bypassMode, selectedTeamId, actAsUserId, t])
 
   // Handlers that clear preset indicators when user modifies manually
   const handlePathParamsChange = (params: PathParam[]) => {
@@ -224,7 +224,7 @@ export function ApiRequestPanel({
           data-cy={sel('devtools.apiExplorer.request.toggleSession')}
         >
           <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', sessionOpen && 'rotate-90')} />
-          <span className="font-medium">Session</span>
+          <span className="font-medium">{t("tabs.session")}</span>
           {!sessionOpen && <span className="truncate">{sessionSummary}</span>}
         </button>
         <div className={cn(!sessionOpen && 'hidden')}>
@@ -254,9 +254,9 @@ export function ApiRequestPanel({
                 data-cy={sel('devtools.apiExplorer.request.tabParams')}
               >
                 {tabsModifiedByPreset?.has('params') && (
-                  <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title="Modified by preset" />
+                  <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title={t("tabs.modifiedByPreset")} />
                 )}
-                Params
+                {t('tabs.params')}
                 {(pathParams.length > 0 || queryParams.length > 0) && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
                     {pathParams.length + queryParams.length}
@@ -269,9 +269,9 @@ export function ApiRequestPanel({
                 data-cy={sel('devtools.apiExplorer.request.tabHeaders')}
               >
                 {tabsModifiedByPreset?.has('headers') && (
-                  <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title="Modified by preset" />
+                  <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title={t("tabs.modifiedByPreset")} />
                 )}
-                Headers
+                {t('tabs.headers')}
                 {headers.length > 0 && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
                     {headers.length}
@@ -285,9 +285,9 @@ export function ApiRequestPanel({
                   data-cy={sel('devtools.apiExplorer.request.tabBody')}
                 >
                   {tabsModifiedByPreset?.has('body') && (
-                    <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title="Modified by preset" />
+                    <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title={t("tabs.modifiedByPreset")} />
                   )}
-                  Body
+                  {t('tabs.body')}
                 </TabsTrigger>
               )}
               {endpointPresets && endpointPresets.presets.length > 0 && (
@@ -296,7 +296,7 @@ export function ApiRequestPanel({
                   className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 pb-2"
                   data-cy={sel('devtools.apiExplorer.request.tabPresets')}
                 >
-                  Presets
+                  {t('tabs.presets')}
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
                     {endpointPresets.presets.length}
                   </Badge>
@@ -309,12 +309,12 @@ export function ApiRequestPanel({
             <TabsContent value="params" className="m-0 p-4 space-y-4">
               {pathParams.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Path Parameters</h4>
+                  <h4 className="text-sm font-medium mb-2">{t("pathParams")}</h4>
                   <PathParamsEditor params={pathParams} onChange={handlePathParamsChange} />
                 </div>
               )}
               <div>
-                <h4 className="text-sm font-medium mb-2">Query Parameters</h4>
+                <h4 className="text-sm font-medium mb-2">{t("queryParams")}</h4>
                 <KeyValueEditor
                   items={queryParams}
                   onChange={handleQueryParamsChange}

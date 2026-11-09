@@ -131,7 +131,7 @@ export function FlowsViewer() {
           <CardContent className="flex items-center gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-amber-600" />
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              {COVERAGE_SUMMARY.flows.withoutTests} flow(s) have no test coverage. Consider adding tests for critical user journeys.
+              {t('noTestsWarning', { count: COVERAGE_SUMMARY.flows.withoutTests })}
             </p>
           </CardContent>
         </Card>

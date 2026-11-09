@@ -43,10 +43,11 @@ const CATEGORY_COLORS: Record<string, string> = {
  * Loading fallback for lazy-loaded block preview
  */
 function BlockPreviewLoading() {
+  const t = useTranslations("devtools.blocks.detail");
   return (
     <div className="flex items-center justify-center py-20 bg-muted rounded-lg">
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      <span className="ml-3 text-muted-foreground">Loading block preview...</span>
+      <span className="ml-3 text-muted-foreground">{t("loadingPreview")}</span>
     </div>
   );
 }
@@ -55,10 +56,11 @@ function BlockPreviewLoading() {
  * Error boundary fallback for block preview
  */
 function BlockPreviewError({ error }: { error: string }) {
+  const t = useTranslations("devtools.blocks.detail");
   return (
     <div className="flex flex-col items-center justify-center py-20 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
       <XCircle className="h-8 w-8 text-red-500 mb-3" />
-      <p className="text-red-600 dark:text-red-400 font-medium">Failed to load block preview</p>
+      <p className="text-red-600 dark:text-red-400 font-medium">{t("previewFailed")}</p>
       <p className="text-sm text-red-500 dark:text-red-400/70 mt-1">{error}</p>
     </div>
   );
@@ -125,9 +127,9 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <LayoutGrid className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-medium">Block not found</p>
+          <p className="text-lg font-medium">{t("notFound")}</p>
           <p className="text-sm text-muted-foreground mb-4">
-            The block &quot;{slug}&quot; does not exist in the registry.
+            {t("notFoundDescription", { slug })}
           </p>
           <Link href="/devtools/blocks">
             <Button variant="outline">
@@ -189,7 +191,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
             {/* Test coverage */}
             <div className="flex items-center gap-2">
               <TestTube2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">{testCoverage.testCount} tests</span>
+              <span className="text-sm">{t("testCount", { count: testCoverage.testCount })}</span>
               {testCoverage.hasTests ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : (
@@ -271,15 +273,15 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
                       <BlockComponent {...currentExample.props} />
                     </Suspense>
                   ) : (
-                    <BlockPreviewError error="Block component not found in registry" />
+                    <BlockPreviewError error={t("componentMissing")} />
                   )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 bg-muted rounded-lg border">
                   <Eye className="h-8 w-8 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground font-medium">No examples defined for this block</p>
+                  <p className="text-muted-foreground font-medium">{t("noExamples")}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Run <code className="bg-background px-2 py-1 rounded">/block:update {slug}</code> to add examples
+                    {t.rich("addExamples", { slug, command: (chunks) => <code className="bg-background px-2 py-1 rounded">{chunks}</code> })}
                   </p>
                 </div>
               )}
@@ -311,7 +313,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg capitalize">{tabName}</CardTitle>
                 <CardDescription>
-                  {Object.keys(fields).length} fields
+                  {t("fieldsCount", { count: Object.keys(fields).length })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -389,11 +391,11 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Block Info</CardTitle>
+                <CardTitle className="text-lg">{t("blockInfo")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm text-muted-foreground">Slug</label>
+                  <label className="text-sm text-muted-foreground">{t("slug")}</label>
                   <p className="font-mono">{block.slug}</p>
                 </div>
                 <div>
@@ -405,11 +407,11 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
                   <p>{(block.scope || []).join(", ")}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground">Icon</label>
+                  <label className="text-sm text-muted-foreground">{t("icon")}</label>
                   <p className="font-mono">{block.icon}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground">Source</label>
+                  <label className="text-sm text-muted-foreground">{t("source")}</label>
                   <p>{block.source} ({block.sourceId})</p>
                 </div>
               </CardContent>
@@ -423,24 +425,24 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
                 <div className="flex items-center gap-2">
                   <TestTube2 className="h-5 w-5 text-muted-foreground" />
                   <span className="text-2xl font-bold">{testCoverage.testCount}</span>
-                  <span className="text-muted-foreground">tests</span>
+                  <span className="text-muted-foreground">{t("testsLabel")}</span>
                 </div>
 
                 {testCoverage.hasTests ? (
                   <div className="flex items-center gap-2 text-green-600">
                     <CheckCircle2 className="h-5 w-5" />
-                    <span>Block has test coverage</span>
+                    <span>{t("hasCoverage")}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <XCircle className="h-5 w-5" />
-                    <span>No tests for this block</span>
+                    <span>{t("noTests")}</span>
                   </div>
                 )}
 
                 {testCoverage.files.length > 0 && (
                   <div className="mt-4">
-                    <label className="text-sm text-muted-foreground mb-2 block">Test files:</label>
+                    <label className="text-sm text-muted-foreground mb-2 block">{t("testFiles")}</label>
                     <ul className="text-sm space-y-1">
                       {testCoverage.files.map((file: string, i: number) => (
                         <li key={i} className="font-mono text-xs text-muted-foreground truncate">
@@ -452,7 +454,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
                 )}
 
                 <div className="mt-4 bg-muted rounded-md p-3">
-                  <label className="text-xs text-muted-foreground mb-1 block">Grep command:</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">{t("grepCommand")}</label>
                   <code className="text-xs font-mono">
                     npx cypress run --env grepTags=&quot;@b-{block.slug}&quot;
                   </code>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Play, Eye, BookOpen, RefreshCw } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card'
@@ -25,6 +26,7 @@ import { readPresetRunToken, regeneratePresetRunToken } from './preset-placehold
  * they are in, and start a new one when they want values nothing has used before.
  */
 function RunTokenBar({ presets }: { presets: ApiPreset[] }) {
+  const t = useTranslations('devtools.api.presets')
   const [token, setToken] = useState<string | null>(null)
 
   // Read after mount: the token lives in localStorage, which the server render cannot see, and
@@ -38,7 +40,7 @@ function RunTokenBar({ presets }: { presets: ApiPreset[] }) {
 
   return (
     <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-      <span className="text-xs text-muted-foreground">Run</span>
+      <span className="text-xs text-muted-foreground">{t("run")}</span>
       <code className="font-mono text-xs text-foreground">{token}</code>
       <Button
         variant="ghost"
@@ -48,11 +50,10 @@ function RunTokenBar({ presets }: { presets: ApiPreset[] }) {
         data-cy={sel('devtools.apiExplorer.presets.regenerateRunToken')}
       >
         <RefreshCw className="h-3 w-3 mr-1" />
-        New run
+        {t('newRun')}
       </Button>
       <span className="text-xs text-muted-foreground">
-        Every {'{{RUN}}'} in these presets resolves to this. Start a new run to send values
-        nothing has used before.
+        {t('runHint', { token: '{{RUN}}' })}
       </span>
     </div>
   )
@@ -65,6 +66,7 @@ interface PresetsTabProps {
 }
 
 export function PresetsTab({ endpointPresets, currentMethod, onApplyPreset }: PresetsTabProps) {
+  const t = useTranslations('devtools.api.presets')
   const [selectedPreset, setSelectedPreset] = useState<ApiPreset | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
 
@@ -75,9 +77,9 @@ export function PresetsTab({ endpointPresets, currentMethod, onApplyPreset }: Pr
         data-cy={sel('devtools.apiExplorer.presets.empty')}
       >
         <BookOpen className="h-12 w-12 mb-4 opacity-50" />
-        <p className="text-sm">No presets available for this endpoint</p>
+        <p className="text-sm">{t("empty")}</p>
         <p className="text-xs mt-2">
-          Create presets in <code className="bg-muted px-1 rounded">devtools/api/</code>
+          {t.rich('createIn', { path: (chunks) => <code className="bg-muted px-1 rounded">{chunks}</code> })}
         </p>
       </div>
     )
@@ -103,9 +105,9 @@ export function PresetsTab({ endpointPresets, currentMethod, onApplyPreset }: Pr
 
       {filteredPresets.length === 0 ? (
         <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-          <p>No presets for <strong>{currentMethod}</strong> method.</p>
+          <p>{t.rich('noneForMethod', { method: currentMethod, strong: (chunks) => <strong>{chunks}</strong> })}</p>
           <p className="mt-1 text-xs">
-            Available methods:{' '}
+            {t('availableMethods')}{' '}
             {[...new Set(endpointPresets.presets.map((p) => p.method))].join(', ')}
           </p>
         </div>
@@ -152,7 +154,7 @@ export function PresetsTab({ endpointPresets, currentMethod, onApplyPreset }: Pr
                         <DialogFooter>
                           <Button onClick={() => handleApplyPreset(preset)}>
                             <Play className="h-4 w-4 mr-2" />
-                            Apply Preset
+                            {t('apply')}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -187,7 +189,7 @@ export function PresetsTab({ endpointPresets, currentMethod, onApplyPreset }: Pr
       {/* Show count of presets in other methods */}
       {filteredPresets.length < endpointPresets.presets.length && (
         <p className="text-xs text-muted-foreground mt-4">
-          {endpointPresets.presets.length - filteredPresets.length} more preset(s) available for other methods
+          {t('moreForOtherMethods', { count: endpointPresets.presets.length - filteredPresets.length })}
         </p>
       )}
     </div>
@@ -199,24 +201,25 @@ interface PresetDetailsProps {
 }
 
 function PresetDetails({ preset }: PresetDetailsProps) {
+  const t = useTranslations('devtools.api.presets')
   return (
     <ScrollArea className="max-h-[60vh]">
       <div className="space-y-4 pr-4">
         {preset.description && (
           <div>
-            <h4 className="text-sm font-medium mb-1">Description</h4>
+            <h4 className="text-sm font-medium mb-1">{t("description")}</h4>
             <p className="text-sm text-muted-foreground">{preset.description}</p>
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium">Method:</h4>
+          <h4 className="text-sm font-medium">{t("method")}</h4>
           <Badge variant="outline">{preset.method}</Badge>
         </div>
 
         {preset.pathParams && Object.keys(preset.pathParams).length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Path Parameters</h4>
+            <h4 className="text-sm font-medium mb-2">{t("pathParams")}</h4>
             <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
               {JSON.stringify(preset.pathParams, null, 2)}
             </pre>
@@ -225,7 +228,7 @@ function PresetDetails({ preset }: PresetDetailsProps) {
 
         {preset.params && Object.keys(preset.params).length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Query Parameters</h4>
+            <h4 className="text-sm font-medium mb-2">{t("queryParams")}</h4>
             <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
               {JSON.stringify(preset.params, null, 2)}
             </pre>
@@ -234,7 +237,7 @@ function PresetDetails({ preset }: PresetDetailsProps) {
 
         {preset.headers && Object.keys(preset.headers).length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Headers</h4>
+            <h4 className="text-sm font-medium mb-2">{t("headers")}</h4>
             <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
               {JSON.stringify(preset.headers, null, 2)}
             </pre>
@@ -243,7 +246,7 @@ function PresetDetails({ preset }: PresetDetailsProps) {
 
         {preset.payload && Object.keys(preset.payload).length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Request Body</h4>
+            <h4 className="text-sm font-medium mb-2">{t("requestBody")}</h4>
             <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
               {JSON.stringify(preset.payload, null, 2)}
             </pre>
@@ -252,7 +255,7 @@ function PresetDetails({ preset }: PresetDetailsProps) {
 
         {preset.sessionConfig && Object.keys(preset.sessionConfig).length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Session Config</h4>
+            <h4 className="text-sm font-medium mb-2">{t("sessionConfig")}</h4>
             <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
               {JSON.stringify(preset.sessionConfig, null, 2)}
             </pre>
@@ -261,7 +264,7 @@ function PresetDetails({ preset }: PresetDetailsProps) {
 
         {preset.tags && preset.tags.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Tags</h4>
+            <h4 className="text-sm font-medium mb-2">{t("tags")}</h4>
             <div className="flex gap-1 flex-wrap">
               {preset.tags.map((tag) => (
                 <Badge key={tag} variant="secondary">

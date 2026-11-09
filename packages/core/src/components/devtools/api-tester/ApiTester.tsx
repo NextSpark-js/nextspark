@@ -111,8 +111,9 @@ export function ApiTester({ route, basePath }: ApiTesterProps) {
           <CardTitle className="font-mono text-lg">{basePath}</CardTitle>
           {route.source && (
             <CardDescription>
-              Source: {route.source}
-              {route.subcategory && ` | Category: ${route.subcategory}`}
+              {route.subcategory
+                ? t('sourceWithCategory', { source: route.source, category: route.subcategory })
+                : t('source', { source: route.source })}
             </CardDescription>
           )}
         </CardHeader>

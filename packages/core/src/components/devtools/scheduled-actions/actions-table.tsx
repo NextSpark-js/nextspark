@@ -28,7 +28,7 @@ interface ActionsTableProps {
   actions: ScheduledAction[]
 }
 
-async function retryAction(actionId: string): Promise<{ newActionId: string }> {
+async function retryAction(actionId: string, fallbackError: string): Promise<{ newActionId: string }> {
   const response = await fetch(withBasePath('/api/v1/devtools/scheduled-actions'), {
     method: 'POST',
     headers: {
@@ -39,14 +39,14 @@ async function retryAction(actionId: string): Promise<{ newActionId: string }> {
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to retry action')
+    throw new Error(error.error || fallbackError)
   }
 
   const data = await response.json()
   return data.data
 }
 
-async function runAction(actionId: string): Promise<{ success: boolean }> {
+async function runAction(actionId: string, fallbackError: string): Promise<{ success: boolean }> {
   const response = await fetch(withBasePath('/api/v1/devtools/scheduled-actions/run'), {
     method: 'POST',
     headers: {
@@ -57,7 +57,7 @@ async function runAction(actionId: string): Promise<{ success: boolean }> {
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to run action')
+    throw new Error(error.error || fallbackError)
   }
 
   const data = await response.json()
@@ -71,7 +71,7 @@ export function ActionsTable({ actions }: ActionsTableProps) {
 
   // Retry mutation
   const retryMutation = useMutation({
-    mutationFn: retryAction,
+    mutationFn: (actionId: string) => retryAction(actionId, t('unknownError')),
     onSuccess: () => {
       toast.success(t('retry.success'))
       queryClient.invalidateQueries({ queryKey: ['scheduled-actions'] })
@@ -83,7 +83,7 @@ export function ActionsTable({ actions }: ActionsTableProps) {
 
   // Run mutation
   const runMutation = useMutation({
-    mutationFn: runAction,
+    mutationFn: (actionId: string) => runAction(actionId, t('unknownError')),
     onSuccess: () => {
       toast.success(t('run.success'))
       queryClient.invalidateQueries({ queryKey: ['scheduled-actions'] })

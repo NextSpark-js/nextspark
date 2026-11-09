@@ -137,12 +137,12 @@ export function ConfigViewer() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to load theme config');
+          throw new Error(data.error || t('loadThemeFailed'));
         }
 
         setThemeConfig(data.data.config);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load theme config');
+        setError(err instanceof Error ? err.message : t('loadThemeFailed'));
       } finally {
         setIsLoadingTheme(false);
       }
@@ -160,12 +160,12 @@ export function ConfigViewer() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to load entities');
+          throw new Error(data.error || t('loadEntitiesFailed'));
         }
 
         setEntities(data.data.entities);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load entities');
+        setError(err instanceof Error ? err.message : t('loadEntitiesFailed'));
       } finally {
         setIsLoadingEntities(false);
       }
@@ -294,7 +294,7 @@ export function ConfigViewer() {
                         <span className="font-medium">{entity.name}</span>
                         <span className="text-muted-foreground text-sm">({entity.slug})</span>
                         <span className="text-xs bg-muted px-2 py-0.5 rounded ml-2">
-                          {entity.fields?.length || 0} fields
+                          {t('fieldsCount', { count: entity.fields?.length || 0 })}
                         </span>
                       </div>
                     </AccordionTrigger>

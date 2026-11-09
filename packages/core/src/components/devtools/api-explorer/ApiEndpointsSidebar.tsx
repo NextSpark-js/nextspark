@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Search, ChevronRight, ChevronDown, Code, Database, Layers, Puzzle, PanelLeftClose, PanelLeft, Folder, FolderOpen } from 'lucide-react'
 import { loadState, saveState } from './explorer-storage'
 import { Input } from '../../ui/input'
@@ -22,11 +23,11 @@ const methodColors: Record<string, string> = {
   OPTIONS: 'bg-gray-500/20 text-gray-600 dark:text-gray-400',
 }
 
-const categoryConfig: Record<RouteCategory, { icon: typeof Code; label: string; color: string }> = {
-  core: { icon: Code, label: 'Core', color: 'text-violet-600 dark:text-violet-400' },
-  entity: { icon: Database, label: 'Entities', color: 'text-blue-600 dark:text-blue-400' },
-  theme: { icon: Layers, label: 'Theme', color: 'text-pink-600 dark:text-pink-400' },
-  plugin: { icon: Puzzle, label: 'Plugins', color: 'text-green-600 dark:text-green-400' },
+const categoryConfig: Record<RouteCategory, { icon: typeof Code; labelKey: string; color: string }> = {
+  core: { icon: Code, labelKey: 'core', color: 'text-violet-600 dark:text-violet-400' },
+  entity: { icon: Database, labelKey: 'entities', color: 'text-blue-600 dark:text-blue-400' },
+  theme: { icon: Layers, labelKey: 'theme', color: 'text-pink-600 dark:text-pink-400' },
+  plugin: { icon: Puzzle, labelKey: 'plugins', color: 'text-green-600 dark:text-green-400' },
 }
 
 interface PathPrefixGroup {
@@ -75,6 +76,7 @@ export function ApiEndpointsSidebar({
   isCollapsed,
   onToggleCollapse,
 }: ApiEndpointsSidebarProps) {
+  const t = useTranslations('devtools.api.sidebar')
   const [searchQuery, setSearchQuery] = useState('')
   // Expand/collapse state is persisted, so the chosen layout
   // (e.g. Core/Entities collapsed but Theme open) survives reloads.
@@ -179,7 +181,7 @@ export function ApiEndpointsSidebar({
                 variant="ghost"
                 size="icon"
                 className={cn('relative', config.color)}
-                title={`${config.label} (${count})`}
+                title={`${t(`categories.${config.labelKey}`)} (${count})`}
                 onClick={() => {
                   onToggleCollapse()
                   setExpandedCategories(new Set([category]))
@@ -204,7 +206,7 @@ export function ApiEndpointsSidebar({
       {/* Header */}
       <div className="p-3 border-b space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-sm">Endpoints</h2>
+          <h2 className="font-semibold text-sm">{t("title")}</h2>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">
               {totalRoutes}
@@ -225,7 +227,7 @@ export function ApiEndpointsSidebar({
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search endpoints..."
+            placeholder={t("search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -266,7 +268,7 @@ export function ApiEndpointsSidebar({
                       <ChevronRight className="h-4 w-4 shrink-0" />
                     )}
                     <Icon className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-left">{config.label}</span>
+                    <span className="flex-1 text-left">{t(`categories.${config.labelKey}`)}</span>
                     <Badge variant="secondary" className="text-xs">
                       {categoryRoutes.length}
                     </Badge>
@@ -276,7 +278,7 @@ export function ApiEndpointsSidebar({
                   <div className="ml-2 mt-1 space-y-0.5">
                     {categoryRoutes.length === 0 ? (
                       <p className="text-xs text-muted-foreground px-2 py-2">
-                        No endpoints in this category
+                        {t('emptyCategory')}
                       </p>
                     ) : (
                       groupByPathPrefix(categoryRoutes).map((group) => {

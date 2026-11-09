@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   XCircle,
@@ -26,6 +27,7 @@ export function BDDTableOfContents({
   activeTestId,
   onSelectTest,
 }: BDDTableOfContentsProps) {
+  const t = useTranslations('devtools.tests.bdd');
   const getPriorityDot = (priority?: string) => {
     switch (priority) {
       case 'high':
@@ -60,7 +62,7 @@ export function BDDTableOfContents({
   return (
     <div className="space-y-2" data-cy="bdd-toc">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-2">
-        Test Cases
+        {t('testCases')}
       </h3>
       <nav className="space-y-1">
         {tests.map((test, index) => (

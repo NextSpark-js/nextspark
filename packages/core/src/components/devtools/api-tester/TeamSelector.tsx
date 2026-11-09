@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Check, ChevronsUpDown, Globe, Users, Search, Loader2 } from 'lucide-react'
 import { useUserTeams, useTeamSearch } from '../../../hooks/teams'
 import { useDebounce } from '../../../hooks/useDebounce'
@@ -43,6 +44,7 @@ export function TeamSelector({
   bypassMode,
   disabled = false,
 }: TeamSelectorProps) {
+  const t = useTranslations('devtools.apiTester.team')
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const debouncedSearch = useDebounce(searchValue, 300)
@@ -61,9 +63,9 @@ export function TeamSelector({
   const selectedTeam = useMemo(() => {
     if (!selectedTeamId) return null
     // Search in both lists
-    const fromUser = userTeams.find((t) => t.id === selectedTeamId)
+    const fromUser = userTeams.find((team) => team.id === selectedTeamId)
     if (fromUser) return fromUser
-    const fromAll = allTeams.find((t) => t.id === selectedTeamId)
+    const fromAll = allTeams.find((team) => team.id === selectedTeamId)
     if (fromAll) return { id: fromAll.id, name: fromAll.name, slug: '' }
     return null
   }, [selectedTeamId, userTeams, allTeams])
@@ -87,14 +89,14 @@ export function TeamSelector({
   if (!bypassMode) {
     return (
       <div className="space-y-1.5" data-cy={sel('devtools.apiExplorer.team.container')}>
-        <label className="text-xs font-medium text-muted-foreground">Team Context</label>
+        <label className="text-xs font-medium text-muted-foreground">{t("context")}</label>
         <Select
           value={selectedTeamId || 'none'}
           onValueChange={(value) => onTeamChange(value === 'none' ? null : value)}
           disabled={disabled}
         >
           <SelectTrigger className="w-full" data-cy={sel('devtools.apiExplorer.team.trigger')}>
-            <SelectValue placeholder="Select team..." />
+            <SelectValue placeholder={t("select")} />
           </SelectTrigger>
           <SelectContent>
             {userTeams.map((team) => (
@@ -110,7 +112,7 @@ export function TeamSelector({
         </Select>
         {!selectedTeamId && (
           <p className="text-xs text-destructive" data-cy={sel('devtools.apiExplorer.team.error')}>
-            Team required for non-bypass requests
+            {t('required')}
           </p>
         )}
       </div>
@@ -121,10 +123,10 @@ export function TeamSelector({
   return (
     <div className="space-y-1.5" data-cy={sel('devtools.apiExplorer.team.container')}>
       <label className="text-xs font-medium text-muted-foreground">
-        Filter by Team (optional)
+        {t('filter')}
         {totalCount > 0 && (
           <span className="ml-2 text-muted-foreground/70">
-            {totalCount} teams available
+            {t('available', { count: totalCount })}
           </span>
         )}
       </label>
@@ -144,7 +146,7 @@ export function TeamSelector({
             {selectedTeamId === null ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Globe className="h-4 w-4" />
-                <span>Cross-team (all teams)</span>
+                <span>{t('crossTeam')}</span>
               </div>
             ) : selectedTeam ? (
               <div className="flex items-center gap-2">
@@ -152,7 +154,7 @@ export function TeamSelector({
                 <span>{selectedTeam.name}</span>
               </div>
             ) : (
-              <span className="text-muted-foreground">Select team to filter...</span>
+              <span className="text-muted-foreground">{t('selectToFilter')}</span>
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -164,7 +166,7 @@ export function TeamSelector({
         >
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Search teams by name or owner..."
+              placeholder={t("search")}
               value={searchValue}
               onValueChange={setSearchValue}
               data-cy={sel('devtools.apiExplorer.team.search')}
@@ -172,17 +174,17 @@ export function TeamSelector({
             {isLoadingAllTeams ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                <span className="text-sm text-muted-foreground">Searching teams...</span>
+                <span className="text-sm text-muted-foreground">{t('searching')}</span>
               </div>
             ) : (
               <>
                 <CommandEmpty>
                   <div className="py-2 text-sm">
                     <Search className="h-4 w-4 mx-auto mb-2 opacity-50" />
-                    <p>No teams found</p>
+                    <p>{t('none')}</p>
                     {debouncedSearch && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Try a different search term
+                        {t('tryOther')}
                       </p>
                     )}
                   </div>
@@ -202,9 +204,9 @@ export function TeamSelector({
                     />
                     <Globe className="mr-2 h-4 w-4 text-muted-foreground" />
                     <div className="flex flex-col">
-                      <span>Cross-team (all teams)</span>
+                      <span>{t('crossTeam')}</span>
                       <span className="text-xs text-muted-foreground">
-                        Access data from all teams without filtering
+                        {t('crossTeamHint')}
                       </span>
                     </div>
                   </CommandItem>
@@ -229,7 +231,7 @@ export function TeamSelector({
                       <div className="flex flex-col flex-1 min-w-0">
                         <span className="truncate">{team.name}</span>
                         <span className="text-xs text-muted-foreground truncate">
-                          {team.owner.name} · {team.memberCount} members
+                          {team.owner.name} · {t('members', { count: team.memberCount })}
                         </span>
                       </div>
                     </CommandItem>
