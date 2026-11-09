@@ -14,7 +14,8 @@ guardOutput();
 // contract and must not be prefixed by unrelated startup output.
 // Migration reporting deliberately reads only .env.example (or an already-set
 // environment variable), never a project's private .env files.
-if (process.argv[2] !== 'migrate') config({ quiet: true });
+// `--no-env-file` (db:migrate, db:seed) means only the exported environment: the file must not reach process.env.
+if (process.argv[2] !== 'migrate' && !process.argv.includes('--no-env-file')) config({ quiet: true });
 import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
 import { prepareCommand } from './commands/prepare.js';
