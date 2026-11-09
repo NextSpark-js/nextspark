@@ -18,7 +18,7 @@ const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
 const FIXTURE = path.join(CORE, 'tests/node/fixtures/registration-gates')
 const ORIGIN = 'http://localhost:5173'
 
-type Step = { op: 'password'; email: string; inviteToken?: string } | { op: 'signin'; email: string; password: string } | { op: 'otp'; email: string } | { op: 'google'; email: string; emailVerified?: boolean } | { op: 'invite'; email: string; token: string }
+type Step = { op: 'password'; email: string; inviteToken?: string } | { op: 'signin'; email: string; password: string } | { op: 'change-password'; email: string; password: string; newPassword: string } | { op: 'otp'; email: string } | { op: 'google'; email: string; emailVerified?: boolean } | { op: 'invite'; email: string; token: string }
 type Result = Step & { status: number; code?: string; location?: string }
 
 function runSteps(databaseUrl: string, teams: string, steps: Step[], demo?: { auth: object }, auth?: object): Result[] {
@@ -193,10 +193,14 @@ test('demo mode: no way of creating an account works, the sample accounts sign i
     { op: 'google', email: 'stranger-google@example.test' },
     { op: 'invite', email: 'invited@example.test', token: 'token-demo' },
     { op: 'signin', email: 'superadmin@nextspark.dev', password: 'Pandora1234' },
+    { op: 'change-password', email: 'superadmin@nextspark.dev', password: 'Pandora1234', newPassword: 'another-long-enough-password' },
+    { op: 'signin', email: 'superadmin@nextspark.dev', password: 'Pandora1234' },
   ], demo)
   for (const r of results.slice(0, 4)) assert.ok(refused(r) || r.status >= 400, `refused: ${JSON.stringify(r)}`)
   assert.deepEqual(await users(owner), before)
   assert.equal(results[4].status, 200, JSON.stringify(results[4]))
+  assert.equal(results[5].code, 'DEMO_ACCOUNT_LOCKED', JSON.stringify(results[5]))
+  assert.equal(results[6].status, 200, 'the shared password still works')
 
   // without the variable the same project creates the account
   const normal = runSteps(ownerUrl, 'multi-tenant', [{ op: 'otp', email: 'stranger-otp@example.test' }], undefined, open)

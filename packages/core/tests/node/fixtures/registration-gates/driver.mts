@@ -13,6 +13,8 @@ type Step =
   | { op: 'password'; email: string; inviteToken?: string; name?: string; firstName?: string }
   | { op: 'otp'; email: string }
   | { op: 'signin'; email: string; password: string }
+  // POST /change-password with the session of a sign-in
+  | { op: 'change-password'; email: string; password: string; newPassword: string }
   | { op: 'google'; email: string; emailVerified?: boolean; name?: string }
   | { op: 'invite'; email: string; token: string }
   // emails: the /user/emails answer (none: no address at all)
@@ -166,6 +168,11 @@ async function run(step: Step) {
     }
     case 'signin':
       return outcome(await authRoute.POST(json('/api/auth/sign-in/email', { email: step.email, password: step.password })))
+    case 'change-password': {
+      const signedIn = await authRoute.POST(json('/api/auth/sign-in/email', { email: step.email, password: step.password }))
+      const cookie = signedIn.headers.getSetCookie().map((c: string) => c.split(';')[0]).join('; ')
+      return outcome(await authRoute.POST(json('/api/auth/change-password', { currentPassword: step.password, newPassword: step.newPassword }, { cookie })))
+    }
     case 'otp': {
       // the stored sign-in code, as send-verification-otp writes it (Better Auth stores codes in plain text by default)
       const { internalAdapter } = await auth.$context

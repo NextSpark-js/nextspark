@@ -260,4 +260,24 @@ describe('Registration Guard Plugin', () => {
       await expect(otpHandler(otpCtx('someone@other.example'))).resolves.toBeUndefined()
     })
   })
+
+  describe('passwords in demo mode', () => {
+    const hook = () => registrationGuardPlugin().hooks!.before![2]
+    afterEach(() => { delete process.env.NEXTSPARK_DEMO_MODE })
+
+    test.each(['/change-password', '/set-password', '/reset-password', '/reset-password/some-token'])('refuses %s', async (path) => {
+      process.env.NEXTSPARK_DEMO_MODE = 'true'
+      expect(hook().matcher({ path } as never)).toBe(true)
+      await expect(hook().handler({ path } as never)).rejects.toMatchObject({ status: 'FORBIDDEN', body: { code: 'DEMO_ACCOUNT_LOCKED' } })
+    })
+
+    test('leaves signing in alone', () => {
+      process.env.NEXTSPARK_DEMO_MODE = 'true'
+      expect(hook().matcher({ path: '/sign-in/email' } as never)).toBe(false)
+    })
+
+    test.each(['/change-password', '/set-password', '/reset-password'])('without demo mode %s is not matched', (path) => {
+      expect(hook().matcher({ path } as never)).toBe(false)
+    })
+  })
 })

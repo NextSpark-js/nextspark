@@ -17,7 +17,7 @@ import { shouldSkipTeamCreation } from '../auth-context';
 import { isDomainAllowed } from './registration-helpers';
 import { registrationError } from './registration-errors';
 import { isDemoMode } from '../demo/mode';
-import type { BetterAuthPlugin } from 'better-auth';
+import { APIError, type BetterAuthPlugin } from 'better-auth';
 
 export const registrationGuardPlugin = (): BetterAuthPlugin => {
   return {
@@ -72,6 +72,13 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
               console.log(`[Auth] Refused ${signUp ? 'a sign-up' : path === '/sign-in/magic-link' ? 'a sign-in link' : 'a sign-in code'} for a user at ${JSON.stringify((body.email.split('@').pop() ?? '').slice(0, 100))}: domain not in allowedDomains`);
               throw registrationError('DOMAIN_NOT_ALLOWED');
             }
+          },
+        },
+        {
+          // A demo's accounts are shared: a visitor who changes a password locks the others out
+          matcher: (ctx) => isDemoMode() && /^\/(change-password|set-password|reset-password)(\/|$)/.test(ctx.path || ''),
+          handler: async () => {
+            throw new APIError('FORBIDDEN', { code: 'DEMO_ACCOUNT_LOCKED', message: 'The sample accounts of this demo cannot change their password.' });
           },
         },
       ],
