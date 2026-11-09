@@ -174,6 +174,11 @@ test('a reset restores the sample data, locks the sample accounts and empties th
     VALUES ('visitor', 'visitor@example.test', 'V', 'V', 'V', 'member', true, 'en', 'US', 'UTC', now(), now())`)
   fs.writeFileSync(path.join(uploads, UPLOAD), 'visitor file')
   fs.writeFileSync(path.join(uploads, 'keep.txt'), 'not an upload')
+  // names of the generated shape that are not files
+  const link = `1730000000001_${'b'.repeat(32)}.png`
+  const directory = `1730000000002_${'c'.repeat(32)}.png`
+  fs.symlinkSync(path.join(uploads, 'keep.txt'), path.join(uploads, link))
+  fs.mkdirSync(path.join(uploads, directory))
 
   const second = run()
   assert.equal(second.status, 0, second.output)
@@ -181,6 +186,8 @@ test('a reset restores the sample data, locks the sample accounts and empties th
   assert.equal((await client.query(`SELECT count(*)::int AS n FROM users WHERE email = 'visitor@example.test'`)).rows[0].n, 0)
   assert.equal(fs.existsSync(path.join(uploads, UPLOAD)), false, 'the upload is gone')
   assert.equal(fs.existsSync(path.join(uploads, 'keep.txt')), true, 'a file the server did not name is left')
+  assert.ok(fs.lstatSync(path.join(uploads, link)).isSymbolicLink(), 'a symlink is left')
+  assert.ok(fs.lstatSync(path.join(uploads, directory)).isDirectory(), 'a directory is left')
   assert.ok((await lastReset()) > firstReset, 'the time moved')
 })
 
