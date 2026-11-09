@@ -26,7 +26,7 @@ function listLocale(root: string, locale: string): string[] {
   return found
 }
 
-async function run(template: string, supportedLocales: string[]): Promise<string> {
+async function run(template: string, supportedLocales: string[], defaultLocale = 'en'): Promise<string> {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `wizard-i18n-${template}-`))
   for (const sub of ['messages', 'entities']) {
     const from = path.join(PROJECTS, template, sub)
@@ -37,7 +37,7 @@ async function run(template: string, supportedLocales: string[]): Promise<string
   const cwd = process.cwd()
   process.chdir(root)
   try {
-    await processI18n({ supportedLocales, defaultLocale: 'en' } as unknown as WizardConfig)
+    await processI18n({ supportedLocales, defaultLocale } as unknown as WizardConfig)
   } finally {
     process.chdir(cwd)
   }
@@ -60,6 +60,29 @@ for (const template of ['starter', 'blog', 'crm', 'productivity']) {
     try {
       const strip = (files: string[], locale: string) => files.map(f => f.replace(new RegExp(`${locale}(\\.json)?$`), '')).sort()
       assert.deepEqual(strip(listLocale(root, 'es'), 'es'), strip(listLocale(root, 'en'), 'en'))
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test(`${template}: default fr with only fr keeps fr catalogs where en was and no en`, async () => {
+    const enRoot = await run(template, ['en'])
+    const root = await run(template, ['fr'], 'fr')
+    try {
+      const strip = (files: string[], locale: string) => files.map(f => f.replace(new RegExp(`${locale}(\\.json)?$`), '')).sort()
+      assert.deepEqual(listLocale(root, 'en'), [])
+      assert.deepEqual(strip(listLocale(root, 'fr'), 'fr'), strip(listLocale(enRoot, 'en'), 'en'))
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+      fs.rmSync(enRoot, { recursive: true, force: true })
+    }
+  })
+
+  test(`${template}: en and fr leaves fr wherever en is`, async () => {
+    const root = await run(template, ['en', 'fr'])
+    try {
+      const strip = (files: string[], locale: string) => files.map(f => f.replace(new RegExp(`${locale}(\\.json)?$`), '')).sort()
+      assert.deepEqual(strip(listLocale(root, 'fr'), 'fr'), strip(listLocale(root, 'en'), 'en'))
     } finally {
       fs.rmSync(root, { recursive: true, force: true })
     }

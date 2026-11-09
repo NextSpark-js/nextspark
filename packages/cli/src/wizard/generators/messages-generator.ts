@@ -123,13 +123,21 @@ export async function ensureFlatLocaleFiles(config: WizardConfig): Promise<void>
     for (const entity of await fs.readdir(entitiesDir)) dirs.push(path.join(entitiesDir, entity, 'messages'))
   }
 
+  const untranslated = new Set<string>()
   for (const dir of dirs) {
-    const source = path.join(dir, `${config.defaultLocale}.json`)
-    if (!await fs.pathExists(source)) continue
+    // The default locale's file, or the English one when the template has none for it
+    const sourceLocale = [config.defaultLocale, 'en'].find(l => fs.pathExistsSync(path.join(dir, `${l}.json`)))
+    if (!sourceLocale) continue
+    const source = path.join(dir, `${sourceLocale}.json`)
     for (const locale of config.supportedLocales) {
       const target = path.join(dir, `${locale}.json`)
-      if (!await fs.pathExists(target)) await fs.copy(source, target)
+      if (await fs.pathExists(target)) continue
+      await fs.copy(source, target)
+      if (sourceLocale !== locale) untranslated.add(locale)
     }
+  }
+  for (const locale of untranslated) {
+    console.warn(`The template has no "${locale}" catalog: its messages are copies of the default locale's (or English), still to translate.`)
   }
 }
 
@@ -171,13 +179,13 @@ export async function updateMessageFiles(config: WizardConfig): Promise<void> {
  * Main function to process all i18n-related tasks
  */
 export async function processI18n(config: WizardConfig): Promise<void> {
+  // Ensure all selected languages have catalogs first: the default locale's own may be one that gets removed below
+  await ensureLanguageFolders(config)
+  await ensureFlatLocaleFiles(config)
+
   // Remove unused languages
   await removeUnusedLanguages(config)
   await removeUnusedEntityMessages(config)
-
-  // Ensure all selected languages have folders
-  await ensureLanguageFolders(config)
-  await ensureFlatLocaleFiles(config)
 
   // Update message files with project values
   await updateMessageFiles(config)
