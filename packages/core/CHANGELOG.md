@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`nextspark migrate` uses the only theme of a 0.x project without asking, and takes `--theme <name>` when there are several.** It stopped unless `NEXT_PUBLIC_ACTIVE_THEME` was set or `.env.example` declared it, although a 0.x project almost always has one theme. With several themes and no flag, the variable is still read from the environment or `.env.example`, for compatibility only; the dry-run simulation hands the theme to the copy as `--theme`. (#424)
 - **The API Explorer's example payload for signing up with an invitation uses a placeholder password.** The example looked like a real one and matched the dev credentials of a template. (#413)
 - **`<html lang>` follows the locale of the dashboard, superadmin and devtools areas.** With Cache Components the root layout is prerendered with the default locale, so the attribute stayed there; the areas set it once they render. (#413)
 - **The "first" of the create-the-first-entity texts agrees with the entity in Spanish, Portuguese, French and Italian.** The catalog text put a masculine adjective in front of an entity name of any gender ("tu primer tarea"); it now names a record and puts the entity in parentheses, as the German text does. (#413)

@@ -201,6 +201,7 @@ program
   .option('--no-prepare', 'Convert the files but do not run nextspark prepare afterwards')
   .option('--no-simulate', 'With --dry-run: do not convert a temporary copy to run the generated-host plan')
   .option('--rename-entity-slugs', 'Rename entity slugs that have an underscore to hyphens (optional: an underscore is valid) and report what else to update')
+  .option('--theme <name>', 'The theme to migrate when contents/themes holds more than one (a single theme is used without asking)')
   .addOption(new Option('--simulation-nonce <nonce>').hideHelp())
   .action(migrateCommand);
 

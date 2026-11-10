@@ -30,6 +30,8 @@ interface MigrateOptions {
   renameEntitySlugs?: boolean;
   /** `--check`: report the obsolete local copies a migrated project still holds; read-only, exit 1 when there are any. */
   check?: boolean;
+  /** `--theme <name>`: the theme to migrate when contents/themes holds more than one (a single one is used without asking). */
+  theme?: string;
 }
 
 /** One leftover of an earlier layout that a project already on the root-first layout can remove (#319). */
@@ -64,7 +66,8 @@ interface MigrateReport {
   };
   activeTheme: {
     name: string | null;
-    source: 'environment' | '.env.example' | null;
+    /** `--theme`, the only directory under contents/themes, or (with several and no flag) the variable a 0.x project kept. */
+    source: '--theme' | 'only theme' | 'environment' | '.env.example' | null;
     themes: { name: string; files: number }[];
     plugins: { name: string; files: number }[];
   };
@@ -1299,7 +1302,14 @@ function hasGeneratedRouteImportRewrite(content: string): boolean {
     || hasStringReplace(view);
 }
 
-function activeTheme(hostRoot: string): { name: string | null; source: 'environment' | '.env.example' | null } {
+/**
+ * The theme a 0.x project is migrated from: the one `--theme` names, else the only directory under contents/themes.
+ * Only with several (or none) and no flag, the variable 0.x selected it with, from the environment or the host's
+ * .env.example, is read as a fallback for compatibility.
+ */
+function activeTheme(hostRoot: string, themes: string[], flag: string | undefined): { name: string | null; source: MigrateReport['activeTheme']['source'] } {
+  if (flag) return { name: flag, source: '--theme' };
+  if (themes.length === 1) return { name: themes[0], source: 'only theme' };
   if (process.env.NEXT_PUBLIC_ACTIVE_THEME) return { name: process.env.NEXT_PUBLIC_ACTIVE_THEME, source: 'environment' };
   const example = join(hostRoot, '.env.example');
   if (!existsSync(example)) return { name: null, source: null };
@@ -1690,7 +1700,7 @@ export function findObsoleteCopies(repository: string, hostRoot: string, templat
   return { findings, notes };
 }
 
-async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppConversionPlan | null }> {
+async function analyze(cwd: string, themeFlag?: string): Promise<{ report: MigrateReport; plan: AppConversionPlan | null }> {
   const repository = repositoryRoot(cwd);
   const host = resolveHostRoot(repository, cwd);
   const packageManifests = packageFiles(repository).map(file => ({ file, pkg: readJson(file) })).filter((entry): entry is { file: string; pkg: Record<string, unknown> } => entry.pkg !== null);
@@ -1703,10 +1713,11 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
       : { value: null, source: null };
   const members = packageManifests.map(entry => ({ path: pathFrom(repository, dirname(entry.file)), packages: packageNextsparkVersions(entry.pkg) })).filter(member => Object.keys(member.packages).length > 0);
   const declaredVersions = [...new Set(members.flatMap(member => Object.values(member.packages).map(normalizedDeclaredVersion)))].sort();
-  const selectedTheme = activeTheme(host.root);
   const themesDirectory = join(host.root, 'contents', 'themes');
   const pluginsDirectory = join(host.root, 'contents', 'plugins');
   const themes = childDirectories(themesDirectory).map(name => ({ name, files: fileCount(join(themesDirectory, name)) }));
+  const selectedTheme = activeTheme(host.root, themes.map(theme => theme.name), themeFlag);
+  const themeChoice = themes.length > 1 ? `contents/themes holds ${themes.map(theme => theme.name).join(', ')}: pass the one this project uses with nextspark migrate --theme <name>` : 'there is no directory under contents/themes';
   const plugins = childDirectories(pluginsDirectory).map(name => ({ name, files: fileCount(join(pluginsDirectory, name)) }));
   const themeDirectory = selectedTheme.name && existsSync(join(themesDirectory, selectedTheme.name)) ? join(themesDirectory, selectedTheme.name) : null;
   const templates = templateDirectory(host.root, repository);
@@ -1758,7 +1769,10 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   if (!selectedTheme.name && appPlan) {
     const line = `${appPlan.root}/globals.css: `;
     const at = blockers.findIndex(entry => entry.startsWith(line));
-    if (at >= 0) blockers[at] = `${line}no active theme was found (NEXT_PUBLIC_ACTIVE_THEME is not set and .env.example does not declare it), so migrate cannot tell core's own copy of this file from yours. Pass the theme: NEXT_PUBLIC_ACTIVE_THEME=<theme> nextspark migrate, or add NEXT_PUBLIC_ACTIVE_THEME=<theme> to .env.example (${themes.length > 0 ? `themes found: ${themes.map(theme => theme.name).join(', ')}` : 'no directory under contents/themes'}); if it is your own file: ${blockers[at].slice(line.length)}`;
+    if (at >= 0) blockers[at] = `${line}no theme was chosen (${themeChoice}), so migrate cannot tell core's own copy of this file from yours; if it is your own file: ${blockers[at].slice(line.length)}`;
+  }
+  if (themeFlag && themes.length > 0 && !themes.some(theme => theme.name === themeFlag)) {
+    blockers.push(`--theme ${themeFlag}: there is no contents/themes/${themeFlag} (themes found: ${themes.map(theme => theme.name).join(', ')}). Pass the name of one of them`);
   }
   const unsimulable: string[] = [];
   const blockSimulation = (line: string) => { blockers.push(line); unsimulable.push(line); };
@@ -1911,7 +1925,7 @@ async function analyze(cwd: string): Promise<{ report: MigrateReport; plan: AppC
   const warnings: string[] = [];
   if (!gitSucceeds(repository, ['diff', '--quiet']) || !gitSucceeds(repository, ['diff', '--cached', '--quiet']) || untracked.length > 0) warnings.push('Git working tree is dirty; report mode does not modify it.');
   if (!templates) warnings.push('Installed @nextsparkjs/core templates were not found; template comparisons are unavailable.');
-  if (!selectedTheme.name) warnings.push('No active theme was found in NEXT_PUBLIC_ACTIVE_THEME or .env.example.');
+  if (!selectedTheme.name) warnings.push(`No theme was chosen: ${themeChoice}.`);
   if (appConversion.blockers.length > 0) warnings.push(`BLOCKED: migration will not write anything until ${appConversion.blockers.length} blocker(s) are fixed by hand (see "App tree conversion").`);
   if (previousEvidence && !previousLookup.templates) {
     warnings.push(previousLookup.networkFailure
@@ -3861,13 +3875,13 @@ function firstErrorLine(output: string): string | null {
 // Windows has no HOME/TMPDIR: its shell, profile and temp locations travel under these names (env names are case-insensitive there)
 const SIMULATION_ENV = /^(?:PATH|HOME|TMPDIR|NODE_OPTIONS|SystemRoot|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|ComSpec|TEMP|TMP)$/i;
 
-/** The simulation's children get only what they need: PATH, HOME, TMPDIR, NODE_OPTIONS, COREPACK_*, on Windows SystemRoot/USERPROFILE/APPDATA/LOCALAPPDATA/PATHEXT/ComSpec/TEMP/TMP, the package-manager settings, NEXTSPARK_* and the active theme migrate resolved (which may come from the environment, not from .env.example). */
-export function simulationEnvironment(theme: string | null, packageManager: string | null = null): NodeJS.ProcessEnv {
+/** The simulation's children get only what they need: PATH, HOME, TMPDIR, NODE_OPTIONS, COREPACK_*, on Windows SystemRoot/USERPROFILE/APPDATA/LOCALAPPDATA/PATHEXT/ComSpec/TEMP/TMP, the package-manager settings and NEXTSPARK_*. The theme migrate chose travels as --theme. */
+export function simulationEnvironment(packageManager: string | null = null): NodeJS.ProcessEnv {
   const kept: NodeJS.ProcessEnv = {};
   for (const [name, value] of Object.entries(process.env)) {
     if (SIMULATION_ENV.test(name) || /^(?:npm_config_|NPM_CONFIG_|pnpm_config_|PNPM_CONFIG_|COREPACK_|NEXTSPARK_)/.test(name)) kept[name] = value;
   }
-  return { ...kept, ...(theme ? { NEXT_PUBLIC_ACTIVE_THEME: theme } : {}), ...(packageManager ? { NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER: packageManager } : {}), NEXTSPARK_MIGRATE_SIMULATION: '1', NEXTSPARK_AUTH_PREFLIGHT: 'off' };
+  return { ...kept, ...(packageManager ? { NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER: packageManager } : {}), NEXTSPARK_MIGRATE_SIMULATION: '1', NEXTSPARK_AUTH_PREFLIGHT: 'off' };
 }
 
 interface SimulationChild {
@@ -3971,10 +3985,10 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     const prepareModule = copiedTemplates ? join(dirname(copiedTemplates), 'scripts', 'build', 'registry', 'host', 'prepare.mjs') : null;
     // The core the project uses decides: one that exports predictHost answers without running the registry build
     const hasPredict = prepareModule !== null && existsSync(prepareModule) && /export\s+(?:async\s+)?function\s+predictHost\b/.test(readFileSync(prepareModule, 'utf8'));
-    const simulationEnv = simulationEnvironment(report.activeTheme.name, projectPnpmPackageManager(resolve(repository, report.hostRoot.path)));
+    const simulationEnv = simulationEnvironment(projectPnpmPackageManager(resolve(repository, report.hostRoot.path)));
     const nonce = randomBytes(16).toString('hex');
     writeFileSync(join(copy, '.git', SIMULATION_MARKER), nonce);
-    const migrated = await runAndCollect(process.execPath, [process.argv[1], 'migrate', '--yes', '--simulation-nonce', nonce, ...(hasPredict ? ['--no-prepare'] : [])], {
+    const migrated = await runAndCollect(process.execPath, [process.argv[1], 'migrate', '--yes', '--simulation-nonce', nonce, ...(report.activeTheme.name ? ['--theme', report.activeTheme.name] : []), ...(hasPredict ? ['--no-prepare'] : [])], {
       cwd: join(copy, pathFrom(repository, process.cwd())),
       env: simulationEnv,
       timeoutMs: 600_000,
@@ -4195,7 +4209,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       printRollbackOnFailure = true;
       throw new MigrateAnalysisError(unfinished.message);
     }
-    const { report, plan: appPlan } = await analyze(process.cwd());
+    const { report, plan: appPlan } = await analyze(process.cwd(), options.theme);
     if (options.renameEntitySlugs && report.entitySlugs.renames.length > 0) {
       report.entitySlugs.rename = true;
       report.entitySlugs.report = entityRenameReport(resolve(repositoryRoot(process.cwd()), report.hostRoot.path), report.entitySlugs, false);
@@ -4300,7 +4314,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     }
     // A project that is root-first already (no contents/) only has an app tree left to convert
     const appTreeOnly = !existsSync(join(hostRoot, 'contents')) && appPlan !== null;
-    if (!theme && !appTreeOnly) throw new MigrateAnalysisError('No active theme was found; set it in .env.example before migrating.');
+    if (!theme && !appTreeOnly) throw new MigrateAnalysisError(`No theme was chosen: ${report.activeTheme.themes.length > 1 ? `contents/themes holds ${report.activeTheme.themes.map(item => item.name).join(', ')}. Pass the one this project uses: nextspark migrate --theme <name>` : 'there is no directory under contents/themes'}.`);
     const themeRoot = join(hostRoot, 'contents', 'themes', theme ?? '');
     if (!appTreeOnly && !existsSync(themeRoot)) throw new MigrateAnalysisError(`Active theme ${theme} was not found under contents/themes/.`);
     const pluginsRoot = join(hostRoot, 'contents', 'plugins');

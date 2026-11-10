@@ -460,31 +460,59 @@ test('migrate --dry-run reports deterministic ambiguous host selection', async (
   }
 })
 
-test('migrate --dry-run reports no active theme when .env.example is absent', async () => {
+test('migrate uses the only theme under contents/themes without .env.example or the variable', async () => {
   const root = await flatFixture()
   try {
     await rm(join(root, '.env.example'))
     const result = runWithoutActiveTheme(root, ['--dry-run', '--json'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const report = JSON.parse(result.stdout)
-    assert.equal(report.activeTheme.name, null)
-    assert.equal(report.activeTheme.source, null)
-    assert.ok(report.warnings.some((warning: string) => /No active theme/.test(warning)))
+    assert.equal(report.activeTheme.name, 'acme')
+    assert.equal(report.activeTheme.source, 'only theme')
+    assert.equal(report.warnings.some((warning: string) => /No theme was chosen/.test(warning)), false)
+    // a variable that names another theme does not override the only one there is
+    const other = run(root, ['--dry-run', '--json'], { NEXT_PUBLIC_ACTIVE_THEME: 'beta' })
+    assert.equal(JSON.parse(other.stdout).activeTheme.name, 'acme')
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
 
-test('migrate without an active theme names it as the cause of an unrecognized app/globals.css', async () => {
+test('migrate with several themes asks for --theme, takes it over the variable, and refuses a theme that does not exist', async () => {
   const root = await flatFixture()
   try {
     await rm(join(root, '.env.example'))
+    await write(root, 'contents/themes/beta/index.ts', 'export {}\n')
     await write(root, 'app/globals.css', '@import "../contents/themes/acme/styles/globals.css";\n')
-    const result = runWithoutActiveTheme(root, ['--dry-run', '--json'])
-    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
-    const { blockers } = JSON.parse(result.stdout).appConversion
-    const line = blockers.find((entry: string) => entry.startsWith('app/globals.css: '))
-    assert.match(line, /no active theme was found.*NEXT_PUBLIC_ACTIVE_THEME=<theme> nextspark migrate.*\.env\.example.*themes found: acme.*move what it holds to styles\/globals\.css/)
+    await commitFixture(root)
+    const none = runWithoutActiveTheme(root, ['--dry-run', '--json'])
+    assert.equal(none.status, 1, `${none.stdout}\n${none.stderr}`)
+    const report = JSON.parse(none.stdout)
+    assert.equal(report.activeTheme.name, null)
+    assert.ok(report.warnings.some((warning: string) => /No theme was chosen: contents\/themes holds acme, beta: pass the one this project uses with nextspark migrate --theme <name>/.test(warning)))
+    const line = report.appConversion.blockers.find((entry: string) => entry.startsWith('app/globals.css: '))
+    assert.match(line, /no theme was chosen \(contents\/themes holds acme, beta: pass the one this project uses with nextspark migrate --theme <name>\).*move what it holds to styles\/globals\.css/)
+    assert.doesNotMatch(line, /NEXT_PUBLIC_ACTIVE_THEME/)
+    const refused = runWithoutActiveTheme(root, ['--yes'])
+    assert.notEqual(refused.status, 0)
+    assert.equal(git_status(root), '')
+    // with a theme chosen, globals.css is judged on its own
+    const chosen = run(root, ['--dry-run', '--json', '--theme', 'acme'])
+    assert.doesNotMatch(JSON.parse(chosen.stdout).appConversion.blockers.find((entry: string) => entry.startsWith('app/globals.css: ')), /no theme was chosen/)
+    git(root, ['rm', '--quiet', 'app/globals.css'])
+    await commitFixture(root)
+
+    const flagged = run(root, ['--dry-run', '--json', '--theme', 'acme'], { NEXT_PUBLIC_ACTIVE_THEME: 'beta' })
+    assert.equal(flagged.status, 0, `${flagged.stdout}\n${flagged.stderr}`)
+    assert.deepEqual([JSON.parse(flagged.stdout).activeTheme.name, JSON.parse(flagged.stdout).activeTheme.source], ['acme', '--theme'])
+
+    // compatibility: with several themes and no flag, the variable a 0.x project kept still chooses
+    const fallback = run(root, ['--dry-run', '--json'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    assert.deepEqual([JSON.parse(fallback.stdout).activeTheme.name, JSON.parse(fallback.stdout).activeTheme.source], ['acme', 'environment'])
+
+    const missing = run(root, ['--dry-run', '--json', '--theme', 'zeta'])
+    assert.equal(missing.status, 1)
+    assert.ok(JSON.parse(missing.stdout).appConversion.blockers.includes('--theme zeta: there is no contents/themes/zeta (themes found: acme, beta). Pass the name of one of them'))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -1959,8 +1987,8 @@ test('the pnpm pin comes from the nearest package.json at or above the project, 
 })
 
 test('the simulation hands the project pnpm pin to the migrate it runs in a copy', () => {
-  assert.equal(simulationEnvironment('t', 'pnpm@10.34.6').NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER, 'pnpm@10.34.6')
-  assert.equal('NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER' in simulationEnvironment('t', null), false)
+  assert.equal(simulationEnvironment('pnpm@10.34.6').NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER, 'pnpm@10.34.6')
+  assert.equal('NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER' in simulationEnvironment(null), false)
 })
 
 test('a dry run in a simulation takes the pnpm pin from the variable the real run hands over, and a real run does not', async () => {
@@ -4036,7 +4064,7 @@ test('migrate --dry-run asks the installed core\'s predictHost about the convert
   }
 })
 
-test('the dry-run simulation gets the active theme from the environment, and says why emission was not checked on an older Next', async () => {
+test('the dry-run simulation gets the theme as --theme, not the variable, and says why emission was not checked on an older Next', async () => {
   const root = await simulationFixture("console.error('prepare must not run when predictHost exists')\nprocess.exit(1)\n")
   try {
     await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', PREDICT_MODULE(`{
@@ -4046,13 +4074,15 @@ test('the dry-run simulation gets the active theme from the environment, and say
       diagnostics: [{ code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'the project resolves next@16.2.11 (/x/package.json) but the table applies to next@~16.4.2 only' }],
       checks: { plan: 'passed', emission: 'failed', grammar: 'skipped', ownership: 'skipped', registries: 'skipped' },
     }`))
-    // the theme comes from the environment only: no .env.example in the project
+    // two themes and no .env.example: the copy can only be converted with the theme the flag named
     git(root, ['rm', '--quiet', '-f', '.env.example'])
+    await write(root, 'contents/themes/beta/index.ts', 'export {}\n')
     await commitFixture(root)
-    const result = run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined, NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    const result = run(root, ['--dry-run', '--json', '--theme', 'acme'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined, NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
     const report = JSON.parse(result.stdout)
     assert.equal(report.hostPlan.unknown, false, report.hostPlan.reason)
-    assert.deepEqual(report.hostPlan.notices, ['NS_PROBE: theme=acme'])
+    // the root-first host plan never sees the variable
+    assert.deepEqual(report.hostPlan.notices, ['NS_PROBE: theme=undefined'])
     assert.deepEqual(report.hostPlan.conflicts, [])
     assert.equal(report.hostPlan.checks.emission, `not checked (installed next 16.2.11 is not ${report.nextRange.required}; see Next.js range)`)
     assert.equal(report.hostPlan.checks.grammar, 'skipped (needs emission)')
@@ -4067,7 +4097,7 @@ test('the dry-run simulation gets the active theme from the environment, and say
       checks: { plan: 'passed', emission: 'failed', grammar: 'skipped', ownership: 'skipped', registries: 'skipped' },
     }`))
     await commitFixture(root)
-    const unresolvable = JSON.parse(run(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined, NEXT_PUBLIC_ACTIVE_THEME: 'acme' }).stdout)
+    const unresolvable = JSON.parse(run(root, ['--dry-run', '--json', '--theme', 'acme'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined }).stdout)
     assert.equal(unresolvable.hostPlan.checks.emission, 'not checked (Next.js is not resolvable from /x; the route export table is for next@16.4.2; see Next.js range)')
     assert.equal(result.status, 0, result.stderr)
   } finally {
@@ -4198,7 +4228,7 @@ test('the simulation keeps Corepack and Windows shell variables, and nothing sec
   const saved = names.map(name => process.env[name])
   names.forEach(name => { process.env[name] = 'x' })
   try {
-    const env = simulationEnvironment('t')
+    const env = simulationEnvironment()
     for (const name of names.slice(0, -1)) assert.equal(env[name], 'x', name)
     assert.equal(env.DATABASE_URL, undefined)
   } finally {
