@@ -662,30 +662,54 @@ Configuración de traducciones multiidioma.
 
 **Estructura de archivos de traducción:**
 
+El catálogo de la entidad (`messages/<locale>.json`) se carga bajo el namespace `{slug}`. El dashboard lee de ahí el
+nombre de la entidad y los textos de cada campo (lista, formulario, detalle, filtros, navegación, búsqueda y creación
+rápida):
+
 ```json
 {
-  "name": "Task",
-  "pluralName": "Tasks",
-  "description": "Manage your tasks",
-  "actions": {
-    "create": "Create Task",
-    "edit": "Edit Task",
-    "delete": "Delete Task",
-    "view": "View Task"
+  "entity": {
+    "singular": "tarea",
+    "plural": "Tareas"
   },
   "fields": {
-    "title": "Task Title",
-    "description": "Description",
-    "status": "Status",
-    "priority": "Priority"
+    "title": {
+      "label": "Título",
+      "placeholder": "Ingresa el título de la tarea...",
+      "description": "El título de la tarea"
+    },
+    "status": {
+      "label": "Estado",
+      "options": {
+        "todo": "Por hacer",
+        "in-progress": "En progreso"
+      }
+    }
   },
-  "messages": {
-    "created": "Task created successfully",
-    "updated": "Task updated successfully",
-    "deleted": "Task deleted successfully"
-  }
+  "actions": { "...": "textos propios de la entidad" }
 }
 ```
+
+| Clave | Reemplaza en el config |
+|-------|------------------------|
+| `entity.singular`, `entity.plural` | `names.singular`, `names.plural` |
+| `fields.<campo>.label` | `display.label` (un `display.labelKey` declarado gana) |
+| `fields.<campo>.placeholder` | `display.placeholder` |
+| `fields.<campo>.description` | `display.description` |
+| `fields.<campo>.options.<valor>` | el `label` de la opción con ese `value` |
+
+**El config es la fuente y el respaldo:** si al catálogo del idioma activo le falta una clave, se muestra el texto del
+config, sin errores ni claves crudas. Una entidad sin catálogo se ve igual que antes. El singular sigue la convención del
+config: en minúscula, porque aparece dentro de frases ("Agregar tarea"); en alemán va con mayúscula, como todo
+sustantivo, y así se muestra también dentro de frases.
+
+El título de la página de detalle y de edición es el del registro: su `title` o `name`, si no el primer campo de texto
+de la lista, y el nombre de la entidad solo cuando el registro no tiene ninguno.
+
+En código, `localizeEntityConfig(config, t)` (`@nextsparkjs/core/lib/entities/entity-text`) devuelve el config con esos
+textos en el idioma de `t`, un traductor de la raíz del catálogo (`useTranslations()` o `getTranslations()`); en un
+componente cliente, `useLocalizedEntityConfig(config)` (`@nextsparkjs/core/hooks/useEntityText`). `useEntityConfig`,
+`useEnabledEntities` y la navegación del dashboard ya lo aplican.
 
 ---
 

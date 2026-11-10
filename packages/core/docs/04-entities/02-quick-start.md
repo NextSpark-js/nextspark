@@ -333,8 +333,10 @@ Crea `messages/en.json`:
 
 ```json
 {
-  "name": "Product",
-  "pluralName": "Products",
+  "entity": {
+    "singular": "product",
+    "plural": "Products"
+  },
   "description": "Manage your products",
   "actions": {
     "create": "Create Product",
@@ -343,10 +345,10 @@ Crea `messages/en.json`:
     "view": "View Product"
   },
   "fields": {
-    "name": "Product Name",
-    "description": "Description",
-    "price": "Price",
-    "status": "Status"
+    "name": { "label": "Product Name", "placeholder": "Enter the product name..." },
+    "description": { "label": "Description" },
+    "price": { "label": "Price" },
+    "status": { "label": "Status", "options": { "active": "Active", "archived": "Archived" } }
   },
   "messages": {
     "created": "Product created successfully",
@@ -360,8 +362,10 @@ Crea `messages/es.json`:
 
 ```json
 {
-  "name": "Producto",
-  "pluralName": "Productos",
+  "entity": {
+    "singular": "producto",
+    "plural": "Productos"
+  },
   "description": "Gestiona tus productos",
   "actions": {
     "create": "Crear Producto",
@@ -370,10 +374,10 @@ Crea `messages/es.json`:
     "view": "Ver Producto"
   },
   "fields": {
-    "name": "Nombre del Producto",
-    "description": "Descripción",
-    "price": "Precio",
-    "status": "Estado"
+    "name": { "label": "Nombre del producto", "placeholder": "Ingresa el nombre del producto..." },
+    "description": { "label": "Descripción" },
+    "price": { "label": "Precio" },
+    "status": { "label": "Estado", "options": { "active": "Activo", "archived": "Archivado" } }
   },
   "messages": {
     "created": "Producto creado exitosamente",
