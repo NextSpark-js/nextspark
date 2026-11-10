@@ -151,10 +151,23 @@ if (process.env.EMAIL_PROVIDER === 'smtp') {
   }).listen(Number(process.env.SMTP_PORT), '127.0.0.1')
 }
 
-/** The link of a sent message, whose body may be quoted-printable. */
-const hrefIn = (message: string) => {
-  const text = message.replace(/=\r\n/g, '').replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-  return /href="([^"]+)"/.exec(text)?.[1]
+/** The link in an HTML body. */
+const hrefIn = (html: string) => /href="([^"]+)"/.exec(html)?.[1]
+
+/**
+ * The link of a message off the wire. Only a part sent as quoted-printable is decoded: in any other text `=XX` is
+ * just text, and the link's own `token=` would turn into a character when the token starts with two of A-F.
+ */
+const smtpHrefIn = (message: string) => {
+  for (const part of message.split(/\r\n--[^\r\n]+\r\n/)) {
+    const [head, ...rest] = part.split('\r\n\r\n')
+    let body = rest.join('\r\n\r\n')
+    if (/content-transfer-encoding:\s*quoted-printable/i.test(head)) {
+      body = body.replace(/=\r\n/g, '').replace(/=([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    }
+    const href = hrefIn(body)
+    if (href) return href
+  }
 }
 
 const magicLinks = new Map<string, string>()
@@ -264,7 +277,7 @@ async function run(step: Step) {
       const body = await res.clone().text()
       if (provider === 'smtp' && smtpMessages.length > before) {
         sends = smtpMessages.length - before
-        magicLinks.set(email, hrefIn(smtpMessages.at(-1)!)!)
+        magicLinks.set(email, smtpHrefIn(smtpMessages.at(-1)!)!)
       }
       return { ...(await outcome(res)), body, sends, link: magicLinks.get(email) }
     }
