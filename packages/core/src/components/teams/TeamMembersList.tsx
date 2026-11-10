@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { MoreHorizontal, Crown, Shield, Eye, UserMinus, Loader2 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
-import { formatDistanceToNow } from 'date-fns'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleRelative } from '../../lib/i18n/format'
 import {
   Table,
   TableBody,
@@ -75,6 +75,7 @@ interface TeamMembersListProps {
 
 export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMembersListProps = {}) {
   const t = useTranslations('teams')
+  const locale = useLocale()
   const { user } = useAuth()
   const { team } = useTeam()
   // Use prop teamId if provided, otherwise fall back to context
@@ -172,9 +173,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
 
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(member.joinedAt || member.joined_at), {
-                        addSuffix: true
-                      })}
+                      {formatLocaleRelative(member.joinedAt || member.joined_at, locale)}
                     </span>
                   </TableCell>
 

@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useTranslations } from 'next-intl'
-import { formatDistanceToNow } from 'date-fns'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleRelative } from '../../lib/i18n/format'
 import { Trash2, Mail, Clock, Shield, Eye, Crown } from 'lucide-react'
 import {
   Table,
@@ -61,6 +61,7 @@ interface InvitationWithInviter extends TeamInvitation {
 
 export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) {
   const t = useTranslations('teams')
+  const locale = useLocale()
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { members } = useTeamMembers({ teamId })
@@ -185,7 +186,7 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
                       <span className={`text-sm ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
                         {isExpired
                           ? t('invitations.expired')
-                          : formatDistanceToNow(new Date(invitation.expiresAt), { addSuffix: true })}
+                          : formatLocaleRelative(invitation.expiresAt, locale)}
                       </span>
                     </div>
                   </TableCell>

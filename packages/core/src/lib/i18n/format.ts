@@ -28,6 +28,19 @@ export function formatLocaleDate(value: string | number | Date, locale: string, 
   return new Intl.DateTimeFormat(locale, dateOnly ? { ...DATE_STYLES[style], timeZone: 'UTC' } : DATE_STYLES[style]).format(date)
 }
 
+const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+  ['year', 31_536_000], ['month', 2_592_000], ['day', 86_400], ['hour', 3_600], ['minute', 60],
+]
+
+/** "3 days ago", "in 2 hours" in the locale (what `formatDistanceToNow(..., { addSuffix: true })` gave in English only). */
+export function formatLocaleRelative(value: string | number | Date, locale: string, now: number = Date.now()): string {
+  const time = new Date(value).getTime()
+  if (isNaN(time)) return String(value)
+  const seconds = Math.round((time - now) / 1000)
+  const [unit, size] = RELATIVE_UNITS.find(([, size]) => Math.abs(seconds) >= size) ?? ['second', 1]
+  return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.trunc(seconds / size), unit)
+}
+
 export function formatLocaleNumber(value: number, locale: string): string {
   return new Intl.NumberFormat(locale).format(value)
 }

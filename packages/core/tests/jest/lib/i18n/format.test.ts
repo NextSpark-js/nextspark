@@ -1,7 +1,7 @@
 /**
  * #413: formatLocaleDate does not throw on an invalid date, and a date with no time is the same calendar day in every time zone.
  */
-import { formatLocaleDate } from '../../../../src/lib/i18n/format'
+import { formatLocaleDate, formatLocaleRelative } from '../../../../src/lib/i18n/format'
 
 describe('formatLocaleDate', () => {
   const zone = process.env.TZ
@@ -21,6 +21,15 @@ describe('formatLocaleDate', () => {
     process.env.TZ = tz
     expect(formatLocaleDate('2026-12-24', 'en')).toBe('Dec 24, 2026')
     expect(formatLocaleDate('2026-12-24', 'de')).toContain('24')
+  })
+
+  test('a relative time is written in the locale, in the past and in the future, and an invalid one is returned as it is', () => {
+    const now = Date.UTC(2026, 11, 24, 12)
+    expect(formatLocaleRelative(now - 3 * 86_400_000, 'en', now)).toBe('3 days ago')
+    expect(formatLocaleRelative(now - 3 * 86_400_000, 'de', now)).toBe('vor 3 Tagen')
+    expect(formatLocaleRelative(now - 3 * 86_400_000, 'es', now)).toBe('hace 3 días')
+    expect(formatLocaleRelative(now + 2 * 3_600_000, 'fr', now)).toBe('dans 2 heures')
+    expect(formatLocaleRelative('nope', 'de', now)).toBe('nope')
   })
 
   test('a date with a time is formatted in the local zone, in the locale', () => {
