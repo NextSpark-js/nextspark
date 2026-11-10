@@ -8,6 +8,9 @@ import { getEntityRegistry, type EntityRegistryEntry } from '../lib/entities/que
 import type { EntityConfig } from '../lib/entities/types'
 import type { SearchResultType } from '@nextsparkjs/registries/entity-types'
 import { SEARCH_TYPE_PRIORITIES } from '@nextsparkjs/registries/entity-types'
+import { useLocale, useTranslations } from 'next-intl'
+import { useEntityLocalizer } from './useEntityText'
+import { entityNameInText } from '../lib/entities/entity-text'
 
 export interface SearchResult {
   id: string
@@ -32,18 +35,19 @@ const getSearchableEntities = (): EntityRegistryEntry[] => {
 }
 
 // Función para generar SearchResults desde entidades del registro
-const generateEntitySearchResults = (): SearchResult[] => {
+// Entity names in the active locale (#421), and the "Manage …" line from the catalog
+const generateEntitySearchResults = (localize: (config: EntityConfig) => EntityConfig, manage: (entities: string) => string): SearchResult[] => {
   const searchableEntities = getSearchableEntities()
 
   return searchableEntities.map(entry => {
-    const config = entry.config as EntityConfig
+    const config = localize(entry.config as EntityConfig)
     const entityName = config.slug || entry.name
     const displayName = config.names?.singular || entityName
 
     return {
       id: `entity-${entry.name}`,
       title: displayName,
-      description: `Manage ${config.names?.plural?.toLowerCase() || displayName.toLowerCase()}`,
+      description: manage(config.names?.plural || displayName),
       type: entry.name as any, // Map to specific entity types
       url: `/dashboard/${config.slug || entry.name}`,
       category: 'Entities',
@@ -116,9 +120,12 @@ export function useSearch() {
   const canAccessBilling = useOptionalPermission('settings.billing' as Permission)
 
   // Generar resultados de búsqueda dinámicamente desde entidades registradas
+  const localize = useEntityLocalizer()
+  const ui = useTranslations('entities.ui')
+  const locale = useLocale()
   const entityResults = useMemo(() => {
-    return generateEntitySearchResults()
-  }, [])
+    return generateEntitySearchResults(localize, entities => ui('manage', { entities: entityNameInText(entities, locale) }))
+  }, [localize, ui, locale])
 
   // Todos los elementos buscables (entidades + páginas del sistema)
   const allSearchableItems = useMemo(() => {

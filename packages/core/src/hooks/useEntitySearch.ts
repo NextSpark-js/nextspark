@@ -8,6 +8,8 @@ import { extractUserPlanData } from '../lib/user-data-utils'
 import { getEnabledEntities } from '../lib/entities/registry.client'
 import type { EntityConfig } from '../lib/entities/types'
 import { useLocalizedEntityConfigs } from './useEntityText'
+import { useLocale, useTranslations } from 'next-intl'
+import { entityNameInText } from '../lib/entities/entity-text'
 
 export interface EntitySearchResult {
   id: string
@@ -58,6 +60,8 @@ export function useEntitySearch(): EntitySearchHookResult {
   const [registryEntities, setAvailableEntities] = useState<EntityConfig[]>([])
   // In the active locale (#421)
   const availableEntities = useLocalizedEntityConfigs(registryEntities)
+  const ui = useTranslations('entities.ui')
+  const locale = useLocale()
 
   useEffect(() => {
     if (!user || !user.role) {
@@ -133,7 +137,7 @@ export function useEntitySearch(): EntitySearchHookResult {
     return availableEntities.map(entity => ({
       id: `entity-${entity.slug}`,
       title: entity.names.singular,
-      description: `Manage ${entity.names.plural.toLowerCase()}`,
+      description: ui('manage', { entities: entityNameInText(entity.names.plural, locale) }),
       entityType: entity.slug,
       type: 'entity' as const,
       url: `/dashboard/${entity.slug}`,
@@ -147,7 +151,7 @@ export function useEntitySearch(): EntitySearchHookResult {
         canCreate: true // This would be calculated based on current usage vs limits
       }
     }))
-  }, [availableEntities, userPlanData.plan])
+  }, [availableEntities, userPlanData.plan, ui, locale])
 
   // All searchable items
   const allSearchableItems = useMemo(() => {
