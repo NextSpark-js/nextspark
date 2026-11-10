@@ -1470,6 +1470,21 @@ test('migrate stops before writing on a destructuring read of NEXT_PUBLIC_ACTIVE
   }
 })
 
+test('a destructuring example of NEXT_PUBLIC_ACTIVE_THEME in a comment does not stop migrate: it is listed', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/lib/doc.ts', '/**\n * const { NEXT_PUBLIC_ACTIVE_THEME } = process.env\n */\nexport const doc = true\n')
+    await commitFixture(root)
+    const dry = run(root, ['--dry-run', '--json'])
+    assert.equal(dry.status, 0, `${dry.stdout}\n${dry.stderr}`)
+    const report = JSON.parse(dry.stdout)
+    assert.equal(report.appConversion.blockers.some((line: string) => line.includes('destructuring')), false)
+    assert.deepEqual(report.themeVariable.left, [{ path: 'lib/doc.ts', line: 2 }])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate rebases root-inspecting tests and preserves their local middleware binding', async () => {
   const { root } = await moveFixture()
   try {

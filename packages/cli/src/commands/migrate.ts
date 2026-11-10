@@ -3214,10 +3214,12 @@ function rewriteThemeVariable(content: string, destination: string, hostRoot: st
   const code = CODE_FILE.test(destination);
   const replacement = isWithin(destination, join(hostRoot, 'tests')) ? JSON.stringify(theme) : 'undefined';
   const lineOf = (index: number) => content.slice(0, index).split('\n').length;
-  const destructured = code ? [...content.matchAll(THEME_DESTRUCTURE)].map(match => lineOf((match.index ?? 0) + match[0].indexOf(THEME_VARIABLE))) : [];
+  const lines = content.split('\n');
+  // an example in a comment (a JSDoc block, say) is not a read
+  const destructured = code ? [...content.matchAll(THEME_DESTRUCTURE)].map(match => lineOf((match.index ?? 0) + match[0].indexOf(THEME_VARIABLE))).filter(line => !COMMENT_LINE.test(lines[line - 1])) : [];
   const replaced: number[] = [];
   const left: number[] = [];
-  const text = content.split('\n').map((line, index) => {
+  const text = lines.map((line, index) => {
     if (!line.includes(THEME_VARIABLE)) return line;
     // only in the line's code: a string or a trailing comment on it keeps its text (sourceView masks both)
     const lineCode = code && !COMMENT_LINE.test(line) ? sourceView(line).code : null;
