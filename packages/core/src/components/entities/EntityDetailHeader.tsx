@@ -36,6 +36,7 @@ import { CopyableId } from '../shared/CopyableId'
 import { sel } from '../../lib/test'
 import { usePermissions } from '../../lib/permissions/hooks'
 import type { EntityConfig } from '../../lib/entities/types'
+import { getRecordTitle } from '../../lib/entities/entity-text'
 import type { Permission } from '../../lib/permissions/types'
 
 export interface EntityDetailHeaderProps {
@@ -148,16 +149,12 @@ export function EntityDetailHeader({
     switch (mode) {
       case 'create':
         return tEntities('actions.create', { entity: entityConfig.names.singular })
+      // The record's own name (#421): its title, or the field its list leads with
       case 'edit':
-        return entity?.title as string ||
-          entity?.name as string ||
-          tEntities('actions.edit', { entity: entityConfig.names.singular })
+        return getRecordTitle(entityConfig, entity, tEntities('actions.edit', { entity: entityConfig.names.singular }))
       case 'view':
       default:
-        return entity?.title as string ||
-          entity?.name as string ||
-          entity?.displayName as string ||
-          entityConfig.names.singular
+        return getRecordTitle(entityConfig, entity, entityConfig.names.singular)
     }
   })()
 

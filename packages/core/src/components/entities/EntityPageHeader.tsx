@@ -6,12 +6,13 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import React from 'react'
 import Link from 'next/link'
 import { Button } from '../ui/button'
 import { ArrowLeft } from 'lucide-react'
 import type { EntityConfig } from '../../lib/entities/types'
+import { entityNameInText, getRecordTitle } from '../../lib/entities/entity-text'
 
 export interface EntityPageHeaderProps {
   entityConfig: EntityConfig
@@ -29,6 +30,7 @@ export function EntityPageHeader({
   className
 }: EntityPageHeaderProps) {
   const text = useTranslations('entities.header')
+  const locale = useLocale()
   const Icon = entityConfig.icon
 
   // Determine title based on mode
@@ -37,10 +39,10 @@ export function EntityPageHeader({
       case 'create':
         return text('create', { entity: entityConfig.names.singular })
       case 'edit':
-        return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : text('edit', { entity: entityConfig.names.singular }))
+        return getRecordTitle(entityConfig, data, text('edit', { entity: entityConfig.names.singular }))
       case 'view':
       default:
-        return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : entityConfig.names.singular)
+        return getRecordTitle(entityConfig, data, entityConfig.names.singular)
     }
   }
 
@@ -48,9 +50,9 @@ export function EntityPageHeader({
   const getSubtitle = (): string => {
     switch (mode) {
       case 'create':
-        return text('newEntity', { entity: entityConfig.names.singular.toLowerCase() })
+        return text('newEntity', { entity: entityNameInText(entityConfig.names.singular, locale) })
       case 'edit':
-        return text('editing', { entity: entityConfig.names.singular.toLowerCase(), id: typeof data?.id === 'string' ? data.id : text('notAvailable') })
+        return text('editing', { entity: entityNameInText(entityConfig.names.singular, locale), id: typeof data?.id === 'string' ? data.id : text('notAvailable') })
       case 'view':
       default:
         return text('viewing', { entity: entityConfig.names.singular, id: typeof data?.id === 'string' ? data.id : text('notAvailable') })
