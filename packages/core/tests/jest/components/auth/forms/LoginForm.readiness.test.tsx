@@ -140,6 +140,7 @@ describe('LoginForm runtime readiness states', () => {
     expect(byCy('auth.login.demoAccounts')).toHaveTextContent('sample@example.test')
     expect(byCy('auth.login.demoAccounts')).toHaveTextContent('Pandora1234')
     expect(byCy('auth.login.signupLink')).not.toBeInTheDocument()
+    expect(document.querySelector('a[href="/forgot-password"]')).not.toBeInTheDocument()
   })
 
   describe('in a domain-restricted project', () => {
@@ -172,5 +173,6 @@ describe('LoginForm runtime readiness states', () => {
 
     expect(byCy('auth.login.demoAccounts')).not.toBeInTheDocument()
     expect(byCy('auth.login.signupLink')).toBeInTheDocument()
+    expect(document.querySelector('a[href="/forgot-password"]')).toBeInTheDocument()
   })
 })

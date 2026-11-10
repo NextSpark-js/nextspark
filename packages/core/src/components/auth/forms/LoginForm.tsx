@@ -1129,14 +1129,16 @@ function ReadyLoginForm({ methods, demoAccounts }: { methods: AuthLoginMethod[];
                   {t('login.form.rememberMe')}
                 </Label>
               </div>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
-                aria-label={t('login.form.forgotPasswordAria')}
-                                data-cy={sel('auth.login.forgotPassword')}
-              >
-                {t('login.form.forgotPassword')}
-              </Link>
+              {!demoAccounts && (
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+                  aria-label={t('login.form.forgotPasswordAria')}
+                                  data-cy={sel('auth.login.forgotPassword')}
+                >
+                  {t('login.form.forgotPassword')}
+                </Link>
+              )}
             </div>
 
             <Button
