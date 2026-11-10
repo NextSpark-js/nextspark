@@ -4,8 +4,10 @@
  * `.nextspark/registries`. Needs that project, so it runs only when NEXTSPARK_PACKED_PROJECT names one:
  *
  *   ./scripts/packages/pack.sh --all --output <dir>/.packages, then create-nextspark-app with those tarballs,
- *   `pnpm add pg-boss` in the project, and in config/app.config.ts
- *   jobs: { enabled: true, shutdownTimeout: 10, queues: { 'purge-teams': { handler: 'teams:purge-deleted' } } }
+ *   `pnpm add pg-boss` in the project, in config/app.config.ts
+ *   jobs: { enabled: true, shutdownTimeout: 10, queues: { ping: { handler: 'worker-check:ping' } } }
+ *   and a lib/scheduled-actions/index.ts that imports core, the documented form, and registers the handler:
+ *   registerScheduledAction('worker-check:ping', async () => { console.log('[worker-check] ping handled') })
  *
  * The test starts its own PostgreSQL cluster (initdb on the PATH), migrates it with the project's CLI, runs the worker
  * the installed CLI (`nextspark worker`), directly so SIGTERM reaches it, enqueues a job and sends SIGTERM.
@@ -60,11 +62,11 @@ test('the worker runs from a project generated from the packed tarballs', { skip
     const boss = new PgBoss(${JSON.stringify(url('owner'))})
     boss.on('error', () => {})
     await boss.start()
-    await boss.send('purge-teams', {})
+    await boss.send('ping', {})
     await boss.stop({ graceful: false })
   `], { cwd: project, encoding: 'utf8' })
   assert.equal(sent.status, 0, sent.stderr)
-  await until('the job to run', /Purged 0 deleted team\(s\)/, 30000)
+  await until('the job to run', /\[worker-check\] ping handled/, 30000)
 
   child.kill('SIGTERM')
   assert.equal(await exited, 0, output)

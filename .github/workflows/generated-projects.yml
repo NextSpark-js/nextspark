@@ -162,8 +162,11 @@ jobs:
         working-directory: ${{ runner.temp }}/project/app
         run: |
           pnpm add -w pg-boss@12.37.1
-          sed -i "s#^export const APP_CONFIG_OVERRIDES = {#&\n  jobs: { enabled: true, shutdownTimeout: 10, queues: { 'purge-teams': { handler: 'teams:purge-deleted' } } },#" config/app.config.ts
-          grep -q "'purge-teams'" config/app.config.ts
+          sed -i "s#^export const APP_CONFIG_OVERRIDES = {#&\n  jobs: { enabled: true, shutdownTimeout: 10, queues: { ping: { handler: 'worker-check:ping' } } },#" config/app.config.ts
+          grep -q "worker-check:ping" config/app.config.ts
+          # A project handler module that imports core, the documented form: on Node 22.14 it reaches the registries through require
+          mkdir -p lib/scheduled-actions
+          cp "$GITHUB_WORKSPACE/packages/cli/tests/fixtures/worker-project-handlers.ts" lib/scheduled-actions/index.ts
           test -x /usr/lib/postgresql/16/bin/initdb || { echo "::error::PostgreSQL 16 binaries not found at /usr/lib/postgresql/16/bin"; exit 1; }
           cd "$GITHUB_WORKSPACE"
           PATH="$PATH:/usr/lib/postgresql/16/bin" NEXTSPARK_PACKED_PROJECT="$PROJECT/app" pnpm exec tsx --test packages/cli/tests/worker-packaged-project.test.ts

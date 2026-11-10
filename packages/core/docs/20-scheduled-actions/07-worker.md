@@ -79,6 +79,8 @@ The two can coexist: the worker only runs the queues you declare in `jobs`, and 
 
 3. Register the handlers as for any Scheduled Action (`registerAllHandlers` of the project, or a core handler). A queue whose handler is not registered stops the worker at start with a message naming it.
 
+   Write handlers as ES modules: do not rely on `__dirname`, `require` or `module.exports`.
+
 4. Run the worker:
 
    ```bash
