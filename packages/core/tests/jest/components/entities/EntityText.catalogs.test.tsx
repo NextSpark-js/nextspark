@@ -84,8 +84,8 @@ import { useEntityConfig, clearEntityConfigCache } from '@/core/hooks/useEntityC
 const RECORD = { id: 'task-1', title: 'Informe trimestral', status: 'in-progress', priority: 'urgent', createdAt: '2026-01-02T10:00:00Z', updatedAt: '2026-01-02T10:00:00Z' }
 
 const LOCALES = {
-  es: { core: esCore, tasks: esTasks, names: ['Tareas', 'tarea'], title: 'Título', titlePlaceholder: 'Ingresa el título de la tarea...', titleHelp: 'El título de la tarea', status: 'Estado', inProgress: 'En progreso', urgent: 'Urgente', todo: 'Por hacer', priority: 'Prioridad' },
-  de: { core: deCore, tasks: deTasks, names: ['Aufgaben', 'Aufgabe'], title: 'Titel', titlePlaceholder: 'Aufgabentitel eingeben...', titleHelp: 'Der Titel der Aufgabe', status: 'Status', inProgress: 'In Bearbeitung', urgent: 'Dringend', todo: 'Zu erledigen', priority: 'Priorität' },
+  es: { core: esCore, tasks: esTasks, names: ['Tareas', 'tarea'], manage: 'Administra tus tareas', title: 'Título', titlePlaceholder: 'Ingresa el título de la tarea...', titleHelp: 'El título de la tarea', status: 'Estado', inProgress: 'En progreso', urgent: 'Urgente', todo: 'Por hacer', priority: 'Prioridad' },
+  de: { core: deCore, tasks: deTasks, names: ['Aufgaben', 'Aufgabe'], manage: 'Verwalten Sie Ihre Aufgaben', title: 'Titel', titlePlaceholder: 'Aufgabentitel eingeben...', titleHelp: 'Der Titel der Aufgabe', status: 'Status', inProgress: 'In Bearbeitung', urgent: 'Dringend', todo: 'Zu erledigen', priority: 'Priorität' },
 } as const
 
 function useLocaleCatalog(locale: keyof typeof LOCALES, tasks: Messages = LOCALES[locale].tasks as Messages) {
@@ -117,6 +117,8 @@ describe.each(['es', 'de'] as const)('the tasks of the starter in %s', (locale) 
     const { rerender } = render(<EntityListWrapper entityType="tasks" />)
 
     expect(await screen.findByRole('heading', { name: text.names[0] })).toBeTruthy()
+    // the entity name inside a sentence: lower case in Spanish, capitalized in German
+    expect(screen.getByText(text.manage)).toBeTruthy()
     // the list waits one render for the URL filters of the entity's filter schema (useUrlFilters re-parses in the app)
     rerender(<EntityListWrapper entityType="tasks" />)
     await waitFor(() => expect(screen.getByText(RECORD.title)).toBeTruthy())
