@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
@@ -26,6 +26,7 @@ import {
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { sumNumeric, toNumber } from '@/lib/crm-utils'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
 interface Opportunity {
@@ -59,10 +60,11 @@ function StageBadge({ stage }: { stage?: string }) {
 
 // Status badge component
 function StatusBadge({ status }: { status?: Opportunity['status'] }) {
+    const t = useTranslations('crm.list')
     const config = {
-        open: { label: 'Open', className: 'bg-amber-500/10 text-amber-600', icon: Clock },
-        won: { label: 'Won', className: 'bg-emerald-500/10 text-emerald-600', icon: CheckCircle2 },
-        lost: { label: 'Lost', className: 'bg-muted text-muted-foreground', icon: Target },
+        open: { label: t('opportunities.status.open'), className: 'bg-amber-500/10 text-amber-600', icon: Clock },
+        won: { label: t('opportunities.status.won'), className: 'bg-emerald-500/10 text-emerald-600', icon: CheckCircle2 },
+        lost: { label: t('opportunities.status.lost'), className: 'bg-muted text-muted-foreground', icon: Target },
     }
 
     const statusConfig = config[status || 'open'] || config.open
@@ -98,6 +100,7 @@ function ProbabilityIndicator({ probability }: { probability?: number }) {
 }
 
 export default function OpportunitiesPage() {
+    const t = useTranslations('crm.list')
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
@@ -128,11 +131,11 @@ export default function OpportunitiesPage() {
 
     // Stats
     const stats = useMemo(() => {
-        const totalValue = opportunities.reduce((sum, o) => sum + (o.amount || 0), 0)
+        const totalValue = sumNumeric(opportunities.map(o => o.amount))
         const openCount = opportunities.filter(o => o.status !== 'won' && o.status !== 'lost').length
         const wonCount = opportunities.filter(o => o.status === 'won').length
         const avgProbability = opportunities.length > 0
-            ? Math.round(opportunities.reduce((sum, o) => sum + (o.probability || 0), 0) / opportunities.length)
+            ? Math.round(sumNumeric(opportunities.map(o => o.probability)) / opportunities.length)
             : 0
 
         return {
@@ -157,7 +160,7 @@ export default function OpportunitiesPage() {
     const columns: Column<Opportunity>[] = [
         {
             key: 'name',
-            header: 'Opportunity',
+            header: t('opportunities.columns.opportunity'),
             sortable: true,
             render: (_, opportunity) => (
                 <div className="flex items-center gap-3">
@@ -175,7 +178,7 @@ export default function OpportunitiesPage() {
         },
         {
             key: 'companyName',
-            header: 'Company',
+            header: t('opportunities.columns.company'),
             sortable: true,
             render: (value, opportunity) => value ? (
                 <button
@@ -194,35 +197,35 @@ export default function OpportunitiesPage() {
         },
         {
             key: 'amount',
-            header: 'Value',
+            header: t('opportunities.columns.value'),
             sortable: true,
             render: (value, opportunity) => (
                 <span className="font-semibold text-primary">
-                    {formatCurrency(value || 0, opportunity.currency)}
+                    {formatCurrency(toNumber(value) ?? 0, opportunity.currency)}
                 </span>
             ),
         },
         {
             key: 'stage',
-            header: 'Stage',
+            header: t('opportunities.columns.stage'),
             sortable: true,
             render: (value) => <StageBadge stage={value} />,
         },
         {
             key: 'probability',
-            header: 'Probability',
+            header: t('opportunities.columns.probability'),
             sortable: true,
             render: (value) => <ProbabilityIndicator probability={value} />,
         },
         {
             key: 'status',
-            header: 'Status',
+            header: t('opportunities.columns.status'),
             sortable: true,
             render: (value) => <StatusBadge status={value} />,
         },
         {
             key: 'expectedCloseDate',
-            header: 'Expected Close',
+            header: t('opportunities.columns.expectedClose'),
             sortable: true,
             render: (value) => value ? (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -237,7 +240,7 @@ export default function OpportunitiesPage() {
     const bulkActions: BulkAction[] = [
         {
             id: 'export',
-            label: 'Export',
+            label: t('common.export'),
             icon: <Download className="w-4 h-4" />,
             onClick: (ids) => {
                 console.log('Export opportunities:', ids)
@@ -246,11 +249,11 @@ export default function OpportunitiesPage() {
         // Only show delete action if user has permission
         ...(canDeleteOpportunities ? [{
             id: 'delete',
-            label: 'Delete',
+            label: t('common.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             variant: 'destructive' as const,
             onClick: async (ids: string[]) => {
-                if (confirm(`Delete ${ids.length} opportunity(ies)?`)) {
+                if (confirm(t('opportunities.deleteConfirm', { count: ids.length }))) {
                     console.log('Delete opportunities:', ids)
                 }
             },
@@ -271,15 +274,15 @@ export default function OpportunitiesPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                        Opportunities
+                        {t('opportunities.title')}
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Track and manage your sales opportunities
+                        {t('opportunities.subtitle')}
                     </p>
                 </div>
                 <Button onClick={handleAddOpportunity} className="gap-2" data-cy="opportunities-add">
                     <Plus className="w-4 h-4" />
-                    Add Opportunity
+                    {t('opportunities.add')}
                 </Button>
             </div>
 
@@ -292,7 +295,7 @@ export default function OpportunitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Total Opportunities</p>
+                            <p className="text-xs text-muted-foreground">{t('opportunities.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -304,7 +307,7 @@ export default function OpportunitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalValue)}</p>
-                            <p className="text-xs text-muted-foreground">Pipeline Value</p>
+                            <p className="text-xs text-muted-foreground">{t('opportunities.stats.pipelineValue')}</p>
                         </div>
                     </div>
                 </div>
@@ -316,7 +319,7 @@ export default function OpportunitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.wonCount}</p>
-                            <p className="text-xs text-muted-foreground">Won</p>
+                            <p className="text-xs text-muted-foreground">{t('opportunities.stats.won')}</p>
                         </div>
                     </div>
                 </div>
@@ -328,7 +331,7 @@ export default function OpportunitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.avgProbability}%</p>
-                            <p className="text-xs text-muted-foreground">Avg. Probability</p>
+                            <p className="text-xs text-muted-foreground">{t('opportunities.stats.avgProbability')}</p>
                         </div>
                     </div>
                 </div>
@@ -341,11 +344,11 @@ export default function OpportunitiesPage() {
                 bulkActions={bulkActions}
                 onRowClick={handleRowClick}
                 isLoading={isLoading}
-                searchPlaceholder="Search opportunities..."
+                searchPlaceholder={t('opportunities.search')}
                 searchFields={['name', 'companyName', 'stage']}
                 pageSize={15}
-                emptyMessage="No opportunities yet"
-                emptyDescription="Start adding opportunities to track your sales pipeline."
+                emptyMessage={t('opportunities.empty')}
+                emptyDescription={t('opportunities.emptyDescription')}
                 entitySlug="opportunities"
             />
         </div>

@@ -126,6 +126,285 @@
         "description": "Schedule calls, meetings, and tasks.",
         "action": "Schedule activity"
       }
+    },
+
+    "list": {
+      "common": {
+        "export": "Export",
+        "delete": "Delete",
+        "never": "Never",
+        "moreTags": "+{count} more"
+      },
+      "table": {
+        "search": "Search...",
+        "noData": "No data found",
+        "noDataDescription": "Try adjusting your filters or add new records.",
+        "selected": "{count} selected",
+        "clear": "Clear",
+        "showing": "Showing {from} to {to} of {total} results",
+        "previous": "Previous",
+        "next": "Next"
+      },
+      "sidebar": {
+        "navigation": "Navigation",
+        "user": "User",
+        "profile": "Profile",
+        "signOut": "Sign out",
+        "nav": {
+          "dashboard": "Dashboard",
+          "leads": "Leads",
+          "contacts": "Contacts",
+          "companies": "Companies",
+          "pipelines": "Pipelines",
+          "products": "Products",
+          "campaigns": "Campaigns",
+          "activities": "Activities",
+          "settings": "Settings"
+        }
+      },
+      "contacts": {
+        "title": "Contacts",
+        "subtitle": "Manage your business contacts and relationships",
+        "add": "Add Contact",
+        "sendEmail": "Send Email",
+        "deleteConfirm": "Delete {count, plural, one {# contact} other {# contacts}}?",
+        "search": "Search contacts...",
+        "empty": "No contacts yet",
+        "emptyDescription": "Start adding contacts to build your network.",
+        "stats": {
+          "total": "Total Contacts",
+          "withCompany": "With Company",
+          "recentlyActive": "Recently Active",
+          "withEmail": "With Email"
+        },
+        "columns": {
+          "name": "Name",
+          "contactInfo": "Contact Info",
+          "company": "Company",
+          "tags": "Tags",
+          "lastActivity": "Last Activity"
+        }
+      },
+      "leads": {
+        "title": "Leads",
+        "subtitle": "Manage and qualify your sales leads",
+        "add": "Add Lead",
+        "convert": "Convert",
+        "deleteConfirm": "Delete {count, plural, one {# lead} other {# leads}}?",
+        "search": "Search leads...",
+        "empty": "No leads yet",
+        "emptyDescription": "Start capturing leads to grow your sales pipeline.",
+        "score": {
+          "hot": "Hot",
+          "warm": "Warm",
+          "cold": "Cold"
+        },
+        "status": {
+          "new": "New",
+          "contacted": "Contacted",
+          "qualified": "Qualified",
+          "converted": "Converted",
+          "lost": "Lost"
+        },
+        "stats": {
+          "total": "Total Leads",
+          "new": "New",
+          "qualified": "Qualified",
+          "hot": "Hot Leads"
+        },
+        "columns": {
+          "name": "Name",
+          "contact": "Contact",
+          "company": "Company",
+          "score": "Score",
+          "status": "Status",
+          "created": "Created"
+        }
+      },
+      "companies": {
+        "title": "Companies",
+        "subtitle": "Manage your business accounts and organizations",
+        "add": "Add Company",
+        "deleteConfirm": "Delete {count, plural, one {# company} other {# companies}}?",
+        "search": "Search companies...",
+        "empty": "No companies yet",
+        "emptyDescription": "Start adding companies to manage your accounts.",
+        "size": {
+          "startup": "Startup",
+          "small": "Small",
+          "medium": "Medium",
+          "enterprise": "Enterprise"
+        },
+        "stats": {
+          "total": "Companies",
+          "contacts": "Contacts",
+          "opportunities": "Opportunities",
+          "pipelineValue": "Pipeline Value"
+        },
+        "columns": {
+          "company": "Company",
+          "website": "Website",
+          "size": "Size",
+          "contacts": "Contacts",
+          "opportunities": "Opportunities",
+          "pipelineValue": "Pipeline Value"
+        }
+      },
+      "opportunities": {
+        "title": "Opportunities",
+        "subtitle": "Track and manage your sales opportunities",
+        "add": "Add Opportunity",
+        "deleteConfirm": "Delete {count, plural, one {# opportunity} other {# opportunities}}?",
+        "search": "Search opportunities...",
+        "empty": "No opportunities yet",
+        "emptyDescription": "Start adding opportunities to track your sales pipeline.",
+        "status": {
+          "open": "Open",
+          "won": "Won",
+          "lost": "Lost"
+        },
+        "stats": {
+          "total": "Total Opportunities",
+          "pipelineValue": "Pipeline Value",
+          "won": "Won",
+          "avgProbability": "Avg. Probability"
+        },
+        "columns": {
+          "opportunity": "Opportunity",
+          "company": "Company",
+          "value": "Value",
+          "stage": "Stage",
+          "probability": "Probability",
+          "status": "Status",
+          "expectedClose": "Expected Close"
+        }
+      },
+      "activities": {
+        "title": "Activities",
+        "subtitle": "Track and manage your sales activities",
+        "add": "New Activity",
+        "timelineView": "Timeline view",
+        "listView": "List view",
+        "empty": "No activities yet",
+        "emptyDescription": "Schedule calls, meetings, and tasks to keep track of your sales activities.",
+        "filters": {
+          "all": "All",
+          "call": "Calls",
+          "email": "Emails",
+          "meeting": "Meetings",
+          "task": "Tasks",
+          "note": "Notes"
+        },
+        "status": {
+          "scheduled": "Scheduled",
+          "in_progress": "In Progress",
+          "completed": "Completed",
+          "cancelled": "Cancelled",
+          "overdue": "Overdue",
+          "unknown": "Unknown"
+        },
+        "timeline": {
+          "today": "Today",
+          "tomorrow": "Tomorrow",
+          "yesterday": "Yesterday",
+          "count": "{count, plural, one {# activity} other {# activities}}"
+        },
+        "stats": {
+          "total": "Total Activities",
+          "scheduled": "Scheduled",
+          "completed": "Completed",
+          "overdue": "Overdue"
+        }
+      },
+      "campaigns": {
+        "title": "Campaigns",
+        "subtitle": "Manage and track your marketing campaigns",
+        "add": "New Campaign",
+        "pause": "Pause",
+        "pauseConfirm": "Pause {count, plural, one {# campaign} other {# campaigns}}?",
+        "deleteConfirm": "Delete {count, plural, one {# campaign} other {# campaigns}}?",
+        "search": "Search campaigns...",
+        "empty": "No campaigns yet",
+        "emptyDescription": "Start creating campaigns to track your marketing efforts.",
+        "type": {
+          "email": "Email",
+          "social": "Social",
+          "ads": "Ads",
+          "content": "Content",
+          "event": "Event"
+        },
+        "status": {
+          "draft": "Draft",
+          "scheduled": "Scheduled",
+          "active": "Active",
+          "paused": "Paused",
+          "completed": "Completed"
+        },
+        "stats": {
+          "total": "Campaigns",
+          "active": "Active",
+          "leads": "Leads",
+          "conversions": "Conversions",
+          "spent": "Spent"
+        },
+        "columns": {
+          "campaign": "Campaign",
+          "type": "Type",
+          "status": "Status",
+          "duration": "Duration",
+          "budget": "Budget",
+          "leads": "Leads",
+          "conversions": "Conversions"
+        }
+      },
+      "products": {
+        "title": "Products",
+        "subtitle": "Manage your product catalog and pricing",
+        "add": "Add Product",
+        "sku": "SKU: {sku}",
+        "archive": "Archive",
+        "archiveConfirm": "Archive {count, plural, one {# product} other {# products}}?",
+        "deleteConfirm": "Delete {count, plural, one {# product} other {# products}}?",
+        "search": "Search products...",
+        "empty": "No products yet",
+        "emptyDescription": "Start adding products to build your catalog.",
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "discontinued": "Discontinued"
+        },
+        "stats": {
+          "total": "Products",
+          "active": "Active",
+          "totalRevenue": "Total Revenue",
+          "avgPrice": "Avg. Price"
+        },
+        "columns": {
+          "product": "Product",
+          "category": "Category",
+          "price": "Price",
+          "margin": "Margin",
+          "sales": "Sales",
+          "status": "Status"
+        }
+      },
+      "pipelines": {
+        "title": "Sales Pipelines",
+        "subtitle": "Manage your sales pipelines and track opportunities",
+        "add": "New Pipeline",
+        "create": "Create Pipeline",
+        "active": "Active",
+        "inactive": "Inactive",
+        "stages": "{count, plural, one {# stage} other {# stages}}",
+        "deals": "{count, plural, one {# deal} other {# deals}}",
+        "viewKanban": "View Kanban",
+        "empty": "No pipelines yet",
+        "emptyDescription": "Create your first sales pipeline to start tracking opportunities and managing your deals.",
+        "stats": {
+          "total": "Total Pipelines",
+          "active": "Active"
+        }
+      }
     }
   }
 }

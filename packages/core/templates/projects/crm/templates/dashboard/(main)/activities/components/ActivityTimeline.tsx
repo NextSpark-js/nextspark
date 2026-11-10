@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import React from 'react'
 import { ActivityCard, type Activity } from './ActivityCard'
 import { CalendarDays, Inbox } from 'lucide-react'
@@ -23,6 +23,7 @@ export function ActivityTimeline({
     groupByDate = true,
 }: ActivityTimelineProps) {
     const locale = useLocale()
+    const t = useTranslations('crm.list')
     // Group activities by date
     const groupedActivities = activities.reduce((acc, activity) => {
         const date = new Date(activity.dueDate)
@@ -52,13 +53,13 @@ export function ActivityTimeline({
         const isPast = date < today && !isToday
 
         if (isToday) {
-            return { main: 'Today', sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }), isToday: true }
+            return { main: t('activities.timeline.today'), sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }), isToday: true }
         }
         if (date.toDateString() === tomorrow.toDateString()) {
-            return { main: 'Tomorrow', sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) }
+            return { main: t('activities.timeline.tomorrow'), sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) }
         }
         if (date.toDateString() === yesterday.toDateString()) {
-            return { main: 'Yesterday', sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }), isPast: true }
+            return { main: t('activities.timeline.yesterday'), sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }), isPast: true }
         }
 
         return {
@@ -75,10 +76,10 @@ export function ActivityTimeline({
                     <Inbox className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                    No activities yet
+                    {t('activities.empty')}
                 </h3>
                 <p className="text-sm text-muted-foreground text-center max-w-sm">
-                    Schedule calls, meetings, and tasks to keep track of your sales activities.
+                    {t('activities.emptyDescription')}
                 </p>
             </div>
         )
@@ -138,7 +139,7 @@ export function ActivityTimeline({
                             </div>
                             <div className="flex-1 h-px bg-border ml-2" />
                             <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                                {groupedActivities[dateKey].length} {groupedActivities[dateKey].length === 1 ? 'activity' : 'activities'}
+                                {t('activities.timeline.count', { count: groupedActivities[dateKey].length })}
                             </span>
                         </div>
 

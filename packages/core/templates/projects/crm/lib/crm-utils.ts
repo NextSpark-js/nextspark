@@ -3,7 +3,21 @@
  * Helper functions for the CRM theme
  */
 
-import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
+import { formatLocaleDate, formatLocaleRelative } from '@nextsparkjs/core/lib/i18n/format'
+
+/**
+ * A number from a value that may arrive as a number or as a string (the API returns NUMERIC columns as strings),
+ * or null when it is not a finite number.
+ */
+export function toNumber(value: unknown): number | null {
+    const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN
+    return Number.isFinite(number) ? number : null
+}
+
+/** The sum of the valid numbers in `values`: one that is not a finite number is ignored instead of turning the total into NaN. */
+export function sumNumeric(values: unknown[]): number {
+    return values.reduce<number>((sum, value) => sum + (toNumber(value) ?? 0), 0)
+}
 
 /**
  * Format currency with proper symbol and decimals
@@ -95,29 +109,9 @@ export function formatRelativeDate(date: Date | string | null | undefined, local
         return '-'
     }
     const d = typeof date === 'string' ? new Date(date) : date
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000)
-
-    if (diffInSeconds < 60) {
-        return 'just now'
-    }
-
-    const diffInMinutes = Math.floor(diffInSeconds / 60)
-    if (diffInMinutes < 60) {
-        return `${diffInMinutes}m ago`
-    }
-
-    const diffInHours = Math.floor(diffInMinutes / 60)
-    if (diffInHours < 24) {
-        return `${diffInHours}h ago`
-    }
-
-    const diffInDays = Math.floor(diffInHours / 24)
-    if (diffInDays === 1) {
-        return 'yesterday'
-    }
-    if (diffInDays < 7) {
-        return `${diffInDays}d ago`
+    // within a week (past or future) in words of the locale ("yesterday", "hace 3 días"), then the date
+    if (Math.abs(Date.now() - d.getTime()) < 7 * 24 * 60 * 60 * 1000) {
+        return formatLocaleRelative(d, locale)
     }
 
     return formatLocaleDate(d, locale)

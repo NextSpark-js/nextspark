@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
@@ -29,6 +29,7 @@ import {
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { sumNumeric, toNumber } from '@/lib/crm-utils'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
@@ -50,12 +51,13 @@ interface Campaign {
 
 // Campaign type badge
 function TypeBadge({ type }: { type: Campaign['type'] }) {
+    const t = useTranslations('crm.list')
     const config = {
-        email: { label: 'Email', icon: Mail, className: 'bg-primary/10 text-primary' },
-        social: { label: 'Social', icon: Users, className: 'bg-violet-500/10 text-violet-600' },
-        ads: { label: 'Ads', icon: MousePointerClick, className: 'bg-amber-500/10 text-amber-600' },
-        content: { label: 'Content', icon: Megaphone, className: 'bg-emerald-500/10 text-emerald-600' },
-        event: { label: 'Event', icon: Calendar, className: 'bg-rose-500/10 text-rose-600' },
+        email: { label: t('campaigns.type.email'), icon: Mail, className: 'bg-primary/10 text-primary' },
+        social: { label: t('campaigns.type.social'), icon: Users, className: 'bg-violet-500/10 text-violet-600' },
+        ads: { label: t('campaigns.type.ads'), icon: MousePointerClick, className: 'bg-amber-500/10 text-amber-600' },
+        content: { label: t('campaigns.type.content'), icon: Megaphone, className: 'bg-emerald-500/10 text-emerald-600' },
+        event: { label: t('campaigns.type.event'), icon: Calendar, className: 'bg-rose-500/10 text-rose-600' },
     }
 
     const { label, icon: Icon, className } = config[type] || config.email
@@ -70,12 +72,13 @@ function TypeBadge({ type }: { type: Campaign['type'] }) {
 
 // Status badge
 function StatusBadge({ status }: { status: Campaign['status'] }) {
+    const t = useTranslations('crm.list')
     const config = {
-        draft: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
-        scheduled: { label: 'Scheduled', className: 'bg-amber-500/10 text-amber-600' },
-        active: { label: 'Active', className: 'bg-emerald-500/10 text-emerald-600' },
-        paused: { label: 'Paused', className: 'bg-orange-500/10 text-orange-600' },
-        completed: { label: 'Completed', className: 'bg-primary/10 text-primary' },
+        draft: { label: t('campaigns.status.draft'), className: 'bg-muted text-muted-foreground' },
+        scheduled: { label: t('campaigns.status.scheduled'), className: 'bg-amber-500/10 text-amber-600' },
+        active: { label: t('campaigns.status.active'), className: 'bg-emerald-500/10 text-emerald-600' },
+        paused: { label: t('campaigns.status.paused'), className: 'bg-orange-500/10 text-orange-600' },
+        completed: { label: t('campaigns.status.completed'), className: 'bg-primary/10 text-primary' },
     }
 
     const { label, className } = config[status] || config.draft
@@ -88,8 +91,10 @@ function StatusBadge({ status }: { status: Campaign['status'] }) {
 }
 
 // Budget progress bar
-function BudgetProgress({ budget, spent }: { budget?: number; spent?: number }) {
+function BudgetProgress({ budget: rawBudget, spent: rawSpent }: { budget?: number | string; spent?: number | string }) {
     const locale = useLocale()
+    const budget = toNumber(rawBudget)
+    const spent = toNumber(rawSpent)
     if (!budget) return <span className="text-muted-foreground">-</span>
 
     const percentage = spent ? Math.min((spent / budget) * 100, 100) : 0
@@ -115,6 +120,7 @@ function BudgetProgress({ budget, spent }: { budget?: number; spent?: number }) 
 }
 
 export default function CampaignsPage() {
+    const t = useTranslations('crm.list')
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
@@ -147,9 +153,9 @@ export default function CampaignsPage() {
     // Stats
     const stats = useMemo(() => {
         const active = campaigns.filter(c => c.status === 'active').length
-        const totalLeads = campaigns.reduce((sum, c) => sum + (c.leads || 0), 0)
-        const totalSpent = campaigns.reduce((sum, c) => sum + (c.spent || 0), 0)
-        const totalConversions = campaigns.reduce((sum, c) => sum + (c.conversions || 0), 0)
+        const totalLeads = sumNumeric(campaigns.map(c => c.leads))
+        const totalSpent = sumNumeric(campaigns.map(c => c.spent))
+        const totalConversions = sumNumeric(campaigns.map(c => c.conversions))
 
         return {
             total: campaigns.length,
@@ -181,7 +187,7 @@ export default function CampaignsPage() {
     const columns: Column<Campaign>[] = [
         {
             key: 'name',
-            header: 'Campaign',
+            header: t('campaigns.columns.campaign'),
             sortable: true,
             render: (_, campaign) => (
                 <div className="flex items-center gap-3">
@@ -201,19 +207,19 @@ export default function CampaignsPage() {
         },
         {
             key: 'type',
-            header: 'Type',
+            header: t('campaigns.columns.type'),
             sortable: true,
             render: (value) => <TypeBadge type={value} />,
         },
         {
             key: 'status',
-            header: 'Status',
+            header: t('campaigns.columns.status'),
             sortable: true,
             render: (value) => <StatusBadge status={value} />,
         },
         {
             key: 'dates',
-            header: 'Duration',
+            header: t('campaigns.columns.duration'),
             render: (_, campaign) => (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Calendar className="w-3.5 h-3.5" />
@@ -225,7 +231,7 @@ export default function CampaignsPage() {
         },
         {
             key: 'budget',
-            header: 'Budget',
+            header: t('campaigns.columns.budget'),
             sortable: true,
             render: (_, campaign) => (
                 <BudgetProgress budget={campaign.budget} spent={campaign.spent} />
@@ -234,7 +240,7 @@ export default function CampaignsPage() {
         },
         {
             key: 'leads',
-            header: 'Leads',
+            header: t('campaigns.columns.leads'),
             sortable: true,
             render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -245,7 +251,7 @@ export default function CampaignsPage() {
         },
         {
             key: 'conversions',
-            header: 'Conversions',
+            header: t('campaigns.columns.conversions'),
             sortable: true,
             render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -260,24 +266,24 @@ export default function CampaignsPage() {
     const bulkActions: BulkAction[] = [
         {
             id: 'export',
-            label: 'Export',
+            label: t('common.export'),
             icon: <Download className="w-4 h-4" />,
             onClick: (ids) => console.log('Export:', ids),
         },
         // Only show pause action if user has update permission
         ...(canUpdateCampaigns ? [{
             id: 'pause',
-            label: 'Pause',
+            label: t('campaigns.pause'),
             icon: <Pause className="w-4 h-4" />,
-            onClick: (ids: string[]) => { if (confirm(`Pause ${ids.length} campaigns?`)) console.log('Pause:', ids) },
+            onClick: (ids: string[]) => { if (confirm(t('campaigns.pauseConfirm', { count: ids.length }))) console.log('Pause:', ids) },
         }] : []),
         // Only show delete action if user has permission
         ...(canDeleteCampaigns ? [{
             id: 'delete',
-            label: 'Delete',
+            label: t('common.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             variant: 'destructive' as const,
-            onClick: (ids: string[]) => { if (confirm(`Delete ${ids.length} campaigns?`)) console.log('Delete:', ids) },
+            onClick: (ids: string[]) => { if (confirm(t('campaigns.deleteConfirm', { count: ids.length }))) console.log('Delete:', ids) },
         }] : []),
     ]
 
@@ -286,15 +292,15 @@ export default function CampaignsPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Campaigns</h1>
+                    <h1 className="text-2xl font-bold text-foreground tracking-tight">{t('campaigns.title')}</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage and track your marketing campaigns
+                        {t('campaigns.subtitle')}
                     </p>
                 </div>
                 <PermissionGate permission="campaigns.create">
                     <Button onClick={() => router.push('/dashboard/campaigns/create')} className="gap-2" data-cy="campaigns-add">
                         <Plus className="w-4 h-4" />
-                        New Campaign
+                        {t('campaigns.add')}
                     </Button>
                 </PermissionGate>
             </div>
@@ -308,7 +314,7 @@ export default function CampaignsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Campaigns</p>
+                            <p className="text-xs text-muted-foreground">{t('campaigns.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -319,7 +325,7 @@ export default function CampaignsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.active}</p>
-                            <p className="text-xs text-muted-foreground">Active</p>
+                            <p className="text-xs text-muted-foreground">{t('campaigns.stats.active')}</p>
                         </div>
                     </div>
                 </div>
@@ -330,7 +336,7 @@ export default function CampaignsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.totalLeads}</p>
-                            <p className="text-xs text-muted-foreground">Leads</p>
+                            <p className="text-xs text-muted-foreground">{t('campaigns.stats.leads')}</p>
                         </div>
                     </div>
                 </div>
@@ -341,7 +347,7 @@ export default function CampaignsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.totalConversions}</p>
-                            <p className="text-xs text-muted-foreground">Conversions</p>
+                            <p className="text-xs text-muted-foreground">{t('campaigns.stats.conversions')}</p>
                         </div>
                     </div>
                 </div>
@@ -352,7 +358,7 @@ export default function CampaignsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalSpent)}</p>
-                            <p className="text-xs text-muted-foreground">Spent</p>
+                            <p className="text-xs text-muted-foreground">{t('campaigns.stats.spent')}</p>
                         </div>
                     </div>
                 </div>
@@ -365,11 +371,11 @@ export default function CampaignsPage() {
                 bulkActions={bulkActions}
                 onRowClick={(c) => router.push(`/dashboard/campaigns/${c.id}`)}
                 isLoading={isLoading}
-                searchPlaceholder="Search campaigns..."
+                searchPlaceholder={t('campaigns.search')}
                 searchFields={['name', 'description', 'type']}
                 pageSize={15}
-                emptyMessage="No campaigns yet"
-                emptyDescription="Start creating campaigns to track your marketing efforts."
+                emptyMessage={t('campaigns.empty')}
+                emptyDescription={t('campaigns.emptyDescription')}
                 entitySlug="campaigns"
             />
         </div>

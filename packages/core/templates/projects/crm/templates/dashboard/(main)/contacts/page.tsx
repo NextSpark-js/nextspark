@@ -5,8 +5,8 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
-import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleDate, formatLocaleNumber, formatLocaleRelative } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -46,6 +46,7 @@ interface Contact {
 
 // Tags component
 function ContactTags({ tags }: { tags?: string[] }) {
+    const t = useTranslations('crm.list')
     if (!tags || tags.length === 0) return <span className="text-muted-foreground">-</span>
 
     return (
@@ -61,7 +62,7 @@ function ContactTags({ tags }: { tags?: string[] }) {
             ))}
             {tags.length > 3 && (
                 <span className="text-xs text-muted-foreground">
-                    +{tags.length - 3} more
+                    {t('common.moreTags', { count: tags.length - 3 })}
                 </span>
             )}
         </div>
@@ -71,25 +72,12 @@ function ContactTags({ tags }: { tags?: string[] }) {
 // Relative time component
 function RelativeTime({ date }: { date?: string }) {
     const locale = useLocale()
-    if (!date) return <span className="text-muted-foreground">Never</span>
+    const t = useTranslations('crm.list')
+    if (!date) return <span className="text-muted-foreground">{t('common.never')}</span>
 
-    const now = new Date()
     const past = new Date(date)
-    const diffMs = now.getTime() - past.getTime()
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-    let text = ''
-    if (diffDays === 0) {
-        text = 'Today'
-    } else if (diffDays === 1) {
-        text = 'Yesterday'
-    } else if (diffDays < 7) {
-        text = `${diffDays} days ago`
-    } else if (diffDays < 30) {
-        text = `${Math.floor(diffDays / 7)} weeks ago`
-    } else {
-        text = formatLocaleDate(past, locale)
-    }
+    const diffDays = Math.floor((Date.now() - past.getTime()) / (1000 * 60 * 60 * 24))
+    const text = diffDays < 30 ? formatLocaleRelative(past, locale) : formatLocaleDate(past, locale)
 
     return (
         <div className={cn(
@@ -103,6 +91,8 @@ function RelativeTime({ date }: { date?: string }) {
 }
 
 export default function ContactsPage() {
+    const t = useTranslations('crm.list')
+    const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
     const [contacts, setContacts] = useState<Contact[]>([])
@@ -151,7 +141,7 @@ export default function ContactsPage() {
     const columns: Column<Contact>[] = [
         {
             key: 'name',
-            header: 'Name',
+            header: t('contacts.columns.name'),
             sortable: true,
             render: (_, contact) => (
                 <div className="flex items-center gap-3">
@@ -171,7 +161,7 @@ export default function ContactsPage() {
         },
         {
             key: 'contact',
-            header: 'Contact Info',
+            header: t('contacts.columns.contactInfo'),
             render: (_, contact) => (
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -189,7 +179,7 @@ export default function ContactsPage() {
         },
         {
             key: 'companyName',
-            header: 'Company',
+            header: t('contacts.columns.company'),
             sortable: true,
             render: (value, contact) => value ? (
                 <button
@@ -208,12 +198,12 @@ export default function ContactsPage() {
         },
         {
             key: 'tags',
-            header: 'Tags',
+            header: t('contacts.columns.tags'),
             render: (value) => <ContactTags tags={value} />,
         },
         {
             key: 'lastActivityAt',
-            header: 'Last Activity',
+            header: t('contacts.columns.lastActivity'),
             sortable: true,
             render: (value) => <RelativeTime date={value} />,
         },
@@ -223,7 +213,7 @@ export default function ContactsPage() {
     const bulkActions: BulkAction[] = [
         {
             id: 'email',
-            label: 'Send Email',
+            label: t('contacts.sendEmail'),
             icon: <Send className="w-4 h-4" />,
             onClick: (ids) => {
                 console.log('Send email to:', ids)
@@ -232,7 +222,7 @@ export default function ContactsPage() {
         },
         {
             id: 'export',
-            label: 'Export',
+            label: t('common.export'),
             icon: <Download className="w-4 h-4" />,
             onClick: (ids) => {
                 console.log('Export contacts:', ids)
@@ -242,11 +232,11 @@ export default function ContactsPage() {
         // Only show delete action if user has permission
         ...(canDeleteContacts ? [{
             id: 'delete',
-            label: 'Delete',
+            label: t('common.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             variant: 'destructive' as const,
             onClick: async (ids: string[]) => {
-                if (confirm(`Delete ${ids.length} contact(s)?`)) {
+                if (confirm(t('contacts.deleteConfirm', { count: ids.length }))) {
                     console.log('Delete contacts:', ids)
                     // Implement delete logic
                 }
@@ -268,15 +258,15 @@ export default function ContactsPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                        Contacts
+                        {t('contacts.title')}
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage your business contacts and relationships
+                        {t('contacts.subtitle')}
                     </p>
                 </div>
                 <Button onClick={handleAddContact} className="gap-2" data-cy="contacts-add">
                     <Plus className="w-4 h-4" />
-                    Add Contact
+                    {t('contacts.add')}
                 </Button>
             </div>
 
@@ -288,8 +278,8 @@ export default function ContactsPage() {
                             <Users className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Total Contacts</p>
+                            <p className="text-2xl font-bold text-foreground">{formatLocaleNumber(stats.total, locale)}</p>
+                            <p className="text-xs text-muted-foreground">{t('contacts.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -300,8 +290,8 @@ export default function ContactsPage() {
                             <Building2 className="w-5 h-5 text-amber-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-foreground">{stats.withCompany}</p>
-                            <p className="text-xs text-muted-foreground">With Company</p>
+                            <p className="text-2xl font-bold text-foreground">{formatLocaleNumber(stats.withCompany, locale)}</p>
+                            <p className="text-xs text-muted-foreground">{t('contacts.stats.withCompany')}</p>
                         </div>
                     </div>
                 </div>
@@ -312,8 +302,8 @@ export default function ContactsPage() {
                             <Clock className="w-5 h-5 text-emerald-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-foreground">{stats.recentlyActive}</p>
-                            <p className="text-xs text-muted-foreground">Recently Active</p>
+                            <p className="text-2xl font-bold text-foreground">{formatLocaleNumber(stats.recentlyActive, locale)}</p>
+                            <p className="text-xs text-muted-foreground">{t('contacts.stats.recentlyActive')}</p>
                         </div>
                     </div>
                 </div>
@@ -324,8 +314,8 @@ export default function ContactsPage() {
                             <Mail className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-foreground">{stats.withEmail}</p>
-                            <p className="text-xs text-muted-foreground">With Email</p>
+                            <p className="text-2xl font-bold text-foreground">{formatLocaleNumber(stats.withEmail, locale)}</p>
+                            <p className="text-xs text-muted-foreground">{t('contacts.stats.withEmail')}</p>
                         </div>
                     </div>
                 </div>
@@ -338,11 +328,11 @@ export default function ContactsPage() {
                 bulkActions={bulkActions}
                 onRowClick={handleRowClick}
                 isLoading={isLoading}
-                searchPlaceholder="Search contacts..."
+                searchPlaceholder={t('contacts.search')}
                 searchFields={['firstName', 'lastName', 'email', 'companyName']}
                 pageSize={15}
-                emptyMessage="No contacts yet"
-                emptyDescription="Start adding contacts to build your network."
+                emptyMessage={t('contacts.empty')}
+                emptyDescription={t('contacts.emptyDescription')}
                 entitySlug="contacts"
             />
         </div>

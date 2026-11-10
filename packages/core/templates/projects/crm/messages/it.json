@@ -117,6 +117,285 @@
         "description": "Pianifica chiamate, riunioni e attività.",
         "action": "Pianifica attività"
       }
+    },
+
+    "list": {
+      "common": {
+        "export": "Esporta",
+        "delete": "Elimina",
+        "never": "Mai",
+        "moreTags": "+{count} in più"
+      },
+      "table": {
+        "search": "Cerca...",
+        "noData": "Nessun dato trovato",
+        "noDataDescription": "Prova a modificare i filtri o aggiungi nuovi record.",
+        "selected": "{count} selezionati",
+        "clear": "Deseleziona",
+        "showing": "Risultati da {from} a {to} su {total}",
+        "previous": "Precedente",
+        "next": "Successivo"
+      },
+      "sidebar": {
+        "navigation": "Navigazione",
+        "user": "Utente",
+        "profile": "Profilo",
+        "signOut": "Esci",
+        "nav": {
+          "dashboard": "Dashboard",
+          "leads": "Lead",
+          "contacts": "Contatti",
+          "companies": "Aziende",
+          "pipelines": "Pipeline",
+          "products": "Prodotti",
+          "campaigns": "Campagne",
+          "activities": "Attività",
+          "settings": "Impostazioni"
+        }
+      },
+      "contacts": {
+        "title": "Contatti",
+        "subtitle": "Gestisci i tuoi contatti e le tue relazioni commerciali",
+        "add": "Aggiungi contatto",
+        "sendEmail": "Invia e-mail",
+        "deleteConfirm": "Eliminare {count, plural, one {# contatto} other {# contatti}}?",
+        "search": "Cerca contatti...",
+        "empty": "Ancora nessun contatto",
+        "emptyDescription": "Inizia ad aggiungere contatti per costruire la tua rete.",
+        "stats": {
+          "total": "Totale contatti",
+          "withCompany": "Con azienda",
+          "recentlyActive": "Attivi di recente",
+          "withEmail": "Con e-mail"
+        },
+        "columns": {
+          "name": "Nome",
+          "contactInfo": "Recapiti",
+          "company": "Azienda",
+          "tags": "Tag",
+          "lastActivity": "Ultima attività"
+        }
+      },
+      "leads": {
+        "title": "Lead",
+        "subtitle": "Gestisci e qualifica i tuoi lead di vendita",
+        "add": "Aggiungi lead",
+        "convert": "Converti",
+        "deleteConfirm": "Eliminare {count, plural, one {# lead} other {# lead}}?",
+        "search": "Cerca lead...",
+        "empty": "Ancora nessun lead",
+        "emptyDescription": "Inizia ad acquisire lead per far crescere la tua pipeline di vendita.",
+        "score": {
+          "hot": "Caldo",
+          "warm": "Tiepido",
+          "cold": "Freddo"
+        },
+        "status": {
+          "new": "Nuovo",
+          "contacted": "Contattato",
+          "qualified": "Qualificato",
+          "converted": "Convertito",
+          "lost": "Perso"
+        },
+        "stats": {
+          "total": "Totale lead",
+          "new": "Nuovi",
+          "qualified": "Qualificati",
+          "hot": "Lead caldi"
+        },
+        "columns": {
+          "name": "Nome",
+          "contact": "Contatto",
+          "company": "Azienda",
+          "score": "Punteggio",
+          "status": "Stato",
+          "created": "Creato"
+        }
+      },
+      "companies": {
+        "title": "Aziende",
+        "subtitle": "Gestisci i tuoi account e le tue organizzazioni",
+        "add": "Aggiungi azienda",
+        "deleteConfirm": "Eliminare {count, plural, one {# azienda} other {# aziende}}?",
+        "search": "Cerca aziende...",
+        "empty": "Ancora nessuna azienda",
+        "emptyDescription": "Inizia ad aggiungere aziende per gestire i tuoi account.",
+        "size": {
+          "startup": "Startup",
+          "small": "Piccola",
+          "medium": "Media",
+          "enterprise": "Grande azienda"
+        },
+        "stats": {
+          "total": "Aziende",
+          "contacts": "Contatti",
+          "opportunities": "Opportunità",
+          "pipelineValue": "Valore della pipeline"
+        },
+        "columns": {
+          "company": "Azienda",
+          "website": "Sito web",
+          "size": "Dimensione",
+          "contacts": "Contatti",
+          "opportunities": "Opportunità",
+          "pipelineValue": "Valore della pipeline"
+        }
+      },
+      "opportunities": {
+        "title": "Opportunità",
+        "subtitle": "Monitora e gestisci le tue opportunità di vendita",
+        "add": "Aggiungi opportunità",
+        "deleteConfirm": "Eliminare {count, plural, one {# opportunità} other {# opportunità}}?",
+        "search": "Cerca opportunità...",
+        "empty": "Ancora nessuna opportunità",
+        "emptyDescription": "Inizia ad aggiungere opportunità per monitorare la tua pipeline di vendita.",
+        "status": {
+          "open": "Aperta",
+          "won": "Vinta",
+          "lost": "Persa"
+        },
+        "stats": {
+          "total": "Totale opportunità",
+          "pipelineValue": "Valore della pipeline",
+          "won": "Vinte",
+          "avgProbability": "Probabilità media"
+        },
+        "columns": {
+          "opportunity": "Opportunità",
+          "company": "Azienda",
+          "value": "Valore",
+          "stage": "Fase",
+          "probability": "Probabilità",
+          "status": "Stato",
+          "expectedClose": "Chiusura prevista"
+        }
+      },
+      "activities": {
+        "title": "Attività",
+        "subtitle": "Monitora e gestisci le tue attività di vendita",
+        "add": "Nuova attività",
+        "timelineView": "Vista cronologica",
+        "listView": "Vista a elenco",
+        "empty": "Ancora nessuna attività",
+        "emptyDescription": "Pianifica chiamate, riunioni e attività per tenere traccia delle tue attività di vendita.",
+        "filters": {
+          "all": "Tutte",
+          "call": "Chiamate",
+          "email": "E-mail",
+          "meeting": "Riunioni",
+          "task": "Attività",
+          "note": "Note"
+        },
+        "status": {
+          "scheduled": "Pianificata",
+          "in_progress": "In corso",
+          "completed": "Completata",
+          "cancelled": "Annullata",
+          "overdue": "In ritardo",
+          "unknown": "Sconosciuta"
+        },
+        "timeline": {
+          "today": "Oggi",
+          "tomorrow": "Domani",
+          "yesterday": "Ieri",
+          "count": "{count, plural, one {# attività} other {# attività}}"
+        },
+        "stats": {
+          "total": "Totale attività",
+          "scheduled": "Pianificate",
+          "completed": "Completate",
+          "overdue": "In ritardo"
+        }
+      },
+      "campaigns": {
+        "title": "Campagne",
+        "subtitle": "Gestisci e monitora le tue campagne di marketing",
+        "add": "Nuova campagna",
+        "pause": "Metti in pausa",
+        "pauseConfirm": "Mettere in pausa {count, plural, one {# campagna} other {# campagne}}?",
+        "deleteConfirm": "Eliminare {count, plural, one {# campagna} other {# campagne}}?",
+        "search": "Cerca campagne...",
+        "empty": "Ancora nessuna campagna",
+        "emptyDescription": "Inizia a creare campagne per monitorare le tue iniziative di marketing.",
+        "type": {
+          "email": "E-mail",
+          "social": "Social",
+          "ads": "Annunci",
+          "content": "Contenuti",
+          "event": "Evento"
+        },
+        "status": {
+          "draft": "Bozza",
+          "scheduled": "Pianificata",
+          "active": "Attiva",
+          "paused": "In pausa",
+          "completed": "Completata"
+        },
+        "stats": {
+          "total": "Campagne",
+          "active": "Attive",
+          "leads": "Lead",
+          "conversions": "Conversioni",
+          "spent": "Speso"
+        },
+        "columns": {
+          "campaign": "Campagna",
+          "type": "Tipo",
+          "status": "Stato",
+          "duration": "Durata",
+          "budget": "Budget",
+          "leads": "Lead",
+          "conversions": "Conversioni"
+        }
+      },
+      "products": {
+        "title": "Prodotti",
+        "subtitle": "Gestisci il tuo catalogo prodotti e i prezzi",
+        "add": "Aggiungi prodotto",
+        "sku": "SKU: {sku}",
+        "archive": "Archivia",
+        "archiveConfirm": "Archiviare {count, plural, one {# prodotto} other {# prodotti}}?",
+        "deleteConfirm": "Eliminare {count, plural, one {# prodotto} other {# prodotti}}?",
+        "search": "Cerca prodotti...",
+        "empty": "Ancora nessun prodotto",
+        "emptyDescription": "Inizia ad aggiungere prodotti per costruire il tuo catalogo.",
+        "status": {
+          "active": "Attivo",
+          "inactive": "Inattivo",
+          "discontinued": "Fuori produzione"
+        },
+        "stats": {
+          "total": "Prodotti",
+          "active": "Attivi",
+          "totalRevenue": "Ricavi totali",
+          "avgPrice": "Prezzo medio"
+        },
+        "columns": {
+          "product": "Prodotto",
+          "category": "Categoria",
+          "price": "Prezzo",
+          "margin": "Margine",
+          "sales": "Vendite",
+          "status": "Stato"
+        }
+      },
+      "pipelines": {
+        "title": "Pipeline di vendita",
+        "subtitle": "Gestisci le tue pipeline di vendita e monitora le opportunità",
+        "add": "Nuova pipeline",
+        "create": "Crea pipeline",
+        "active": "Attiva",
+        "inactive": "Inattiva",
+        "stages": "{count, plural, one {# fase} other {# fasi}}",
+        "deals": "{count, plural, one {# trattativa} other {# trattative}}",
+        "viewKanban": "Vedi kanban",
+        "empty": "Ancora nessuna pipeline",
+        "emptyDescription": "Crea la tua prima pipeline di vendita per iniziare a monitorare le opportunità e gestire le trattative.",
+        "stats": {
+          "total": "Totale pipeline",
+          "active": "Attive"
+        }
+      }
     }
   }
 }

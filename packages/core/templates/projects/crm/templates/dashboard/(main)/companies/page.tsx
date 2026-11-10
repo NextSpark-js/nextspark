@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -23,6 +23,7 @@ import {
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { sumNumeric } from '@/lib/crm-utils'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
@@ -41,11 +42,12 @@ interface Company {
 
 // Size badge component
 function SizeBadge({ size }: { size?: Company['size'] | string }) {
+    const t = useTranslations('crm.list')
     const config: Record<string, { label: string; className: string }> = {
-        startup: { label: 'Startup', className: 'bg-violet-500/10 text-violet-600' },
-        small: { label: 'Small', className: 'bg-amber-500/10 text-amber-600' },
-        medium: { label: 'Medium', className: 'bg-emerald-500/10 text-emerald-600' },
-        enterprise: { label: 'Enterprise', className: 'bg-primary/10 text-primary' },
+        startup: { label: t('companies.size.startup'), className: 'bg-violet-500/10 text-violet-600' },
+        small: { label: t('companies.size.small'), className: 'bg-amber-500/10 text-amber-600' },
+        medium: { label: t('companies.size.medium'), className: 'bg-emerald-500/10 text-emerald-600' },
+        enterprise: { label: t('companies.size.enterprise'), className: 'bg-primary/10 text-primary' },
     }
 
     if (!size) return <span className="text-muted-foreground">-</span>
@@ -68,6 +70,7 @@ function SizeBadge({ size }: { size?: Company['size'] | string }) {
 }
 
 export default function CompaniesPage() {
+    const t = useTranslations('crm.list')
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
@@ -98,9 +101,9 @@ export default function CompaniesPage() {
 
     // Stats
     const stats = useMemo(() => {
-        const totalContacts = companies.reduce((sum, c) => sum + (c.contactCount || 0), 0)
-        const totalOpportunities = companies.reduce((sum, c) => sum + (c.opportunityCount || 0), 0)
-        const totalPipeline = companies.reduce((sum, c) => sum + (c.totalPipelineValue || 0), 0)
+        const totalContacts = sumNumeric(companies.map(c => c.contactCount))
+        const totalOpportunities = sumNumeric(companies.map(c => c.opportunityCount))
+        const totalPipeline = sumNumeric(companies.map(c => c.totalPipelineValue))
 
         return {
             total: companies.length,
@@ -123,7 +126,7 @@ export default function CompaniesPage() {
     const columns: Column<Company>[] = [
         {
             key: 'name',
-            header: 'Company',
+            header: t('companies.columns.company'),
             sortable: true,
             render: (_, company) => (
                 <div className="flex items-center gap-3">
@@ -141,7 +144,7 @@ export default function CompaniesPage() {
         },
         {
             key: 'website',
-            header: 'Website',
+            header: t('companies.columns.website'),
             render: (value: string) => value ? (
                 <a
                     href={value.startsWith('http') ? value : `https://${value}`}
@@ -157,13 +160,13 @@ export default function CompaniesPage() {
         },
         {
             key: 'size',
-            header: 'Size',
+            header: t('companies.columns.size'),
             sortable: true,
             render: (value) => <SizeBadge size={value} />,
         },
         {
             key: 'contactCount',
-            header: 'Contacts',
+            header: t('companies.columns.contacts'),
             sortable: true,
             render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -174,7 +177,7 @@ export default function CompaniesPage() {
         },
         {
             key: 'opportunityCount',
-            header: 'Opportunities',
+            header: t('companies.columns.opportunities'),
             sortable: true,
             render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -185,11 +188,11 @@ export default function CompaniesPage() {
         },
         {
             key: 'totalPipelineValue',
-            header: 'Pipeline Value',
+            header: t('companies.columns.pipelineValue'),
             sortable: true,
             render: (value) => (
                 <span className="font-medium text-primary">
-                    {value ? formatCurrency(value) : '-'}
+                    {value ? formatCurrency(sumNumeric([value])) : '-'}
                 </span>
             ),
         },
@@ -199,17 +202,17 @@ export default function CompaniesPage() {
     const bulkActions: BulkAction[] = [
         {
             id: 'export',
-            label: 'Export',
+            label: t('common.export'),
             icon: <Download className="w-4 h-4" />,
             onClick: (ids) => console.log('Export:', ids),
         },
         // Only show delete action if user has permission
         ...(canDeleteCompanies ? [{
             id: 'delete',
-            label: 'Delete',
+            label: t('common.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             variant: 'destructive' as const,
-            onClick: (ids: string[]) => { if (confirm(`Delete ${ids.length} companies?`)) console.log('Delete:', ids) },
+            onClick: (ids: string[]) => { if (confirm(t('companies.deleteConfirm', { count: ids.length }))) console.log('Delete:', ids) },
         }] : []),
     ]
 
@@ -218,15 +221,15 @@ export default function CompaniesPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Companies</h1>
+                    <h1 className="text-2xl font-bold text-foreground tracking-tight">{t('companies.title')}</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage your business accounts and organizations
+                        {t('companies.subtitle')}
                     </p>
                 </div>
                 <PermissionGate permission="companies.create">
                     <Button onClick={() => router.push('/dashboard/companies/create')} className="gap-2" data-cy="companies-add">
                         <Plus className="w-4 h-4" />
-                        Add Company
+                        {t('companies.add')}
                     </Button>
                 </PermissionGate>
             </div>
@@ -240,7 +243,7 @@ export default function CompaniesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Companies</p>
+                            <p className="text-xs text-muted-foreground">{t('companies.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -251,7 +254,7 @@ export default function CompaniesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.totalContacts}</p>
-                            <p className="text-xs text-muted-foreground">Contacts</p>
+                            <p className="text-xs text-muted-foreground">{t('companies.stats.contacts')}</p>
                         </div>
                     </div>
                 </div>
@@ -262,7 +265,7 @@ export default function CompaniesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.totalOpportunities}</p>
-                            <p className="text-xs text-muted-foreground">Opportunities</p>
+                            <p className="text-xs text-muted-foreground">{t('companies.stats.opportunities')}</p>
                         </div>
                     </div>
                 </div>
@@ -273,7 +276,7 @@ export default function CompaniesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalPipeline)}</p>
-                            <p className="text-xs text-muted-foreground">Pipeline Value</p>
+                            <p className="text-xs text-muted-foreground">{t('companies.stats.pipelineValue')}</p>
                         </div>
                     </div>
                 </div>
@@ -286,11 +289,11 @@ export default function CompaniesPage() {
                 bulkActions={bulkActions}
                 onRowClick={(c) => router.push(`/dashboard/companies/${c.id}`)}
                 isLoading={isLoading}
-                searchPlaceholder="Search companies..."
+                searchPlaceholder={t('companies.search')}
                 searchFields={['name', 'industry', 'website']}
                 pageSize={15}
-                emptyMessage="No companies yet"
-                emptyDescription="Start adding companies to manage your accounts."
+                emptyMessage={t('companies.empty')}
+                emptyDescription={t('companies.emptyDescription')}
                 entitySlug="companies"
             />
         </div>

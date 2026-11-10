@@ -42,6 +42,9 @@ module.exports = {
     '^@/core$': '<rootDir>/src',
     // core's route modules: what the generated src/app of a project re-exports
     '^@/app/(.*)$': '<rootDir>/src/routes/$1',
+    // the crm template's own aliases (what its pages import in a generated project)
+    '^@/templates/shared/(.*)$': '<rootDir>/templates/projects/crm/templates/shared/$1',
+    '^@/lib/crm-utils$': '<rootDir>/templates/projects/crm/lib/crm-utils',
     '^@nextsparkjs/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',
     '^next/server$': '<rootDir>/tests/jest/__mocks__/next-server.js',
     '^server-only$': '<rootDir>/tests/jest/__mocks__/server-only.js',

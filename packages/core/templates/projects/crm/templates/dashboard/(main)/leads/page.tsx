@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
@@ -47,23 +47,24 @@ interface Lead {
 
 // Score badge component
 function LeadScoreBadge({ score }: { score?: number }) {
+    const t = useTranslations('crm.list')
     if (!score) return <span className="text-muted-foreground">-</span>
 
     let Icon = Snowflake
     let bgClass = 'bg-muted'
     let textClass = 'text-muted-foreground'
-    let label = 'Cold'
+    let label = t('leads.score.cold')
 
     if (score >= 80) {
         Icon = Flame
         bgClass = 'bg-destructive/10'
         textClass = 'text-destructive'
-        label = 'Hot'
+        label = t('leads.score.hot')
     } else if (score >= 50) {
         Icon = ThermometerSun
         bgClass = 'bg-amber-500/10'
         textClass = 'text-amber-600'
-        label = 'Warm'
+        label = t('leads.score.warm')
     }
 
     return (
@@ -77,12 +78,13 @@ function LeadScoreBadge({ score }: { score?: number }) {
 
 // Status badge component
 function StatusBadge({ status }: { status: Lead['status'] }) {
+    const t = useTranslations('crm.list')
     const config = {
-        new: { label: 'New', className: 'bg-primary/10 text-primary' },
-        contacted: { label: 'Contacted', className: 'bg-amber-500/10 text-amber-600' },
-        qualified: { label: 'Qualified', className: 'bg-emerald-500/10 text-emerald-600' },
-        converted: { label: 'Converted', className: 'bg-violet-500/10 text-violet-600' },
-        lost: { label: 'Lost', className: 'bg-muted text-muted-foreground' },
+        new: { label: t('leads.status.new'), className: 'bg-primary/10 text-primary' },
+        contacted: { label: t('leads.status.contacted'), className: 'bg-amber-500/10 text-amber-600' },
+        qualified: { label: t('leads.status.qualified'), className: 'bg-emerald-500/10 text-emerald-600' },
+        converted: { label: t('leads.status.converted'), className: 'bg-violet-500/10 text-violet-600' },
+        lost: { label: t('leads.status.lost'), className: 'bg-muted text-muted-foreground' },
     }
 
     const { label, className } = config[status] || config.new
@@ -95,6 +97,7 @@ function StatusBadge({ status }: { status: Lead['status'] }) {
 }
 
 export default function LeadsPage() {
+    const t = useTranslations('crm.list')
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
@@ -135,7 +138,7 @@ export default function LeadsPage() {
     const columns: Column<Lead>[] = [
         {
             key: 'name',
-            header: 'Name',
+            header: t('leads.columns.name'),
             sortable: true,
             render: (_, lead) => (
                 <div className="flex items-center gap-3">
@@ -155,7 +158,7 @@ export default function LeadsPage() {
         },
         {
             key: 'contact',
-            header: 'Contact',
+            header: t('leads.columns.contact'),
             render: (_, lead) => (
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -173,7 +176,7 @@ export default function LeadsPage() {
         },
         {
             key: 'companyName',
-            header: 'Company',
+            header: t('leads.columns.company'),
             sortable: true,
             render: (value) => value ? (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -184,19 +187,19 @@ export default function LeadsPage() {
         },
         {
             key: 'score',
-            header: 'Score',
+            header: t('leads.columns.score'),
             sortable: true,
             render: (value) => <LeadScoreBadge score={value} />,
         },
         {
             key: 'status',
-            header: 'Status',
+            header: t('leads.columns.status'),
             sortable: true,
             render: (value) => <StatusBadge status={value} />,
         },
         {
             key: 'createdAt',
-            header: 'Created',
+            header: t('leads.columns.created'),
             sortable: true,
             render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -211,7 +214,7 @@ export default function LeadsPage() {
     const bulkActions: BulkAction[] = [
         {
             id: 'export',
-            label: 'Export',
+            label: t('common.export'),
             icon: <Download className="w-4 h-4" />,
             onClick: (ids) => {
                 console.log('Export leads:', ids)
@@ -220,7 +223,7 @@ export default function LeadsPage() {
         },
         {
             id: 'convert',
-            label: 'Convert',
+            label: t('leads.convert'),
             icon: <ArrowRightCircle className="w-4 h-4" />,
             onClick: (ids) => {
                 console.log('Convert leads:', ids)
@@ -230,11 +233,11 @@ export default function LeadsPage() {
         // Only show delete action if user has permission
         ...(canDeleteLeads ? [{
             id: 'delete',
-            label: 'Delete',
+            label: t('common.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             variant: 'destructive' as const,
             onClick: async (ids: string[]) => {
-                if (confirm(`Delete ${ids.length} lead(s)?`)) {
+                if (confirm(t('leads.deleteConfirm', { count: ids.length }))) {
                     console.log('Delete leads:', ids)
                     // Implement delete logic
                 }
@@ -256,15 +259,15 @@ export default function LeadsPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                        Leads
+                        {t('leads.title')}
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage and qualify your sales leads
+                        {t('leads.subtitle')}
                     </p>
                 </div>
                 <Button onClick={handleAddLead} className="gap-2" data-cy="leads-add">
                     <UserPlus className="w-4 h-4" />
-                    Add Lead
+                    {t('leads.add')}
                 </Button>
             </div>
 
@@ -277,7 +280,7 @@ export default function LeadsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Total Leads</p>
+                            <p className="text-xs text-muted-foreground">{t('leads.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -289,7 +292,7 @@ export default function LeadsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.new}</p>
-                            <p className="text-xs text-muted-foreground">New</p>
+                            <p className="text-xs text-muted-foreground">{t('leads.stats.new')}</p>
                         </div>
                     </div>
                 </div>
@@ -301,7 +304,7 @@ export default function LeadsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.qualified}</p>
-                            <p className="text-xs text-muted-foreground">Qualified</p>
+                            <p className="text-xs text-muted-foreground">{t('leads.stats.qualified')}</p>
                         </div>
                     </div>
                 </div>
@@ -313,7 +316,7 @@ export default function LeadsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.hot}</p>
-                            <p className="text-xs text-muted-foreground">Hot Leads</p>
+                            <p className="text-xs text-muted-foreground">{t('leads.stats.hot')}</p>
                         </div>
                     </div>
                 </div>
@@ -326,11 +329,11 @@ export default function LeadsPage() {
                 bulkActions={bulkActions}
                 onRowClick={handleRowClick}
                 isLoading={isLoading}
-                searchPlaceholder="Search leads..."
+                searchPlaceholder={t('leads.search')}
                 searchFields={['firstName', 'lastName', 'email', 'companyName']}
                 pageSize={15}
-                emptyMessage="No leads yet"
-                emptyDescription="Start capturing leads to grow your sales pipeline."
+                emptyMessage={t('leads.empty')}
+                emptyDescription={t('leads.emptyDescription')}
                 entitySlug="leads"
             />
         </div>

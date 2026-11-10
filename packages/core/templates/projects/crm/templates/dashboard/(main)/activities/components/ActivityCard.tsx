@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import React from 'react'
 import { formatRelativeDate } from '@/lib/crm-utils'
 import {
@@ -57,12 +57,12 @@ const activityTypeConfig: Record<Activity['type'], { icon: LucideIcon; bgClass: 
 }
 
 // Status badge configuration
-const statusConfig: Record<Activity['status'], { label: string; className: string }> = {
-    scheduled: { label: 'Scheduled', className: 'bg-primary/10 text-primary' },
-    in_progress: { label: 'In Progress', className: 'bg-amber-500/10 text-amber-600' },
-    completed: { label: 'Completed', className: 'bg-emerald-500/10 text-emerald-600' },
-    cancelled: { label: 'Cancelled', className: 'bg-muted text-muted-foreground' },
-    overdue: { label: 'Overdue', className: 'bg-destructive/10 text-destructive' },
+const statusConfig: Record<Activity['status'], { className: string }> = {
+    scheduled: { className: 'bg-primary/10 text-primary' },
+    in_progress: { className: 'bg-amber-500/10 text-amber-600' },
+    completed: { className: 'bg-emerald-500/10 text-emerald-600' },
+    cancelled: { className: 'bg-muted text-muted-foreground' },
+    overdue: { className: 'bg-destructive/10 text-destructive' },
 }
 
 // Priority indicator configuration
@@ -75,13 +75,15 @@ const priorityConfig: Record<Activity['priority'], { className: string }> = {
 
 // Default fallback config for unknown activity types
 const defaultTypeConfig = { icon: FileText, bgClass: 'bg-muted', textClass: 'text-muted-foreground' }
-const defaultStatusConfig = { label: 'Unknown', className: 'bg-muted text-muted-foreground' }
+const defaultStatusConfig = { className: 'bg-muted text-muted-foreground' }
 const defaultPriorityConfig = { className: 'bg-muted-foreground/50' }
 
 export function ActivityCard({ activity, onClick }: ActivityCardProps) {
     const locale = useLocale()
+    const t = useTranslations('crm.list')
     const typeConfig = activityTypeConfig[activity.type] || defaultTypeConfig
     const status = statusConfig[activity.status] || defaultStatusConfig
+    const statusLabel = activity.status in statusConfig ? t(`activities.status.${activity.status}`) : t('activities.status.unknown')
     const priority = priorityConfig[activity.priority] || defaultPriorityConfig
     const Icon = typeConfig.icon
 
@@ -129,7 +131,7 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
                         'shrink-0 px-2.5 py-1 rounded-md text-xs font-medium capitalize',
                         status.className
                     )}>
-                        {status.label}
+                        {statusLabel}
                     </span>
                 </div>
 

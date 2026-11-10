@@ -6,6 +6,8 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import {
     ChevronDown,
     ChevronUp,
@@ -68,13 +70,15 @@ export function CRMDataTable<T extends { id: string }>({
     bulkActions = [],
     onRowClick,
     isLoading = false,
-    searchPlaceholder = 'Search...',
+    searchPlaceholder,
     searchFields = [],
     pageSize = 10,
-    emptyMessage = 'No data found',
-    emptyDescription = 'Try adjusting your filters or add new records.',
+    emptyMessage,
+    emptyDescription,
     entitySlug,
 }: CRMDataTableProps<T>) {
+    const t = useTranslations('crm.list.table')
+    const locale = useLocale()
     // Generate data-cy attribute with entity-specific or generic prefix
     const dataCy = (suffix: string) => entitySlug ? `${entitySlug}-${suffix}` : `crm-datatable-${suffix}`
     // State
@@ -217,7 +221,7 @@ export function CRMDataTable<T extends { id: string }>({
                                 setSearchQuery(e.target.value)
                                 setCurrentPage(1)
                             }}
-                            placeholder={searchPlaceholder}
+                            placeholder={searchPlaceholder ?? t('search')}
                             className="w-full pl-10 pr-10 py-2 bg-muted/50 border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             data-cy={dataCy('search')}
                         />
@@ -236,7 +240,7 @@ export function CRMDataTable<T extends { id: string }>({
                 {selectedIds.size > 0 && (
                     <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2" data-cy={dataCy('bulk-actions')}>
                         <span className="text-sm text-muted-foreground">
-                            {selectedIds.size} selected
+                            {t('selected', { count: selectedIds.size })}
                         </span>
                         <div className="flex items-center gap-2">
                             {bulkActions.map((action) => (
@@ -256,7 +260,7 @@ export function CRMDataTable<T extends { id: string }>({
                             onClick={clearSelection}
                             className="text-sm text-muted-foreground hover:text-foreground"
                         >
-                            Clear
+                            {t('clear')}
                         </button>
                     </div>
                 )}
@@ -360,10 +364,10 @@ export function CRMDataTable<T extends { id: string }>({
                                             <Inbox className="w-6 h-6 text-muted-foreground" />
                                         </div>
                                         <p className="text-sm font-medium text-foreground mb-1">
-                                            {emptyMessage}
+                                            {emptyMessage ?? t('noData')}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {emptyDescription}
+                                            {emptyDescription ?? t('noDataDescription')}
                                         </p>
                                     </div>
                                 </td>
@@ -377,7 +381,7 @@ export function CRMDataTable<T extends { id: string }>({
             {totalPages > 1 && (
                 <div className="flex items-center justify-between" data-cy={dataCy('pagination')}>
                     <p className="text-sm text-muted-foreground">
-                        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, processedData.length)} of {processedData.length} results
+                        {t('showing', { from: formatLocaleNumber(((currentPage - 1) * pageSize) + 1, locale), to: formatLocaleNumber(Math.min(currentPage * pageSize, processedData.length), locale), total: formatLocaleNumber(processedData.length, locale) })}
                     </p>
 
                     <div className="flex items-center gap-2">
@@ -390,7 +394,7 @@ export function CRMDataTable<T extends { id: string }>({
                             data-cy={dataCy('pagination-prev')}
                         >
                             <ChevronLeft className="w-4 h-4" />
-                            Previous
+                            {t('previous')}
                         </Button>
 
                         <div className="flex items-center gap-1">
@@ -428,7 +432,7 @@ export function CRMDataTable<T extends { id: string }>({
                             className="gap-1"
                             data-cy={dataCy('pagination-next')}
                         >
-                            Next
+                            {t('next')}
                             <ChevronRight className="w-4 h-4" />
                         </Button>
                     </div>

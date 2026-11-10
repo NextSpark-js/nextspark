@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useCallback } from 'react'
@@ -33,24 +34,24 @@ import {
 interface NavItem {
     href: string
     icon: React.ElementType
-    label: string
+    id: string
     badge?: number
     color?: string
 }
 
 const mainNavItems: NavItem[] = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-primary' },
-    { href: '/dashboard/leads', icon: UserPlus, label: 'Leads', color: 'text-amber-500' },
-    { href: '/dashboard/contacts', icon: Users, label: 'Contacts', color: 'text-emerald-500' },
-    { href: '/dashboard/companies', icon: Building2, label: 'Companies', color: 'text-blue-500' },
-    { href: '/dashboard/pipelines', icon: Layers, label: 'Pipelines', color: 'text-violet-500' },
-    { href: '/dashboard/products', icon: Package, label: 'Products', color: 'text-rose-500' },
-    { href: '/dashboard/campaigns', icon: Megaphone, label: 'Campaigns', color: 'text-orange-500' },
-    { href: '/dashboard/activities', icon: Calendar, label: 'Activities', color: 'text-cyan-500' },
+    { href: '/dashboard', icon: LayoutDashboard, id: 'dashboard', color: 'text-primary' },
+    { href: '/dashboard/leads', icon: UserPlus, id: 'leads', color: 'text-amber-500' },
+    { href: '/dashboard/contacts', icon: Users, id: 'contacts', color: 'text-emerald-500' },
+    { href: '/dashboard/companies', icon: Building2, id: 'companies', color: 'text-blue-500' },
+    { href: '/dashboard/pipelines', icon: Layers, id: 'pipelines', color: 'text-violet-500' },
+    { href: '/dashboard/products', icon: Package, id: 'products', color: 'text-rose-500' },
+    { href: '/dashboard/campaigns', icon: Megaphone, id: 'campaigns', color: 'text-orange-500' },
+    { href: '/dashboard/activities', icon: Calendar, id: 'activities', color: 'text-cyan-500' },
 ]
 
 const bottomNavItems: NavItem[] = [
-    { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+    { href: '/dashboard/settings', icon: Settings, id: 'settings' },
 ]
 
 // Tooltip component
@@ -99,6 +100,8 @@ function NavItemButton({ item, isActive, expanded }: {
     isActive: boolean
     expanded: boolean
 }) {
+    const t = useTranslations('crm.list.sidebar')
+    const label = t(`nav.${item.id}`)
     const Icon = item.icon
     const slug = item.href.split('/').pop() || 'dashboard'
 
@@ -126,7 +129,7 @@ function NavItemButton({ item, isActive, expanded }: {
             )} />
 
             {expanded && (
-                <span className="text-sm font-medium truncate relative z-10">{item.label}</span>
+                <span className="text-sm font-medium truncate relative z-10">{label}</span>
             )}
 
             {expanded && item.badge && item.badge > 0 && (
@@ -142,13 +145,14 @@ function NavItemButton({ item, isActive, expanded }: {
     }
 
     return (
-        <Tooltip content={item.label} show={!expanded}>
+        <Tooltip content={label} show={!expanded}>
             {button}
         </Tooltip>
     )
 }
 
 export function CRMSidebar() {
+    const t = useTranslations('crm.list.sidebar')
     const pathname = usePathname()
     const { user, signOut } = useAuth()
     const [expanded, setExpanded] = useState(false)
@@ -229,7 +233,7 @@ export function CRMSidebar() {
             <nav className={cn('flex-1 overflow-y-auto py-4 scrollbar-thin', expanded ? 'px-3' : 'px-2')}>
                 {expanded && (
                     <p className="px-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3 animate-in fade-in duration-200">
-                        Navigation
+                        {t('navigation')}
                     </p>
                 )}
                 <div className="space-y-1">
@@ -293,13 +297,13 @@ export function CRMSidebar() {
                             )}
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate" data-cy="crm-sidebar-user-name">
-                                    {user?.firstName || 'User'}
+                                    {user?.firstName || t('user')}
                                 </p>
                                 <p className="text-xs text-muted-foreground truncate" data-cy="crm-sidebar-user-email">
                                     {user?.email}
                                 </p>
                             </div>
-                            <Tooltip content="Sign out" side="bottom">
+                            <Tooltip content={t('signOut')} side="bottom">
                                 <button
                                     onClick={handleSignOut}
                                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
@@ -310,7 +314,7 @@ export function CRMSidebar() {
                             </Tooltip>
                         </div>
                     ) : (
-                        <Tooltip content={user?.firstName || 'Profile'}>
+                        <Tooltip content={user?.firstName || t('profile')}>
                             <Link
                                 href="/dashboard/settings/profile"
                                 className="block"

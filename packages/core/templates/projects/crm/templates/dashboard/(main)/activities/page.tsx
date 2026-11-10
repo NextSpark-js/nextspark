@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ActivityTimeline } from './components/ActivityTimeline'
@@ -31,16 +32,17 @@ type ViewMode = 'timeline' | 'list'
 type FilterType = 'all' | 'call' | 'email' | 'meeting' | 'task' | 'note'
 
 // Filter configuration with icons
-const filterConfig: Record<FilterType, { icon: typeof Phone; label: string }> = {
-    all: { icon: Activity, label: 'All' },
-    call: { icon: Phone, label: 'Calls' },
-    email: { icon: Mail, label: 'Emails' },
-    meeting: { icon: Users, label: 'Meetings' },
-    task: { icon: CheckSquare, label: 'Tasks' },
-    note: { icon: FileText, label: 'Notes' },
+const filterConfig: Record<FilterType, { icon: typeof Phone }> = {
+    all: { icon: Activity },
+    call: { icon: Phone },
+    email: { icon: Mail },
+    meeting: { icon: Users },
+    task: { icon: CheckSquare },
+    note: { icon: FileText },
 }
 
 export default function ActivitiesPage() {
+    const t = useTranslations('crm.list')
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
     const [activities, setActivities] = useState<ActivityType[]>([])
@@ -156,10 +158,10 @@ export default function ActivitiesPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                        Activities
+                        {t('activities.title')}
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Track and manage your sales activities
+                        {t('activities.subtitle')}
                     </p>
                 </div>
 
@@ -174,7 +176,7 @@ export default function ActivitiesPage() {
                                     : 'text-muted-foreground hover:text-foreground'
                             )}
                             onClick={() => setViewMode('timeline')}
-                            title="Timeline view"
+                            title={t('activities.timelineView')}
                         >
                             <CalendarDays className="w-4 h-4" />
                         </button>
@@ -186,7 +188,7 @@ export default function ActivitiesPage() {
                                     : 'text-muted-foreground hover:text-foreground'
                             )}
                             onClick={() => setViewMode('list')}
-                            title="List view"
+                            title={t('activities.listView')}
                         >
                             <LayoutList className="w-4 h-4" />
                         </button>
@@ -194,7 +196,7 @@ export default function ActivitiesPage() {
 
                     <Button onClick={handleAddActivity} className="gap-2" data-cy="activities-add">
                         <Plus className="w-4 h-4" />
-                        New Activity
+                        {t('activities.add')}
                     </Button>
                 </div>
             </div>
@@ -208,7 +210,7 @@ export default function ActivitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Total Activities</p>
+                            <p className="text-xs text-muted-foreground">{t('activities.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -220,7 +222,7 @@ export default function ActivitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.scheduled}</p>
-                            <p className="text-xs text-muted-foreground">Scheduled</p>
+                            <p className="text-xs text-muted-foreground">{t('activities.stats.scheduled')}</p>
                         </div>
                     </div>
                 </div>
@@ -232,7 +234,7 @@ export default function ActivitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.completed}</p>
-                            <p className="text-xs text-muted-foreground">Completed</p>
+                            <p className="text-xs text-muted-foreground">{t('activities.stats.completed')}</p>
                         </div>
                     </div>
                 </div>
@@ -244,7 +246,7 @@ export default function ActivitiesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.overdue}</p>
-                            <p className="text-xs text-muted-foreground">Overdue</p>
+                            <p className="text-xs text-muted-foreground">{t('activities.stats.overdue')}</p>
                         </div>
                     </div>
                 </div>
@@ -270,7 +272,7 @@ export default function ActivitiesPage() {
                             )}
                         >
                             <Icon className="w-4 h-4" />
-                            {config.label}
+                            {t(`activities.filters.${key}`)}
                             <span className={cn(
                                 'ml-1 px-1.5 py-0.5 rounded text-xs',
                                 isActive

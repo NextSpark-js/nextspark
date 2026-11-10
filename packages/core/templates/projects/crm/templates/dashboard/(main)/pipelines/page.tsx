@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -33,6 +34,7 @@ interface Pipeline {
 }
 
 export default function PipelinesPage() {
+    const t = useTranslations('crm.list')
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
     const [pipelines, setPipelines] = useState<Pipeline[]>([])
@@ -104,16 +106,16 @@ export default function PipelinesPage() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                        Sales Pipelines
+                        {t('pipelines.title')}
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage your sales pipelines and track opportunities
+                        {t('pipelines.subtitle')}
                     </p>
                 </div>
                 <PermissionGate permission="pipelines.create">
                     <Button onClick={handleCreatePipeline} className="gap-2" data-cy="pipelines-add">
                         <Plus className="w-4 h-4" />
-                        New Pipeline
+                        {t('pipelines.add')}
                     </Button>
                 </PermissionGate>
             </div>
@@ -127,7 +129,7 @@ export default function PipelinesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{totalPipelines}</p>
-                            <p className="text-xs text-muted-foreground">Total Pipelines</p>
+                            <p className="text-xs text-muted-foreground">{t('pipelines.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -139,7 +141,7 @@ export default function PipelinesPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{activePipelines}</p>
-                            <p className="text-xs text-muted-foreground">Active</p>
+                            <p className="text-xs text-muted-foreground">{t('pipelines.stats.active')}</p>
                         </div>
                     </div>
                 </div>
@@ -178,7 +180,7 @@ export default function PipelinesPage() {
                                         ? 'bg-emerald-500/10 text-emerald-600'
                                         : 'bg-muted text-muted-foreground'
                                 )}>
-                                    {pipeline.isActive !== false ? 'Active' : 'Inactive'}
+                                    {pipeline.isActive !== false ? t('pipelines.active') : t('pipelines.inactive')}
                                 </span>
                             </div>
 
@@ -187,14 +189,14 @@ export default function PipelinesPage() {
                                 <div className="flex items-center gap-2 text-sm">
                                     <Layers className="w-4 h-4 text-muted-foreground" />
                                     <span className="text-muted-foreground">
-                                        {pipeline.stages?.length || 0} stages
+                                        {t('pipelines.stages', { count: pipeline.stages?.length || 0 })}
                                     </span>
                                 </div>
                                 {pipeline.dealCount !== undefined && (
                                     <div className="flex items-center gap-2 text-sm">
                                         <Target className="w-4 h-4 text-muted-foreground" />
                                         <span className="text-muted-foreground">
-                                            {pipeline.dealCount} deals
+                                            {t('pipelines.deals', { count: pipeline.dealCount })}
                                         </span>
                                     </div>
                                 )}
@@ -204,7 +206,7 @@ export default function PipelinesPage() {
                             <div className="flex items-center justify-between pt-4 border-t border-border/50">
                                 <div className="flex items-center gap-2 text-sm font-medium text-primary group-hover:underline">
                                     <TrendingUp className="w-4 h-4" />
-                                    View Kanban
+                                    {t('pipelines.viewKanban')}
                                 </div>
                                 <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                             </div>
@@ -217,15 +219,15 @@ export default function PipelinesPage() {
                         <Inbox className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
-                        No pipelines yet
+                        {t('pipelines.empty')}
                     </h3>
                     <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-                        Create your first sales pipeline to start tracking opportunities and managing your deals.
+                        {t('pipelines.emptyDescription')}
                     </p>
                     <PermissionGate permission="pipelines.create">
                         <Button onClick={handleCreatePipeline} className="gap-2">
                             <Plus className="w-4 h-4" />
-                            Create Pipeline
+                            {t('pipelines.create')}
                         </Button>
                     </PermissionGate>
                 </div>

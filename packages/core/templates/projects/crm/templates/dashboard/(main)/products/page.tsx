@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -24,6 +24,7 @@ import {
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { sumNumeric, toNumber } from '@/lib/crm-utils'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
@@ -43,10 +44,11 @@ interface Product {
 
 // Status badge component
 function StatusBadge({ status }: { status: Product['status'] }) {
+    const t = useTranslations('crm.list')
     const config = {
-        active: { label: 'Active', className: 'bg-emerald-500/10 text-emerald-600' },
-        inactive: { label: 'Inactive', className: 'bg-amber-500/10 text-amber-600' },
-        discontinued: { label: 'Discontinued', className: 'bg-muted text-muted-foreground' },
+        active: { label: t('products.status.active'), className: 'bg-emerald-500/10 text-emerald-600' },
+        inactive: { label: t('products.status.inactive'), className: 'bg-amber-500/10 text-amber-600' },
+        discontinued: { label: t('products.status.discontinued'), className: 'bg-muted text-muted-foreground' },
     }
 
     const { label, className } = config[status] || config.active
@@ -59,8 +61,10 @@ function StatusBadge({ status }: { status: Product['status'] }) {
 }
 
 // Margin indicator
-function MarginIndicator({ price, cost }: { price: number; cost?: number }) {
-    if (!cost || cost === 0) return <span className="text-muted-foreground">-</span>
+function MarginIndicator({ price: rawPrice, cost: rawCost }: { price: number | string; cost?: number | string }) {
+    const price = toNumber(rawPrice)
+    const cost = toNumber(rawCost)
+    if (!price || !cost) return <span className="text-muted-foreground">-</span>
 
     const margin = ((price - cost) / price) * 100
 
@@ -79,6 +83,7 @@ function MarginIndicator({ price, cost }: { price: number; cost?: number }) {
 }
 
 export default function ProductsPage() {
+    const t = useTranslations('crm.list')
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
@@ -111,10 +116,10 @@ export default function ProductsPage() {
     // Stats
     const stats = useMemo(() => {
         const active = products.filter(p => p.status === 'active').length
-        const totalRevenue = products.reduce((sum, p) => sum + (p.price * (p.salesCount || 0)), 0)
-        const avgPrice = products.length > 0
-            ? products.reduce((sum, p) => sum + p.price, 0) / products.length
-            : 0
+        // price and salesCount are NUMERIC columns: strings when they reach the page
+        const totalRevenue = sumNumeric(products.map(p => (toNumber(p.price) ?? 0) * (toNumber(p.salesCount) ?? 0)))
+        const prices = products.map(p => toNumber(p.price)).filter((price): price is number => price !== null)
+        const avgPrice = prices.length > 0 ? sumNumeric(prices) / prices.length : 0
 
         return {
             total: products.length,
@@ -137,7 +142,7 @@ export default function ProductsPage() {
     const columns: Column<Product>[] = [
         {
             key: 'name',
-            header: 'Product',
+            header: t('products.columns.product'),
             sortable: true,
             render: (_, product) => (
                 <div className="flex items-center gap-3">
@@ -147,7 +152,7 @@ export default function ProductsPage() {
                     <div>
                         <p className="font-medium text-foreground">{product.name}</p>
                         {product.sku && (
-                            <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+                            <p className="text-xs text-muted-foreground">{t('products.sku', { sku: product.sku })}</p>
                         )}
                     </div>
                 </div>
@@ -155,7 +160,7 @@ export default function ProductsPage() {
         },
         {
             key: 'category',
-            header: 'Category',
+            header: t('products.columns.category'),
             sortable: true,
             render: (value) => value ? (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -166,24 +171,24 @@ export default function ProductsPage() {
         },
         {
             key: 'price',
-            header: 'Price',
+            header: t('products.columns.price'),
             sortable: true,
             render: (value) => (
                 <span className="font-medium text-primary">
-                    {formatCurrency(value)}
+                    {formatCurrency(toNumber(value) ?? 0)}
                 </span>
             ),
         },
         {
             key: 'margin',
-            header: 'Margin',
+            header: t('products.columns.margin'),
             render: (_, product) => (
                 <MarginIndicator price={product.price} cost={product.cost} />
             ),
         },
         {
             key: 'salesCount',
-            header: 'Sales',
+            header: t('products.columns.sales'),
             sortable: true,
             render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
@@ -194,7 +199,7 @@ export default function ProductsPage() {
         },
         {
             key: 'status',
-            header: 'Status',
+            header: t('products.columns.status'),
             sortable: true,
             render: (value) => <StatusBadge status={value} />,
         },
@@ -204,24 +209,24 @@ export default function ProductsPage() {
     const bulkActions: BulkAction[] = [
         {
             id: 'export',
-            label: 'Export',
+            label: t('common.export'),
             icon: <Download className="w-4 h-4" />,
             onClick: (ids) => console.log('Export:', ids),
         },
         // Only show archive action if user has update permission
         ...(canUpdateProducts ? [{
             id: 'archive',
-            label: 'Archive',
+            label: t('products.archive'),
             icon: <Archive className="w-4 h-4" />,
-            onClick: (ids: string[]) => { if (confirm(`Archive ${ids.length} products?`)) console.log('Archive:', ids) },
+            onClick: (ids: string[]) => { if (confirm(t('products.archiveConfirm', { count: ids.length }))) console.log('Archive:', ids) },
         }] : []),
         // Only show delete action if user has permission
         ...(canDeleteProducts ? [{
             id: 'delete',
-            label: 'Delete',
+            label: t('common.delete'),
             icon: <Trash2 className="w-4 h-4" />,
             variant: 'destructive' as const,
-            onClick: (ids: string[]) => { if (confirm(`Delete ${ids.length} products?`)) console.log('Delete:', ids) },
+            onClick: (ids: string[]) => { if (confirm(t('products.deleteConfirm', { count: ids.length }))) console.log('Delete:', ids) },
         }] : []),
     ]
 
@@ -230,15 +235,15 @@ export default function ProductsPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Products</h1>
+                    <h1 className="text-2xl font-bold text-foreground tracking-tight">{t('products.title')}</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage your product catalog and pricing
+                        {t('products.subtitle')}
                     </p>
                 </div>
                 <PermissionGate permission="products.create">
                     <Button onClick={() => router.push('/dashboard/products/create')} className="gap-2" data-cy="products-add">
                         <Plus className="w-4 h-4" />
-                        Add Product
+                        {t('products.add')}
                     </Button>
                 </PermissionGate>
             </div>
@@ -252,7 +257,7 @@ export default function ProductsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Products</p>
+                            <p className="text-xs text-muted-foreground">{t('products.stats.total')}</p>
                         </div>
                     </div>
                 </div>
@@ -263,7 +268,7 @@ export default function ProductsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{stats.active}</p>
-                            <p className="text-xs text-muted-foreground">Active</p>
+                            <p className="text-xs text-muted-foreground">{t('products.stats.active')}</p>
                         </div>
                     </div>
                 </div>
@@ -274,7 +279,7 @@ export default function ProductsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalRevenue)}</p>
-                            <p className="text-xs text-muted-foreground">Total Revenue</p>
+                            <p className="text-xs text-muted-foreground">{t('products.stats.totalRevenue')}</p>
                         </div>
                     </div>
                 </div>
@@ -285,7 +290,7 @@ export default function ProductsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.avgPrice)}</p>
-                            <p className="text-xs text-muted-foreground">Avg. Price</p>
+                            <p className="text-xs text-muted-foreground">{t('products.stats.avgPrice')}</p>
                         </div>
                     </div>
                 </div>
@@ -298,11 +303,11 @@ export default function ProductsPage() {
                 bulkActions={bulkActions}
                 onRowClick={(p) => router.push(`/dashboard/products/${p.id}`)}
                 isLoading={isLoading}
-                searchPlaceholder="Search products..."
+                searchPlaceholder={t('products.search')}
                 searchFields={['name', 'sku', 'category']}
                 pageSize={15}
-                emptyMessage="No products yet"
-                emptyDescription="Start adding products to build your catalog."
+                emptyMessage={t('products.empty')}
+                emptyDescription={t('products.emptyDescription')}
                 entitySlug="products"
             />
         </div>
