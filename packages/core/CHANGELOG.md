@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The "first" of the create-the-first-entity texts agrees with the entity in Spanish, Portuguese, French and Italian.** The catalog text put a masculine adjective in front of an entity name of any gender ("tu primer tarea"); it now names a record and puts the entity in parentheses, as the German text does. (#413)
 - **The MRR and ARR of the subscriptions page are written in the active locale.** The page preferred the English strings of the API over the amounts in cents. (#413)
 - **A `NUMERIC` value, which the database returns as text, is written in the active locale.** A number field showed "3.00" in every language. (#413)
 - **The sidebar's entity links keep a `data-cy` built from the entity's slug.** It came from the displayed name, which is translated since the entity catalogs are read, so the selector changed with the language. (#421)
