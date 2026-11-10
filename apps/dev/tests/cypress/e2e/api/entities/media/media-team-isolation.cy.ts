@@ -43,6 +43,10 @@ describe('Media API - Team Isolation', {
   let mediaAPITeamB: InstanceType<typeof MediaAPIController>
   let mediaAPINoTeam: InstanceType<typeof MediaAPIController>
 
+  // A 1x1 PNG, uploaded to team A in before() so the tests that need a media item do not depend on the sample data
+  const PNG_1X1_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  let seededMediaId: string
+
   // Track created media for cleanup
   let createdMediaTeamA: string[] = []
   let createdMediaTeamB: string[] = []
@@ -52,6 +56,25 @@ describe('Media API - Team Isolation', {
     mediaAPITeamA = new MediaAPIController(BASE_URL, SUPERADMIN_API_KEY, TEAM_A_ID)
     mediaAPITeamB = new MediaAPIController(BASE_URL, SUPERADMIN_API_KEY, TEAM_B_ID)
     mediaAPINoTeam = new MediaAPIController(BASE_URL, SUPERADMIN_API_KEY, null) // No team context
+
+    // cy.request cannot send multipart FormData (see MEDIA_TEAM_004), so the image goes up with fetch
+    cy.wrap(null).then(() => {
+      const bytes = Uint8Array.from(atob(PNG_1X1_BASE64), (c) => c.charCodeAt(0))
+      const form = new FormData()
+      form.append('files', new File([bytes], `team-isolation-seed-${Date.now()}.png`, { type: 'image/png' }))
+      return fetch(`${BASE_URL}/api/v1/media/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${SUPERADMIN_API_KEY}`, 'x-team-id': TEAM_A_ID },
+        body: form
+      }).then((response) => response.json())
+    }).then((body: any) => {
+      expect(body.success, 'the seed image uploads').to.eq(true)
+      seededMediaId = body.data.media[0].id
+    })
+  })
+
+  after(() => {
+    if (seededMediaId) mediaAPITeamA.deleteMedia(seededMediaId)
   })
 
   beforeEach(() => {
@@ -173,11 +196,9 @@ describe('Media API - Team Isolation', {
     it('MEDIA_TEAM_005: Should return 403 when trying to update media from a non-member team', () => {
       allure.severity('critical')
 
-      // Get first media from team A
-      mediaAPITeamA.getMedia({ limit: 1 }).then((listResponse: any) => {
-        expect(listResponse.body.data.data.length).to.be.greaterThan(0)
-
-        const teamAMediaId = listResponse.body.data.data[0].id
+      // The media item uploaded to team A in before()
+      {
+        const teamAMediaId = seededMediaId
 
         // Try to update it using team B context (user is not a member of team B)
         const updateData = { alt: 'Hacked from team B' }
@@ -196,7 +217,7 @@ describe('Media API - Team Isolation', {
             cy.log('Team A media unchanged after non-member update attempt')
           })
         })
-      })
+      }
     })
   })
 
@@ -207,11 +228,9 @@ describe('Media API - Team Isolation', {
     it('MEDIA_TEAM_006: Should return 403 when trying to delete media from a non-member team', () => {
       allure.severity('critical')
 
-      // Get first media from team A
-      mediaAPITeamA.getMedia({ limit: 1 }).then((listResponse: any) => {
-        expect(listResponse.body.data.data.length).to.be.greaterThan(0)
-
-        const teamAMediaId = listResponse.body.data.data[0].id
+      // The media item uploaded to team A in before()
+      {
+        const teamAMediaId = seededMediaId
 
         // Try to delete it using team B context (user is not a member of team B)
         mediaAPITeamB.deleteMedia(teamAMediaId).then((deleteResponse: any) => {
@@ -227,7 +246,7 @@ describe('Media API - Team Isolation', {
             cy.log('Team A media still exists after non-member delete attempt')
           })
         })
-      })
+      }
     })
   })
 
@@ -238,11 +257,9 @@ describe('Media API - Team Isolation', {
     it('MEDIA_TEAM_007: Should return 403 when trying to access media from a non-member team by ID', { tags: '@smoke' }, () => {
       allure.severity('critical')
 
-      // Get first media from team A
-      mediaAPITeamA.getMedia({ limit: 1 }).then((listResponse: any) => {
-        expect(listResponse.body.data.data.length).to.be.greaterThan(0)
-
-        const teamAMediaId = listResponse.body.data.data[0].id
+      // The media item uploaded to team A in before()
+      {
+        const teamAMediaId = seededMediaId
 
         // Try to access it using team B context (user is not a member of team B)
         mediaAPITeamB.getMediaById(teamAMediaId).then((getResponse: any) => {
@@ -252,7 +269,7 @@ describe('Media API - Team Isolation', {
 
           cy.log('Non-member team cannot view media by ID (403)')
         })
-      })
+      }
     })
   })
 
