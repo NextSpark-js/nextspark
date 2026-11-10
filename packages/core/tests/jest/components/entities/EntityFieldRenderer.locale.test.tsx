@@ -35,6 +35,13 @@ describe('EntityFieldRenderer values in the active locale', () => {
     expect(show('number', 1234567.5)).toContain('1.234.567,5')
   })
 
+  test('a NUMERIC that pg returns as a string is formatted like a number; text that is not numeric is shown as it is', () => {
+    mockLocale = 'de'
+    expect(show('number', '1234.50')).toContain('1.234,5')
+    expect(show('number', '3.00')).toBe('3')
+    expect(show('number', 'n/a')).toBe('n/a')
+  })
+
   test('a date-time carries the time in the locale', () => {
     mockLocale = 'de'
     expect(show('datetime', '2026-12-24T12:00:00Z')).toMatch(/^24\.12\.2026/)

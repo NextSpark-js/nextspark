@@ -98,6 +98,8 @@ function formatDisplayValue(text: FieldText, locale: string, value: unknown, fie
       return String(value || '')
 
     case 'number':
+      // pg returns a NUMERIC as a string ("3.00"): a numeric string is formatted like a number, anything else is shown as it is
+      if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value)) return formatLocaleNumber(Number(value), locale)
       return typeof value === 'number' ? formatLocaleNumber(value, locale) : String(value || '')
 
     case 'boolean':
