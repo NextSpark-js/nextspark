@@ -17,7 +17,7 @@ This is the one upgrade path, supported from `0.1.0-beta.183` (the oldest releas
 2. Set every `@nextsparkjs/*` package to the same release, `0.1.0-beta.192` or later, in the root and in `web/` (or wherever the web app lives), including any `overrides` or `catalog` entries, and install. `pnpm update-core` does both only if the project is already on `0.1.0-beta.191` or later: earlier releases do not have it, so from `0.1.0-beta.183` to `0.1.0-beta.190` this step is manual, and a short checklist applies before step 1: see [Projects created before 0.1.0-beta.191](#projects-created-before-010-beta191). Do not bump `next` by hand: `migrate --yes` sets `next` and `eslint-config-next` to `~16.4.2` (the generator reads Next's own route rules and refuses another minor), and step 6 installs.
    `pnpm add` on pnpm 12 re-sorts the whole `dependencies` block, so a two-line change shows up as dozens of changed lines in `package.json`: commit it on its own.
 3. Run `pnpm exec nextspark migrate --dry-run` from the web app's directory. It prints the report and changes nothing; it exits `1` when the migration would refuse to run, listing why under **App tree conversion**. `--json` prints the same as JSON. The report also lists the [obsolete local copies](#cleanup-after-migrating) the project still has. It also predicts the generated host on a throwaway copy (notices such as replaced entity routes and conflicts, and which checks ran); a prediction that fails is reported as unknown, never as clean.
-   - **The active theme** comes from `NEXT_PUBLIC_ACTIVE_THEME` in the environment, else from `.env.example` in the web app's directory (the host root, e.g. `web/.env.example`, not the repository root). If the project keeps it elsewhere, set it on the command line: `NEXT_PUBLIC_ACTIVE_THEME=<theme> pnpm exec nextspark migrate --dry-run`, and the same for `--yes`.
+   - **The theme** migrate moves is the only directory under `contents/themes`; nothing needs to name it. With several, pass the one the project uses: `pnpm exec nextspark migrate --dry-run --theme <name>`, and the same for `--yes`. Only with several themes and no `--theme`, for compatibility, migrate still takes the one `NEXT_PUBLIC_ACTIVE_THEME` names in the environment, else in `.env.example` in the web app's directory (the host root, e.g. `web/.env.example`); `--theme` wins over both. See [The theme variable](#the-theme-variable) for what happens to `NEXT_PUBLIC_ACTIVE_THEME` itself.
 4. Fix what the report names (and rename any entity called `users`, `teams`, `auth`, `billing`, `cron`, `api-keys`, `devtools`, `media`, `media-tags`, `blocks`, `patterns`, `post-categories` or `team-invitations`: core reserves those API namespaces and `prepare` refuses such an entity), then `pnpm exec nextspark migrate --yes`. Without `--yes` it stops after the report. Keep the rollback commands it prints until the upgrade is committed.
 5. Review the printed summary and commit. If git still tracks files under `src/app`, run the `git rm -r -q --cached src/app` it prints (then commit) so that the now-ignored generated files leave the index.
 6. **Install again** (at the root and in the web app). Migrate changes `next` and `eslint-config-next` to `~16.4.2`, so the install that came before it no longer matches `package.json`. Then `pnpm exec nextspark prepare`.
@@ -103,6 +103,32 @@ It looks at `app/` (before the `src/` layout) or `src/app/`, and decides file by
 | A billing webhook route core generated, when `lib/billing/<provider>-webhook-extensions` holds more than core's empty stub | Removes the route and adds `billing: { webhookExtensions: { <provider>: './lib/billing/...' } }` to `nextspark.config.ts` |
 
 Every moved file keeps its relative imports pointing at the same files. Migrate then writes `src/proxy.ts` when the project has none, adds `.nextspark/` and `src/app/` to `.gitignore`, and runs `nextspark prepare`. If generation fails, the project is left converted, the failure is printed, and so is the rollback (`git checkout -- .` plus a `git clean` of exactly what the run created).
+
+## The theme variable
+
+A root-first project is its own theme, so nothing sets or reads `NEXT_PUBLIC_ACTIVE_THEME` any more: not the runtime, not `nextspark build`, not `db:migrate`. Migrate takes it out of the project:
+
+- **`.env.example`**: the line that sets it is removed. Remove it from `.env` and from the deployment's environment yourself; migrate never reads or edits a private `.env`.
+- **Reads in code**: `process.env.NEXT_PUBLIC_ACTIVE_THEME`, `process.env?.NEXT_PUBLIC_ACTIVE_THEME` and `process.env['NEXT_PUBLIC_ACTIVE_THEME']`, in `.js`, `.ts` and the like and outside comment lines, become `undefined` (under `tests/`, the theme's name in quotes, which the tests' assertions expect). The report's **NEXT_PUBLIC_ACTIVE_THEME** section (`themeVariable.replaced` in `--json`) lists the file and line of each: the theme logic around them (`if (activeTheme && ...)`, a fallback to `'default'`) is dead code to delete.
+- **Every other mention** (a comment, a Markdown document, a string, an object key) is left as written and listed the same way (`themeVariable.left`). Migrate does not rename the variable: delete each mention that was about choosing a theme.
+- **A destructuring read** (`const { NEXT_PUBLIC_ACTIVE_THEME } = process.env`, renamed or with a default) stops migrate before it writes, naming the file and line: take the variable out of the destructuring and treat the theme as `undefined`, commit, and run it again.
+- **`scripts/cy-run-prod.cjs`**, which core's wizard wrote and which looks for the Cypress config under `contents/themes`: when its text is one of the versions core published (line endings, indentation and empty lines aside), migrate replaces it with `node_modules/@nextsparkjs/core/templates/scripts/cy-run-prod.cjs`. One you changed is left exactly as it is, with a warning: compare it with the template and carry your change over.
+
+**Migrated with an earlier release?** Before `0.1.0-beta.202`, migrate replaced the reads with `undefined` without saying where, renamed every other mention to `ROOT_FIRST_PROJECT`, and rewrote `scripts/cy-run-prod.cjs` instead of replacing it. Look for:
+
+- `ROOT_FIRST_PROJECT` (`git grep -n ROOT_FIRST_PROJECT`): nothing reads it. Delete each mention, or the line, and the setting in `.env` files and the deployment's environment if you added one.
+- `const activeTheme = undefined` and other places where a theme name is read from `undefined` (`undefined || 'default'`): delete the branch that chose a theme.
+- `scripts/cy-run-prod.cjs` still looking under `contents/themes`: copy `node_modules/@nextsparkjs/core/templates/scripts/cy-run-prod.cjs` over it unless you changed it.
+
+### The database of a 0.x project
+
+A 0.x database recorded the project's migrations under the theme (`('theme', <theme>)` and `('theme-settings', ...)` in `_content_migrations`, `'theme'` in `_entity_migrations`). The first `pnpm db:migrate` after the upgrade records the ones already applied for the project instead of running them again, and needs no option when the rows name a single theme. When they name several (a development database that ran more than one theme), it stops before running anything and lists them: run it once with the theme this project was migrated from, the directory under `contents/themes` that migrate moved (`nextspark migrate` prints the command at the end):
+
+```bash
+pnpm db:migrate --legacy-theme <theme>
+```
+
+`db:seed` takes the same option. A name that is not one of the listed themes stops the run too. Once the rows are recorded for the project there is nothing left to take over, and the option is ignored, so a deploy script that keeps it does no harm.
 
 ## When migrate is killed or fails after it started writing
 

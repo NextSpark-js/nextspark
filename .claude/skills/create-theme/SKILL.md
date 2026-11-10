@@ -57,8 +57,8 @@ explicit so validation checks it against the supported Next.js range (`~16.4.2`)
 From the repository root:
 
 ```bash
-# Confirm no legacy selectable-theme paths or environment selector were added.
-rg -n 'contents/(themes|plugins)|NEXT_PUBLIC_ACTIVE_THEME' \
+# Confirm no legacy selectable-theme paths were added.
+rg -n 'contents/(themes|plugins)' \
   packages/core/templates/projects/<template-name>
 
 # Exercise compiler discovery from a clean extracted project fixture.

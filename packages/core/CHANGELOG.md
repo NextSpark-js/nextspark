@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 0.1.0-beta.201
+
+- **A project migrated from 0.x by an earlier `nextspark migrate` may still hold what that run left of the theme variable.** `git grep -n ROOT_FIRST_PROJECT` finds the mentions it renamed: nothing reads that name, so delete each one, and any setting of it in `.env` files or the deployment's environment. Code that reads a theme name from `undefined` (`const activeTheme = undefined`, `undefined || 'default'`) is theme logic it left behind: delete the branch. A `scripts/cy-run-prod.cjs` that still looks under `contents/themes` can be replaced with `node_modules/@nextsparkjs/core/templates/scripts/cy-run-prod.cjs` unless you changed it. `NEXT_PUBLIC_ACTIVE_THEME` itself can go from `.env` and the deployment's environment. See "The theme variable" in the 0.x upgrade guide. (#424)
+
 ### Fixed
 
 - **`db:migrate` no longer reads `NEXT_PUBLIC_ACTIVE_THEME`; `--legacy-theme <theme>` names the theme a 0.x database came from when it recorded migrations under several.** A root-first project never sets the variable, yet the runner read it from the environment and the project `.env` to tell those themes apart. The migrations a 0.x database recorded under a single theme are still taken over with no option; with several and no flag the run stops before anything and names the flag. `db:seed` takes the flag too; a flag that names none of the recorded themes stops the run, and a database with nothing to take over ignores it. `nextspark migrate` prints the flag with the theme it moved. (#424)

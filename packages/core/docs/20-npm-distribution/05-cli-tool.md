@@ -54,7 +54,7 @@ The report resolves the Next.js host before scanning, so a web host under
 `web/` is not mistaken for the monorepo root. It inventories version drift,
 the project and plugins, template customizations, legacy imports, tooling
 paths, root-name and file collisions, untracked files, and sibling workspace
-references. For legacy projects only, it reads the selected theme from `NEXT_PUBLIC_ACTIVE_THEME` or `.env.example`; it does not read private `.env` files. Once the report is clean,
+references. The theme it moves is the only directory under `contents/themes`; with several, `--theme <name>` names it (only then, and only without the flag, it falls back to `NEXT_PUBLIC_ACTIVE_THEME` in the environment or `.env.example`, as 0.x did; it does not read private `.env` files). Once the report is clean,
 `pnpm exec nextspark migrate --yes` performs the move (`--no-prepare` skips the
 `nextspark prepare` it runs at the end).
 
@@ -100,13 +100,14 @@ Options:
 
 ## Database commands
 
-`db:migrate` and `db:seed` (also `db migrate` / `db seed`) take one option:
+`db:migrate` and `db:seed` (also `db migrate` / `db seed`) take these options:
 
 | Option | Effect |
 |---|---|
 | `--no-env-file` | Ignore the project `.env`; the connection comes only from the exported environment |
+| `--legacy-theme <theme>` | Only for the first run on a database a 0.x project used, when it recorded the project's migrations under several themes: the theme the project was migrated from. See [The database of a 0.x project](../17-updates/06-upgrade-0x-projects.md#the-database-of-a-0x-project) |
 
-Precedence: an exported `DATABASE_URL`, `MIGRATE_DATABASE_URL`, `MIGRATION_TIMEOUT_SECONDS` or `NEXT_PUBLIC_ACTIVE_THEME` beats the same variable in `.env`; the `.env` fills what the environment leaves unset. Before the first migration the runner prints the destination (host and database name only, never the user, password or URL). See [Database Migrations](../10-backend/02-migrations.md#running-migrations).
+Precedence: an exported `DATABASE_URL`, `MIGRATE_DATABASE_URL` or `MIGRATION_TIMEOUT_SECONDS` beats the same variable in `.env`; the `.env` fills what the environment leaves unset. Before the first migration the runner prints the destination (host and database name only, never the user, password or URL). See [Database Migrations](../10-backend/02-migrations.md#running-migrations).
 
 ## Using in package.json
 
