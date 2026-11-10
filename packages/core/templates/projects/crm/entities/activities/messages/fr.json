@@ -1,0 +1,123 @@
+{
+  "entity": {
+    "name": "Activité",
+    "plural": "Activités",
+    "description": "Suivre les interactions et les communications"
+  },
+  "fields": {
+    "entityType": {
+      "label": "Type d'entité associée",
+      "description": "Type d'entité à laquelle cette activité est liée",
+      "placeholder": "Sélectionnez un type d'entité..."
+    },
+    "entityId": {
+      "label": "Entité associée",
+      "description": "Entité à laquelle cette activité est liée",
+      "placeholder": "Sélectionnez une entité..."
+    },
+    "type": {
+      "label": "Type d'activité",
+      "description": "Type d'activité",
+      "placeholder": "Sélectionnez un type..."
+    },
+    "subject": {
+      "label": "Objet",
+      "description": "Objet ou titre de l'activité",
+      "placeholder": "Saisissez l'objet..."
+    },
+    "description": {
+      "label": "Description",
+      "description": "Description détaillée de l'activité",
+      "placeholder": "Saisissez la description..."
+    },
+    "status": {
+      "label": "Statut",
+      "description": "Statut actuel de l'activité",
+      "placeholder": "Sélectionnez un statut..."
+    },
+    "priority": {
+      "label": "Priorité",
+      "description": "Niveau de priorité de l'activité",
+      "placeholder": "Sélectionnez une priorité..."
+    },
+    "dueDate": {
+      "label": "Échéance",
+      "description": "Date d'échéance de l'activité",
+      "placeholder": "Sélectionnez une date..."
+    },
+    "completedAt": {
+      "label": "Terminé le",
+      "description": "Date à laquelle l'activité a été terminée"
+    },
+    "duration": {
+      "label": "Durée (minutes)",
+      "description": "Durée de l'activité en minutes",
+      "placeholder": "0"
+    },
+    "outcome": {
+      "label": "Résultat",
+      "description": "Résultat de l'activité",
+      "placeholder": "Sélectionnez un résultat..."
+    },
+    "assignedTo": {
+      "label": "Assigné à",
+      "description": "Utilisateur assigné à cette activité",
+      "placeholder": "Sélectionnez un utilisateur..."
+    }
+  },
+  "options": {
+    "entityType": {
+      "lead": "Lead",
+      "contact": "Contact",
+      "company": "Entreprise",
+      "opportunity": "Opportunité"
+    },
+    "type": {
+      "call": "Appel téléphonique",
+      "email": "E-mail",
+      "meeting": "Réunion",
+      "task": "Tâche",
+      "note": "Note",
+      "demo": "Démo",
+      "proposal": "Proposition",
+      "follow_up": "Relance"
+    },
+    "status": {
+      "pending": "En attente",
+      "in_progress": "En cours",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "deferred": "Reporté"
+    },
+    "priority": {
+      "low": "Faible",
+      "medium": "Moyenne",
+      "high": "Élevée",
+      "urgent": "Urgente"
+    },
+    "outcome": {
+      "successful": "Réussi",
+      "partially_successful": "Partiellement réussi",
+      "unsuccessful": "Échec",
+      "no_response": "Sans réponse",
+      "reschedule": "Report nécessaire"
+    }
+  },
+  "actions": {
+    "create": "Créer une activité",
+    "edit": "Modifier l'activité",
+    "delete": "Supprimer l'activité",
+    "view": "Voir l'activité",
+    "list": "Lister les activités",
+    "complete": "Marquer comme terminé",
+    "schedule": "Planifier une activité"
+  },
+  "messages": {
+    "created": "Activité créée avec succès",
+    "updated": "Activité mise à jour avec succès",
+    "deleted": "Activité supprimée avec succès",
+    "completed": "Activité marquée comme terminée",
+    "notFound": "Activité introuvable",
+    "error": "Une erreur s'est produite lors du traitement de l'activité"
+  }
+}

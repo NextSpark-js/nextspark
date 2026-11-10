@@ -1,0 +1,123 @@
+{
+  "entity": {
+    "name": "Aktivität",
+    "plural": "Aktivitäten",
+    "description": "Interaktionen und Kommunikation nachverfolgen"
+  },
+  "fields": {
+    "entityType": {
+      "label": "Verknüpfter Entitätstyp",
+      "description": "Typ der Entität, mit der diese Aktivität verknüpft ist",
+      "placeholder": "Entitätstyp auswählen..."
+    },
+    "entityId": {
+      "label": "Verknüpfte Entität",
+      "description": "Entität, mit der diese Aktivität verknüpft ist",
+      "placeholder": "Entität auswählen..."
+    },
+    "type": {
+      "label": "Aktivitätstyp",
+      "description": "Art der Aktivität",
+      "placeholder": "Typ auswählen..."
+    },
+    "subject": {
+      "label": "Betreff",
+      "description": "Betreff oder Titel der Aktivität",
+      "placeholder": "Betreff eingeben..."
+    },
+    "description": {
+      "label": "Beschreibung",
+      "description": "Ausführliche Beschreibung der Aktivität",
+      "placeholder": "Beschreibung eingeben..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Aktueller Status der Aktivität",
+      "placeholder": "Status auswählen..."
+    },
+    "priority": {
+      "label": "Priorität",
+      "description": "Prioritätsstufe der Aktivität",
+      "placeholder": "Priorität auswählen..."
+    },
+    "dueDate": {
+      "label": "Fällig am",
+      "description": "Wann die Aktivität fällig ist",
+      "placeholder": "Datum auswählen..."
+    },
+    "completedAt": {
+      "label": "Abgeschlossen am",
+      "description": "Wann die Aktivität abgeschlossen wurde"
+    },
+    "duration": {
+      "label": "Dauer (Minuten)",
+      "description": "Dauer der Aktivität in Minuten",
+      "placeholder": "0"
+    },
+    "outcome": {
+      "label": "Ergebnis",
+      "description": "Ergebnis der Aktivität",
+      "placeholder": "Ergebnis auswählen..."
+    },
+    "assignedTo": {
+      "label": "Zugewiesen an",
+      "description": "Benutzer, dem diese Aktivität zugewiesen ist",
+      "placeholder": "Benutzer auswählen..."
+    }
+  },
+  "options": {
+    "entityType": {
+      "lead": "Lead",
+      "contact": "Kontakt",
+      "company": "Unternehmen",
+      "opportunity": "Opportunity"
+    },
+    "type": {
+      "call": "Telefonanruf",
+      "email": "E-Mail",
+      "meeting": "Meeting",
+      "task": "Aufgabe",
+      "note": "Notiz",
+      "demo": "Demo",
+      "proposal": "Angebot",
+      "follow_up": "Nachfassen"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "in_progress": "In Bearbeitung",
+      "completed": "Abgeschlossen",
+      "cancelled": "Abgebrochen",
+      "deferred": "Zurückgestellt"
+    },
+    "priority": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch",
+      "urgent": "Dringend"
+    },
+    "outcome": {
+      "successful": "Erfolgreich",
+      "partially_successful": "Teilweise erfolgreich",
+      "unsuccessful": "Nicht erfolgreich",
+      "no_response": "Keine Antwort",
+      "reschedule": "Neuer Termin erforderlich"
+    }
+  },
+  "actions": {
+    "create": "Aktivität erstellen",
+    "edit": "Aktivität bearbeiten",
+    "delete": "Aktivität löschen",
+    "view": "Aktivität ansehen",
+    "list": "Aktivitäten auflisten",
+    "complete": "Als erledigt markieren",
+    "schedule": "Aktivität planen"
+  },
+  "messages": {
+    "created": "Aktivität erfolgreich erstellt",
+    "updated": "Aktivität erfolgreich aktualisiert",
+    "deleted": "Aktivität erfolgreich gelöscht",
+    "completed": "Aktivität als erledigt markiert",
+    "notFound": "Aktivität nicht gefunden",
+    "error": "Beim Verarbeiten der Aktivität ist ein Fehler aufgetreten"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "productivity": {
+    "name": "Produktivität",
+    "description": "Eine App zur gemeinsamen Aufgabenverwaltung",
+    "tagline": "Organisiert eure Arbeit gemeinsam",
+    "navigation": {
+      "boards": "Boards",
+      "myCards": "Meine Karten",
+      "calendar": "Kalender",
+      "team": "Team"
+    },
+    "quickActions": {
+      "createBoard": "Board erstellen",
+      "createCard": "Karte hinzufügen"
+    },
+    "dashboard": {
+      "welcome": "Willkommen zurück!",
+      "welcomeWithName": "Willkommen zurück, {name}!",
+      "overview": "Deine Übersicht",
+      "recentBoards": "Zuletzt verwendete Boards",
+      "upcomingDeadlines": "Anstehende Fristen",
+      "assignedToYou": "Dir zugewiesen",
+      "teamActivity": "Team-Aktivität"
+    },
+    "stats": {
+      "totalBoards": "Boards insgesamt",
+      "totalCards": "Karten insgesamt",
+      "cardsCompleted": "Abgeschlossene Karten",
+      "cardsDueThisWeek": "Diese Woche fällig"
+    },
+    "empty": {
+      "noBoards": {
+        "title": "Noch keine Boards",
+        "description": "Erstelle dein erstes Board, um deine Arbeit zu organisieren.",
+        "action": "Erstes Board erstellen"
+      },
+      "noAssignedCards": {
+        "title": "Keine Karten zugewiesen",
+        "description": "Dir zugewiesene Karten erscheinen hier."
+      },
+      "noDeadlines": {
+        "title": "Keine anstehenden Fristen",
+        "description": "Karten mit Fälligkeitsdatum erscheinen hier."
+      }
+    },
+    "collaboration": {
+      "invite": "Teammitglied einladen",
+      "inviteDescription": "Lade jemanden ein, an deinen Boards mitzuarbeiten",
+      "teamMembers": "Teammitglieder",
+      "roles": {
+        "owner": "Inhaber",
+        "member": "Mitglied",
+        "viewer": "Betrachter"
+      },
+      "roleDescriptions": {
+        "owner": "Voller Zugriff auf alle Boards, Listen und Karten. Kann Mitglieder einladen.",
+        "member": "Kann Listen und Karten erstellen und bearbeiten. Kann keine Boards löschen.",
+        "viewer": "Schreibgeschützter Zugriff auf alle Boards, Listen und Karten."
+      }
+    },
+    "shortcuts": {
+      "title": "Tastenkürzel",
+      "newCard": "Neue Karte",
+      "newBoard": "Neues Board",
+      "search": "Suchen",
+      "toggleSidebar": "Seitenleiste umschalten",
+      "nextList": "Nächste Liste",
+      "previousList": "Vorherige Liste"
+    }
+  }
+}

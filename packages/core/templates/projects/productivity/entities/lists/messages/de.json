@@ -1,0 +1,54 @@
+{
+  "title": "Listen",
+  "singular": "Liste",
+  "plural": "Listen",
+  "description": "Spalten innerhalb von Boards zum Organisieren von Karten",
+  "fields": {
+    "name": {
+      "label": "Name",
+      "placeholder": "Listennamen eingeben...",
+      "description": "Name der Liste"
+    },
+    "position": {
+      "label": "Position",
+      "description": "Anzeigereihenfolge innerhalb des Boards"
+    },
+    "boardId": {
+      "label": "Board",
+      "placeholder": "Board auswählen...",
+      "description": "Übergeordnetes Board"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann die Liste erstellt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann die Liste zuletzt geändert wurde"
+    }
+  },
+  "actions": {
+    "create": "Liste hinzufügen",
+    "edit": "Liste bearbeiten",
+    "delete": "Liste löschen",
+    "moveLeft": "Nach links verschieben",
+    "moveRight": "Nach rechts verschieben"
+  },
+  "messages": {
+    "created": "Liste erfolgreich erstellt",
+    "updated": "Liste erfolgreich aktualisiert",
+    "deleted": "Liste erfolgreich gelöscht",
+    "moved": "Liste verschoben",
+    "confirmDelete": "Möchtest du diese Liste wirklich löschen? Alle darin enthaltenen Karten werden endgültig entfernt."
+  },
+  "empty": {
+    "title": "Noch keine Listen",
+    "description": "Füge eine Liste hinzu, um deine Karten zu organisieren.",
+    "action": "Liste hinzufügen"
+  },
+  "defaults": {
+    "todo": "Zu erledigen",
+    "inProgress": "In Bearbeitung",
+    "done": "Erledigt"
+  }
+}

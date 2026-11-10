@@ -1,0 +1,93 @@
+{
+  "common": {
+    "blog": {
+      "viewBlog": "Visualizza il blog"
+    }
+  },
+  "blog": {
+    "title": "Piattaforma di blog",
+    "description": "Pensieri, storie e idee dalla nostra community di autori",
+    "viewBlog": "Visualizza il blog",
+    "writtenBy": "Scritto da",
+    "publishedOn": "Pubblicato il",
+    "readMore": "Leggi di più",
+    "backToHome": "Torna alla home",
+    "backToPosts": "Torna agli articoli",
+    "noPosts": "Ancora nessun articolo",
+    "noPostsDescription": "Torna presto a trovarci per nuovi contenuti.",
+    "publicFeed": {
+      "title": "Ultime storie",
+      "subtitle": "Pensieri, storie e idee dalla nostra community di autori",
+      "recentPosts": "Articoli recenti",
+      "loadMore": "Carica altro",
+      "noResults": "Nessun articolo trovato",
+      "filterByCategory": "Filtra per categoria"
+    },
+    "newsletter": {
+      "title": "Resta aggiornato",
+      "description": "Iscriviti per essere avvisato quando vengono pubblicati nuovi articoli. Niente spam, annulla l'iscrizione quando vuoi.",
+      "placeholder": "tua@email.it",
+      "subscribe": "Iscriviti"
+    },
+    "author": {
+      "profileTitle": "Profilo di {name}",
+      "postsCount": "{count} articoli pubblicati",
+      "postsCountSingular": "{count} articolo pubblicato",
+      "viewAllPosts": "Visualizza tutti gli articoli",
+      "followOn": "Segui su {platform}",
+      "visitWebsite": "Visita il sito web",
+      "moreFrom": "Altro da {name}",
+      "notFound": "Autore non trovato",
+      "notFoundDescription": "L'autore che stai cercando non esiste."
+    },
+    "category": {
+      "title": "Articoli in {category}",
+      "noResults": "Ancora nessun articolo in questa categoria"
+    },
+    "dashboard": {
+      "myPosts": "I miei articoli",
+      "newPost": "Nuovo articolo",
+      "editProfile": "Modifica profilo",
+      "publishPost": "Pubblica",
+      "unpublishPost": "Annulla la pubblicazione",
+      "confirmPublish": "Vuoi davvero pubblicare questo articolo?",
+      "confirmUnpublish": "Vuoi davvero annullare la pubblicazione di questo articolo?",
+      "statusDraft": "Bozza",
+      "statusPublished": "Pubblicato"
+    },
+    "profile": {
+      "username": "Nome utente",
+      "usernameHint": "Questo sarà l'URL del tuo profilo pubblico: /author/{username}",
+      "bio": "Bio",
+      "bioPlaceholder": "Racconta ai lettori qualcosa di te...",
+      "socialLinks": "Link social",
+      "twitter": "Profilo Twitter/X",
+      "linkedin": "Profilo LinkedIn",
+      "website": "Sito web personale",
+      "saveProfile": "Salva profilo",
+      "profileUpdated": "Profilo aggiornato con successo"
+    },
+    "quickActions": {
+      "writePost": "Scrivi un nuovo articolo"
+    },
+    "categories": {
+      "all": "Tutte le categorie",
+      "uncategorized": "Senza categoria"
+    },
+    "search": {
+      "placeholder": "Cerca articoli...",
+      "noResults": "Nessun articolo trovato",
+      "resultsFor": "Risultati per"
+    },
+    "pagination": {
+      "previous": "Precedente",
+      "next": "Successivo",
+      "page": "Pagina"
+    },
+    "meta": {
+      "minRead": "min di lettura",
+      "draft": "Bozza",
+      "scheduled": "Programmato per"
+    }
+  }
+}

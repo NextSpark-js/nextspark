@@ -1,0 +1,117 @@
+{
+  "entity": {
+    "name": "Contatto",
+    "plural": "Contatti",
+    "description": "Gestisci le persone di contatto nelle aziende"
+  },
+  "fields": {
+    "firstName": {
+      "label": "Nome",
+      "description": "Nome del contatto",
+      "placeholder": "Inserisci il nome..."
+    },
+    "lastName": {
+      "label": "Cognome",
+      "description": "Cognome del contatto",
+      "placeholder": "Inserisci il cognome..."
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Indirizzo e-mail del contatto",
+      "placeholder": "Inserisci l'indirizzo e-mail..."
+    },
+    "phone": {
+      "label": "Telefono",
+      "description": "Numero di telefono dell'ufficio",
+      "placeholder": "Inserisci il numero di telefono..."
+    },
+    "mobile": {
+      "label": "Cellulare",
+      "description": "Numero di cellulare",
+      "placeholder": "Inserisci il numero di cellulare..."
+    },
+    "companyId": {
+      "label": "Azienda",
+      "description": "Azienda associata",
+      "placeholder": "Seleziona l'azienda..."
+    },
+    "position": {
+      "label": "Posizione",
+      "description": "Posizione o qualifica",
+      "placeholder": "Inserisci la posizione..."
+    },
+    "department": {
+      "label": "Reparto",
+      "description": "Reparto all'interno dell'azienda",
+      "placeholder": "Inserisci il reparto..."
+    },
+    "isPrimary": {
+      "label": "Contatto principale",
+      "description": "È il contatto principale dell'azienda"
+    },
+    "birthDate": {
+      "label": "Data di nascita",
+      "description": "Data di nascita del contatto",
+      "placeholder": "Seleziona una data..."
+    },
+    "linkedin": {
+      "label": "LinkedIn",
+      "description": "URL del profilo LinkedIn",
+      "placeholder": "https://linkedin.com/in/..."
+    },
+    "twitter": {
+      "label": "Twitter",
+      "description": "Nome utente Twitter/X",
+      "placeholder": "@utente"
+    },
+    "preferredChannel": {
+      "label": "Canale preferito",
+      "description": "Canale di comunicazione preferito",
+      "placeholder": "Seleziona il canale..."
+    },
+    "timezone": {
+      "label": "Fuso orario",
+      "description": "Fuso orario del contatto",
+      "placeholder": "UTC"
+    },
+    "lastContactedAt": {
+      "label": "Ultimo contatto",
+      "description": "Ultima volta in cui questo contatto è stato raggiunto"
+    },
+    "createdAt": {
+      "label": "Creato il",
+      "description": "Quando il contatto è stato creato"
+    },
+    "updatedAt": {
+      "label": "Aggiornato il",
+      "description": "Quando il contatto è stato aggiornato l'ultima volta"
+    }
+  },
+  "options": {
+    "preferredChannel": {
+      "email": "E-mail",
+      "phone": "Telefono",
+      "whatsapp": "WhatsApp",
+      "linkedin": "LinkedIn",
+      "slack": "Slack",
+      "other": "Altro"
+    }
+  },
+  "actions": {
+    "create": "Crea contatto",
+    "edit": "Modifica contatto",
+    "delete": "Elimina contatto",
+    "view": "Visualizza contatto",
+    "list": "Elenca contatti",
+    "search": "Cerca contatti",
+    "export": "Esporta contatti",
+    "import": "Importa contatti"
+  },
+  "messages": {
+    "created": "Contatto creato con successo",
+    "updated": "Contatto aggiornato con successo",
+    "deleted": "Contatto eliminato con successo",
+    "notFound": "Contatto non trovato",
+    "error": "Si è verificato un errore durante l'elaborazione del contatto"
+  }
+}

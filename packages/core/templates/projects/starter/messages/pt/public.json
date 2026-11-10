@@ -1,0 +1,18 @@
+{
+  "home": {
+    "hero": {
+      "title": "Bem-vindo ao seu aplicativo",
+      "description": "Um aplicativo SaaS moderno criado com NextSpark",
+      "cta": "Começar"
+    },
+    "features": {
+      "title": "Recursos",
+      "subtitle": "Tudo o que você precisa para criar seu SaaS"
+    }
+  },
+  "footer": {
+    "copyright": "Todos os direitos reservados.",
+    "privacyPolicy": "Política de Privacidade",
+    "termsOfService": "Termos de Serviço"
+  }
+}

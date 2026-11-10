@@ -1,0 +1,55 @@
+{
+  "entity": {
+    "singular": "Article",
+    "plural": "Articles"
+  },
+  "fields": {
+    "title": {
+      "label": "Titre",
+      "placeholder": "Saisissez le titre...",
+      "description": "Titre de l'article"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "slug-article",
+      "description": "Identifiant adapté aux URL"
+    },
+    "status": {
+      "label": "Statut",
+      "description": "Statut de publication",
+      "options": {
+        "draft": "Brouillon",
+        "published": "Publié",
+        "scheduled": "Planifié",
+        "archived": "Archivé"
+      }
+    },
+    "excerpt": {
+      "label": "Extrait",
+      "placeholder": "Brève description...",
+      "description": "Court résumé affiché dans les listes"
+    },
+    "featuredImage": {
+      "label": "Image mise en avant",
+      "description": "Image principale de l'article"
+    },
+    "categories": {
+      "label": "Catégories",
+      "placeholder": "Sélectionnez des catégories...",
+      "description": "Catégories de l'article"
+    }
+  },
+  "actions": {
+    "create": "Créer un article",
+    "edit": "Modifier l'article",
+    "delete": "Supprimer l'article",
+    "publish": "Publier",
+    "unpublish": "Dépublier"
+  },
+  "messages": {
+    "created": "Article créé avec succès",
+    "updated": "Article mis à jour avec succès",
+    "deleted": "Article supprimé avec succès",
+    "published": "Article publié avec succès"
+  }
+}

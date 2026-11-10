@@ -1,0 +1,94 @@
+{
+  "title": "Publicações",
+  "singular": "Publicação",
+  "plural": "Publicações",
+  "description": "Gerencie suas publicações do blog",
+  "fields": {
+    "title": {
+      "label": "Título",
+      "placeholder": "Digite um título atraente...",
+      "description": "O título da sua publicação do blog"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "minha-publicacao-do-blog",
+      "description": "Versão do título amigável para URL"
+    },
+    "excerpt": {
+      "label": "Resumo",
+      "placeholder": "Escreva um breve resumo da sua publicação...",
+      "description": "Um breve resumo exibido nas listas de publicações"
+    },
+    "content": {
+      "label": "Conteúdo",
+      "placeholder": "Comece a escrever sua publicação...",
+      "description": "O conteúdo principal da sua publicação do blog"
+    },
+    "featuredImage": {
+      "label": "Imagem de destaque",
+      "placeholder": "Enviar uma imagem...",
+      "description": "Imagem principal exibida com a publicação"
+    },
+    "category": {
+      "label": "Categoria",
+      "placeholder": "ex.: Tecnologia, Viagens, Gastronomia",
+      "description": "Categoria principal da publicação"
+    },
+    "tags": {
+      "label": "Tags",
+      "placeholder": "Adicionar tags...",
+      "description": "Palavras-chave para ajudar os leitores a encontrar esta publicação"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Selecione o status...",
+      "description": "Status de publicação",
+      "options": {
+        "draft": "Rascunho",
+        "published": "Publicado",
+        "scheduled": "Agendado"
+      }
+    },
+    "publishedAt": {
+      "label": "Data de publicação",
+      "placeholder": "Selecione uma data...",
+      "description": "Quando a publicação foi ou será publicada"
+    },
+    "createdAt": {
+      "label": "Criado em",
+      "description": "Quando a publicação foi criada"
+    },
+    "updatedAt": {
+      "label": "Atualizado em",
+      "description": "Quando a publicação foi modificada pela última vez"
+    }
+  },
+  "actions": {
+    "create": "Nova publicação",
+    "edit": "Editar publicação",
+    "delete": "Excluir publicação",
+    "publish": "Publicar",
+    "unpublish": "Cancelar publicação",
+    "saveDraft": "Salvar rascunho",
+    "preview": "Pré-visualizar"
+  },
+  "messages": {
+    "created": "Publicação criada com sucesso",
+    "updated": "Publicação atualizada com sucesso",
+    "deleted": "Publicação excluída com sucesso",
+    "published": "Publicação publicada com sucesso",
+    "unpublished": "Publicação despublicada",
+    "confirmDelete": "Tem certeza de que deseja excluir esta publicação? Esta ação não pode ser desfeita."
+  },
+  "empty": {
+    "title": "Nenhuma publicação ainda",
+    "description": "Comece escrevendo sua primeira publicação do blog.",
+    "action": "Escreva sua primeira publicação"
+  },
+  "filters": {
+    "all": "Todas as publicações",
+    "published": "Publicado",
+    "draft": "Rascunhos",
+    "scheduled": "Agendado"
+  }
+}

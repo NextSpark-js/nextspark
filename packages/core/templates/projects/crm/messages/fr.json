@@ -1,0 +1,122 @@
+{
+  "crm": {
+    "name": "CRM Enterprise",
+    "description": "Solution CRM complète pour les équipes commerciales et marketing",
+    "tagline": "Concluez plus d'affaires, développez votre entreprise",
+    "navigation": {
+      "leads": "Leads",
+      "contacts": "Contacts",
+      "companies": "Entreprises",
+      "opportunities": "Opportunités",
+      "activities": "Activités",
+      "campaigns": "Campagnes",
+      "reports": "Rapports",
+      "settings": "Paramètres"
+    },
+    "quickActions": {
+      "newLead": "Nouveau lead",
+      "newContact": "Nouveau contact",
+      "newCompany": "Nouvelle entreprise",
+      "newOpportunity": "Nouvelle opportunité",
+      "scheduleActivity": "Planifier une activité",
+      "createCampaign": "Créer une campagne"
+    },
+    "dashboard": {
+      "welcome": "Bon retour !",
+      "welcomeWithName": "Bon retour, {name} !",
+      "overview": "Aperçu des ventes",
+      "pipelineValue": "Valeur de la pipeline",
+      "openDeals": "Affaires ouvertes",
+      "wonThisMonth": "Gagnées ce mois-ci",
+      "conversionRate": "Taux de conversion",
+      "upcomingActivities": "Activités à venir",
+      "recentLeads": "Leads récents",
+      "topOpportunities": "Meilleures opportunités"
+    },
+    "pipeline": {
+      "title": "Pipeline commerciale",
+      "totalValue": "Valeur totale",
+      "dealCount": "Affaires",
+      "stages": {
+        "qualification": "Qualification",
+        "needsAnalysis": "Analyse des besoins",
+        "proposal": "Proposition",
+        "negotiation": "Négociation",
+        "closedWon": "Clôturée gagnée",
+        "closedLost": "Clôturée perdue"
+      }
+    },
+    "reports": {
+      "title": "Rapports",
+      "sales": "Rapport des ventes",
+      "marketing": "Rapport marketing",
+      "pipeline": "Rapport de pipeline",
+      "activity": "Rapport d'activité",
+      "forecast": "Prévisions de ventes"
+    },
+    "features": {
+      "convert": {
+        "title": "Convertir le lead",
+        "description": "Convertir ce lead en contact et en entreprise",
+        "createContact": "Créer un contact",
+        "createCompany": "Créer une entreprise",
+        "success": "Lead converti avec succès",
+        "alreadyConverted": "Ce lead a déjà été converti"
+      },
+      "bulkImport": {
+        "title": "Importer des données",
+        "description": "Importer des données depuis un fichier CSV ou Excel",
+        "selectFile": "Sélectionner un fichier",
+        "mapping": "Associer les colonnes",
+        "preview": "Aperçu",
+        "import": "Importer"
+      },
+      "bulkExport": {
+        "title": "Exporter des données",
+        "description": "Exporter des données vers un fichier CSV ou Excel",
+        "allRecords": "Tous les enregistrements",
+        "selectedRecords": "Enregistrements sélectionnés",
+        "filteredRecords": "Enregistrements filtrés"
+      }
+    },
+    "roles": {
+      "owner": "Administrateur",
+      "admin": "Responsable",
+      "member": "Commercial",
+      "viewer": "Lecteur",
+      "descriptions": {
+        "owner": "Accès complet à toutes les fonctionnalités et à tous les paramètres du CRM",
+        "admin": "Peut gérer l'équipe, consulter les rapports et effectuer des opérations en masse",
+        "member": "Peut gérer les leads, les contacts, les opportunités et les activités",
+        "viewer": "Accès en lecture seule aux données du CRM"
+      }
+    },
+    "stats": {
+      "totalLeads": "Total des leads",
+      "qualifiedLeads": "Leads qualifiés",
+      "totalOpportunities": "Total des opportunités",
+      "wonOpportunities": "Opportunités gagnées",
+      "pipelineValue": "Valeur de la pipeline",
+      "avgDealSize": "Taille moyenne des affaires",
+      "winRate": "Taux de réussite",
+      "activeCampaigns": "Campagnes actives"
+    },
+    "empty": {
+      "noLeads": {
+        "title": "Aucun lead pour le moment",
+        "description": "Commencez à capter des leads pour développer votre pipeline.",
+        "action": "Ajouter votre premier lead"
+      },
+      "noOpportunities": {
+        "title": "Aucune opportunité pour le moment",
+        "description": "Créez des opportunités à partir de leads qualifiés.",
+        "action": "Créer une opportunité"
+      },
+      "noActivities": {
+        "title": "Aucune activité planifiée",
+        "description": "Planifiez des appels, des réunions et des tâches.",
+        "action": "Planifier une activité"
+      }
+    }
+  }
+}

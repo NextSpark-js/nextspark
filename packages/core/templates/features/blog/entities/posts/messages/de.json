@@ -1,0 +1,55 @@
+{
+  "entity": {
+    "singular": "Beitrag",
+    "plural": "Beiträge"
+  },
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Titel eingeben...",
+      "description": "Titel des Beitrags"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "beitrags-slug",
+      "description": "URL-freundliche Kennung"
+    },
+    "status": {
+      "label": "Status",
+      "description": "Veröffentlichungsstatus",
+      "options": {
+        "draft": "Entwurf",
+        "published": "Veröffentlicht",
+        "scheduled": "Geplant",
+        "archived": "Archiviert"
+      }
+    },
+    "excerpt": {
+      "label": "Auszug",
+      "placeholder": "Kurze Beschreibung...",
+      "description": "Kurze Zusammenfassung, die in Listen angezeigt wird"
+    },
+    "featuredImage": {
+      "label": "Titelbild",
+      "description": "Hauptbild des Beitrags"
+    },
+    "categories": {
+      "label": "Kategorien",
+      "placeholder": "Kategorien auswählen...",
+      "description": "Kategorien des Beitrags"
+    }
+  },
+  "actions": {
+    "create": "Beitrag erstellen",
+    "edit": "Beitrag bearbeiten",
+    "delete": "Beitrag löschen",
+    "publish": "Veröffentlichen",
+    "unpublish": "Veröffentlichung zurückziehen"
+  },
+  "messages": {
+    "created": "Beitrag erfolgreich erstellt",
+    "updated": "Beitrag erfolgreich aktualisiert",
+    "deleted": "Beitrag erfolgreich gelöscht",
+    "published": "Beitrag erfolgreich veröffentlicht"
+  }
+}

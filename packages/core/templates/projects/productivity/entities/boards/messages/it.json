@@ -1,0 +1,74 @@
+{
+  "title": "Bacheche",
+  "singular": "Bacheca",
+  "plural": "Bacheche",
+  "description": "Organizza il tuo lavoro in bacheche",
+  "fields": {
+    "name": {
+      "label": "Nome",
+      "placeholder": "Inserisci il nome della bacheca...",
+      "description": "Nome della bacheca"
+    },
+    "description": {
+      "label": "Descrizione",
+      "placeholder": "Descrivi a cosa serve questa bacheca...",
+      "description": "Descrizione facoltativa della bacheca"
+    },
+    "color": {
+      "label": "Colore",
+      "placeholder": "Seleziona il colore...",
+      "description": "Colore di sfondo della bacheca",
+      "options": {
+        "blue": "Blu",
+        "green": "Verde",
+        "purple": "Viola",
+        "orange": "Arancione",
+        "red": "Rosso",
+        "pink": "Rosa",
+        "gray": "Grigio"
+      }
+    },
+    "archived": {
+      "label": "Archiviata",
+      "description": "Archivia questa bacheca"
+    },
+    "position": {
+      "label": "Posizione",
+      "description": "Ordine di visualizzazione"
+    },
+    "createdAt": {
+      "label": "Creato il",
+      "description": "Quando la bacheca è stata creata"
+    },
+    "updatedAt": {
+      "label": "Aggiornato il",
+      "description": "Quando la bacheca è stata modificata l'ultima volta"
+    }
+  },
+  "actions": {
+    "create": "Nuova bacheca",
+    "edit": "Modifica bacheca",
+    "delete": "Elimina bacheca",
+    "archive": "Archivia bacheca",
+    "unarchive": "Ripristina bacheca",
+    "duplicate": "Duplica bacheca"
+  },
+  "messages": {
+    "created": "Bacheca creata con successo",
+    "updated": "Bacheca aggiornata con successo",
+    "deleted": "Bacheca eliminata con successo",
+    "archived": "Bacheca archiviata",
+    "unarchived": "Bacheca ripristinata",
+    "confirmDelete": "Vuoi davvero eliminare questa bacheca? Tutte le liste e le schede verranno rimosse definitivamente."
+  },
+  "empty": {
+    "title": "Ancora nessuna bacheca",
+    "description": "Crea la tua prima bacheca per organizzare il tuo lavoro.",
+    "action": "Crea la tua prima bacheca"
+  },
+  "filters": {
+    "all": "Tutte le bacheche",
+    "active": "Attivo",
+    "archived": "Archiviata"
+  }
+}

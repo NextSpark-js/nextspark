@@ -1,0 +1,94 @@
+{
+  "title": "Beiträge",
+  "singular": "Beitrag",
+  "plural": "Beiträge",
+  "description": "Verwalte deine Blogbeiträge",
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Gib einen überzeugenden Titel ein...",
+      "description": "Der Titel deines Blogbeitrags"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "mein-blogbeitrag",
+      "description": "URL-freundliche Version des Titels"
+    },
+    "excerpt": {
+      "label": "Auszug",
+      "placeholder": "Schreibe eine kurze Zusammenfassung deines Beitrags...",
+      "description": "Eine kurze Zusammenfassung, die in Beitragslisten angezeigt wird"
+    },
+    "content": {
+      "label": "Inhalt",
+      "placeholder": "Beginne mit dem Schreiben deines Beitrags...",
+      "description": "Der Hauptinhalt deines Blogbeitrags"
+    },
+    "featuredImage": {
+      "label": "Titelbild",
+      "placeholder": "Bild hochladen...",
+      "description": "Hauptbild, das mit dem Beitrag angezeigt wird"
+    },
+    "category": {
+      "label": "Kategorie",
+      "placeholder": "z. B. Technologie, Reisen, Essen",
+      "description": "Hauptkategorie des Beitrags"
+    },
+    "tags": {
+      "label": "Tags",
+      "placeholder": "Tags hinzufügen...",
+      "description": "Schlüsselwörter, die Lesern helfen, diesen Beitrag zu finden"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Status auswählen...",
+      "description": "Veröffentlichungsstatus",
+      "options": {
+        "draft": "Entwurf",
+        "published": "Veröffentlicht",
+        "scheduled": "Geplant"
+      }
+    },
+    "publishedAt": {
+      "label": "Veröffentlichungsdatum",
+      "placeholder": "Datum auswählen...",
+      "description": "Wann der Beitrag veröffentlicht wurde bzw. wird"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann der Beitrag erstellt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann der Beitrag zuletzt geändert wurde"
+    }
+  },
+  "actions": {
+    "create": "Neuer Beitrag",
+    "edit": "Beitrag bearbeiten",
+    "delete": "Beitrag löschen",
+    "publish": "Veröffentlichen",
+    "unpublish": "Veröffentlichung zurückziehen",
+    "saveDraft": "Entwurf speichern",
+    "preview": "Vorschau"
+  },
+  "messages": {
+    "created": "Beitrag erfolgreich erstellt",
+    "updated": "Beitrag erfolgreich aktualisiert",
+    "deleted": "Beitrag erfolgreich gelöscht",
+    "published": "Beitrag erfolgreich veröffentlicht",
+    "unpublished": "Beitrag nicht mehr veröffentlicht",
+    "confirmDelete": "Möchtest du diesen Beitrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+  },
+  "empty": {
+    "title": "Noch keine Beiträge",
+    "description": "Fang an, indem du deinen ersten Blogbeitrag schreibst.",
+    "action": "Schreibe deinen ersten Beitrag"
+  },
+  "filters": {
+    "all": "Alle Beiträge",
+    "published": "Veröffentlicht",
+    "draft": "Entwürfe",
+    "scheduled": "Geplant"
+  }
+}

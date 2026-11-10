@@ -1,0 +1,33 @@
+{
+  "entity": {
+    "name": "Kategorie",
+    "namePlural": "Kategorien",
+    "description": "Ordne deine Blogbeiträge nach Kategorien"
+  },
+  "fields": {
+    "name": "Name",
+    "slug": "Slug",
+    "description": "Beschreibung",
+    "createdAt": "Erstellt am",
+    "updatedAt": "Aktualisiert am"
+  },
+  "actions": {
+    "create": "Kategorie erstellen",
+    "edit": "Kategorie bearbeiten",
+    "delete": "Kategorie löschen",
+    "view": "Kategorie ansehen",
+    "list": "Kategorien auflisten"
+  },
+  "messages": {
+    "created": "Kategorie erfolgreich erstellt",
+    "updated": "Kategorie erfolgreich aktualisiert",
+    "deleted": "Kategorie erfolgreich gelöscht",
+    "notFound": "Kategorie nicht gefunden",
+    "listEmpty": "Keine Kategorien gefunden. Erstelle deine erste Kategorie, um deine Beiträge zu organisieren."
+  },
+  "validation": {
+    "nameRequired": "Der Kategoriename ist erforderlich",
+    "slugRequired": "Der Slug ist erforderlich",
+    "slugInvalid": "Der Slug muss URL-freundlich sein (nur Kleinbuchstaben, Zahlen und Bindestriche)"
+  }
+}

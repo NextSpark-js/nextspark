@@ -1,0 +1,107 @@
+{
+  "entity": {
+    "name": "Opportunité",
+    "plural": "Opportunités",
+    "description": "Gérer les opportunités de vente"
+  },
+  "fields": {
+    "name": {
+      "label": "Nom de l'opportunité",
+      "description": "Nom ou titre de l'opportunité",
+      "placeholder": "Saisissez le nom de l'opportunité..."
+    },
+    "companyId": {
+      "label": "Entreprise",
+      "description": "Entreprise à laquelle appartient cette opportunité",
+      "placeholder": "Sélectionnez une entreprise..."
+    },
+    "contactId": {
+      "label": "Contact principal",
+      "description": "Contact principal pour cette opportunité",
+      "placeholder": "Sélectionnez un contact..."
+    },
+    "pipelineId": {
+      "label": "Pipeline",
+      "description": "Pipeline dans laquelle se trouve cette opportunité",
+      "placeholder": "Sélectionnez une pipeline..."
+    },
+    "stageId": {
+      "label": "Étape",
+      "description": "Étape actuelle dans la pipeline",
+      "placeholder": "ID de l'étape de la pipeline"
+    },
+    "amount": {
+      "label": "Montant de l'affaire",
+      "description": "Valeur du montant de l'affaire",
+      "placeholder": "0,00"
+    },
+    "currency": {
+      "label": "Devise",
+      "description": "Code de la devise du montant",
+      "placeholder": "Sélectionnez une devise..."
+    },
+    "probability": {
+      "label": "Probabilité de gain (%)",
+      "description": "Probabilité de gain en pourcentage",
+      "placeholder": "0"
+    },
+    "expectedRevenue": {
+      "label": "Chiffre d'affaires attendu",
+      "description": "Chiffre d'affaires attendu calculé"
+    },
+    "closeDate": {
+      "label": "Date de clôture prévue",
+      "description": "Date de clôture prévue ou réelle",
+      "placeholder": "Sélectionnez une date..."
+    },
+    "type": {
+      "label": "Type d'opportunité",
+      "description": "Nature de l'opportunité",
+      "placeholder": "Sélectionnez un type..."
+    },
+    "source": {
+      "label": "Source",
+      "description": "Source de l'opportunité",
+      "placeholder": "Sélectionnez une source..."
+    },
+    "status": {
+      "label": "Statut",
+      "description": "Statut actuel de l'opportunité",
+      "placeholder": "Sélectionnez un statut..."
+    },
+    "assignedTo": {
+      "label": "Assigné à",
+      "description": "Commercial assigné à l'opportunité",
+      "placeholder": "Sélectionnez un utilisateur..."
+    }
+  },
+  "options": {
+    "type": {
+      "new_business": "Nouveau client",
+      "existing_business": "Client existant",
+      "renewal": "Renouvellement",
+      "upgrade": "Montée en gamme",
+      "downgrade": "Rétrogradation"
+    },
+    "status": {
+      "open": "Ouverte",
+      "won": "Gagnée",
+      "lost": "Perdu",
+      "abandoned": "Abandonnée"
+    }
+  },
+  "actions": {
+    "create": "Créer une opportunité",
+    "edit": "Modifier l'opportunité",
+    "delete": "Supprimer l'opportunité",
+    "view": "Voir l'opportunité",
+    "list": "Lister les opportunités"
+  },
+  "messages": {
+    "created": "Opportunité créée avec succès",
+    "updated": "Opportunité mise à jour avec succès",
+    "deleted": "Opportunité supprimée avec succès",
+    "notFound": "Opportunité introuvable",
+    "error": "Une erreur s'est produite lors du traitement de l'opportunité"
+  }
+}

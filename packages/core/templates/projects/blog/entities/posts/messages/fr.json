@@ -1,0 +1,94 @@
+{
+  "title": "Articles",
+  "singular": "Article",
+  "plural": "Articles",
+  "description": "Gérez vos articles de blog",
+  "fields": {
+    "title": {
+      "label": "Titre",
+      "placeholder": "Saisissez un titre accrocheur...",
+      "description": "Le titre de votre article de blog"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "mon-article-de-blog",
+      "description": "Version du titre adaptée aux URL"
+    },
+    "excerpt": {
+      "label": "Extrait",
+      "placeholder": "Rédigez un bref résumé de votre article...",
+      "description": "Un court résumé affiché dans les listes d'articles"
+    },
+    "content": {
+      "label": "Contenu",
+      "placeholder": "Commencez à rédiger votre article...",
+      "description": "Le contenu principal de votre article de blog"
+    },
+    "featuredImage": {
+      "label": "Image mise en avant",
+      "placeholder": "Téléverser une image...",
+      "description": "Image principale affichée avec l'article"
+    },
+    "category": {
+      "label": "Catégorie",
+      "placeholder": "par ex. Technologie, Voyage, Cuisine",
+      "description": "Catégorie principale de l'article"
+    },
+    "tags": {
+      "label": "Tags",
+      "placeholder": "Ajouter des tags...",
+      "description": "Mots-clés pour aider les lecteurs à trouver cet article"
+    },
+    "status": {
+      "label": "Statut",
+      "placeholder": "Sélectionnez un statut...",
+      "description": "Statut de publication",
+      "options": {
+        "draft": "Brouillon",
+        "published": "Publié",
+        "scheduled": "Planifié"
+      }
+    },
+    "publishedAt": {
+      "label": "Date de publication",
+      "placeholder": "Sélectionnez une date...",
+      "description": "Date à laquelle l'article a été ou sera publié"
+    },
+    "createdAt": {
+      "label": "Créé le",
+      "description": "Date de création de l'article"
+    },
+    "updatedAt": {
+      "label": "Mis à jour le",
+      "description": "Date de dernière modification de l'article"
+    }
+  },
+  "actions": {
+    "create": "Nouvel article",
+    "edit": "Modifier l'article",
+    "delete": "Supprimer l'article",
+    "publish": "Publier",
+    "unpublish": "Dépublier",
+    "saveDraft": "Enregistrer le brouillon",
+    "preview": "Aperçu"
+  },
+  "messages": {
+    "created": "Article créé avec succès",
+    "updated": "Article mis à jour avec succès",
+    "deleted": "Article supprimé avec succès",
+    "published": "Article publié avec succès",
+    "unpublished": "Article dépublié",
+    "confirmDelete": "Voulez-vous vraiment supprimer cet article ? Cette action est irréversible."
+  },
+  "empty": {
+    "title": "Aucun article pour le moment",
+    "description": "Commencez par rédiger votre premier article de blog.",
+    "action": "Rédigez votre premier article"
+  },
+  "filters": {
+    "all": "Tous les articles",
+    "published": "Publié",
+    "draft": "Brouillons",
+    "scheduled": "Planifié"
+  }
+}

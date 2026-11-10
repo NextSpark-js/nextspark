@@ -1,0 +1,71 @@
+{
+  "productivity": {
+    "name": "Produttività",
+    "description": "Un'app collaborativa per la gestione delle attività",
+    "tagline": "Organizza il lavoro, insieme",
+    "navigation": {
+      "boards": "Bacheche",
+      "myCards": "Le mie schede",
+      "calendar": "Calendario",
+      "team": "Team"
+    },
+    "quickActions": {
+      "createBoard": "Crea bacheca",
+      "createCard": "Aggiungi scheda"
+    },
+    "dashboard": {
+      "welcome": "Bentornato!",
+      "welcomeWithName": "Bentornato, {name}!",
+      "overview": "La tua panoramica",
+      "recentBoards": "Bacheche recenti",
+      "upcomingDeadlines": "Scadenze in arrivo",
+      "assignedToYou": "Assegnate a te",
+      "teamActivity": "Attività del team"
+    },
+    "stats": {
+      "totalBoards": "Totale bacheche",
+      "totalCards": "Totale schede",
+      "cardsCompleted": "Schede completate",
+      "cardsDueThisWeek": "In scadenza questa settimana"
+    },
+    "empty": {
+      "noBoards": {
+        "title": "Ancora nessuna bacheca",
+        "description": "Crea la tua prima bacheca per organizzare il tuo lavoro.",
+        "action": "Crea la tua prima bacheca"
+      },
+      "noAssignedCards": {
+        "title": "Nessuna scheda assegnata",
+        "description": "Le schede assegnate a te appariranno qui."
+      },
+      "noDeadlines": {
+        "title": "Nessuna scadenza in arrivo",
+        "description": "Le schede con una scadenza appariranno qui."
+      }
+    },
+    "collaboration": {
+      "invite": "Invita un membro del team",
+      "inviteDescription": "Invita qualcuno a collaborare sulle tue bacheche",
+      "teamMembers": "Membri del team",
+      "roles": {
+        "owner": "Proprietario",
+        "member": "Membro",
+        "viewer": "Visualizzatore"
+      },
+      "roleDescriptions": {
+        "owner": "Accesso completo a tutte le bacheche, liste e schede. Può invitare membri.",
+        "member": "Può creare e modificare liste e schede. Non può eliminare bacheche.",
+        "viewer": "Accesso di sola lettura a tutte le bacheche, liste e schede."
+      }
+    },
+    "shortcuts": {
+      "title": "Scorciatoie da tastiera",
+      "newCard": "Nuova scheda",
+      "newBoard": "Nuova bacheca",
+      "search": "Cerca",
+      "toggleSidebar": "Mostra/nascondi barra laterale",
+      "nextList": "Lista successiva",
+      "previousList": "Lista precedente"
+    }
+  }
+}

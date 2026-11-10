@@ -1,0 +1,145 @@
+{
+  "entity": {
+    "name": "Campagna",
+    "plural": "Campagne",
+    "description": "Gestisci campagne di marketing e outreach"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome della campagna",
+      "description": "Nome o titolo della campagna",
+      "placeholder": "Inserisci il nome della campagna..."
+    },
+    "type": {
+      "label": "Tipo di campagna",
+      "description": "Tipo di campagna di marketing",
+      "placeholder": "Seleziona il tipo..."
+    },
+    "status": {
+      "label": "Stato",
+      "description": "Stato attuale della campagna",
+      "placeholder": "Seleziona lo stato..."
+    },
+    "channel": {
+      "label": "Canale",
+      "description": "Canale di marketing utilizzato",
+      "placeholder": "Seleziona il canale..."
+    },
+    "budget": {
+      "label": "Budget",
+      "description": "Importo del budget della campagna",
+      "placeholder": "0,00"
+    },
+    "spend": {
+      "label": "Importo speso",
+      "description": "Importo già speso",
+      "placeholder": "0,00"
+    },
+    "targetAudience": {
+      "label": "Pubblico di destinazione",
+      "description": "Descrizione del pubblico di destinazione",
+      "placeholder": "Inserisci il pubblico di destinazione..."
+    },
+    "startDate": {
+      "label": "Data di inizio",
+      "description": "Data di inizio della campagna",
+      "placeholder": "Seleziona una data..."
+    },
+    "endDate": {
+      "label": "Data di fine",
+      "description": "Data di fine della campagna",
+      "placeholder": "Seleziona una data..."
+    },
+    "impressions": {
+      "label": "Impressioni",
+      "description": "Numero di impressioni",
+      "placeholder": "0"
+    },
+    "clicks": {
+      "label": "Clic",
+      "description": "Numero di clic",
+      "placeholder": "0"
+    },
+    "conversions": {
+      "label": "Conversioni",
+      "description": "Numero di conversioni",
+      "placeholder": "0"
+    },
+    "ctr": {
+      "label": "CTR (%)",
+      "description": "Percentuale di clic",
+      "placeholder": "0,00"
+    },
+    "conversionRate": {
+      "label": "Tasso di conversione (%)",
+      "description": "Tasso di conversione in percentuale",
+      "placeholder": "0,00"
+    },
+    "roi": {
+      "label": "ROI (%)",
+      "description": "Ritorno sull'investimento in percentuale",
+      "placeholder": "0,00"
+    },
+    "assignedTo": {
+      "label": "Responsabile della campagna",
+      "description": "Utente che gestisce questa campagna",
+      "placeholder": "Seleziona l'utente..."
+    }
+  },
+  "options": {
+    "type": {
+      "email": "Email marketing",
+      "social": "Social media",
+      "ppc": "Pay-per-click",
+      "content": "Content marketing",
+      "webinar": "Webinar",
+      "event": "Evento",
+      "referral": "Segnalazione",
+      "affiliate": "Affiliazione",
+      "retargeting": "Retargeting"
+    },
+    "status": {
+      "draft": "Bozza",
+      "scheduled": "Programmato",
+      "active": "Attivo",
+      "paused": "In pausa",
+      "completed": "Completato",
+      "cancelled": "Annullato"
+    },
+    "channel": {
+      "email": "E-mail",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "twitter": "Twitter",
+      "google_ads": "Google Ads",
+      "youtube": "YouTube",
+      "tiktok": "TikTok",
+      "website": "Sito web",
+      "blog": "Blog",
+      "seo": "SEO",
+      "other": "Altro"
+    }
+  },
+  "actions": {
+    "create": "Crea campagna",
+    "edit": "Modifica campagna",
+    "delete": "Elimina campagna",
+    "view": "Visualizza campagna",
+    "list": "Elenca campagne",
+    "launch": "Avvia campagna",
+    "pause": "Metti in pausa la campagna",
+    "resume": "Riprendi la campagna",
+    "duplicate": "Duplica campagna"
+  },
+  "messages": {
+    "created": "Campagna creata con successo",
+    "updated": "Campagna aggiornata con successo",
+    "deleted": "Campagna eliminata con successo",
+    "launched": "Campagna avviata con successo",
+    "paused": "Campagna messa in pausa con successo",
+    "resumed": "Campagna ripresa con successo",
+    "notFound": "Campagna non trovata",
+    "error": "Si è verificato un errore durante l'elaborazione della campagna"
+  }
+}

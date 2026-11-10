@@ -1,0 +1,114 @@
+{
+  "entity": {
+    "name": "Notiz",
+    "plural": "Notizen",
+    "description": "Notizen und Dokumentation verwalten"
+  },
+  "fields": {
+    "entityType": {
+      "label": "Verknüpfter Entitätstyp",
+      "description": "Typ der Entität, mit der diese Notiz verknüpft ist",
+      "placeholder": "Entitätstyp auswählen..."
+    },
+    "entityId": {
+      "label": "Verknüpfte Entität",
+      "description": "Entität, mit der diese Notiz verknüpft ist",
+      "placeholder": "Entität auswählen..."
+    },
+    "title": {
+      "label": "Titel",
+      "description": "Titel oder Betreff der Notiz",
+      "placeholder": "Titel eingeben..."
+    },
+    "content": {
+      "label": "Inhalt",
+      "description": "Inhalt der Notiz",
+      "placeholder": "Notizinhalt eingeben..."
+    },
+    "type": {
+      "label": "Notiztyp",
+      "description": "Typ oder Kategorie der Notiz",
+      "placeholder": "Typ auswählen..."
+    },
+    "isPrivate": {
+      "label": "Private Notiz",
+      "description": "Ob diese Notiz privat ist"
+    },
+    "isPinned": {
+      "label": "Angeheftet",
+      "description": "Ob diese Notiz angeheftet ist"
+    },
+    "tags": {
+      "label": "Tags",
+      "description": "Tags zur Kategorisierung der Notiz",
+      "placeholder": "Tags eingeben..."
+    },
+    "attachments": {
+      "label": "Anhänge",
+      "description": "Dateianhänge"
+    },
+    "reminderDate": {
+      "label": "Erinnerungsdatum",
+      "description": "Wann an diese Notiz erinnert werden soll",
+      "placeholder": "Datum auswählen..."
+    },
+    "sharedWith": {
+      "label": "Geteilt mit",
+      "description": "Benutzer, mit denen diese Notiz geteilt wird",
+      "placeholder": "Benutzer auswählen..."
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann die Notiz erstellt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann die Notiz zuletzt aktualisiert wurde"
+    }
+  },
+  "options": {
+    "entityType": {
+      "lead": "Lead",
+      "contact": "Kontakt",
+      "company": "Unternehmen",
+      "opportunity": "Opportunity",
+      "activity": "Aktivität",
+      "campaign": "Kampagne",
+      "product": "Produkt"
+    },
+    "type": {
+      "general": "Allgemein",
+      "meeting": "Besprechungsnotizen",
+      "call": "Gesprächsnotizen",
+      "email": "E-Mail-Notizen",
+      "research": "Recherche",
+      "todo": "To-do",
+      "idea": "Idee",
+      "feedback": "Feedback",
+      "issue": "Problem",
+      "solution": "Lösung"
+    }
+  },
+  "actions": {
+    "create": "Notiz erstellen",
+    "edit": "Notiz bearbeiten",
+    "delete": "Notiz löschen",
+    "view": "Notiz ansehen",
+    "list": "Notizen auflisten",
+    "pin": "Notiz anheften",
+    "unpin": "Notiz lösen",
+    "share": "Notiz teilen",
+    "duplicate": "Notiz duplizieren",
+    "export": "Notiz exportieren"
+  },
+  "messages": {
+    "created": "Notiz erfolgreich erstellt",
+    "updated": "Notiz erfolgreich aktualisiert",
+    "deleted": "Notiz erfolgreich gelöscht",
+    "pinned": "Notiz erfolgreich angeheftet",
+    "unpinned": "Notiz erfolgreich gelöst",
+    "shared": "Notiz erfolgreich geteilt",
+    "notFound": "Notiz nicht gefunden",
+    "error": "Beim Verarbeiten der Notiz ist ein Fehler aufgetreten"
+  }
+}

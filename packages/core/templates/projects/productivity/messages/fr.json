@@ -1,0 +1,71 @@
+{
+  "productivity": {
+    "name": "Productivité",
+    "description": "Une application de gestion de tâches collaborative",
+    "tagline": "Organisez votre travail, ensemble",
+    "navigation": {
+      "boards": "Tableaux",
+      "myCards": "Mes cartes",
+      "calendar": "Calendrier",
+      "team": "Équipe"
+    },
+    "quickActions": {
+      "createBoard": "Créer un tableau",
+      "createCard": "Ajouter une carte"
+    },
+    "dashboard": {
+      "welcome": "Bon retour !",
+      "welcomeWithName": "Bon retour, {name} !",
+      "overview": "Votre aperçu",
+      "recentBoards": "Tableaux récents",
+      "upcomingDeadlines": "Échéances à venir",
+      "assignedToYou": "Assignées à vous",
+      "teamActivity": "Activité de l'équipe"
+    },
+    "stats": {
+      "totalBoards": "Total des tableaux",
+      "totalCards": "Total des cartes",
+      "cardsCompleted": "Cartes terminées",
+      "cardsDueThisWeek": "Échéance cette semaine"
+    },
+    "empty": {
+      "noBoards": {
+        "title": "Aucun tableau pour le moment",
+        "description": "Créez votre premier tableau pour organiser votre travail.",
+        "action": "Créer votre premier tableau"
+      },
+      "noAssignedCards": {
+        "title": "Aucune carte assignée",
+        "description": "Les cartes qui vous sont assignées apparaîtront ici."
+      },
+      "noDeadlines": {
+        "title": "Aucune échéance à venir",
+        "description": "Les cartes avec une date d'échéance apparaîtront ici."
+      }
+    },
+    "collaboration": {
+      "invite": "Inviter un membre de l'équipe",
+      "inviteDescription": "Invitez quelqu'un à collaborer sur vos tableaux",
+      "teamMembers": "Membres de l'équipe",
+      "roles": {
+        "owner": "Propriétaire",
+        "member": "Membre",
+        "viewer": "Lecteur"
+      },
+      "roleDescriptions": {
+        "owner": "Accès complet à tous les tableaux, listes et cartes. Peut inviter des membres.",
+        "member": "Peut créer et modifier des listes et des cartes. Ne peut pas supprimer de tableaux.",
+        "viewer": "Accès en lecture seule à tous les tableaux, listes et cartes."
+      }
+    },
+    "shortcuts": {
+      "title": "Raccourcis clavier",
+      "newCard": "Nouvelle carte",
+      "newBoard": "Nouveau tableau",
+      "search": "Rechercher",
+      "toggleSidebar": "Afficher/masquer la barre latérale",
+      "nextList": "Liste suivante",
+      "previousList": "Liste précédente"
+    }
+  }
+}

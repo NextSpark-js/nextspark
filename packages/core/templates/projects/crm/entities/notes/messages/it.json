@@ -1,0 +1,114 @@
+{
+  "entity": {
+    "name": "Nota",
+    "plural": "Note",
+    "description": "Gestisci note e documentazione"
+  },
+  "fields": {
+    "entityType": {
+      "label": "Tipo di entità correlata",
+      "description": "Tipo di entità a cui è collegata questa nota",
+      "placeholder": "Seleziona il tipo di entità..."
+    },
+    "entityId": {
+      "label": "Entità correlata",
+      "description": "Entità a cui è collegata questa nota",
+      "placeholder": "Seleziona l'entità..."
+    },
+    "title": {
+      "label": "Titolo",
+      "description": "Titolo o oggetto della nota",
+      "placeholder": "Inserisci il titolo..."
+    },
+    "content": {
+      "label": "Contenuto",
+      "description": "Contenuto della nota",
+      "placeholder": "Inserisci il contenuto della nota..."
+    },
+    "type": {
+      "label": "Tipo di nota",
+      "description": "Tipo o categoria della nota",
+      "placeholder": "Seleziona il tipo..."
+    },
+    "isPrivate": {
+      "label": "Nota privata",
+      "description": "Indica se questa nota è privata"
+    },
+    "isPinned": {
+      "label": "Fissata",
+      "description": "Indica se questa nota è fissata"
+    },
+    "tags": {
+      "label": "Tag",
+      "description": "Tag per categorizzare la nota",
+      "placeholder": "Inserisci i tag..."
+    },
+    "attachments": {
+      "label": "Allegati",
+      "description": "Allegati di file"
+    },
+    "reminderDate": {
+      "label": "Data del promemoria",
+      "description": "Quando ricevere un promemoria per questa nota",
+      "placeholder": "Seleziona una data..."
+    },
+    "sharedWith": {
+      "label": "Condivisa con",
+      "description": "Utenti con cui è condivisa questa nota",
+      "placeholder": "Seleziona gli utenti..."
+    },
+    "createdAt": {
+      "label": "Creato il",
+      "description": "Quando la nota è stata creata"
+    },
+    "updatedAt": {
+      "label": "Aggiornato il",
+      "description": "Quando la nota è stata aggiornata l'ultima volta"
+    }
+  },
+  "options": {
+    "entityType": {
+      "lead": "Lead",
+      "contact": "Contatto",
+      "company": "Azienda",
+      "opportunity": "Opportunità",
+      "activity": "Attività",
+      "campaign": "Campagna",
+      "product": "Prodotto"
+    },
+    "type": {
+      "general": "Generale",
+      "meeting": "Note di riunione",
+      "call": "Note di chiamata",
+      "email": "Note e-mail",
+      "research": "Ricerca",
+      "todo": "Da fare",
+      "idea": "Idea",
+      "feedback": "Feedback",
+      "issue": "Problema",
+      "solution": "Soluzione"
+    }
+  },
+  "actions": {
+    "create": "Crea nota",
+    "edit": "Modifica nota",
+    "delete": "Elimina nota",
+    "view": "Visualizza nota",
+    "list": "Elenca note",
+    "pin": "Fissa nota",
+    "unpin": "Rimuovi nota dai fissati",
+    "share": "Condividi nota",
+    "duplicate": "Duplica nota",
+    "export": "Esporta nota"
+  },
+  "messages": {
+    "created": "Nota creata con successo",
+    "updated": "Nota aggiornata con successo",
+    "deleted": "Nota eliminata con successo",
+    "pinned": "Nota fissata con successo",
+    "unpinned": "Nota rimossa dai fissati con successo",
+    "shared": "Nota condivisa con successo",
+    "notFound": "Nota non trovata",
+    "error": "Si è verificato un errore durante l'elaborazione della nota"
+  }
+}

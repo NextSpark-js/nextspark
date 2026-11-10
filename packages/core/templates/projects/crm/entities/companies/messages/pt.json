@@ -1,0 +1,146 @@
+{
+  "entity": {
+    "name": "Empresa",
+    "plural": "Empresas",
+    "description": "Gerencie empresas clientes e prospects"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome da empresa",
+      "description": "Nome de exibição da empresa",
+      "placeholder": "Digite o nome da empresa..."
+    },
+    "legalName": {
+      "label": "Razão social",
+      "description": "Razão social registrada da empresa",
+      "placeholder": "Digite a razão social..."
+    },
+    "taxId": {
+      "label": "Número fiscal",
+      "description": "Número de identificação fiscal",
+      "placeholder": "Digite o número fiscal..."
+    },
+    "website": {
+      "label": "Site",
+      "description": "URL do site da empresa",
+      "placeholder": "https://example.com"
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Endereço de e-mail geral da empresa",
+      "placeholder": "info@company.com"
+    },
+    "phone": {
+      "label": "Telefone",
+      "description": "Número de telefone principal da empresa",
+      "placeholder": "Digite o número de telefone..."
+    },
+    "industry": {
+      "label": "Setor",
+      "description": "Setor econômico",
+      "placeholder": "Digite o setor..."
+    },
+    "type": {
+      "label": "Tipo de empresa",
+      "description": "Tipo de relação comercial",
+      "placeholder": "Selecione o tipo..."
+    },
+    "size": {
+      "label": "Porte da empresa",
+      "description": "Porte da empresa por número de funcionários",
+      "placeholder": "Selecione o porte..."
+    },
+    "annualRevenue": {
+      "label": "Receita anual",
+      "description": "Receita anual na moeda",
+      "placeholder": "0,00"
+    },
+    "address": {
+      "label": "Endereço",
+      "description": "Logradouro",
+      "placeholder": "Digite o endereço..."
+    },
+    "city": {
+      "label": "Cidade",
+      "description": "Cidade",
+      "placeholder": "Digite a cidade..."
+    },
+    "state": {
+      "label": "Estado",
+      "description": "Estado ou província",
+      "placeholder": "Digite o estado..."
+    },
+    "country": {
+      "label": "País",
+      "description": "País",
+      "placeholder": "BR"
+    },
+    "postalCode": {
+      "label": "Código postal",
+      "description": "Código postal ou CEP",
+      "placeholder": "Digite o código postal..."
+    },
+    "logo": {
+      "label": "Logotipo",
+      "description": "URL do logotipo da empresa",
+      "placeholder": "https://example.com/logo.png"
+    },
+    "rating": {
+      "label": "Avaliação",
+      "description": "Avaliação comercial",
+      "placeholder": "Selecione a avaliação..."
+    },
+    "assignedTo": {
+      "label": "Atribuído a",
+      "description": "Gerente de conta atribuído",
+      "placeholder": "Selecione o usuário..."
+    },
+    "createdAt": {
+      "label": "Criado em",
+      "description": "Quando a empresa foi criada"
+    },
+    "updatedAt": {
+      "label": "Atualizado em",
+      "description": "Quando a empresa foi atualizada pela última vez"
+    }
+  },
+  "options": {
+    "type": {
+      "prospect": "Prospect",
+      "customer": "Cliente",
+      "partner": "Parceiro",
+      "competitor": "Concorrente",
+      "vendor": "Fornecedor",
+      "other": "Outro"
+    },
+    "size": {
+      "1-10": "1 a 10 funcionários",
+      "11-50": "11 a 50 funcionários",
+      "51-200": "51 a 200 funcionários",
+      "201-500": "201 a 500 funcionários",
+      "500+": "Mais de 500 funcionários"
+    },
+    "rating": {
+      "hot": "Quente",
+      "warm": "Morno",
+      "cold": "Frio"
+    }
+  },
+  "actions": {
+    "create": "Criar empresa",
+    "edit": "Editar empresa",
+    "delete": "Excluir empresa",
+    "view": "Ver empresa",
+    "list": "Listar empresas",
+    "search": "Pesquisar empresas",
+    "export": "Exportar empresas",
+    "import": "Importar empresas"
+  },
+  "messages": {
+    "created": "Empresa criada com sucesso",
+    "updated": "Empresa atualizada com sucesso",
+    "deleted": "Empresa excluída com sucesso",
+    "notFound": "Empresa não encontrada",
+    "error": "Ocorreu um erro ao processar a empresa"
+  }
+}

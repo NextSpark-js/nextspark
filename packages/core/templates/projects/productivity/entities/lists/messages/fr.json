@@ -1,0 +1,54 @@
+{
+  "title": "Listes",
+  "singular": "Liste",
+  "plural": "Listes",
+  "description": "Colonnes des tableaux pour organiser les cartes",
+  "fields": {
+    "name": {
+      "label": "Nom",
+      "placeholder": "Saisissez le nom de la liste...",
+      "description": "Nom de la liste"
+    },
+    "position": {
+      "label": "Poste",
+      "description": "Ordre d'affichage dans le tableau"
+    },
+    "boardId": {
+      "label": "Tableau",
+      "placeholder": "Sélectionnez un tableau...",
+      "description": "Tableau parent"
+    },
+    "createdAt": {
+      "label": "Créé le",
+      "description": "Date de création de la liste"
+    },
+    "updatedAt": {
+      "label": "Mis à jour le",
+      "description": "Date de dernière modification de la liste"
+    }
+  },
+  "actions": {
+    "create": "Ajouter une liste",
+    "edit": "Modifier la liste",
+    "delete": "Supprimer la liste",
+    "moveLeft": "Déplacer vers la gauche",
+    "moveRight": "Déplacer vers la droite"
+  },
+  "messages": {
+    "created": "Liste créée avec succès",
+    "updated": "Liste mise à jour avec succès",
+    "deleted": "Liste supprimée avec succès",
+    "moved": "Liste déplacée",
+    "confirmDelete": "Voulez-vous vraiment supprimer cette liste ? Toutes les cartes qu'elle contient seront définitivement supprimées."
+  },
+  "empty": {
+    "title": "Aucune liste pour le moment",
+    "description": "Ajoutez une liste pour commencer à organiser vos cartes.",
+    "action": "Ajouter une liste"
+  },
+  "defaults": {
+    "todo": "À faire",
+    "inProgress": "En cours",
+    "done": "Terminé"
+  }
+}

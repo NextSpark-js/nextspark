@@ -1,0 +1,117 @@
+{
+  "entity": {
+    "name": "Contato",
+    "plural": "Contatos",
+    "description": "Gerencie as pessoas de contato nas empresas"
+  },
+  "fields": {
+    "firstName": {
+      "label": "Nome",
+      "description": "Nome do contato",
+      "placeholder": "Digite o nome..."
+    },
+    "lastName": {
+      "label": "Sobrenome",
+      "description": "Sobrenome do contato",
+      "placeholder": "Digite o sobrenome..."
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Endereço de e-mail do contato",
+      "placeholder": "Digite o endereço de e-mail..."
+    },
+    "phone": {
+      "label": "Telefone",
+      "description": "Telefone do escritório",
+      "placeholder": "Digite o número de telefone..."
+    },
+    "mobile": {
+      "label": "Celular",
+      "description": "Número de celular",
+      "placeholder": "Digite o número de celular..."
+    },
+    "companyId": {
+      "label": "Empresa",
+      "description": "Empresa associada",
+      "placeholder": "Selecione a empresa..."
+    },
+    "position": {
+      "label": "Cargo",
+      "description": "Cargo ou título",
+      "placeholder": "Digite o cargo..."
+    },
+    "department": {
+      "label": "Departamento",
+      "description": "Departamento na empresa",
+      "placeholder": "Digite o departamento..."
+    },
+    "isPrimary": {
+      "label": "Contato principal",
+      "description": "É o contato principal da empresa"
+    },
+    "birthDate": {
+      "label": "Data de nascimento",
+      "description": "Data de nascimento do contato",
+      "placeholder": "Selecione uma data..."
+    },
+    "linkedin": {
+      "label": "LinkedIn",
+      "description": "URL do perfil do LinkedIn",
+      "placeholder": "https://linkedin.com/in/..."
+    },
+    "twitter": {
+      "label": "Twitter",
+      "description": "Usuário do Twitter/X",
+      "placeholder": "@usuario"
+    },
+    "preferredChannel": {
+      "label": "Canal preferido",
+      "description": "Canal de comunicação preferido",
+      "placeholder": "Selecione o canal..."
+    },
+    "timezone": {
+      "label": "Fuso horário",
+      "description": "Fuso horário do contato",
+      "placeholder": "UTC"
+    },
+    "lastContactedAt": {
+      "label": "Último contato",
+      "description": "Última vez que este contato foi alcançado"
+    },
+    "createdAt": {
+      "label": "Criado em",
+      "description": "Quando o contato foi criado"
+    },
+    "updatedAt": {
+      "label": "Atualizado em",
+      "description": "Quando o contato foi atualizado pela última vez"
+    }
+  },
+  "options": {
+    "preferredChannel": {
+      "email": "E-mail",
+      "phone": "Telefone",
+      "whatsapp": "WhatsApp",
+      "linkedin": "LinkedIn",
+      "slack": "Slack",
+      "other": "Outro"
+    }
+  },
+  "actions": {
+    "create": "Criar contato",
+    "edit": "Editar contato",
+    "delete": "Excluir contato",
+    "view": "Ver contato",
+    "list": "Listar contatos",
+    "search": "Pesquisar contatos",
+    "export": "Exportar contatos",
+    "import": "Importar contatos"
+  },
+  "messages": {
+    "created": "Contato criado com sucesso",
+    "updated": "Contato atualizado com sucesso",
+    "deleted": "Contato excluído com sucesso",
+    "notFound": "Contato não encontrado",
+    "error": "Ocorreu um erro ao processar o contato"
+  }
+}

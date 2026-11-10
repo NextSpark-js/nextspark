@@ -1,0 +1,146 @@
+{
+  "entity": {
+    "name": "Entreprise",
+    "plural": "Entreprises",
+    "description": "Gérer les entreprises clientes et les prospects"
+  },
+  "fields": {
+    "name": {
+      "label": "Nom de l'entreprise",
+      "description": "Nom d'affichage de l'entreprise",
+      "placeholder": "Saisissez le nom de l'entreprise..."
+    },
+    "legalName": {
+      "label": "Raison sociale",
+      "description": "Raison sociale officielle de l'entreprise",
+      "placeholder": "Saisissez la raison sociale..."
+    },
+    "taxId": {
+      "label": "Numéro fiscal",
+      "description": "Numéro d'identification fiscale",
+      "placeholder": "Saisissez le numéro fiscal..."
+    },
+    "website": {
+      "label": "Site web",
+      "description": "URL du site web de l'entreprise",
+      "placeholder": "https://example.com"
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Adresse e-mail générale de l'entreprise",
+      "placeholder": "info@company.com"
+    },
+    "phone": {
+      "label": "Téléphone",
+      "description": "Numéro de téléphone principal de l'entreprise",
+      "placeholder": "Saisissez le numéro de téléphone..."
+    },
+    "industry": {
+      "label": "Secteur d'activité",
+      "description": "Secteur économique",
+      "placeholder": "Saisissez le secteur d'activité..."
+    },
+    "type": {
+      "label": "Type d'entreprise",
+      "description": "Type de relation commerciale",
+      "placeholder": "Sélectionnez un type..."
+    },
+    "size": {
+      "label": "Taille de l'entreprise",
+      "description": "Taille de l'entreprise selon le nombre d'employés",
+      "placeholder": "Sélectionnez une taille..."
+    },
+    "annualRevenue": {
+      "label": "Chiffre d'affaires annuel",
+      "description": "Chiffre d'affaires annuel dans la devise",
+      "placeholder": "0,00"
+    },
+    "address": {
+      "label": "Adresse",
+      "description": "Adresse postale",
+      "placeholder": "Saisissez l'adresse..."
+    },
+    "city": {
+      "label": "Ville",
+      "description": "Ville",
+      "placeholder": "Saisissez la ville..."
+    },
+    "state": {
+      "label": "État",
+      "description": "État ou province",
+      "placeholder": "Saisissez l'état..."
+    },
+    "country": {
+      "label": "Pays",
+      "description": "Pays",
+      "placeholder": "FR"
+    },
+    "postalCode": {
+      "label": "Code postal",
+      "description": "Code postal",
+      "placeholder": "Saisissez le code postal..."
+    },
+    "logo": {
+      "label": "Logo",
+      "description": "URL du logo de l'entreprise",
+      "placeholder": "https://example.com/logo.png"
+    },
+    "rating": {
+      "label": "Évaluation",
+      "description": "Évaluation commerciale",
+      "placeholder": "Sélectionnez une évaluation..."
+    },
+    "assignedTo": {
+      "label": "Assigné à",
+      "description": "Gestionnaire de compte assigné",
+      "placeholder": "Sélectionnez un utilisateur..."
+    },
+    "createdAt": {
+      "label": "Créé le",
+      "description": "Date de création de l'entreprise"
+    },
+    "updatedAt": {
+      "label": "Mis à jour le",
+      "description": "Date de dernière mise à jour de l'entreprise"
+    }
+  },
+  "options": {
+    "type": {
+      "prospect": "Prospect",
+      "customer": "Client",
+      "partner": "Partenaire",
+      "competitor": "Concurrent",
+      "vendor": "Fournisseur",
+      "other": "Autre"
+    },
+    "size": {
+      "1-10": "1 à 10 employés",
+      "11-50": "11 à 50 employés",
+      "51-200": "51 à 200 employés",
+      "201-500": "201 à 500 employés",
+      "500+": "Plus de 500 employés"
+    },
+    "rating": {
+      "hot": "Chaud",
+      "warm": "Tiède",
+      "cold": "Froid"
+    }
+  },
+  "actions": {
+    "create": "Créer une entreprise",
+    "edit": "Modifier l'entreprise",
+    "delete": "Supprimer l'entreprise",
+    "view": "Voir l'entreprise",
+    "list": "Lister les entreprises",
+    "search": "Rechercher des entreprises",
+    "export": "Exporter les entreprises",
+    "import": "Importer des entreprises"
+  },
+  "messages": {
+    "created": "Entreprise créée avec succès",
+    "updated": "Entreprise mise à jour avec succès",
+    "deleted": "Entreprise supprimée avec succès",
+    "notFound": "Entreprise introuvable",
+    "error": "Une erreur s'est produite lors du traitement de l'entreprise"
+  }
+}

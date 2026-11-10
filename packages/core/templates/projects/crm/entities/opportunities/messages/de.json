@@ -1,0 +1,107 @@
+{
+  "entity": {
+    "name": "Opportunity",
+    "plural": "Opportunities",
+    "description": "Verkaufschancen verwalten"
+  },
+  "fields": {
+    "name": {
+      "label": "Name der Opportunity",
+      "description": "Name oder Titel der Opportunity",
+      "placeholder": "Namen der Opportunity eingeben..."
+    },
+    "companyId": {
+      "label": "Unternehmen",
+      "description": "Unternehmen, zu dem diese Opportunity gehört",
+      "placeholder": "Unternehmen auswählen..."
+    },
+    "contactId": {
+      "label": "Hauptkontakt",
+      "description": "Hauptansprechpartner für diese Opportunity",
+      "placeholder": "Kontakt auswählen..."
+    },
+    "pipelineId": {
+      "label": "Pipeline",
+      "description": "Pipeline, in der sich diese Opportunity befindet",
+      "placeholder": "Pipeline auswählen..."
+    },
+    "stageId": {
+      "label": "Phase",
+      "description": "Aktuelle Phase in der Pipeline",
+      "placeholder": "Phasen-ID aus der Pipeline"
+    },
+    "amount": {
+      "label": "Abschlusswert",
+      "description": "Wert des Abschlusses",
+      "placeholder": "0,00"
+    },
+    "currency": {
+      "label": "Währung",
+      "description": "Währungscode für den Betrag",
+      "placeholder": "Währung auswählen..."
+    },
+    "probability": {
+      "label": "Gewinnwahrscheinlichkeit (%)",
+      "description": "Gewinnwahrscheinlichkeit in Prozent",
+      "placeholder": "0"
+    },
+    "expectedRevenue": {
+      "label": "Erwarteter Umsatz",
+      "description": "Berechneter erwarteter Umsatz"
+    },
+    "closeDate": {
+      "label": "Voraussichtliches Abschlussdatum",
+      "description": "Erwartetes oder tatsächliches Abschlussdatum",
+      "placeholder": "Datum auswählen..."
+    },
+    "type": {
+      "label": "Typ der Opportunity",
+      "description": "Art der Opportunity",
+      "placeholder": "Typ auswählen..."
+    },
+    "source": {
+      "label": "Quelle",
+      "description": "Quelle der Opportunity",
+      "placeholder": "Quelle auswählen..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Aktueller Status der Opportunity",
+      "placeholder": "Status auswählen..."
+    },
+    "assignedTo": {
+      "label": "Zugewiesen an",
+      "description": "Der Opportunity zugewiesene Vertriebsmitarbeitende",
+      "placeholder": "Benutzer auswählen..."
+    }
+  },
+  "options": {
+    "type": {
+      "new_business": "Neugeschäft",
+      "existing_business": "Bestandsgeschäft",
+      "renewal": "Verlängerung",
+      "upgrade": "Upgrade",
+      "downgrade": "Downgrade"
+    },
+    "status": {
+      "open": "Offen",
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "abandoned": "Aufgegeben"
+    }
+  },
+  "actions": {
+    "create": "Opportunity erstellen",
+    "edit": "Opportunity bearbeiten",
+    "delete": "Opportunity löschen",
+    "view": "Opportunity ansehen",
+    "list": "Opportunities auflisten"
+  },
+  "messages": {
+    "created": "Opportunity erfolgreich erstellt",
+    "updated": "Opportunity erfolgreich aktualisiert",
+    "deleted": "Opportunity erfolgreich gelöscht",
+    "notFound": "Opportunity nicht gefunden",
+    "error": "Beim Verarbeiten der Opportunity ist ein Fehler aufgetreten"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "entity": {
+    "name": "Lead",
+    "plural": "Leads",
+    "description": "Potenzielle Interessenten und Geschäftschancen verwalten"
+  },
+  "fields": {
+    "companyName": {
+      "label": "Firmenname",
+      "description": "Name des Interessentenunternehmens",
+      "placeholder": "Firmennamen eingeben..."
+    },
+    "contactName": {
+      "label": "Name des Kontakts",
+      "description": "Name der Ansprechperson",
+      "placeholder": "Namen des Kontakts eingeben..."
+    },
+    "email": {
+      "label": "E-Mail",
+      "description": "E-Mail-Adresse",
+      "placeholder": "E-Mail-Adresse eingeben..."
+    },
+    "phone": {
+      "label": "Telefon",
+      "description": "Telefonnummer",
+      "placeholder": "Telefonnummer eingeben..."
+    },
+    "website": {
+      "label": "Website",
+      "description": "Firmenwebsite",
+      "placeholder": "https://example.com"
+    },
+    "source": {
+      "label": "Lead-Quelle",
+      "description": "Wie dieser Lead gewonnen wurde",
+      "placeholder": "Quelle auswählen..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Aktueller Lead-Status",
+      "placeholder": "Status auswählen..."
+    },
+    "score": {
+      "label": "Lead-Score",
+      "description": "Lead-Score von 0 bis 100",
+      "placeholder": "0"
+    },
+    "industry": {
+      "label": "Branche",
+      "description": "Wirtschaftszweig",
+      "placeholder": "Branche eingeben..."
+    },
+    "companySize": {
+      "label": "Unternehmensgröße",
+      "description": "Anzahl der Mitarbeitenden",
+      "placeholder": "Unternehmensgröße auswählen..."
+    },
+    "budget": {
+      "label": "Geschätztes Budget",
+      "description": "Geschätzter Budgetbetrag",
+      "placeholder": "0,00"
+    },
+    "assignedTo": {
+      "label": "Zugewiesen an",
+      "description": "Diesem Lead zugewiesene Vertriebsmitarbeitende",
+      "placeholder": "Benutzer auswählen..."
+    },
+    "notes": {
+      "label": "Notizen",
+      "description": "Interne Notizen zum Lead",
+      "placeholder": "Notizen eingeben..."
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann der Lead erstellt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann der Lead zuletzt aktualisiert wurde"
+    }
+  },
+  "options": {
+    "source": {
+      "web": "Website",
+      "referral": "Empfehlung",
+      "cold_call": "Kaltakquise",
+      "trade_show": "Messe",
+      "social_media": "Soziale Medien",
+      "email": "E-Mail",
+      "advertising": "Werbung",
+      "partner": "Partner",
+      "other": "Sonstiges"
+    },
+    "status": {
+      "new": "Neu",
+      "contacted": "Kontaktiert",
+      "qualified": "Qualifiziert",
+      "proposal": "Angebot",
+      "negotiation": "Verhandlung",
+      "converted": "Konvertiert",
+      "lost": "Verloren"
+    },
+    "companySize": {
+      "1-10": "1–10 Mitarbeitende",
+      "11-50": "11–50 Mitarbeitende",
+      "51-200": "51–200 Mitarbeitende",
+      "201-500": "201–500 Mitarbeitende",
+      "500+": "Über 500 Mitarbeitende"
+    }
+  },
+  "actions": {
+    "create": "Lead erstellen",
+    "edit": "Lead bearbeiten",
+    "delete": "Lead löschen",
+    "view": "Lead ansehen",
+    "list": "Leads auflisten",
+    "search": "Leads suchen",
+    "export": "Leads exportieren",
+    "import": "Leads importieren",
+    "convert": "Lead konvertieren",
+    "assign": "Lead zuweisen"
+  },
+  "messages": {
+    "created": "Lead erfolgreich erstellt",
+    "updated": "Lead erfolgreich aktualisiert",
+    "deleted": "Lead erfolgreich gelöscht",
+    "converted": "Lead erfolgreich konvertiert",
+    "assigned": "Lead erfolgreich zugewiesen",
+    "notFound": "Lead nicht gefunden",
+    "error": "Beim Verarbeiten des Leads ist ein Fehler aufgetreten"
+  }
+}

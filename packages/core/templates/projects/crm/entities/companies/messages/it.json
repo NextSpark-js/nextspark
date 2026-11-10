@@ -1,0 +1,146 @@
+{
+  "entity": {
+    "name": "Azienda",
+    "plural": "Aziende",
+    "description": "Gestisci aziende clienti e potenziali clienti"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome dell'azienda",
+      "description": "Nome visualizzato dell'azienda",
+      "placeholder": "Inserisci il nome dell'azienda..."
+    },
+    "legalName": {
+      "label": "Ragione sociale",
+      "description": "Ragione sociale registrata dell'azienda",
+      "placeholder": "Inserisci la ragione sociale..."
+    },
+    "taxId": {
+      "label": "Partita IVA",
+      "description": "Numero di identificazione fiscale",
+      "placeholder": "Inserisci la partita IVA..."
+    },
+    "website": {
+      "label": "Sito web",
+      "description": "URL del sito web dell'azienda",
+      "placeholder": "https://example.com"
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Indirizzo e-mail generale dell'azienda",
+      "placeholder": "info@company.com"
+    },
+    "phone": {
+      "label": "Telefono",
+      "description": "Numero di telefono principale dell'azienda",
+      "placeholder": "Inserisci il numero di telefono..."
+    },
+    "industry": {
+      "label": "Settore",
+      "description": "Settore economico",
+      "placeholder": "Inserisci il settore..."
+    },
+    "type": {
+      "label": "Tipo di azienda",
+      "description": "Tipo di relazione commerciale",
+      "placeholder": "Seleziona il tipo..."
+    },
+    "size": {
+      "label": "Dimensione dell'azienda",
+      "description": "Dimensione dell'azienda in base ai dipendenti",
+      "placeholder": "Seleziona la dimensione..."
+    },
+    "annualRevenue": {
+      "label": "Fatturato annuo",
+      "description": "Fatturato annuo nella valuta",
+      "placeholder": "0,00"
+    },
+    "address": {
+      "label": "Indirizzo",
+      "description": "Via e numero civico",
+      "placeholder": "Inserisci l'indirizzo..."
+    },
+    "city": {
+      "label": "Città",
+      "description": "Città",
+      "placeholder": "Inserisci la città..."
+    },
+    "state": {
+      "label": "Stato",
+      "description": "Stato o provincia",
+      "placeholder": "Inserisci lo stato..."
+    },
+    "country": {
+      "label": "Paese",
+      "description": "Paese",
+      "placeholder": "IT"
+    },
+    "postalCode": {
+      "label": "CAP",
+      "description": "Codice di avviamento postale",
+      "placeholder": "Inserisci il CAP..."
+    },
+    "logo": {
+      "label": "Logo",
+      "description": "URL del logo dell'azienda",
+      "placeholder": "https://example.com/logo.png"
+    },
+    "rating": {
+      "label": "Valutazione",
+      "description": "Valutazione commerciale",
+      "placeholder": "Seleziona la valutazione..."
+    },
+    "assignedTo": {
+      "label": "Assegnato a",
+      "description": "Account manager assegnato",
+      "placeholder": "Seleziona l'utente..."
+    },
+    "createdAt": {
+      "label": "Creato il",
+      "description": "Quando l'azienda è stata creata"
+    },
+    "updatedAt": {
+      "label": "Aggiornato il",
+      "description": "Quando l'azienda è stata aggiornata l'ultima volta"
+    }
+  },
+  "options": {
+    "type": {
+      "prospect": "Potenziale cliente",
+      "customer": "Cliente",
+      "partner": "Partner",
+      "competitor": "Concorrente",
+      "vendor": "Fornitore",
+      "other": "Altro"
+    },
+    "size": {
+      "1-10": "1-10 dipendenti",
+      "11-50": "11-50 dipendenti",
+      "51-200": "51-200 dipendenti",
+      "201-500": "201-500 dipendenti",
+      "500+": "Oltre 500 dipendenti"
+    },
+    "rating": {
+      "hot": "Caldo",
+      "warm": "Tiepido",
+      "cold": "Freddo"
+    }
+  },
+  "actions": {
+    "create": "Crea azienda",
+    "edit": "Modifica azienda",
+    "delete": "Elimina azienda",
+    "view": "Visualizza azienda",
+    "list": "Elenca aziende",
+    "search": "Cerca aziende",
+    "export": "Esporta aziende",
+    "import": "Importa aziende"
+  },
+  "messages": {
+    "created": "Azienda creata con successo",
+    "updated": "Azienda aggiornata con successo",
+    "deleted": "Azienda eliminata con successo",
+    "notFound": "Azienda non trovata",
+    "error": "Si è verificato un errore durante l'elaborazione dell'azienda"
+  }
+}

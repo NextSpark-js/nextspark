@@ -1,0 +1,106 @@
+{
+  "title": "Karten",
+  "singular": "Karte",
+  "plural": "Karten",
+  "description": "Aufgabenkarten, um deine Arbeit zu verfolgen",
+  "myCards": "Meine Karten",
+  "allCards": "Alle Karten",
+  "assignedToMe": "Mir zugewiesen",
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Kartentitel eingeben...",
+      "description": "Kartentitel"
+    },
+    "description": {
+      "label": "Beschreibung",
+      "placeholder": "Füge eine ausführlichere Beschreibung hinzu...",
+      "description": "Ausführliche Beschreibung der Aufgabe"
+    },
+    "position": {
+      "label": "Position",
+      "description": "Anzeigereihenfolge innerhalb der Liste"
+    },
+    "dueDate": {
+      "label": "Fällig am",
+      "placeholder": "Fälligkeitsdatum auswählen...",
+      "description": "Wann diese Aufgabe fällig ist"
+    },
+    "labels": {
+      "label": "Labels",
+      "placeholder": "Labels auswählen...",
+      "description": "Tags zur Kategorisierung dieser Karte",
+      "options": {
+        "urgent": "Dringend",
+        "important": "Wichtig",
+        "bug": "Fehler",
+        "feature": "Funktion",
+        "enhancement": "Verbesserung",
+        "documentation": "Dokumentation"
+      }
+    },
+    "assigneeId": {
+      "label": "Zuständige Person",
+      "placeholder": "Zuweisen an...",
+      "description": "Teammitglied, dem diese Karte zugewiesen ist"
+    },
+    "listId": {
+      "label": "Liste",
+      "placeholder": "Liste auswählen...",
+      "description": "Übergeordnete Liste"
+    },
+    "boardId": {
+      "label": "Board",
+      "placeholder": "Board auswählen...",
+      "description": "Übergeordnetes Board"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann die Karte erstellt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann die Karte zuletzt geändert wurde"
+    }
+  },
+  "actions": {
+    "create": "Karte hinzufügen",
+    "edit": "Karte bearbeiten",
+    "delete": "Karte löschen",
+    "move": "Karte verschieben",
+    "assign": "Zuweisen",
+    "unassign": "Zuweisung aufheben",
+    "addLabel": "Label hinzufügen",
+    "removeLabel": "Label entfernen",
+    "setDueDate": "Fälligkeitsdatum festlegen",
+    "removeDueDate": "Fälligkeitsdatum entfernen"
+  },
+  "messages": {
+    "created": "Karte erfolgreich erstellt",
+    "updated": "Karte erfolgreich aktualisiert",
+    "deleted": "Karte erfolgreich gelöscht",
+    "moved": "Karte nach {listName} verschoben",
+    "assigned": "Karte {userName} zugewiesen",
+    "unassigned": "Zuweisung der Karte aufgehoben",
+    "confirmDelete": "Möchtest du diese Karte wirklich löschen?"
+  },
+  "empty": {
+    "title": "Keine Karten in dieser Liste",
+    "description": "Füge eine Karte hinzu, um loszulegen.",
+    "action": "Karte hinzufügen"
+  },
+  "filters": {
+    "all": "Alle Karten",
+    "assignedToMe": "Mir zugewiesen",
+    "unassigned": "Nicht zugewiesen",
+    "overdue": "Überfällig",
+    "dueThisWeek": "Diese Woche fällig",
+    "noDueDate": "Kein Fälligkeitsdatum"
+  },
+  "dueStatus": {
+    "overdue": "Überfällig",
+    "dueToday": "Heute fällig",
+    "dueTomorrow": "Morgen fällig",
+    "dueThisWeek": "Diese Woche fällig"
+  }
+}

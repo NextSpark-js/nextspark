@@ -1,0 +1,135 @@
+{
+  "entity": {
+    "name": "Prodotto",
+    "plural": "Prodotti",
+    "description": "Gestisci prodotti e servizi"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome del prodotto",
+      "description": "Nome del prodotto o del servizio",
+      "placeholder": "Inserisci il nome del prodotto..."
+    },
+    "sku": {
+      "label": "SKU",
+      "description": "Identificativo dell'unità di gestione delle scorte",
+      "placeholder": "Inserisci lo SKU..."
+    },
+    "description": {
+      "label": "Descrizione",
+      "description": "Descrizione del prodotto",
+      "placeholder": "Inserisci la descrizione..."
+    },
+    "category": {
+      "label": "Categoria",
+      "description": "Categoria del prodotto",
+      "placeholder": "Inserisci la categoria..."
+    },
+    "type": {
+      "label": "Tipo di prodotto",
+      "description": "Tipo di prodotto o servizio",
+      "placeholder": "Seleziona il tipo..."
+    },
+    "status": {
+      "label": "Stato",
+      "description": "Stato del prodotto",
+      "placeholder": "Seleziona lo stato..."
+    },
+    "price": {
+      "label": "Prezzo unitario",
+      "description": "Prezzo per unità",
+      "placeholder": "0,00"
+    },
+    "cost": {
+      "label": "Costo unitario",
+      "description": "Costo per unità",
+      "placeholder": "0,00"
+    },
+    "currency": {
+      "label": "Valuta",
+      "description": "Codice valuta",
+      "placeholder": "Seleziona la valuta..."
+    },
+    "stockQuantity": {
+      "label": "Quantità in magazzino",
+      "description": "Quantità di scorte disponibile",
+      "placeholder": "0"
+    },
+    "minStockLevel": {
+      "label": "Livello minimo di scorte",
+      "description": "Soglia del livello minimo di scorte",
+      "placeholder": "0"
+    },
+    "features": {
+      "label": "Caratteristiche",
+      "description": "Elenco delle caratteristiche del prodotto"
+    },
+    "specifications": {
+      "label": "Specifiche",
+      "description": "Specifiche tecniche"
+    },
+    "images": {
+      "label": "Immagini",
+      "description": "Immagini del prodotto"
+    },
+    "isActive": {
+      "label": "Attivo",
+      "description": "Indica se il prodotto è attivo"
+    },
+    "weight": {
+      "label": "Peso",
+      "description": "Peso del prodotto",
+      "placeholder": "0,00"
+    },
+    "dimensions": {
+      "label": "Dimensioni",
+      "description": "Dimensioni del prodotto",
+      "placeholder": "L × P × A"
+    },
+    "vendor": {
+      "label": "Fornitore",
+      "description": "Produttore o fornitore del prodotto",
+      "placeholder": "Inserisci il fornitore..."
+    }
+  },
+  "options": {
+    "type": {
+      "physical": "Prodotto fisico",
+      "digital": "Prodotto digitale",
+      "service": "Servizio",
+      "subscription": "Abbonamento",
+      "bundle": "Pacchetto di prodotti",
+      "variant": "Variante del prodotto"
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "discontinued": "Fuori produzione",
+      "out_of_stock": "Esaurito",
+      "coming_soon": "Prossimamente"
+    }
+  },
+  "actions": {
+    "create": "Crea prodotto",
+    "edit": "Modifica prodotto",
+    "delete": "Elimina prodotto",
+    "view": "Visualizza prodotto",
+    "list": "Elenca prodotti",
+    "duplicate": "Duplica prodotto",
+    "activate": "Attiva prodotto",
+    "deactivate": "Disattiva prodotto",
+    "restock": "Rifornisci prodotto"
+  },
+  "messages": {
+    "created": "Prodotto creato con successo",
+    "updated": "Prodotto aggiornato con successo",
+    "deleted": "Prodotto eliminato con successo",
+    "activated": "Prodotto attivato con successo",
+    "deactivated": "Prodotto disattivato con successo",
+    "restocked": "Prodotto rifornito con successo",
+    "lowStock": "Le scorte del prodotto stanno per esaurirsi",
+    "outOfStock": "Il prodotto è esaurito",
+    "notFound": "Prodotto non trovato",
+    "error": "Si è verificato un errore durante l'elaborazione del prodotto"
+  }
+}

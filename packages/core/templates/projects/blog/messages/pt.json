@@ -1,0 +1,93 @@
+{
+  "common": {
+    "blog": {
+      "viewBlog": "Ver o blog"
+    }
+  },
+  "blog": {
+    "title": "Plataforma de blog",
+    "description": "Pensamentos, histórias e ideias da nossa comunidade de escritores",
+    "viewBlog": "Ver o blog",
+    "writtenBy": "Escrito por",
+    "publishedOn": "Publicado em",
+    "readMore": "Leia mais",
+    "backToHome": "Voltar para o início",
+    "backToPosts": "Voltar às publicações",
+    "noPosts": "Nenhuma publicação ainda",
+    "noPostsDescription": "Volte em breve para ver novos conteúdos.",
+    "publicFeed": {
+      "title": "Histórias mais recentes",
+      "subtitle": "Pensamentos, histórias e ideias da nossa comunidade de escritores",
+      "recentPosts": "Publicações recentes",
+      "loadMore": "Carregar mais",
+      "noResults": "Nenhuma publicação encontrada",
+      "filterByCategory": "Filtrar por categoria"
+    },
+    "newsletter": {
+      "title": "Fique por dentro",
+      "description": "Inscreva-se para ser avisado quando novos artigos forem publicados. Sem spam, cancele a inscrição quando quiser.",
+      "placeholder": "seu@email.com.br",
+      "subscribe": "Inscrever-se"
+    },
+    "author": {
+      "profileTitle": "Perfil de {name}",
+      "postsCount": "{count} publicações publicadas",
+      "postsCountSingular": "{count} publicação publicada",
+      "viewAllPosts": "Ver todas as publicações",
+      "followOn": "Seguir no {platform}",
+      "visitWebsite": "Visitar o site",
+      "moreFrom": "Mais de {name}",
+      "notFound": "Autor não encontrado",
+      "notFoundDescription": "O autor que você procura não existe."
+    },
+    "category": {
+      "title": "Publicações em {category}",
+      "noResults": "Nenhuma publicação nesta categoria ainda"
+    },
+    "dashboard": {
+      "myPosts": "Minhas publicações",
+      "newPost": "Nova publicação",
+      "editProfile": "Editar perfil",
+      "publishPost": "Publicar",
+      "unpublishPost": "Cancelar publicação",
+      "confirmPublish": "Tem certeza de que deseja publicar esta publicação?",
+      "confirmUnpublish": "Tem certeza de que deseja cancelar a publicação desta publicação?",
+      "statusDraft": "Rascunho",
+      "statusPublished": "Publicado"
+    },
+    "profile": {
+      "username": "Nome de usuário",
+      "usernameHint": "Esta será a URL do seu perfil público: /author/{username}",
+      "bio": "Bio",
+      "bioPlaceholder": "Conte aos leitores um pouco sobre você...",
+      "socialLinks": "Links sociais",
+      "twitter": "Perfil do Twitter/X",
+      "linkedin": "Perfil do LinkedIn",
+      "website": "Site pessoal",
+      "saveProfile": "Salvar perfil",
+      "profileUpdated": "Perfil atualizado com sucesso"
+    },
+    "quickActions": {
+      "writePost": "Escrever uma nova publicação"
+    },
+    "categories": {
+      "all": "Todas as categorias",
+      "uncategorized": "Sem categoria"
+    },
+    "search": {
+      "placeholder": "Pesquisar publicações...",
+      "noResults": "Nenhuma publicação encontrada",
+      "resultsFor": "Resultados para"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Próximo",
+      "page": "Página"
+    },
+    "meta": {
+      "minRead": "min de leitura",
+      "draft": "Rascunho",
+      "scheduled": "Agendado para"
+    }
+  }
+}

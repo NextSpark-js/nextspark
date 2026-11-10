@@ -1,0 +1,71 @@
+{
+  "productivity": {
+    "name": "Produtividade",
+    "description": "Um aplicativo colaborativo de gerenciamento de tarefas",
+    "tagline": "Organizem o trabalho, juntos",
+    "navigation": {
+      "boards": "Quadros",
+      "myCards": "Meus cartões",
+      "calendar": "Calendário",
+      "team": "Equipe"
+    },
+    "quickActions": {
+      "createBoard": "Criar quadro",
+      "createCard": "Adicionar cartão"
+    },
+    "dashboard": {
+      "welcome": "Bem-vindo de volta!",
+      "welcomeWithName": "Bem-vindo de volta, {name}!",
+      "overview": "Sua visão geral",
+      "recentBoards": "Quadros recentes",
+      "upcomingDeadlines": "Prazos próximos",
+      "assignedToYou": "Atribuídos a você",
+      "teamActivity": "Atividade da equipe"
+    },
+    "stats": {
+      "totalBoards": "Total de quadros",
+      "totalCards": "Total de cartões",
+      "cardsCompleted": "Cartões concluídos",
+      "cardsDueThisWeek": "Vence esta semana"
+    },
+    "empty": {
+      "noBoards": {
+        "title": "Nenhum quadro ainda",
+        "description": "Crie seu primeiro quadro para organizar seu trabalho.",
+        "action": "Criar seu primeiro quadro"
+      },
+      "noAssignedCards": {
+        "title": "Nenhum cartão atribuído",
+        "description": "Os cartões atribuídos a você aparecerão aqui."
+      },
+      "noDeadlines": {
+        "title": "Nenhum prazo próximo",
+        "description": "Os cartões com data de vencimento aparecerão aqui."
+      }
+    },
+    "collaboration": {
+      "invite": "Convidar membro da equipe",
+      "inviteDescription": "Convide alguém para colaborar nos seus quadros",
+      "teamMembers": "Membros da equipe",
+      "roles": {
+        "owner": "Proprietário",
+        "member": "Membro",
+        "viewer": "Visualizador"
+      },
+      "roleDescriptions": {
+        "owner": "Acesso total a todos os quadros, listas e cartões. Pode convidar membros.",
+        "member": "Pode criar e editar listas e cartões. Não pode excluir quadros.",
+        "viewer": "Acesso somente leitura a todos os quadros, listas e cartões."
+      }
+    },
+    "shortcuts": {
+      "title": "Atalhos de teclado",
+      "newCard": "Novo cartão",
+      "newBoard": "Novo quadro",
+      "search": "Pesquisar",
+      "toggleSidebar": "Alternar barra lateral",
+      "nextList": "Próxima lista",
+      "previousList": "Lista anterior"
+    }
+  }
+}

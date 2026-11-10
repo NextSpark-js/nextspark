@@ -1,0 +1,74 @@
+{
+  "title": "Quadros",
+  "singular": "Quadro",
+  "plural": "Quadros",
+  "description": "Organize seu trabalho em quadros",
+  "fields": {
+    "name": {
+      "label": "Nome",
+      "placeholder": "Digite o nome do quadro...",
+      "description": "Nome do quadro"
+    },
+    "description": {
+      "label": "Descrição",
+      "placeholder": "Descreva para que serve este quadro...",
+      "description": "Descrição opcional do quadro"
+    },
+    "color": {
+      "label": "Cor",
+      "placeholder": "Selecione a cor...",
+      "description": "Cor de fundo do quadro",
+      "options": {
+        "blue": "Azul",
+        "green": "Verde",
+        "purple": "Roxo",
+        "orange": "Laranja",
+        "red": "Vermelho",
+        "pink": "Rosa",
+        "gray": "Cinza"
+      }
+    },
+    "archived": {
+      "label": "Arquivado",
+      "description": "Arquivar este quadro"
+    },
+    "position": {
+      "label": "Cargo",
+      "description": "Ordem de exibição"
+    },
+    "createdAt": {
+      "label": "Criado em",
+      "description": "Quando o quadro foi criado"
+    },
+    "updatedAt": {
+      "label": "Atualizado em",
+      "description": "Quando o quadro foi modificado pela última vez"
+    }
+  },
+  "actions": {
+    "create": "Novo quadro",
+    "edit": "Editar quadro",
+    "delete": "Excluir quadro",
+    "archive": "Arquivar quadro",
+    "unarchive": "Desarquivar quadro",
+    "duplicate": "Duplicar quadro"
+  },
+  "messages": {
+    "created": "Quadro criado com sucesso",
+    "updated": "Quadro atualizado com sucesso",
+    "deleted": "Quadro excluído com sucesso",
+    "archived": "Quadro arquivado",
+    "unarchived": "Quadro desarquivado",
+    "confirmDelete": "Tem certeza de que deseja excluir este quadro? Todas as listas e cartões serão removidos permanentemente."
+  },
+  "empty": {
+    "title": "Nenhum quadro ainda",
+    "description": "Crie seu primeiro quadro para organizar seu trabalho.",
+    "action": "Criar seu primeiro quadro"
+  },
+  "filters": {
+    "all": "Todos os quadros",
+    "active": "Ativo",
+    "archived": "Arquivado"
+  }
+}

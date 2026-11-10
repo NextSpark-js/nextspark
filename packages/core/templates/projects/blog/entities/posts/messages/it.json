@@ -1,0 +1,94 @@
+{
+  "title": "Articoli",
+  "singular": "Articolo",
+  "plural": "Articoli",
+  "description": "Gestisci i tuoi articoli del blog",
+  "fields": {
+    "title": {
+      "label": "Titolo",
+      "placeholder": "Inserisci un titolo accattivante...",
+      "description": "Il titolo del tuo articolo del blog"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "il-mio-articolo-del-blog",
+      "description": "Versione del titolo adatta agli URL"
+    },
+    "excerpt": {
+      "label": "Estratto",
+      "placeholder": "Scrivi un breve riassunto del tuo articolo...",
+      "description": "Un breve riassunto mostrato negli elenchi degli articoli"
+    },
+    "content": {
+      "label": "Contenuto",
+      "placeholder": "Inizia a scrivere il tuo articolo...",
+      "description": "Il contenuto principale del tuo articolo del blog"
+    },
+    "featuredImage": {
+      "label": "Immagine in evidenza",
+      "placeholder": "Carica un'immagine...",
+      "description": "Immagine principale mostrata con l'articolo"
+    },
+    "category": {
+      "label": "Categoria",
+      "placeholder": "ad es. Tecnologia, Viaggi, Cibo",
+      "description": "Categoria principale dell'articolo"
+    },
+    "tags": {
+      "label": "Tag",
+      "placeholder": "Aggiungi tag...",
+      "description": "Parole chiave per aiutare i lettori a trovare questo articolo"
+    },
+    "status": {
+      "label": "Stato",
+      "placeholder": "Seleziona lo stato...",
+      "description": "Stato di pubblicazione",
+      "options": {
+        "draft": "Bozza",
+        "published": "Pubblicato",
+        "scheduled": "Programmato"
+      }
+    },
+    "publishedAt": {
+      "label": "Data di pubblicazione",
+      "placeholder": "Seleziona una data...",
+      "description": "Quando l'articolo è stato o sarà pubblicato"
+    },
+    "createdAt": {
+      "label": "Creato il",
+      "description": "Quando l'articolo è stato creato"
+    },
+    "updatedAt": {
+      "label": "Aggiornato il",
+      "description": "Quando l'articolo è stato modificato l'ultima volta"
+    }
+  },
+  "actions": {
+    "create": "Nuovo articolo",
+    "edit": "Modifica articolo",
+    "delete": "Elimina articolo",
+    "publish": "Pubblica",
+    "unpublish": "Annulla la pubblicazione",
+    "saveDraft": "Salva bozza",
+    "preview": "Anteprima"
+  },
+  "messages": {
+    "created": "Articolo creato con successo",
+    "updated": "Articolo aggiornato con successo",
+    "deleted": "Articolo eliminato con successo",
+    "published": "Articolo pubblicato con successo",
+    "unpublished": "Articolo non più pubblicato",
+    "confirmDelete": "Vuoi davvero eliminare questo articolo? Questa azione non può essere annullata."
+  },
+  "empty": {
+    "title": "Ancora nessun articolo",
+    "description": "Inizia scrivendo il tuo primo articolo del blog.",
+    "action": "Scrivi il tuo primo articolo"
+  },
+  "filters": {
+    "all": "Tutti gli articoli",
+    "published": "Pubblicato",
+    "draft": "Bozze",
+    "scheduled": "Programmato"
+  }
+}

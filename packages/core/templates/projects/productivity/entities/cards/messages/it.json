@@ -1,0 +1,106 @@
+{
+  "title": "Schede",
+  "singular": "Scheda",
+  "plural": "Schede",
+  "description": "Schede attività per tenere traccia del tuo lavoro",
+  "myCards": "Le mie schede",
+  "allCards": "Tutte le schede",
+  "assignedToMe": "Assegnate a me",
+  "fields": {
+    "title": {
+      "label": "Titolo",
+      "placeholder": "Inserisci il titolo della scheda...",
+      "description": "Titolo della scheda"
+    },
+    "description": {
+      "label": "Descrizione",
+      "placeholder": "Aggiungi una descrizione più dettagliata...",
+      "description": "Descrizione dettagliata dell'attività"
+    },
+    "position": {
+      "label": "Posizione",
+      "description": "Ordine di visualizzazione all'interno della lista"
+    },
+    "dueDate": {
+      "label": "Scadenza",
+      "placeholder": "Seleziona la scadenza...",
+      "description": "Quando scade questa attività"
+    },
+    "labels": {
+      "label": "Etichette",
+      "placeholder": "Seleziona le etichette...",
+      "description": "Tag per categorizzare questa scheda",
+      "options": {
+        "urgent": "Urgente",
+        "important": "Importante",
+        "bug": "Bug",
+        "feature": "Funzionalità",
+        "enhancement": "Miglioramento",
+        "documentation": "Documentazione"
+      }
+    },
+    "assigneeId": {
+      "label": "Assegnatario",
+      "placeholder": "Assegna a...",
+      "description": "Membro del team assegnato a questa scheda"
+    },
+    "listId": {
+      "label": "Lista",
+      "placeholder": "Seleziona la lista...",
+      "description": "Lista principale"
+    },
+    "boardId": {
+      "label": "Bacheca",
+      "placeholder": "Seleziona la bacheca...",
+      "description": "Bacheca principale"
+    },
+    "createdAt": {
+      "label": "Creato il",
+      "description": "Quando la scheda è stata creata"
+    },
+    "updatedAt": {
+      "label": "Aggiornato il",
+      "description": "Quando la scheda è stata modificata l'ultima volta"
+    }
+  },
+  "actions": {
+    "create": "Aggiungi scheda",
+    "edit": "Modifica scheda",
+    "delete": "Elimina scheda",
+    "move": "Sposta scheda",
+    "assign": "Assegna",
+    "unassign": "Rimuovi assegnazione",
+    "addLabel": "Aggiungi etichetta",
+    "removeLabel": "Rimuovi etichetta",
+    "setDueDate": "Imposta la scadenza",
+    "removeDueDate": "Rimuovi la scadenza"
+  },
+  "messages": {
+    "created": "Scheda creata con successo",
+    "updated": "Scheda aggiornata con successo",
+    "deleted": "Scheda eliminata con successo",
+    "moved": "Scheda spostata in {listName}",
+    "assigned": "Scheda assegnata a {userName}",
+    "unassigned": "Scheda non più assegnata",
+    "confirmDelete": "Vuoi davvero eliminare questa scheda?"
+  },
+  "empty": {
+    "title": "Nessuna scheda in questa lista",
+    "description": "Aggiungi una scheda per iniziare.",
+    "action": "Aggiungi una scheda"
+  },
+  "filters": {
+    "all": "Tutte le schede",
+    "assignedToMe": "Assegnate a me",
+    "unassigned": "Non assegnata",
+    "overdue": "In ritardo",
+    "dueThisWeek": "In scadenza questa settimana",
+    "noDueDate": "Nessuna scadenza"
+  },
+  "dueStatus": {
+    "overdue": "In ritardo",
+    "dueToday": "In scadenza oggi",
+    "dueTomorrow": "In scadenza domani",
+    "dueThisWeek": "In scadenza questa settimana"
+  }
+}

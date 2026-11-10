@@ -1,0 +1,145 @@
+{
+  "entity": {
+    "name": "Campanha",
+    "plural": "Campanhas",
+    "description": "Gerencie campanhas de marketing e prospecção"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome da campanha",
+      "description": "Nome ou título da campanha",
+      "placeholder": "Digite o nome da campanha..."
+    },
+    "type": {
+      "label": "Tipo de campanha",
+      "description": "Tipo de campanha de marketing",
+      "placeholder": "Selecione o tipo..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Status atual da campanha",
+      "placeholder": "Selecione o status..."
+    },
+    "channel": {
+      "label": "Canal",
+      "description": "Canal de marketing utilizado",
+      "placeholder": "Selecione o canal..."
+    },
+    "budget": {
+      "label": "Orçamento",
+      "description": "Valor do orçamento da campanha",
+      "placeholder": "0,00"
+    },
+    "spend": {
+      "label": "Valor gasto",
+      "description": "Valor já gasto",
+      "placeholder": "0,00"
+    },
+    "targetAudience": {
+      "label": "Público-alvo",
+      "description": "Descrição do público-alvo",
+      "placeholder": "Digite o público-alvo..."
+    },
+    "startDate": {
+      "label": "Data de início",
+      "description": "Data de início da campanha",
+      "placeholder": "Selecione uma data..."
+    },
+    "endDate": {
+      "label": "Data de término",
+      "description": "Data de término da campanha",
+      "placeholder": "Selecione uma data..."
+    },
+    "impressions": {
+      "label": "Impressões",
+      "description": "Número de impressões",
+      "placeholder": "0"
+    },
+    "clicks": {
+      "label": "Cliques",
+      "description": "Número de cliques",
+      "placeholder": "0"
+    },
+    "conversions": {
+      "label": "Conversões",
+      "description": "Número de conversões",
+      "placeholder": "0"
+    },
+    "ctr": {
+      "label": "CTR (%)",
+      "description": "Taxa de cliques em porcentagem",
+      "placeholder": "0,00"
+    },
+    "conversionRate": {
+      "label": "Taxa de conversão (%)",
+      "description": "Taxa de conversão em porcentagem",
+      "placeholder": "0,00"
+    },
+    "roi": {
+      "label": "ROI (%)",
+      "description": "Retorno sobre o investimento em porcentagem",
+      "placeholder": "0,00"
+    },
+    "assignedTo": {
+      "label": "Gerente da campanha",
+      "description": "Usuário que gerencia esta campanha",
+      "placeholder": "Selecione o usuário..."
+    }
+  },
+  "options": {
+    "type": {
+      "email": "Marketing por e-mail",
+      "social": "Redes sociais",
+      "ppc": "Pagamento por clique",
+      "content": "Marketing de conteúdo",
+      "webinar": "Webinar",
+      "event": "Evento",
+      "referral": "Indicação",
+      "affiliate": "Afiliado",
+      "retargeting": "Retargeting"
+    },
+    "status": {
+      "draft": "Rascunho",
+      "scheduled": "Agendado",
+      "active": "Ativo",
+      "paused": "Pausado",
+      "completed": "Concluído",
+      "cancelled": "Cancelado"
+    },
+    "channel": {
+      "email": "E-mail",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "twitter": "Twitter",
+      "google_ads": "Google Ads",
+      "youtube": "YouTube",
+      "tiktok": "TikTok",
+      "website": "Site",
+      "blog": "Blog",
+      "seo": "SEO",
+      "other": "Outro"
+    }
+  },
+  "actions": {
+    "create": "Criar campanha",
+    "edit": "Editar campanha",
+    "delete": "Excluir campanha",
+    "view": "Ver campanha",
+    "list": "Listar campanhas",
+    "launch": "Iniciar campanha",
+    "pause": "Pausar campanha",
+    "resume": "Retomar campanha",
+    "duplicate": "Duplicar campanha"
+  },
+  "messages": {
+    "created": "Campanha criada com sucesso",
+    "updated": "Campanha atualizada com sucesso",
+    "deleted": "Campanha excluída com sucesso",
+    "launched": "Campanha iniciada com sucesso",
+    "paused": "Campanha pausada com sucesso",
+    "resumed": "Campanha retomada com sucesso",
+    "notFound": "Campanha não encontrada",
+    "error": "Ocorreu um erro ao processar a campanha"
+  }
+}

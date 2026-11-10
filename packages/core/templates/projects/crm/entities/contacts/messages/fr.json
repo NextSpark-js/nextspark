@@ -1,0 +1,117 @@
+{
+  "entity": {
+    "name": "Contact",
+    "plural": "Contacts",
+    "description": "Gérer les personnes de contact dans les entreprises"
+  },
+  "fields": {
+    "firstName": {
+      "label": "Prénom",
+      "description": "Prénom du contact",
+      "placeholder": "Saisissez le prénom..."
+    },
+    "lastName": {
+      "label": "Nom de famille",
+      "description": "Nom de famille du contact",
+      "placeholder": "Saisissez le nom de famille..."
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Adresse e-mail du contact",
+      "placeholder": "Saisissez l'adresse e-mail..."
+    },
+    "phone": {
+      "label": "Téléphone",
+      "description": "Numéro de téléphone au bureau",
+      "placeholder": "Saisissez le numéro de téléphone..."
+    },
+    "mobile": {
+      "label": "Mobile",
+      "description": "Numéro de téléphone mobile",
+      "placeholder": "Saisissez le numéro de mobile..."
+    },
+    "companyId": {
+      "label": "Entreprise",
+      "description": "Entreprise associée",
+      "placeholder": "Sélectionnez une entreprise..."
+    },
+    "position": {
+      "label": "Poste",
+      "description": "Poste ou intitulé de fonction",
+      "placeholder": "Saisissez le poste..."
+    },
+    "department": {
+      "label": "Service",
+      "description": "Service au sein de l'entreprise",
+      "placeholder": "Saisissez le service..."
+    },
+    "isPrimary": {
+      "label": "Contact principal",
+      "description": "Est le contact principal de l'entreprise"
+    },
+    "birthDate": {
+      "label": "Date de naissance",
+      "description": "Date de naissance du contact",
+      "placeholder": "Sélectionnez une date..."
+    },
+    "linkedin": {
+      "label": "LinkedIn",
+      "description": "URL du profil LinkedIn",
+      "placeholder": "https://linkedin.com/in/..."
+    },
+    "twitter": {
+      "label": "Twitter",
+      "description": "Identifiant Twitter/X",
+      "placeholder": "@utilisateur"
+    },
+    "preferredChannel": {
+      "label": "Canal préféré",
+      "description": "Canal de communication préféré",
+      "placeholder": "Sélectionnez un canal..."
+    },
+    "timezone": {
+      "label": "Fuseau horaire",
+      "description": "Fuseau horaire du contact",
+      "placeholder": "UTC"
+    },
+    "lastContactedAt": {
+      "label": "Dernier contact",
+      "description": "Dernière fois que ce contact a été joint"
+    },
+    "createdAt": {
+      "label": "Créé le",
+      "description": "Date de création du contact"
+    },
+    "updatedAt": {
+      "label": "Mis à jour le",
+      "description": "Date de dernière mise à jour du contact"
+    }
+  },
+  "options": {
+    "preferredChannel": {
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "whatsapp": "WhatsApp",
+      "linkedin": "LinkedIn",
+      "slack": "Slack",
+      "other": "Autre"
+    }
+  },
+  "actions": {
+    "create": "Créer un contact",
+    "edit": "Modifier le contact",
+    "delete": "Supprimer le contact",
+    "view": "Voir le contact",
+    "list": "Lister les contacts",
+    "search": "Rechercher des contacts",
+    "export": "Exporter les contacts",
+    "import": "Importer des contacts"
+  },
+  "messages": {
+    "created": "Contact créé avec succès",
+    "updated": "Contact mis à jour avec succès",
+    "deleted": "Contact supprimé avec succès",
+    "notFound": "Contact introuvable",
+    "error": "Une erreur s'est produite lors du traitement du contact"
+  }
+}

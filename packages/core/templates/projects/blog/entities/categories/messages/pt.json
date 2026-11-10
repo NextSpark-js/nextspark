@@ -1,0 +1,33 @@
+{
+  "entity": {
+    "name": "Categoria",
+    "namePlural": "Categorias",
+    "description": "Organize suas publicações do blog por categoria"
+  },
+  "fields": {
+    "name": "Nome",
+    "slug": "Slug",
+    "description": "Descrição",
+    "createdAt": "Criado em",
+    "updatedAt": "Atualizado em"
+  },
+  "actions": {
+    "create": "Criar categoria",
+    "edit": "Editar categoria",
+    "delete": "Excluir categoria",
+    "view": "Ver categoria",
+    "list": "Listar categorias"
+  },
+  "messages": {
+    "created": "Categoria criada com sucesso",
+    "updated": "Categoria atualizada com sucesso",
+    "deleted": "Categoria excluída com sucesso",
+    "notFound": "Categoria não encontrada",
+    "listEmpty": "Nenhuma categoria encontrada. Crie sua primeira categoria para organizar suas publicações."
+  },
+  "validation": {
+    "nameRequired": "O nome da categoria é obrigatório",
+    "slugRequired": "O slug é obrigatório",
+    "slugInvalid": "O slug deve ser amigável para URL (apenas letras minúsculas, números e hífens)"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "entity": {
+    "name": "Lead",
+    "plural": "Leads",
+    "description": "Gerencie prospects potenciais e oportunidades de negócio"
+  },
+  "fields": {
+    "companyName": {
+      "label": "Nome da empresa",
+      "description": "Nome da empresa prospect",
+      "placeholder": "Digite o nome da empresa..."
+    },
+    "contactName": {
+      "label": "Nome do contato",
+      "description": "Nome da pessoa de contato",
+      "placeholder": "Digite o nome do contato..."
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Endereço de e-mail",
+      "placeholder": "Digite o endereço de e-mail..."
+    },
+    "phone": {
+      "label": "Telefone",
+      "description": "Número de telefone",
+      "placeholder": "Digite o número de telefone..."
+    },
+    "website": {
+      "label": "Site",
+      "description": "Site da empresa",
+      "placeholder": "https://example.com"
+    },
+    "source": {
+      "label": "Origem do lead",
+      "description": "Como este lead foi obtido",
+      "placeholder": "Selecione a origem..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Status atual do lead",
+      "placeholder": "Selecione o status..."
+    },
+    "score": {
+      "label": "Pontuação do lead",
+      "description": "Pontuação do lead de 0 a 100",
+      "placeholder": "0"
+    },
+    "industry": {
+      "label": "Setor",
+      "description": "Setor econômico",
+      "placeholder": "Digite o setor..."
+    },
+    "companySize": {
+      "label": "Porte da empresa",
+      "description": "Número de funcionários",
+      "placeholder": "Selecione o porte da empresa..."
+    },
+    "budget": {
+      "label": "Orçamento estimado",
+      "description": "Valor estimado do orçamento",
+      "placeholder": "0,00"
+    },
+    "assignedTo": {
+      "label": "Atribuído a",
+      "description": "Representante de vendas atribuído a este lead",
+      "placeholder": "Selecione o usuário..."
+    },
+    "notes": {
+      "label": "Notas",
+      "description": "Notas internas sobre o lead",
+      "placeholder": "Digite as notas..."
+    },
+    "createdAt": {
+      "label": "Criado em",
+      "description": "Quando o lead foi criado"
+    },
+    "updatedAt": {
+      "label": "Atualizado em",
+      "description": "Quando o lead foi atualizado pela última vez"
+    }
+  },
+  "options": {
+    "source": {
+      "web": "Site",
+      "referral": "Indicação",
+      "cold_call": "Ligação fria",
+      "trade_show": "Feira comercial",
+      "social_media": "Redes sociais",
+      "email": "E-mail",
+      "advertising": "Publicidade",
+      "partner": "Parceiro",
+      "other": "Outro"
+    },
+    "status": {
+      "new": "Novo",
+      "contacted": "Contatado",
+      "qualified": "Qualificado",
+      "proposal": "Proposta",
+      "negotiation": "Negociação",
+      "converted": "Convertido",
+      "lost": "Perdido"
+    },
+    "companySize": {
+      "1-10": "1 a 10 funcionários",
+      "11-50": "11 a 50 funcionários",
+      "51-200": "51 a 200 funcionários",
+      "201-500": "201 a 500 funcionários",
+      "500+": "Mais de 500 funcionários"
+    }
+  },
+  "actions": {
+    "create": "Criar lead",
+    "edit": "Editar lead",
+    "delete": "Excluir lead",
+    "view": "Ver lead",
+    "list": "Listar leads",
+    "search": "Pesquisar leads",
+    "export": "Exportar leads",
+    "import": "Importar leads",
+    "convert": "Converter lead",
+    "assign": "Atribuir lead"
+  },
+  "messages": {
+    "created": "Lead criado com sucesso",
+    "updated": "Lead atualizado com sucesso",
+    "deleted": "Lead excluído com sucesso",
+    "converted": "Lead convertido com sucesso",
+    "assigned": "Lead atribuído com sucesso",
+    "notFound": "Lead não encontrado",
+    "error": "Ocorreu um erro ao processar o lead"
+  }
+}

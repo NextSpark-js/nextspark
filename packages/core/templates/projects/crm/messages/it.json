@@ -1,0 +1,122 @@
+{
+  "crm": {
+    "name": "CRM Enterprise",
+    "description": "Soluzione CRM completa per i team vendite e marketing",
+    "tagline": "Chiudi più affari, fai crescere la tua attività",
+    "navigation": {
+      "leads": "Lead",
+      "contacts": "Contatti",
+      "companies": "Aziende",
+      "opportunities": "Opportunità",
+      "activities": "Attività",
+      "campaigns": "Campagne",
+      "reports": "Report",
+      "settings": "Impostazioni"
+    },
+    "quickActions": {
+      "newLead": "Nuovo lead",
+      "newContact": "Nuovo contatto",
+      "newCompany": "Nuova azienda",
+      "newOpportunity": "Nuova opportunità",
+      "scheduleActivity": "Pianifica attività",
+      "createCampaign": "Crea campagna"
+    },
+    "dashboard": {
+      "welcome": "Bentornato!",
+      "welcomeWithName": "Bentornato, {name}!",
+      "overview": "Panoramica delle vendite",
+      "pipelineValue": "Valore della pipeline",
+      "openDeals": "Affari aperti",
+      "wonThisMonth": "Vinti questo mese",
+      "conversionRate": "Tasso di conversione",
+      "upcomingActivities": "Attività in programma",
+      "recentLeads": "Lead recenti",
+      "topOpportunities": "Opportunità principali"
+    },
+    "pipeline": {
+      "title": "Pipeline di vendita",
+      "totalValue": "Valore totale",
+      "dealCount": "Affari",
+      "stages": {
+        "qualification": "Qualificazione",
+        "needsAnalysis": "Analisi dei bisogni",
+        "proposal": "Proposta",
+        "negotiation": "Negoziazione",
+        "closedWon": "Chiusa vinta",
+        "closedLost": "Chiusa persa"
+      }
+    },
+    "reports": {
+      "title": "Report",
+      "sales": "Report vendite",
+      "marketing": "Report marketing",
+      "pipeline": "Report pipeline",
+      "activity": "Report attività",
+      "forecast": "Previsioni di vendita"
+    },
+    "features": {
+      "convert": {
+        "title": "Converti lead",
+        "description": "Converti questo lead in un contatto e un'azienda",
+        "createContact": "Crea contatto",
+        "createCompany": "Crea azienda",
+        "success": "Lead convertito con successo",
+        "alreadyConverted": "Questo lead è già stato convertito"
+      },
+      "bulkImport": {
+        "title": "Importa dati",
+        "description": "Importa dati da un file CSV o Excel",
+        "selectFile": "Seleziona file",
+        "mapping": "Associa colonne",
+        "preview": "Anteprima",
+        "import": "Importa"
+      },
+      "bulkExport": {
+        "title": "Esporta dati",
+        "description": "Esporta dati in un file CSV o Excel",
+        "allRecords": "Tutti i record",
+        "selectedRecords": "Record selezionati",
+        "filteredRecords": "Record filtrati"
+      }
+    },
+    "roles": {
+      "owner": "Amministratore",
+      "admin": "Responsabile",
+      "member": "Rappresentante",
+      "viewer": "Visualizzatore",
+      "descriptions": {
+        "owner": "Accesso completo a tutte le funzioni e impostazioni del CRM",
+        "admin": "Può gestire il team, visualizzare i report ed eseguire operazioni in blocco",
+        "member": "Può gestire lead, contatti, opportunità e attività",
+        "viewer": "Accesso di sola lettura ai dati del CRM"
+      }
+    },
+    "stats": {
+      "totalLeads": "Totale lead",
+      "qualifiedLeads": "Lead qualificati",
+      "totalOpportunities": "Totale opportunità",
+      "wonOpportunities": "Opportunità vinte",
+      "pipelineValue": "Valore della pipeline",
+      "avgDealSize": "Dimensione media degli affari",
+      "winRate": "Tasso di vittoria",
+      "activeCampaigns": "Campagne attive"
+    },
+    "empty": {
+      "noLeads": {
+        "title": "Ancora nessun lead",
+        "description": "Inizia ad acquisire lead per far crescere la tua pipeline.",
+        "action": "Aggiungi il tuo primo lead"
+      },
+      "noOpportunities": {
+        "title": "Ancora nessuna opportunità",
+        "description": "Crea opportunità da lead qualificati.",
+        "action": "Crea opportunità"
+      },
+      "noActivities": {
+        "title": "Nessuna attività pianificata",
+        "description": "Pianifica chiamate, riunioni e attività.",
+        "action": "Pianifica attività"
+      }
+    }
+  }
+}

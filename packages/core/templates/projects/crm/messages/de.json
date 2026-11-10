@@ -1,0 +1,122 @@
+{
+  "crm": {
+    "name": "CRM Enterprise",
+    "description": "Komplette CRM-Lösung für Vertriebs- und Marketingteams",
+    "tagline": "Mehr Abschlüsse erzielen, das Geschäft ausbauen",
+    "navigation": {
+      "leads": "Leads",
+      "contacts": "Kontakte",
+      "companies": "Unternehmen",
+      "opportunities": "Opportunities",
+      "activities": "Aktivitäten",
+      "campaigns": "Kampagnen",
+      "reports": "Berichte",
+      "settings": "Einstellungen"
+    },
+    "quickActions": {
+      "newLead": "Neuer Lead",
+      "newContact": "Neuer Kontakt",
+      "newCompany": "Neues Unternehmen",
+      "newOpportunity": "Neue Opportunity",
+      "scheduleActivity": "Aktivität planen",
+      "createCampaign": "Kampagne erstellen"
+    },
+    "dashboard": {
+      "welcome": "Willkommen zurück!",
+      "welcomeWithName": "Willkommen zurück, {name}!",
+      "overview": "Vertriebsübersicht",
+      "pipelineValue": "Pipeline-Wert",
+      "openDeals": "Offene Deals",
+      "wonThisMonth": "Diesen Monat gewonnen",
+      "conversionRate": "Conversion-Rate",
+      "upcomingActivities": "Anstehende Aktivitäten",
+      "recentLeads": "Neueste Leads",
+      "topOpportunities": "Top-Opportunities"
+    },
+    "pipeline": {
+      "title": "Vertriebs-Pipeline",
+      "totalValue": "Gesamtwert",
+      "dealCount": "Deals",
+      "stages": {
+        "qualification": "Qualifizierung",
+        "needsAnalysis": "Bedarfsanalyse",
+        "proposal": "Angebot",
+        "negotiation": "Verhandlung",
+        "closedWon": "Gewonnen (abgeschlossen)",
+        "closedLost": "Verloren (abgeschlossen)"
+      }
+    },
+    "reports": {
+      "title": "Berichte",
+      "sales": "Vertriebsbericht",
+      "marketing": "Marketingbericht",
+      "pipeline": "Pipeline-Bericht",
+      "activity": "Aktivitätsbericht",
+      "forecast": "Verkaufsprognose"
+    },
+    "features": {
+      "convert": {
+        "title": "Lead konvertieren",
+        "description": "Diesen Lead in einen Kontakt und ein Unternehmen umwandeln",
+        "createContact": "Kontakt erstellen",
+        "createCompany": "Unternehmen erstellen",
+        "success": "Lead erfolgreich konvertiert",
+        "alreadyConverted": "Dieser Lead wurde bereits konvertiert"
+      },
+      "bulkImport": {
+        "title": "Daten importieren",
+        "description": "Daten aus einer CSV- oder Excel-Datei importieren",
+        "selectFile": "Datei auswählen",
+        "mapping": "Spalten zuordnen",
+        "preview": "Vorschau",
+        "import": "Importieren"
+      },
+      "bulkExport": {
+        "title": "Daten exportieren",
+        "description": "Daten in eine CSV- oder Excel-Datei exportieren",
+        "allRecords": "Alle Datensätze",
+        "selectedRecords": "Ausgewählte Datensätze",
+        "filteredRecords": "Gefilterte Datensätze"
+      }
+    },
+    "roles": {
+      "owner": "Administrator",
+      "admin": "Manager",
+      "member": "Vertriebsmitarbeitende",
+      "viewer": "Betrachter",
+      "descriptions": {
+        "owner": "Voller Zugriff auf alle CRM-Funktionen und -Einstellungen",
+        "admin": "Kann das Team verwalten, Berichte ansehen und Massenvorgänge ausführen",
+        "member": "Kann Leads, Kontakte, Opportunities und Aktivitäten verwalten",
+        "viewer": "Schreibgeschützter Zugriff auf CRM-Daten"
+      }
+    },
+    "stats": {
+      "totalLeads": "Leads insgesamt",
+      "qualifiedLeads": "Qualifizierte Leads",
+      "totalOpportunities": "Opportunities insgesamt",
+      "wonOpportunities": "Gewonnene Opportunities",
+      "pipelineValue": "Pipeline-Wert",
+      "avgDealSize": "Ø Deal-Größe",
+      "winRate": "Gewinnquote",
+      "activeCampaigns": "Aktive Kampagnen"
+    },
+    "empty": {
+      "noLeads": {
+        "title": "Noch keine Leads",
+        "description": "Erfasse Leads, um deine Pipeline auszubauen.",
+        "action": "Ersten Lead hinzufügen"
+      },
+      "noOpportunities": {
+        "title": "Noch keine Opportunities",
+        "description": "Erstelle Opportunities aus qualifizierten Leads.",
+        "action": "Opportunity erstellen"
+      },
+      "noActivities": {
+        "title": "Keine Aktivitäten geplant",
+        "description": "Plane Anrufe, Meetings und Aufgaben.",
+        "action": "Aktivität planen"
+      }
+    }
+  }
+}

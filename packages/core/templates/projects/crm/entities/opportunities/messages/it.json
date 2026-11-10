@@ -1,0 +1,107 @@
+{
+  "entity": {
+    "name": "Opportunità",
+    "plural": "Opportunità",
+    "description": "Gestisci le opportunità di vendita"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome dell'opportunità",
+      "description": "Nome o titolo dell'opportunità",
+      "placeholder": "Inserisci il nome dell'opportunità..."
+    },
+    "companyId": {
+      "label": "Azienda",
+      "description": "Azienda a cui appartiene questa opportunità",
+      "placeholder": "Seleziona l'azienda..."
+    },
+    "contactId": {
+      "label": "Contatto principale",
+      "description": "Contatto principale per questa opportunità",
+      "placeholder": "Seleziona il contatto..."
+    },
+    "pipelineId": {
+      "label": "Pipeline",
+      "description": "Pipeline in cui si trova questa opportunità",
+      "placeholder": "Seleziona la pipeline..."
+    },
+    "stageId": {
+      "label": "Fase",
+      "description": "Fase attuale nella pipeline",
+      "placeholder": "ID della fase dalla pipeline"
+    },
+    "amount": {
+      "label": "Valore dell'affare",
+      "description": "Valore dell'importo dell'affare",
+      "placeholder": "0,00"
+    },
+    "currency": {
+      "label": "Valuta",
+      "description": "Codice valuta dell'importo",
+      "placeholder": "Seleziona la valuta..."
+    },
+    "probability": {
+      "label": "Probabilità di vittoria (%)",
+      "description": "Probabilità di vittoria in percentuale",
+      "placeholder": "0"
+    },
+    "expectedRevenue": {
+      "label": "Fatturato previsto",
+      "description": "Fatturato previsto calcolato"
+    },
+    "closeDate": {
+      "label": "Data di chiusura prevista",
+      "description": "Data di chiusura prevista o effettiva",
+      "placeholder": "Seleziona una data..."
+    },
+    "type": {
+      "label": "Tipo di opportunità",
+      "description": "Tipo di opportunità",
+      "placeholder": "Seleziona il tipo..."
+    },
+    "source": {
+      "label": "Fonte",
+      "description": "Fonte dell'opportunità",
+      "placeholder": "Seleziona la fonte..."
+    },
+    "status": {
+      "label": "Stato",
+      "description": "Stato attuale dell'opportunità",
+      "placeholder": "Seleziona lo stato..."
+    },
+    "assignedTo": {
+      "label": "Assegnato a",
+      "description": "Venditore assegnato all'opportunità",
+      "placeholder": "Seleziona l'utente..."
+    }
+  },
+  "options": {
+    "type": {
+      "new_business": "Nuovo business",
+      "existing_business": "Business esistente",
+      "renewal": "Rinnovo",
+      "upgrade": "Upgrade",
+      "downgrade": "Downgrade"
+    },
+    "status": {
+      "open": "Aperta",
+      "won": "Vinta",
+      "lost": "Perso",
+      "abandoned": "Abbandonata"
+    }
+  },
+  "actions": {
+    "create": "Crea opportunità",
+    "edit": "Modifica opportunità",
+    "delete": "Elimina opportunità",
+    "view": "Visualizza opportunità",
+    "list": "Elenca opportunità"
+  },
+  "messages": {
+    "created": "Opportunità creata con successo",
+    "updated": "Opportunità aggiornata con successo",
+    "deleted": "Opportunità eliminata con successo",
+    "notFound": "Opportunità non trovata",
+    "error": "Si è verificato un errore durante l'elaborazione dell'opportunità"
+  }
+}
