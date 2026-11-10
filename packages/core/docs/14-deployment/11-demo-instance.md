@@ -43,7 +43,11 @@ BETTER_AUTH_URL=https://demo.example.com
 NEXT_PUBLIC_APP_URL=https://demo.example.com
 STORAGE_DRIVER=local
 UPLOADS_DIR=/var/lib/nextspark-demo/uploads
+# What sits in front of the server: xff behind a reverse proxy (with NEXTSPARK_TRUSTED_PROXY_HOPS), vercel, cloudflare or header:<name>
+NEXTSPARK_CLIENT_IP_SOURCE=xff
 ```
+
+Every visitor signs in with the same few accounts, so a demo has no per-account limit on sign-in attempts and relies on the per-address one. That only works when `NEXTSPARK_CLIENT_IP_SOURCE` matches the proxy in front of the server: when the address is read wrong (the proxy's own, for example), every visitor shares one budget and a few of them can keep the rest out with 429. See [Client address](./10-client-address.md).
 
 ---
 
