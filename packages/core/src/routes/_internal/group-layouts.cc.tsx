@@ -17,12 +17,14 @@ import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/transla
  *
  * `getMessages()` reads the request (the locale), and Next refuses a layout that does so outside
  * Suspense while prerendering. Two shapes, by what each group's client components need:
- * - `(auth)`, `(public)` and `devtools` use core and project messages only: the wrapper provides the build-time
+ * - `(auth)` and `(public)` use core and project messages only: the wrapper provides the build-time
  *   `STATIC_MESSAGES` of the default locale, as the PPR root layout does, and stays out of the
  *   dynamic part of the page.
  * - `dashboard` and `superadmin` also need the plugin and entity messages, and the signed-in
  *   user's locale: the wrapper loads them inside a Suspense boundary, so the page's shell is
  *   prerendered and the messages stream in with the request.
+ * - `devtools` (development only) loads the request's messages like those two, with core and project messages only, so
+ *   its client components speak the user's language (#414).
  *
  * `i18n.requestLocale` turns `(auth)` and `(public)` to the second shape (the registry holds the setting as a literal,
  * so a project that leaves it off keeps the static wrappers and their prerender): the group's messages are those of the
@@ -45,7 +47,7 @@ type LayoutProps = { children: ReactNode }
  * The wrappers hand every prop to the layout they wrap: `children`, and the parallel route slots a project layout declares
  * (`@modal` -> `modal`). Only `children` is put behind a Suspense boundary here; a slot that reads request data has its own.
  */
-function staticMessagesWrapper(group: 'auth' | 'public' | 'devtools') {
+function staticMessagesWrapper(group: 'auth' | 'public') {
   return <P extends LayoutProps>(ResolvedLayout: ComponentType<P>) =>
     function LayoutWithStaticMessages(props: P) {
       return (
@@ -64,7 +66,7 @@ async function DynamicMarker() {
   return null
 }
 
-async function RequestMessages({ group, extraNamespaces, markLanguage, children }: LayoutProps & { group: 'auth' | 'public' | 'dashboard' | 'superadmin'; extraNamespaces: readonly string[]; markLanguage?: boolean }) {
+async function RequestMessages({ group, extraNamespaces, markLanguage, children }: LayoutProps & { group: 'auth' | 'public' | 'devtools' | 'dashboard' | 'superadmin'; extraNamespaces: readonly string[]; markLanguage?: boolean }) {
   const messages = await getMessages()
   const provider = (
     <NextIntlClientProvider messages={selectMessages(messages, group, extraNamespaces)}>
@@ -76,17 +78,19 @@ async function RequestMessages({ group, extraNamespaces, markLanguage, children 
   return <div lang={await getLocale()} style={{ display: 'contents' }}>{provider}</div>
 }
 
-function requestMessagesWrapper(group: 'auth' | 'public' | 'dashboard' | 'superadmin') {
+function requestMessagesWrapper(group: 'auth' | 'public' | 'devtools' | 'dashboard' | 'superadmin') {
   return <P extends LayoutProps>(ResolvedLayout: ComponentType<P>) =>
     function LayoutWithRequestMessages(props: P) {
       const configured = getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
       const toRequest = group === 'auth' || group === 'public'
+      // `devtools` has no plugin or entity namespaces: core and project messages only, as in the ISR module
+      const extra = group === 'dashboard' || group === 'superadmin' ? configured[group] : []
       return (
         <Suspense fallback={null}>
           <Suspense>
             <DynamicMarker />
           </Suspense>
-          <RequestMessages group={group} extraNamespaces={toRequest ? [] : configured[group]} markLanguage={toRequest}>
+          <RequestMessages group={group} extraNamespaces={extra} markLanguage={toRequest}>
             <ResolvedLayout {...props} />
           </RequestMessages>
         </Suspense>
@@ -106,6 +110,6 @@ checkRequestLocale(APP_CONFIG_MERGED.i18n, { auth: REQUEST_LOCALE_AUTH, public: 
 
 export const withAuthMessages = REQUEST_LOCALE_AUTH ? requestOrStaticWrapper('auth') : staticMessagesWrapper('auth')
 export const withPublicMessages = REQUEST_LOCALE_PUBLIC ? requestOrStaticWrapper('public') : staticMessagesWrapper('public')
-export const withDevtoolsMessages = staticMessagesWrapper('devtools')
+export const withDevtoolsMessages = requestMessagesWrapper('devtools')
 export const withSuperadminMessages = requestMessagesWrapper('superadmin')
 export const withDashboardMessages = requestMessagesWrapper('dashboard')

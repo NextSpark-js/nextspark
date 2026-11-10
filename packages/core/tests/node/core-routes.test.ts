@@ -286,11 +286,12 @@ test('i18n.requestLocale picks the auth and public wrappers from a literal the r
   assert.match(groups, /from '@nextsparkjs\/registries\/request-locale'/)
   assert.match(groups, /export const withAuthMessages = REQUEST_LOCALE_AUTH \? requestOrStaticWrapper\('auth'\) : staticMessagesWrapper\('auth'\)/)
   assert.match(groups, /export const withPublicMessages = REQUEST_LOCALE_PUBLIC \? requestOrStaticWrapper\('public'\) : staticMessagesWrapper\('public'\)/)
-  // the wrappers of the other groups are untouched
-  assert.match(groups, /export const withDevtoolsMessages = staticMessagesWrapper\('devtools'\)/)
+  // devtools loads the request's messages (#414); the wrappers of the other groups are untouched
+  assert.match(groups, /export const withDevtoolsMessages = requestMessagesWrapper\('devtools'\)/)
   assert.match(groups, /export const withDashboardMessages = requestMessagesWrapper\('dashboard'\)/)
   // dashboard and superadmin keep their plugin and entity namespaces; only auth and public pass none
-  assert.match(groups, /extraNamespaces=\{toRequest \? \[\] : configured\[group\]\}/)
+  assert.match(groups, /extraNamespaces=\{extra\}/)
+  assert.match(groups, /const extra = group === 'dashboard' \|\| group === 'superadmin' \? configured\[group\] : \[\]/)
   assert.match(groups, /const toRequest = group === 'auth' \|\| group === 'public'/)
 })
 

@@ -24,7 +24,7 @@ const MULTI = { supportedLocales: ['en', 'es', 'fr'], defaultLocale: 'en' }
 type Wrapper = (layout: React.ComponentType<{ children: React.ReactNode }>) => (props: { children: React.ReactNode }) => unknown
 
 function load() {
-  let module: { withAuthMessages: Wrapper; withPublicMessages: Wrapper } | undefined
+  let module: { withAuthMessages: Wrapper; withPublicMessages: Wrapper; withDevtoolsMessages: Wrapper } | undefined
   jest.isolateModules(() => {
     module = require('../../../src/routes/_internal/group-layouts.cc')
   })
@@ -58,6 +58,15 @@ beforeEach(() => {
   i18n = { ...MULTI }
 })
 afterEach(() => warn.mockRestore())
+
+describe('devtools wrapper (#414)', () => {
+  it('reads the request messages whatever the setting, so its client components follow the user language', async () => {
+    const layouts = load()
+    expect((await render(layouts.withDevtoolsMessages)).requested).toBe(true)
+    flags = { auth: true, public: true }
+    expect((await render(load().withDevtoolsMessages)).requested).toBe(true)
+  })
+})
 
 describe('group wrappers with i18n.requestLocale', () => {
   it('keeps both groups static when the setting is off', async () => {

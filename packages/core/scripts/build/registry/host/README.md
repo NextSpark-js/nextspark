@@ -319,8 +319,8 @@ and `[[...a]]`: `NS_HOST_DYNAMIC_SEGMENT_CONFLICT`).
 root layout) are of three kinds: the `page.cc.tsx` files of the routes whose segment config Next.js rejects with it (login, signup and both
 docs pages: `dynamic`, `dynamicParams`); the `layout.cc.tsx` files of the five layouts that load messages (`(auth)`, `(public)`, `devtools`,
 `superadmin`, `dashboard`), because `await getMessages()` reads the request and Next.js refuses that outside Suspense while prerendering
-(`_internal/group-layouts.cc`: `(auth)`, `(public)` and `devtools` provide the build-time `STATIC_MESSAGES` of the default locale and put
-their pages behind Suspense; `dashboard` and `superadmin` load request messages inside a Suspense boundary and declare their area
+(`_internal/group-layouts.cc`: `(auth)` and `(public)` provide the build-time `STATIC_MESSAGES` of the default locale and put
+their pages behind Suspense; `devtools` (development only), `dashboard` and `superadmin` load request messages inside a Suspense boundary and declare their area
 request-time; an override composes through `_internal/{auth,public,superadmin,devtools}-layout.cc`, one module per group, so the
 guards, dashboard providers and sidebars of the protected groups never reach a public or auth route); and the root layout (`layout.ppr`, whose `main` puts the page behind Suspense as the net for a page that reads `params`,
 cookies or headers below no other boundary). The public item routes omit `revalidate` in that mode; a host that builds in Cache Components
