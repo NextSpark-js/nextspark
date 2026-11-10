@@ -14,7 +14,7 @@
     "backToHome": "Zurück zur Startseite",
     "backToPosts": "Zurück zu den Beiträgen",
     "noPosts": "Noch keine Beiträge",
-    "noPostsDescription": "Schau bald wieder vorbei, es kommen neue Inhalte.",
+    "noPostsDescription": "Schauen Sie bald wieder vorbei, es kommen neue Inhalte.",
     "publicFeed": {
       "title": "Neueste Geschichten",
       "subtitle": "Gedanken, Geschichten und Ideen aus unserer Community von Autorinnen und Autoren",
@@ -24,9 +24,9 @@
       "filterByCategory": "Nach Kategorie filtern"
     },
     "newsletter": {
-      "title": "Bleib auf dem Laufenden",
-      "description": "Abonniere, um benachrichtigt zu werden, wenn neue Artikel erscheinen. Kein Spam, jederzeit abbestellbar.",
-      "placeholder": "deine@email.de",
+      "title": "Bleiben Sie auf dem Laufenden",
+      "description": "Abonnieren Sie, um benachrichtigt zu werden, wenn neue Artikel erscheinen. Kein Spam, jederzeit abbestellbar.",
+      "placeholder": "ihre@email.de",
       "subscribe": "Abonnieren"
     },
     "author": {
@@ -50,16 +50,16 @@
       "editProfile": "Profil bearbeiten",
       "publishPost": "Veröffentlichen",
       "unpublishPost": "Veröffentlichung zurückziehen",
-      "confirmPublish": "Möchtest du diesen Beitrag wirklich veröffentlichen?",
-      "confirmUnpublish": "Möchtest du die Veröffentlichung dieses Beitrags wirklich zurückziehen?",
+      "confirmPublish": "Möchten Sie diesen Beitrag wirklich veröffentlichen?",
+      "confirmUnpublish": "Möchten Sie die Veröffentlichung dieses Beitrags wirklich zurückziehen?",
       "statusDraft": "Entwurf",
       "statusPublished": "Veröffentlicht"
     },
     "profile": {
       "username": "Benutzername",
-      "usernameHint": "Das wird die URL deines öffentlichen Profils: /author/{username}",
+      "usernameHint": "Das wird die URL Ihres öffentlichen Profils: /author/{username}",
       "bio": "Bio",
-      "bioPlaceholder": "Erzähl den Lesern etwas über dich...",
+      "bioPlaceholder": "Erzählen Sie den Lesern etwas über sich...",
       "socialLinks": "Soziale Links",
       "twitter": "Twitter/X-Profil",
       "linkedin": "LinkedIn-Profil",

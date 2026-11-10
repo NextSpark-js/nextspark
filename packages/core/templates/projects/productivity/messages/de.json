@@ -2,7 +2,7 @@
   "productivity": {
     "name": "Produktivität",
     "description": "Eine App zur gemeinsamen Aufgabenverwaltung",
-    "tagline": "Organisiert eure Arbeit gemeinsam",
+    "tagline": "Organisieren Sie Ihre Arbeit gemeinsam",
     "navigation": {
       "boards": "Boards",
       "myCards": "Meine Karten",
@@ -16,10 +16,10 @@
     "dashboard": {
       "welcome": "Willkommen zurück!",
       "welcomeWithName": "Willkommen zurück, {name}!",
-      "overview": "Deine Übersicht",
+      "overview": "Ihre Übersicht",
       "recentBoards": "Zuletzt verwendete Boards",
       "upcomingDeadlines": "Anstehende Fristen",
-      "assignedToYou": "Dir zugewiesen",
+      "assignedToYou": "Ihnen zugewiesen",
       "teamActivity": "Team-Aktivität"
     },
     "stats": {
@@ -31,12 +31,12 @@
     "empty": {
       "noBoards": {
         "title": "Noch keine Boards",
-        "description": "Erstelle dein erstes Board, um deine Arbeit zu organisieren.",
+        "description": "Erstellen Sie Ihr erstes Board, um Ihre Arbeit zu organisieren.",
         "action": "Erstes Board erstellen"
       },
       "noAssignedCards": {
         "title": "Keine Karten zugewiesen",
-        "description": "Dir zugewiesene Karten erscheinen hier."
+        "description": "Ihnen zugewiesene Karten erscheinen hier."
       },
       "noDeadlines": {
         "title": "Keine anstehenden Fristen",
@@ -45,7 +45,7 @@
     },
     "collaboration": {
       "invite": "Teammitglied einladen",
-      "inviteDescription": "Lade jemanden ein, an deinen Boards mitzuarbeiten",
+      "inviteDescription": "Laden Sie jemanden ein, an Ihren Boards mitzuarbeiten",
       "teamMembers": "Teammitglieder",
       "roles": {
         "owner": "Inhaber",

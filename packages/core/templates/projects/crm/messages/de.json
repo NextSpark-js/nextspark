@@ -104,17 +104,17 @@
     "empty": {
       "noLeads": {
         "title": "Noch keine Leads",
-        "description": "Erfasse Leads, um deine Pipeline auszubauen.",
+        "description": "Erfassen Sie Leads, um Ihre Pipeline auszubauen.",
         "action": "Ersten Lead hinzufügen"
       },
       "noOpportunities": {
         "title": "Noch keine Opportunities",
-        "description": "Erstelle Opportunities aus qualifizierten Leads.",
+        "description": "Erstellen Sie Opportunities aus qualifizierten Leads.",
         "action": "Opportunity erstellen"
       },
       "noActivities": {
         "title": "Keine Aktivitäten geplant",
-        "description": "Plane Anrufe, Meetings und Aufgaben.",
+        "description": "Planen Sie Anrufe, Meetings und Aufgaben.",
         "action": "Aktivität planen"
       }
     }

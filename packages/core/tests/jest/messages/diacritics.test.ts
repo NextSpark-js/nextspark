@@ -182,3 +182,32 @@ test('the derived forms reach well beyond the fixed lists', () => {
   expect(FORMS.es.size).toBeGreaterThan(200)
   expect(FORMS.de.size).toBeGreaterThan(400)
 })
+
+// #413: the German catalogs address the user as "Sie" (#411), also the project messages of the templates (the entity
+// catalogs, `entities/*/messages`, are not read here). A du/euch pronoun or possessive is the sign of the informal form.
+const DU_FORM = /\b(?:[Dd]u|[Dd]ir|[Dd]ich|[Dd]ein\w*|euch|[Ee]ure\w*)\b/
+const duKeys = (entries: Array<[string, string]>) => entries.filter(([, text]) => DU_FORM.test(text)).map(([key]) => key)
+
+const TEMPLATE_PROJECTS = path.join(ROOT, 'packages/core/templates/projects')
+const sieFiles = [
+  ...Object.values(PLACES).flatMap(({ messages }) => jsonFiles(path.join(ROOT, messages, 'de'))),
+  ...readdirSync(TEMPLATE_PROJECTS).flatMap(project => {
+    const flat = path.join(TEMPLATE_PROJECTS, project, 'messages', 'de.json')
+    return existsSync(flat) ? [flat] : jsonFiles(path.join(TEMPLATE_PROJECTS, project, 'messages', 'de'))
+  }),
+]
+
+describe('the German catalogs say "Sie"', () => {
+  test('the scan reads the templates', () => {
+    const names = sieFiles.map(f => path.relative(ROOT, f))
+    expect(names).toEqual(expect.arrayContaining(['packages/core/templates/projects/blog/messages/de.json', 'packages/core/templates/projects/crm/messages/de.json', 'packages/core/templates/projects/productivity/messages/de.json']))
+  })
+
+  test.each(sieFiles.map(f => [path.relative(ROOT, f), f]))('%s has no du form', (_name, file) => {
+    expect(duKeys(strings(JSON.parse(readFileSync(file, 'utf8'))))).toEqual([])
+  })
+
+  test('the check catches the informal form and leaves Sie alone', () => {
+    expect(duKeys([['a', 'Möchtest du das löschen?'], ['b', 'Dir zugewiesen'], ['c', 'deine@email.de'], ['d', 'Möchten Sie das löschen?'], ['e', 'Ihnen zugewiesen'], ['f', 'Organisiert eure Arbeit']])).toEqual(['a', 'b', 'c', 'f'])
+  })
+})
