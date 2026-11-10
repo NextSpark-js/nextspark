@@ -13,6 +13,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 import { SKIPPED_DIRS, SKIPPED_FILE, SOURCE_FILE } from './source-files.mjs'
@@ -122,11 +123,68 @@ function nextThemesImports(root, manifest) {
   return { changed, notes }
 }
 
+const MAIN_LAYOUT = path.join('templates', 'dashboard', '(main)', 'layout.tsx')
+const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'templates', 'projects')
+/**
+ * The dashboard layouts the crm and productivity templates published before #417 (hash of the text without
+ * whitespace), and the client component each one's new layout renders. Any other text is the project's own code.
+ */
+const PUBLISHED_LAYOUTS = {
+  ce09dfd4631ee57c: { template: 'crm', shared: 'CRMDashboardLayout.tsx' },
+  '2b08862caaaee5e3': { template: 'crm', shared: 'CRMDashboardLayout.tsx' },
+  c4fdd46abd9f858b: { template: 'productivity', shared: 'ProductivityDashboardLayout.tsx' },
+}
+
+const digest = (text) => crypto.createHash('sha256').update(text.replace(/\s+/g, '')).digest('hex').slice(0, 16)
+const CLIENT_COMPONENT = /^\s*(?:(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)\s*)*['"]use client['"]/
+
+/**
+ * What the dashboard layout of a project is for the entity registry: 'ok' (it hydrates it, or it is a server
+ * component), 'published' (a text an old template published: says which) or 'own' (a client component of the project)
+ */
+export function classifyMainLayout(text) {
+  if (text.includes('EntityRegistryHydrator') || !CLIENT_COMPONENT.test(text)) return { kind: 'ok' }
+  const published = PUBLISHED_LAYOUTS[digest(text)]
+  return published ? { kind: 'published', ...published } : { kind: 'own' }
+}
+
+/**
+ * 0.1.0-beta.202: a dashboard layout of the project replaces core's DashboardShell, which fills the client entity
+ * registry; one that does not leaves the entity detail and edit pages answering "not found in the registry" (#417)
+ */
+function entityRegistryLayout(root) {
+  const file = path.join(root, MAIN_LAYOUT)
+  const text = readText(file)
+  if (text === null) return { changed: [], notes: [] }
+  const found = classifyMainLayout(text)
+  if (found.kind === 'ok') return { changed: [], notes: [] }
+  const how = `Make it a server component that renders its content inside <EntityRegistryHydrator entities={...}> (from @nextsparkjs/core/components/dashboard/layouts/EntityRegistryHydrator), moving its current body to a client component: node_modules/@nextsparkjs/core/templates/projects/crm/templates/dashboard/(main)/layout.tsx shows how to build the entities list.`
+  const own = `${MAIN_LAYOUT} is a client component that does not fill the client entity registry, so /dashboard/<entity>/<id> answers "Entity not found in the registry". It was left as it is: it is not a layout a template published. ${how}`
+  if (found.kind === 'own') return { changed: [], notes: [own] }
+  const source = path.join(TEMPLATES, found.template, 'templates')
+  const layout = readText(path.join(source, 'dashboard', '(main)', 'layout.tsx'))
+  const client = readText(path.join(source, 'shared', found.shared))
+  const clientFile = path.join('templates', 'shared', found.shared)
+  if (layout === null || client === null) return { changed: [], notes: [own] }
+  if (fs.existsSync(path.join(root, clientFile))) {
+    return { changed: [], notes: [`${MAIN_LAYOUT} is the old ${found.template} template layout, but ${clientFile} already exists, so nothing was written. ${how}`] }
+  }
+  fs.mkdirSync(path.dirname(path.join(root, clientFile)), { recursive: true })
+  fs.writeFileSync(path.join(root, clientFile), client)
+  fs.writeFileSync(file, layout)
+  return { changed: [clientFile, MAIN_LAYOUT], notes: [] }
+}
+
 export const CODE_MIGRATIONS = [
   {
     version: '0.1.0-beta.200',
     title: `useTheme and ThemeProvider from next-themes -> ${THEME_PROVIDER}`,
     run: nextThemesImports,
+  },
+  {
+    version: '0.1.0-beta.202',
+    title: 'the dashboard layout of a crm or productivity project fills the client entity registry',
+    run: entityRegistryLayout,
   },
 ]
 

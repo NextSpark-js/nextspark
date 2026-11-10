@@ -9,7 +9,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { CODE_MIGRATIONS, findNextThemesImports, nextThemesLines, projectSourceFiles, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
+import { CODE_MIGRATIONS, classifyMainLayout, findNextThemesImports, nextThemesLines, projectSourceFiles, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
 
 const CORE = '@nextsparkjs/core/providers/theme-provider'
 
@@ -149,4 +149,76 @@ test('a directory or a file the project cannot read is skipped: the walk, the re
   assert.deepEqual(findNextThemesImports(root), ['lib/open.ts:1'])
   const migration = CODE_MIGRATIONS.find((entry: { version: string }) => entry.version === '0.1.0-beta.200')
   assert.deepEqual(migration.run(root, {}).changed, ['lib/open.ts'])
+})
+
+// #417: the dashboard layout of a crm or productivity project that does not fill the client entity registry
+const MAIN_LAYOUT = 'templates/dashboard/(main)/layout.tsx'
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const TEMPLATES = path.resolve(HERE, '../../templates/projects')
+const entityRegistryMigration = () => CODE_MIGRATIONS.find((entry: { version: string }) => entry.version === '0.1.0-beta.202')
+const templateFile = (template: string, file: string) => fs.readFileSync(path.join(TEMPLATES, template, 'templates', file), 'utf8')
+/** The layouts the templates published before the fix, as they were */
+const oldLayout = (name: string) => fs.readFileSync(path.join(HERE, 'fixtures/old-dashboard-layouts', `${name}.txt`), 'utf8')
+
+function project(t: { after: (fn: () => void) => void }, files: Record<string, string>) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'code-migrations-layout-'))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  for (const [file, content] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
+    fs.writeFileSync(path.join(root, file), content)
+  }
+  return root
+}
+
+test('classifyMainLayout: only a client layout without the hydrator needs anything, and only the published texts are replaced', () => {
+  assert.equal(classifyMainLayout(templateFile('crm', 'dashboard/(main)/layout.tsx')).kind, 'ok')
+  assert.equal(classifyMainLayout(templateFile('productivity', 'dashboard/(main)/layout.tsx')).kind, 'ok')
+  assert.equal(classifyMainLayout('export default function L({ children }) { return children }\n').kind, 'ok')
+  assert.equal(classifyMainLayout("'use client'\nexport default function L() { return null }\n").kind, 'own')
+  assert.equal(classifyMainLayout('/** header */\n\n"use client"\nexport default function L() { return null }\n').kind, 'own')
+  assert.deepEqual(classifyMainLayout(oldLayout('crm-1')), { kind: 'published', template: 'crm', shared: 'CRMDashboardLayout.tsx' })
+  assert.deepEqual(classifyMainLayout(oldLayout('crm-2')), { kind: 'published', template: 'crm', shared: 'CRMDashboardLayout.tsx' })
+  assert.deepEqual(classifyMainLayout(oldLayout('productivity-1')), { kind: 'published', template: 'productivity', shared: 'ProductivityDashboardLayout.tsx' })
+})
+
+test('the 0.1.0-beta.202 migration replaces each published old layout, adds the client component beside it, and a second run does nothing', (t) => {
+  for (const [name, template, shared] of [
+    ['crm-1', 'crm', 'CRMDashboardLayout.tsx'],
+    ['crm-2', 'crm', 'CRMDashboardLayout.tsx'],
+    ['productivity-1', 'productivity', 'ProductivityDashboardLayout.tsx'],
+  ]) {
+    // Line endings and indentation do not make a text the project's own
+    const root = project(t, { [MAIN_LAYOUT]: oldLayout(name).replace(/\n/g, '\r\n') })
+    const first = entityRegistryMigration().run(root, {})
+    assert.deepEqual([...first.changed].sort(), [MAIN_LAYOUT, `templates/shared/${shared}`].sort(), name)
+    assert.deepEqual(first.notes, [], name)
+    assert.equal(fs.readFileSync(path.join(root, MAIN_LAYOUT), 'utf8'), templateFile(template, 'dashboard/(main)/layout.tsx'), name)
+    assert.equal(fs.readFileSync(path.join(root, 'templates/shared', shared), 'utf8'), templateFile(template, `shared/${shared}`), name)
+    assert.deepEqual(entityRegistryMigration().run(root, {}), { changed: [], notes: [] }, name)
+  }
+})
+
+test('the 0.1.0-beta.202 migration leaves a layout the project changed as it is, and the note says what to do', (t) => {
+  const own = `${oldLayout('crm-1')}\n// the project's own line\n`
+  const root = project(t, { [MAIN_LAYOUT]: own })
+  const result = entityRegistryMigration().run(root, {})
+  assert.deepEqual(result.changed, [])
+  assert.equal(fs.readFileSync(path.join(root, MAIN_LAYOUT), 'utf8'), own)
+  assert.equal(fs.existsSync(path.join(root, 'templates/shared/CRMDashboardLayout.tsx')), false)
+  assert.match(result.notes.join('\n'), /templates\/dashboard\/\(main\)\/layout\.tsx is a client component.*left as it is.*EntityRegistryHydrator/)
+})
+
+test('the 0.1.0-beta.202 migration does nothing to a project without that layout (the starter)', (t) => {
+  const root = project(t, { 'app/page.tsx': 'export default function P() { return null }\n' })
+  assert.deepEqual(entityRegistryMigration().run(root, {}), { changed: [], notes: [] })
+  assert.deepEqual(fs.readdirSync(root), ['app'])
+})
+
+test('the 0.1.0-beta.202 migration does not write over a client file the project already has', (t) => {
+  const root = project(t, { [MAIN_LAYOUT]: oldLayout('crm-1'), 'templates/shared/CRMDashboardLayout.tsx': '// mine\n' })
+  const result = entityRegistryMigration().run(root, {})
+  assert.deepEqual(result.changed, [])
+  assert.equal(fs.readFileSync(path.join(root, MAIN_LAYOUT), 'utf8'), oldLayout('crm-1'))
+  assert.equal(fs.readFileSync(path.join(root, 'templates/shared/CRMDashboardLayout.tsx'), 'utf8'), '// mine\n')
+  assert.match(result.notes.join('\n'), /already exists, so nothing was written/)
 })
