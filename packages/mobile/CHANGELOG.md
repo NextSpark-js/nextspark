@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The mobile template and `@nextsparkjs/mobile` ask for `@babel/core` ^7.29.6, and the package's build uses `glob` 14.
 - The README notes that with Xcode 26.3 a freshly generated project does not build, because `expo-modules-jsi` 58.0.22 fails to compile; it needs a patch release of Expo's package or a newer Xcode. (#286)
 - The mobile template and `create-nextspark-app` declare `@preeternal/react-native-cookie-manager` `7.0.0` (React Native's New Architecture only, which is the only one React Native 0.88 has). The two calls the package makes, `get(url)` and `clearAll()`, keep their signatures, and the peer range `>=6.3.0` is unchanged. An existing project moves with `pnpm add @preeternal/react-native-cookie-manager@7.0.0` and a new `expo prebuild`. (#286)
 
