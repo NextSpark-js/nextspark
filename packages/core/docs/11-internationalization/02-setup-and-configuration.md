@@ -508,8 +508,12 @@ configured user-role display key.
 route-to-group lookup, but layouts do not inspect headers or a pathname to
 choose messages. That keeps routes prerenderable.
 
-The Geist faces no longer preload; a project using `var(--font-geist-sans)`
-loads them through normal CSS discovery with `font-display: swap`.
+The root layout loads Geist and Geist Mono from the `geist` package with
+`next/font/local`, so `next build` makes no request to Google Fonts and works
+offline. The CSS variables are `--font-geist-sans` and `--font-geist-mono`. The
+layout has no option to turn the fonts off: a project that wants its own
+typeface sets its own `font-family` (or overrides the variables) in its
+`globals.css`, and the Geist files are then simply not used by the page.
 
 ### Project template namespace outside its route group
 

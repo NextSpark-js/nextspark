@@ -25,10 +25,8 @@ jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({
 jest.mock('next/headers', () => ({
   headers: () => mockHeaders(),
 }))
-jest.mock('next/font/google', () => ({
-  Geist: () => ({ variable: 'geist-sans' }),
-  Geist_Mono: () => ({ variable: 'geist-mono' }),
-}))
+jest.mock('geist/font/sans', () => ({ GeistSans: { variable: 'geist-sans' } }))
+jest.mock('geist/font/mono', () => ({ GeistMono: { variable: 'geist-mono' } }))
 jest.mock('next-intl', () => ({
   NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))

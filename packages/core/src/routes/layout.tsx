@@ -6,7 +6,8 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { headers } from "next/headers"
-import { Geist, Geist_Mono } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
@@ -25,18 +26,7 @@ import { PluginService } from '@nextsparkjs/core/lib/services/plugin.service'
 import { APP_CONFIG_MERGED } from "@nextsparkjs/core/lib/config/config-client"
 import { getThemeSettings, themeProviderProps } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  preload: false,
-})
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  preload: false,
-})
-
+// Geist ships as files (next/font/local): the build makes no request to Google Fonts (#419)
 const defaultMetadata: Metadata = {
   title: "NextSpark App",
   description: "Built with NextSpark",
@@ -96,7 +86,7 @@ export default async function RootLayout({
         ))}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
       >
         <NextIntlClientProvider locale={locale} messages={selectMessages(messages, 'root', CONSENT_CONFIG.enabled ? OPTIONAL_ROOT_NAMESPACES : [])}>
           <NextThemeProvider
