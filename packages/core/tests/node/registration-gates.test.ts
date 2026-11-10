@@ -202,6 +202,12 @@ test('demo mode: no way of creating an account works, the sample accounts sign i
   assert.equal(results[5].code, 'DEMO_ACCOUNT_LOCKED', JSON.stringify(results[5]))
   assert.equal(results[6].status, 200, 'the shared password still works')
 
+  // a domain-restricted project: the sample accounts are outside its domains, and a demo signs them in all the same
+  const restricted = { registration: { mode: 'domain-restricted', allowedDomains: ['example.test'] }, methods: ['email-otp', 'google'], emailAndPassword: { enabled: true } }
+  const signin = { op: 'signin', email: 'superadmin@nextspark.dev', password: 'Pandora1234' } as Step
+  assert.equal(runSteps(ownerUrl, 'multi-tenant', [signin], { auth: restricted })[0].status, 200)
+  assert.equal(runSteps(ownerUrl, 'multi-tenant', [signin], undefined, restricted)[0].code, 'DOMAIN_NOT_ALLOWED')
+
   // without the variable the same project creates the account
   const normal = runSteps(ownerUrl, 'multi-tenant', [{ op: 'otp', email: 'stranger-otp@example.test' }], undefined, open)
   assert.equal(normal[0].status, 200, JSON.stringify(normal[0]))

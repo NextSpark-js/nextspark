@@ -549,7 +549,8 @@ export const auth = betterAuth({
 
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
-          if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {
+          // A demo signs in only its sample accounts, whatever domain they have
+          if ((registrationMode === 'domain-restricted' || registrationMode === 'domain-open') && !isDemoMode()) {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0) {
               // Look up user email from DB
