@@ -13,7 +13,7 @@ import path from 'path'
 /** Fixed for every project: a private workspace package nothing publishes. */
 export const CONTRACTS_PACKAGE_NAME = '@project/contracts'
 
-export const CONTRACTS_ZOD_VERSION = '^4.1.5'
+export const CONTRACTS_ZOD_VERSION = '^4.6.6'
 export const CONTRACTS_TYPESCRIPT_VERSION = '^5.3.0'
 
 export interface ContractsPackageOptions {

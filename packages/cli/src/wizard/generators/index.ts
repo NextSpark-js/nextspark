@@ -343,7 +343,7 @@ export async function updatePackageJson(
     // State & Data
     '@tanstack/react-query': '^5.64.2',
     // Forms & Validation
-    'zod': '^4.5.4',
+    'zod': '^4.6.6',
     'react-hook-form': '^7.54.2',
     '@hookform/resolvers': '^5.0.1',
     // UI

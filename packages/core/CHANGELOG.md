@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **A web and mobile project declares the same exact `react` and `react-dom` in `web/` and in `mobile/`.** React Native bundles a renderer for one React version and fails with "Incompatible React versions" on any other, so the mobile app pins it and `web/` now takes that version (`19.3.0`) instead of `^19.2.0`. To align an existing workspace, set `react` and `react-dom` in `web/package.json` to the version in `mobile/package.json`. (#286)
+- **`zod` ^4.6.6 and `sanitize-html` ^2.18.1 are the minimum versions.** Core, the generated projects and the plugins declare them, and the lockfile resolves the latest patch releases of a few transitive dependencies. With `sanitize-html` 2.18 the `srcset` of an `<img>` in a rich-text block is checked against the schemes of the `img` tag, so a `data:` image in it is kept as in its `src`; in a `<source>` it is still dropped.
 
 ### Added
 
