@@ -17,6 +17,7 @@ jest.mock('next-intl', () => {
   // the real English messages, so the assertions read what a user would
   const messages = require('../../../../src/messages/en/index').default
   return {
+    useLocale: () => 'en',
     useTranslations: (namespace?: string) => (key: string, values: Record<string, unknown> = {}) =>
       ([namespace, key].filter(Boolean).join('.').split('.').reduce((node: any, part) => node?.[part], messages) as string).replace(/\{(\w+)\}/g, (_, name) => String(values[name])),
   }

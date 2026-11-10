@@ -10,7 +10,7 @@ const mockAuth: { user: { role?: string } | null } = { user: { role: 'member' } 
 const mockConfig: { dashboard: { homeRoute?: unknown } | undefined } = { dashboard: undefined }
 
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), replace: mockReplace }) }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
 jest.mock('@nextsparkjs/core/hooks/useUserProfile', () => ({
   useUserProfile: () => ({ user: mockAuth.user && { id: 'u1', firstName: 'A', email: 'a@example.com' }, isLoading: false }),
 }))

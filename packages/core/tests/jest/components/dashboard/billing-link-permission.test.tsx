@@ -12,7 +12,7 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
 jest.mock('@/core/lib/permissions/hooks', () => ({ usePermission: (p: string) => (p === 'settings.billing' ? canAccessBilling : true) }))
 jest.mock('@/core/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'u1', email: 'a@x.com', firstName: 'A', lastName: 'B' }, signOut: jest.fn(), isLoading: false }),

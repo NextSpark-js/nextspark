@@ -11,7 +11,7 @@ const mutateAsync = jest.fn<(input: { files: File[] }) => Promise<unknown>>()
 jest.mock('@/core/hooks/useDisplayUrls', () => ({ useDisplayUrls: () => (url: string) => url, useSignedProps: (props: unknown) => props }))
 jest.mock('@/core/hooks/useMediaUpload',() => ({ useMediaUpload: () => ({ mutateAsync }) }))
 jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: null, isPending: false }) }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
 jest.mock('next/image', () => ({ __esModule: true, default: () => null }))
 
 import { EntityFieldRenderer } from '@/core/components/entities/EntityFieldRenderer'
