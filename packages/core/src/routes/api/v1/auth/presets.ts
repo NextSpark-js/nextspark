@@ -20,7 +20,7 @@ export default defineApiEndpoint({
       path: '/signup-with-invite',
       payload: {
         email: 'newuser@example.com',
-        password: 'Test1234',
+        password: 'your-password-here',
         firstName: 'John',
         lastName: 'Doe',
         inviteToken: 'invitation_token_here'
