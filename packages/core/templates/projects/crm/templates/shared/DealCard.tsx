@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
 import React from 'react'
 import { formatCurrency, formatRelativeDate, isDealRotten } from '@/lib/crm-utils'
 import { Building2, Clock, AlertTriangle, TrendingUp } from 'lucide-react'
@@ -40,6 +41,7 @@ const getProbabilityStyle = (probability: number) => {
 }
 
 export function DealCard({ deal, onClick, isDragging, rottenDays = 30 }: DealCardProps) {
+    const locale = useLocale()
     const isRotten = isDealRotten(deal.updatedAt, rottenDays)
     const probStyle = getProbabilityStyle(deal.probability)
 
@@ -105,7 +107,7 @@ export function DealCard({ deal, onClick, isDragging, rottenDays = 30 }: DealCar
 
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
-                    <span>{formatRelativeDate(deal.updatedAt)}</span>
+                    <span>{formatRelativeDate(deal.updatedAt, locale)}</span>
                 </div>
             </div>
 

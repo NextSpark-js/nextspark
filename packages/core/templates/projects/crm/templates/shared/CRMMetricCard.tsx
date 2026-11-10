@@ -1,4 +1,6 @@
 import { Card } from '@nextsparkjs/core/components/ui/card'
+import { useLocale } from 'next-intl'
+import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import { formatCurrency, formatCompactNumber, calculatePercentageChange } from '../../lib/crm-utils'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
@@ -21,8 +23,9 @@ export function CRMMetricCard({
     icon,
     className = '',
 }: CRMMetricCardProps) {
+    const locale = useLocale()
     const formattedValue = typeof value === 'number'
-        ? formatValue(value, format, currency)
+        ? formatValue(value, format, currency, locale)
         : value
 
     const change = previousValue !== undefined && typeof value === 'number'
@@ -58,7 +61,7 @@ export function CRMMetricCard({
     )
 }
 
-function formatValue(value: number, format: string, currency: string): string {
+function formatValue(value: number, format: string, currency: string, locale: string): string {
     switch (format) {
         case 'currency':
             return formatCurrency(value, currency)
@@ -67,7 +70,7 @@ function formatValue(value: number, format: string, currency: string): string {
         case 'percentage':
             return `${value.toFixed(1)}%`
         case 'number':
-            return value.toLocaleString()
+            return formatLocaleNumber(value, locale)
         default:
             return value.toString()
     }

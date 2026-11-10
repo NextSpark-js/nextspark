@@ -8,6 +8,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale } from 'next-intl'
+import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import Link from 'next/link'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import {
@@ -84,6 +86,7 @@ function KPICard({
     prefix?: string
     suffix?: string
 }) {
+    const locale = useLocale()
     const isPositive = trend && trend > 0
     const TrendIcon = isPositive ? TrendingUp : TrendingDown
 
@@ -107,7 +110,7 @@ function KPICard({
             </div>
             <div className="mt-4">
                 <p className="text-2xl font-bold text-foreground">
-                    {prefix}{typeof value === 'number' ? value.toLocaleString() : value}{suffix}
+                    {prefix}{typeof value === 'number' ? formatLocaleNumber(value, locale) : value}{suffix}
                 </p>
                 <p className="text-sm text-muted-foreground mt-0.5">{title}</p>
             </div>
@@ -117,6 +120,7 @@ function KPICard({
 
 // Pipeline Funnel component
 function PipelineFunnel({ stages }: { stages: PipelineStage[] }) {
+    const locale = useLocale()
     const maxValue = Math.max(...stages.map(s => s.value), 1)
 
     return (
@@ -140,7 +144,7 @@ function PipelineFunnel({ stages }: { stages: PipelineStage[] }) {
                         <div className="flex items-center justify-between text-sm mb-1.5">
                             <span className="font-medium text-foreground">{stage.name}</span>
                             <span className="text-muted-foreground">
-                                {stage.count} deals · ${stage.value.toLocaleString()}
+                                {stage.count} deals · ${formatLocaleNumber(stage.value, locale)}
                             </span>
                         </div>
                         <div className="h-8 bg-muted/50 rounded-lg overflow-hidden relative">
@@ -155,7 +159,7 @@ function PipelineFunnel({ stages }: { stages: PipelineStage[] }) {
                             />
                             <div className="absolute inset-0 flex items-center px-3">
                                 <span className="text-xs font-medium text-white drop-shadow-sm">
-                                    ${stage.value.toLocaleString()}
+                                    ${formatLocaleNumber(stage.value, locale)}
                                 </span>
                             </div>
                         </div>
@@ -169,7 +173,7 @@ function PipelineFunnel({ stages }: { stages: PipelineStage[] }) {
                     <div>
                         <p className="text-sm text-muted-foreground">Total Pipeline Value</p>
                         <p className="text-xl font-bold text-foreground">
-                            ${stages.reduce((sum, s) => sum + s.value, 0).toLocaleString()}
+                            ${formatLocaleNumber(stages.reduce((sum, s) => sum + s.value, 0), locale)}
                         </p>
                     </div>
                     <div className="text-right">
@@ -251,6 +255,7 @@ function RecentActivities({ activities }: { activities: ActivityItem[] }) {
 
 // Hot Deals component
 function HotDeals({ deals }: { deals: Deal[] }) {
+    const locale = useLocale()
     return (
         <div className="bg-card border rounded-xl p-5">
             <div className="flex items-center justify-between mb-5">
@@ -294,7 +299,7 @@ function HotDeals({ deals }: { deals: Deal[] }) {
                             </div>
                             <div className="text-right">
                                 <p className="font-semibold text-primary text-sm">
-                                    ${deal.value.toLocaleString()}
+                                    ${formatLocaleNumber(deal.value, locale)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                     {deal.probability}% likely

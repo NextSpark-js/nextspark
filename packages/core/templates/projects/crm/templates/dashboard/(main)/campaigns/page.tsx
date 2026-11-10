@@ -5,6 +5,8 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
+import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -87,6 +89,7 @@ function StatusBadge({ status }: { status: Campaign['status'] }) {
 
 // Budget progress bar
 function BudgetProgress({ budget, spent }: { budget?: number; spent?: number }) {
+    const locale = useLocale()
     if (!budget) return <span className="text-muted-foreground">-</span>
 
     const percentage = spent ? Math.min((spent / budget) * 100, 100) : 0
@@ -98,7 +101,7 @@ function BudgetProgress({ budget, spent }: { budget?: number; spent?: number }) 
         <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
-                    ${(spent || 0).toLocaleString()} / ${budget.toLocaleString()}
+                    ${formatLocaleNumber(spent || 0, locale)} / ${formatLocaleNumber(budget, locale)}
                 </span>
             </div>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">

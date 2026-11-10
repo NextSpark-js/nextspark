@@ -11,7 +11,8 @@ import { useEffect } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 
 import {
   Loader2,
@@ -29,6 +30,7 @@ function DefaultDashboardPage() {
   const { user, isLoading } = useUserProfile()
   const router = useRouter()
   const t = useTranslations('dashboard')
+  const locale = useLocale()
 
   const { user: authUser } = useAuth()
   const canAccessBilling = usePermission('settings.billing' as Permission)
@@ -202,7 +204,7 @@ function DefaultDashboardPage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium">{t('activity.accountCreated')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(user.createdAt || '').toLocaleDateString()}
+                    {user.createdAt ? formatLocaleDate(user.createdAt, locale) : ''}
                   </p>
                 </div>
               </div>

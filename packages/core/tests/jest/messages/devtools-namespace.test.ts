@@ -134,9 +134,14 @@ describe('the scan catches', () => {
     ['a default parameter', "function f(label = 'Resize panels') {}", ['Resize panels']],
     ['a destructuring default', "function f({ label = 'Resize panels' }: P) {}", ['Resize panels']],
     ['a date formatted for a fixed locale', "const a = d.toLocaleString('es-ES', {}); const b = new Intl.NumberFormat('de')", ["fixed locale 'es-ES'", "fixed locale 'de'"]],
+    ['a date or a number with no locale', "const a = d.toLocaleDateString(); const b = n.toLocaleString(undefined, {}); const c = new Intl.DateTimeFormat()", ['no locale in d.toLocaleDateString()', 'no locale in n.toLocaleString()', 'no locale in Intl.DateTimeFormat()']],
     ['a text with an @', '<p>Write to the team @ the office</p>', ['Write to the team @ the office']],
   ])('%s', (_name, code, expected) => {
     expect(scan(code)).toEqual(expected)
+  })
+
+  test('and leaves a date or a number with a locale alone', () => {
+    expect(scan("const a = d.toLocaleDateString(locale); const b = n.toLocaleString(locale, { dateStyle: 'long' }); const c = new Intl.NumberFormat(locale)")).toEqual([])
   })
 
   test('and leaves the code, the exceptions and the demo data alone', () => {

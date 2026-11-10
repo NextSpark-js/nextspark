@@ -32,12 +32,14 @@ import {
   Save,
   Loader2
 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { useUserWithMetaSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 import { SecurityPageSkeleton } from '@nextsparkjs/core/components/settings/SettingsPageSkeleton'
 
 function SecurityPage() {
   const t = useTranslations('settings')
+  const locale = useLocale()
   const tCommon = useTranslations('common')
   
   // Hook para manejar user metadata con autenticación de sesión
@@ -477,7 +479,7 @@ function SecurityPage() {
                         <span className="truncate">{login.device}</span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{new Date(login.timestamp).toLocaleString()}</span>
+                          <span className="truncate">{formatLocaleDate(login.timestamp, locale, 'dateTime')}</span>
                         </span>
                       </div>
                     </div>

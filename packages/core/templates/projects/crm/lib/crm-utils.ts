@@ -3,6 +3,8 @@
  * Helper functions for the CRM theme
  */
 
+import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
+
 /**
  * Format currency with proper symbol and decimals
  */
@@ -88,7 +90,7 @@ export function isDealRotten(
 /**
  * Format date relative to now (e.g., "2 hours ago", "yesterday")
  */
-export function formatRelativeDate(date: Date | string | null | undefined): string {
+export function formatRelativeDate(date: Date | string | null | undefined, locale: string = 'en'): string {
     if (!date) {
         return '-'
     }
@@ -118,7 +120,7 @@ export function formatRelativeDate(date: Date | string | null | undefined): stri
         return `${diffInDays}d ago`
     }
 
-    return d.toLocaleDateString()
+    return formatLocaleDate(d, locale)
 }
 
 /**

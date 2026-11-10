@@ -5,6 +5,8 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
+import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -68,6 +70,7 @@ function ContactTags({ tags }: { tags?: string[] }) {
 
 // Relative time component
 function RelativeTime({ date }: { date?: string }) {
+    const locale = useLocale()
     if (!date) return <span className="text-muted-foreground">Never</span>
 
     const now = new Date()
@@ -85,7 +88,7 @@ function RelativeTime({ date }: { date?: string }) {
     } else if (diffDays < 30) {
         text = `${Math.floor(diffDays / 7)} weeks ago`
     } else {
-        text = past.toLocaleDateString()
+        text = formatLocaleDate(past, locale)
     }
 
     return (

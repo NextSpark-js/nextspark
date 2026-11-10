@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '../ui/card'
@@ -98,7 +98,8 @@ async function performSearch(
   query: string, 
   accessibleEntities: EntityConfig[],
   filters: SearchFilters = {},
-  maxResults: number = 50
+  maxResults: number = 50,
+  locale: string = 'en'
 ): Promise<SearchResult[]> {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 150))
@@ -130,7 +131,7 @@ async function performSearch(
           entityName: entityConfig.slug,
           entityConfig,
           title: String(item.title || item.name || `${entityConfig.names.singular} #${item.id}`),
-          description: String(item.description || generateDescription(item, entityConfig)),
+          description: String(item.description || generateDescription(item, entityConfig, locale)),
           matches,
           url: `/dashboard/${entityConfig.slug}/${item.id}`,
           metadata: {
@@ -242,7 +243,7 @@ function findSearchMatches(
 /**
  * Generate description from entity data
  */
-function generateDescription(item: Record<string, unknown>, entityConfig: EntityConfig): string {
+function generateDescription(item: Record<string, unknown>, entityConfig: EntityConfig, locale: string): string {
   const descFields = ['description', 'summary', 'content', 'notes']
   
   for (const fieldName of descFields) {
@@ -253,15 +254,15 @@ function generateDescription(item: Record<string, unknown>, entityConfig: Entity
     }
   }
   
-  return `${entityConfig.names.singular} created ${formatDate(item.createdAt as string)}`
+  return `${entityConfig.names.singular} created ${formatDate(item.createdAt as string, locale)}`
 }
 
 /**
  * Format date for display
  */
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, locale: string): string {
   try {
-    return new Date(dateString).toLocaleDateString()
+    return new Date(dateString).toLocaleDateString(locale)
   } catch {
     return 'recently'
   }
@@ -312,6 +313,7 @@ export function EntitySearch({
   className,
 }: EntitySearchProps) {
   const text = useTranslations('entities.search')
+  const locale = useLocale()
   const placeholder = placeholderProp ?? text('placeholder')
   const { user } = useAuth()
   const router = useRouter()
@@ -348,7 +350,7 @@ export function EntitySearch({
 
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const searchResults = await performSearch(searchQuery, accessibleEntities, filters, maxResults)
+        const searchResults = await performSearch(searchQuery, accessibleEntities, filters, maxResults, locale)
         setResults(searchResults)
         onSearch?.(searchQuery, filters.entityName)
       } catch (error) {
@@ -358,7 +360,7 @@ export function EntitySearch({
         setIsSearching(false)
       }
     }, 300)
-  }, [accessibleEntities, filters, maxResults, onSearch])
+  }, [accessibleEntities, filters, maxResults, onSearch, locale])
 
   // Handle search input change
   const handleSearchChange = useCallback((value: string) => {
@@ -648,7 +650,7 @@ export function EntitySearch({
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {formatDate(result.metadata.createdAt)}
+                            {formatDate(result.metadata.createdAt, locale)}
                           </div>
                           {result.metadata.createdBy && (
                             <div className="flex items-center gap-1">

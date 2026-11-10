@@ -9,7 +9,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { ImageIcon, LoaderIcon, TagIcon, XIcon, PlusIcon, CopyIcon, CheckIcon, CalendarIcon } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -44,6 +44,7 @@ function formatFileSize(bytes: number): string {
 
 export function MediaDetailPanel({ media, onClose, showPreview = true, readOnly = false, className }: MediaDetailPanelProps) {
   const t = useTranslations('media')
+  const locale = useLocale()
   const { toast } = useToast()
   const updateMutation = useUpdateMedia()
   const addTagMutation = useAddMediaTag()
@@ -153,7 +154,7 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, readOnly 
             )}
             <span className="shrink-0 flex items-center gap-1">
               <CalendarIcon className="h-3 w-3" />
-              {new Date(media.createdAt).toLocaleString(undefined, {
+              {new Date(media.createdAt).toLocaleString(locale, {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',

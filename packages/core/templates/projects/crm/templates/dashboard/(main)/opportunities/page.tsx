@@ -5,6 +5,8 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
+import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -96,6 +98,7 @@ function ProbabilityIndicator({ probability }: { probability?: number }) {
 }
 
 export default function OpportunitiesPage() {
+    const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
     const [opportunities, setOpportunities] = useState<Opportunity[]>([])
@@ -224,7 +227,7 @@ export default function OpportunitiesPage() {
             render: (value) => value ? (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>{new Date(value).toLocaleDateString()}</span>
+                    <span>{formatLocaleDate(value, locale)}</span>
                 </div>
             ) : <span className="text-muted-foreground">-</span>,
         },

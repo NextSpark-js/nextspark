@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
 import React from 'react'
 import { ActivityCard, type Activity } from './ActivityCard'
 import { CalendarDays, Inbox } from 'lucide-react'
@@ -21,6 +22,7 @@ export function ActivityTimeline({
     onActivityClick,
     groupByDate = true,
 }: ActivityTimelineProps) {
+    const locale = useLocale()
     // Group activities by date
     const groupedActivities = activities.reduce((acc, activity) => {
         const date = new Date(activity.dueDate)
@@ -50,17 +52,17 @@ export function ActivityTimeline({
         const isPast = date < today && !isToday
 
         if (isToday) {
-            return { main: 'Today', sub: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), isToday: true }
+            return { main: 'Today', sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }), isToday: true }
         }
         if (date.toDateString() === tomorrow.toDateString()) {
-            return { main: 'Tomorrow', sub: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) }
+            return { main: 'Tomorrow', sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) }
         }
         if (date.toDateString() === yesterday.toDateString()) {
-            return { main: 'Yesterday', sub: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), isPast: true }
+            return { main: 'Yesterday', sub: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }), isPast: true }
         }
 
         return {
-            main: date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }),
+            main: date.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' }),
             sub: date.getFullYear() !== today.getFullYear() ? date.getFullYear().toString() : undefined,
             isPast
         }

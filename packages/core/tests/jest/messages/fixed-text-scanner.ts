@@ -50,6 +50,8 @@ const MESSAGE_CALLS = new Set([
   'setError', 'confirm', 'alert',
 ])
 
+const LOCALE_FORMATTER = /(\.toLocale(Date|Time)?String|^Intl\.(DateTimeFormat|NumberFormat|RelativeTimeFormat|ListFormat|PluralRules))$/
+
 // a demo email address is data, not a text
 const PURE_EMAIL = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/
 
@@ -113,7 +115,10 @@ export function fixedTexts(source: ts.SourceFile, notTranslatable: NotTranslatab
       }
     } else if (ts.isCallExpression(node) && MESSAGE_CALLS.has(node.expression.getText(source)) && node.arguments[0]) {
       check(node.arguments[0], true)
-    } else if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && node.arguments?.[0] && ts.isStringLiteral(node.arguments[0]) && /(\.toLocale(Date|Time)?String|^Intl\.(DateTimeFormat|NumberFormat|RelativeTimeFormat|ListFormat|PluralRules))$/.test(node.expression.getText(source))) {
+    } else if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && LOCALE_FORMATTER.test(node.expression.getText(source)) && (!node.arguments?.[0] || node.arguments[0].getText(source) === 'undefined')) {
+      // a date or a number formatted with no locale: it follows the browser, not the language of the interface (and the server and the client can disagree)
+      at(node, `no locale in ${node.expression.getText(source)}()`)
+    } else if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && node.arguments?.[0] && ts.isStringLiteral(node.arguments[0]) && LOCALE_FORMATTER.test(node.expression.getText(source))) {
       // a date or a number formatted for one fixed locale ('es-ES') instead of the active one
       at(node, `fixed locale ${node.arguments[0].getText(source)}`)
     } else if (ts.isNewExpression(node) && node.expression.getText(source) === 'Error' && node.arguments?.[0]) {

@@ -13,6 +13,8 @@
 import { useState, useCallback, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useLocale } from 'next-intl'
+import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { ArrowLeft, Save, Eye, Loader2, Check, X, Trash2, ExternalLink } from 'lucide-react'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -83,6 +85,7 @@ function generateSlug(title: string): string {
 
 export default function EditPostPage({ params }: PageProps) {
   const { id } = use(params)
+  const locale = useLocale()
   const router = useRouter()
   const teamId = useTeamContext().currentTeam?.id
   const [post, setPost] = useState<PostData | null>(null)
@@ -515,10 +518,10 @@ export default function EditPostPage({ params }: PageProps) {
 
               {/* Meta Info */}
               <div className="text-xs text-muted-foreground space-y-1 pt-4">
-                <p>Created: {new Date(post.createdAt).toLocaleDateString()}</p>
-                <p>Updated: {new Date(post.updatedAt).toLocaleDateString()}</p>
+                <p>Created: {formatLocaleDate(post.createdAt, locale)}</p>
+                <p>Updated: {formatLocaleDate(post.updatedAt, locale)}</p>
                 {post.publishedAt && (
-                  <p>Published: {new Date(post.publishedAt).toLocaleDateString()}</p>
+                  <p>Published: {formatLocaleDate(post.publishedAt, locale)}</p>
                 )}
               </div>
             </div>

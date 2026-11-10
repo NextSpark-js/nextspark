@@ -7,7 +7,8 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatLocaleDate, formatLocaleNumber } from '../../lib/i18n/format'
 import React from 'react'
 import { Input } from '../ui/input'
 import { Textarea } from '../ui/textarea'
@@ -80,7 +81,7 @@ export interface EntityFieldRendererProps {
 /** The texts the field renderers read (see `useSectionText('entities.field', ...)` in the component). */
 type FieldText = ReturnType<typeof useTranslations>
 
-function formatDisplayValue(text: FieldText, value: unknown, field: EntityField): string {
+function formatDisplayValue(text: FieldText, locale: string, value: unknown, field: EntityField): string {
   if (value === null || value === undefined) {
     return '-'
   }
@@ -97,16 +98,16 @@ function formatDisplayValue(text: FieldText, value: unknown, field: EntityField)
       return String(value || '')
 
     case 'number':
-      return typeof value === 'number' ? value.toLocaleString() : String(value || '')
+      return typeof value === 'number' ? formatLocaleNumber(value, locale) : String(value || '')
 
     case 'boolean':
       return value ? text('yes') : text('no')
 
     case 'date':
-      return value ? new Date(value as string).toLocaleDateString() : ''
+      return value ? formatLocaleDate(value as string, locale) : ''
 
     case 'datetime':
-      return value ? new Date(value as string).toLocaleString() : ''
+      return value ? formatLocaleDate(value as string, locale, 'dateTime') : ''
 
     case 'json':
       return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value || '')
@@ -802,7 +803,7 @@ function renderFormField(
 /**
  * Render display field for read-only mode
  */
-function renderDisplayField(text: FieldText, field: EntityField, value: unknown, mode: 'display' | 'list', context?: EntityFieldContext) {
+function renderDisplayField(text: FieldText, locale: string, field: EntityField, value: unknown, mode: 'display' | 'list', context?: EntityFieldContext) {
   // Handle user fields specially with UserDisplay component
   if (field.type === 'user') {
     // For user fields, value is stored as user ID string (or array for multi)
@@ -873,7 +874,7 @@ function renderDisplayField(text: FieldText, field: EntityField, value: unknown,
     }
   }
 
-  const formattedValue = formatDisplayValue(text, value, field)
+  const formattedValue = formatDisplayValue(text, locale, value, field)
 
   if (mode === 'list') {
     // Compact list mode
@@ -964,6 +965,7 @@ export function EntityFieldRenderer({
   context,
 }: EntityFieldRendererProps) {
   const text = useTranslations('entities.field')
+  const locale = useLocale()
   if (mode === 'form') {
     if (!onChange) {
       throw new Error('onChange is required for form mode')
@@ -1001,7 +1003,7 @@ export function EntityFieldRenderer({
 
   return (
     <div className={className}>
-      {renderDisplayField(text, field, value, mode, context)}
+      {renderDisplayField(text, locale, field, value, mode, context)}
     </div>
   )
 }

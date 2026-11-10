@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
 import React from 'react'
 import { formatRelativeDate } from '@/lib/crm-utils'
 import {
@@ -78,6 +79,7 @@ const defaultStatusConfig = { label: 'Unknown', className: 'bg-muted text-muted-
 const defaultPriorityConfig = { className: 'bg-muted-foreground/50' }
 
 export function ActivityCard({ activity, onClick }: ActivityCardProps) {
+    const locale = useLocale()
     const typeConfig = activityTypeConfig[activity.type] || defaultTypeConfig
     const status = statusConfig[activity.status] || defaultStatusConfig
     const priority = priorityConfig[activity.priority] || defaultPriorityConfig
@@ -158,7 +160,7 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
 
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto">
                         <Clock className="w-3.5 h-3.5" />
-                        <span>{formatRelativeDate(activity.dueDate)}</span>
+                        <span>{formatRelativeDate(activity.dueDate, locale)}</span>
                     </div>
                 </div>
             </div>

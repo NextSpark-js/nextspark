@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { MoreVerticalIcon, Edit2Icon, EyeIcon, Trash2Icon, ImageIcon } from 'lucide-react'
 import {
   Table,
@@ -51,8 +51,8 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString(undefined, {
+function formatDate(dateString: string, locale: string): string {
+  return new Date(dateString).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -71,6 +71,7 @@ export function MediaList({
   className,
 }: MediaListProps) {
   const t = useTranslations('media')
+  const locale = useLocale()
 
   if (isLoading) {
     return (
@@ -214,7 +215,7 @@ export function MediaList({
                     : '—'}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell text-muted-foreground">
-                  {formatDate(media.createdAt)}
+                  {formatDate(media.createdAt, locale)}
                 </TableCell>
                 {(onEdit || onDelete) && (
                   <TableCell onClick={(e) => e.stopPropagation()}>
