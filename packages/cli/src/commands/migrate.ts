@@ -144,6 +144,11 @@ interface MigrateReport {
   /** Old references inside AI-workflow directories: listed, never rewritten. */
   aiWorkflowReferences: { path: string; occurrences: number }[];
   contractsPackage: { needed: boolean; path: string; mobile: string | null; skipped: string | null; /** False when the directory already exists (without a package.json): rollback then removes only the files migrate writes. */ createsDirectory: boolean };
+  /**
+   * NEXT_PUBLIC_ACTIVE_THEME, which a root-first project never sets: the reads --yes replaces (the theme logic around
+   * them is dead code to delete) and the mentions it leaves as written, at the path each file ends up in.
+   */
+  themeVariable: { replaced: { path: string; line: number }[]; left: { path: string; line: number }[] };
   /** Block configs whose old `thumbnail: "/theme/blocks/..."` line is removed (BlockConfig.thumbnail is the registry's import now). */
   blockThumbnails: { path: string; lines: number }[];
   /** Leftovers of an earlier layout (see `findObsoleteCopies`); what `nextspark migrate --check` reports on its own. */
@@ -1896,6 +1901,23 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
   }
   // S114: a kept src/ proxy or instrumentation file that is not a facade over core's entries
   proxyNotices.push(...entryFacadeWarnings(host.root, templates));
+  // Where each file ends up, or null for the ones the migration removes (generated app files and root proxies)
+  const appFile = (path: string) => join(host.root, appPlan?.root ?? '', path);
+  const removedFiles = new Set([
+    ...(appPlan?.files ?? []).filter(file => file.fate.kind === 'remove' || file.fate.kind === 'loader').map(file => appFile(file.path)),
+    ...(appPlan ? rootProxyFiles.generated.map(file => join(host.root, file)) : []),
+  ]);
+  const movedFiles = new Map<string, string>([
+    ...(appPlan?.files ?? []).flatMap(file => file.fate.kind === 'override' || file.fate.kind === 'project' ? [[appFile(file.path), join(host.root, file.fate.destination)] as [string, string]] : []),
+    ...(appPlan ? rootProxyFiles.customizations.map(file => [join(host.root, file), join(host.root, 'src', file)] as [string, string]) : []),
+    ...(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => [item.source, item.destination] as [string, string]) : []),
+  ]);
+  const themeUses = movePlan && selectedTheme.name
+    ? themeVariableUses(repository, host.root, selectedTheme.name, movePlan, file => removedFiles.has(file) ? null : movedFiles.get(file) ?? file)
+    : { replaced: [], left: [], destructured: [] };
+  for (const use of themeUses.destructured) {
+    blockers.push(`${use.path}:${use.line}: reads NEXT_PUBLIC_ACTIVE_THEME by destructuring process.env, which migrate does not rewrite. A root-first project never sets it: take it out of the destructuring and treat the theme as undefined (or delete the code that chose one), commit, and run migrate again`);
+  }
   const appConversion: MigrateReport['appConversion'] = {
     root: appRoot,
     removed: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'remove' ? [{ path: file.path, evidence: file.fate.evidence }] : []),
@@ -1968,6 +1990,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
     duplicateCopies,
     hostFramework: hostFrameworkPlan,
     aiWorkflowReferences: aiWorkflowReferences(repository, selectedTheme.name),
+    themeVariable: { replaced: themeUses.replaced, left: themeUses.left },
     contractsPackage: { needed: contractsPlan !== null, path: pathFrom(repository, join(repository, 'packages', 'contracts')), mobile: contractsPlan?.mobile ? pathFrom(repository, contractsPlan.mobile) : null, skipped: contracts.skipped, createsDirectory: contractsPlan !== null && !existsSync(contractsPlan.contractsDirectory) },
     blockThumbnails: hostFiles.filter(file => isBlockConfig(file) && !inAiWorkflowDirectory(repository, file)).flatMap(file => {
       const lines = countBlockThumbnails(readFileSync(file, 'utf8'));
@@ -2043,6 +2066,12 @@ function printReport(report: MigrateReport, dryRun: boolean): void {
     `nextspark.config.ts: ${report.config.plannedCreation ? `will create (plugins: ${report.config.plugins.join(', ') || 'none'})` : 'already exists; will not overwrite'}`,
     `.env.example: ${report.envExample.action}${report.envExample.path ? ` (${report.envExample.path})` : ''}`,
   ]);
+  if (report.themeVariable.replaced.length + report.themeVariable.left.length > 0) {
+    section('NEXT_PUBLIC_ACTIVE_THEME (a root-first project never sets it)', [
+      ...report.themeVariable.replaced.map(use => `${use.path}:${use.line}: read replaced with undefined (with the theme name under tests/); delete the theme logic around it`),
+      ...report.themeVariable.left.map(use => `${use.path}:${use.line}: left as written (a comment, a document, a string or a key); remove it if it chose a theme`),
+    ]);
+  }
   section('Core script references', [
     `renamed: ${paths(report.coreScripts.renamed)}`,
     `warnings: ${paths(report.coreScripts.warnings)}`,
@@ -3118,15 +3147,64 @@ function rewriteRemovedMiddlewareApi(content: string, destination: string, hostR
     .replace(/\bgetThemeAppConfig\b/g, 'getProjectAppConfig');
 }
 
-function rewriteActiveThemeUse(content: string, destination: string, hostRoot: string, theme: string): string {
-  // A root-first project no longer selects a theme at runtime. Tests moved
-  // out of that theme may still assert that the old runner selected the
-  // fixture they are exercising; preserve that assertion as the known source
-  // theme instead of turning it into `undefined`.
+const THEME_VARIABLE = 'NEXT_PUBLIC_ACTIVE_THEME';
+/** A read of the variable 0.x chose the theme with: `process.env.X`, `process.env?.X`, `process.env['X']` */
+const THEME_READ = /\bprocess\.env(?:\?\.|\.)NEXT_PUBLIC_ACTIVE_THEME\b|\bprocess\.env(?:\?\.)?\[\s*(['"`])NEXT_PUBLIC_ACTIVE_THEME\1\s*\]/g;
+/** `const { NEXT_PUBLIC_ACTIVE_THEME } = process.env`, renamed or with a default too: a read migrate does not rewrite */
+const THEME_DESTRUCTURE = /\{[^{}]*\bNEXT_PUBLIC_ACTIVE_THEME\b[^{}]*\}\s*=\s*process\.env\b/g;
+const CODE_FILE = /\.(?:[cm]?[jt]sx?)$/;
+const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*)/;
+
+/**
+ * A root-first project never sets NEXT_PUBLIC_ACTIVE_THEME. In code, outside comment lines, its reads become
+ * `undefined`; under tests/, the name of the theme the project came from, which their assertions expect. Every other
+ * mention (a comment, a document, a string, an env key) is left as written, and no other name replaces it. The line
+ * numbers say what to clean up: the theme logic around a replaced read is dead code, and a destructuring read of
+ * process.env is one migrate refuses to guess.
+ */
+function rewriteThemeVariable(content: string, destination: string, hostRoot: string, theme: string): { text: string; replaced: number[]; left: number[]; destructured: number[] } {
+  if (!content.includes(THEME_VARIABLE)) return { text: content, replaced: [], left: [], destructured: [] };
+  const code = CODE_FILE.test(destination);
   const replacement = isWithin(destination, join(hostRoot, 'tests')) ? JSON.stringify(theme) : 'undefined';
-  return content
-    .replace(/process\.env\.NEXT_PUBLIC_ACTIVE_THEME/g, replacement)
-    .replace(/NEXT_PUBLIC_ACTIVE_THEME/g, 'ROOT_FIRST_PROJECT');
+  const lineOf = (index: number) => content.slice(0, index).split('\n').length;
+  const destructured = code ? [...content.matchAll(THEME_DESTRUCTURE)].map(match => lineOf((match.index ?? 0) + match[0].indexOf(THEME_VARIABLE))) : [];
+  const replaced: number[] = [];
+  const left: number[] = [];
+  const text = content.split('\n').map((line, index) => {
+    if (!line.includes(THEME_VARIABLE)) return line;
+    const next = code && !COMMENT_LINE.test(line) ? line.replace(THEME_READ, () => replacement) : line;
+    if (next !== line) replaced.push(index + 1);
+    if (next.includes(THEME_VARIABLE) && !destructured.includes(index + 1)) left.push(index + 1);
+    return next;
+  }).join('\n');
+  return { text, replaced, left, destructured };
+}
+
+/** The files applyMove rewrites: the repository's, but other themes' and the AI-workflow directories (#201). */
+function moveRewriteFiles(repository: string, hostRoot: string, theme: string, plan: MovePlan): string[] {
+  return filesIn(repository).filter(file => !isOtherThemeFile(file, join(hostRoot, 'contents', 'themes'), theme)
+    && !inAiWorkflowDirectory(repository, file)
+    && !plan.duplicates.some(item => item.source === file)
+    && !plan.collisions.some(item => item.source === file));
+}
+
+/**
+ * What --yes does with NEXT_PUBLIC_ACTIVE_THEME, read before anything is written: the reads it replaces and the
+ * mentions it leaves, at the path each file ends up in (`finalPath`), leaving out the files the migration removes.
+ */
+function themeVariableUses(repository: string, hostRoot: string, theme: string, plan: MovePlan, finalPath: (file: string) => string | null): { replaced: { path: string; line: number }[]; left: { path: string; line: number }[]; destructured: { path: string; line: number }[] } {
+  const found = { replaced: [] as { path: string; line: number }[], left: [] as { path: string; line: number }[], destructured: [] as { path: string; line: number }[] };
+  const planned = new Map([...plan.moves, ...plan.duplicates].map(item => [item.source, item.destination]));
+  for (const file of moveRewriteFiles(repository, hostRoot, theme, plan)) {
+    const end = finalPath(file);
+    if (end === null) continue;
+    const buffer = readFileSync(file);
+    if (!isText(buffer) || !buffer.includes(THEME_VARIABLE)) continue;
+    const uses = rewriteThemeVariable(buffer.toString('utf8'), planned.get(file) ?? file, hostRoot, theme);
+    const path = pathFrom(repository, end);
+    for (const kind of ['replaced', 'left', 'destructured'] as const) found[kind].push(...uses[kind].map(line => ({ path, line })));
+  }
+  return found;
 }
 
 function removeActiveThemeFromExample(hostRoot: string): boolean {
@@ -3331,10 +3409,8 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
   const unmoved = new Set(plan.unmoved);
   const duplicateByDestination = new Map(plan.duplicates.map(item => [item.destination, item]));
   // AI-workflow directories are left as they are (#201); the report lists what they still reference
-  const files = filesIn(repository).filter(file => !isOtherThemeFile(file, join(hostRoot, 'contents', 'themes'), theme) && !inAiWorkflowDirectory(repository, file));
   let rewritten = 0;
-  for (const file of files) {
-    if (plan.duplicates.some(item => item.source === file) || plan.collisions.some(item => item.source === file)) continue;
+  for (const file of moveRewriteFiles(repository, hostRoot, theme, plan)) {
     const buffer = readFileSync(file);
     if (!isText(buffer)) continue;
     const duplicate = duplicateByDestination.get(file);
@@ -3350,7 +3426,7 @@ function applyMove(repository: string, hostRoot: string, themeRoot: string, plug
       next = rewriteMovedDepthConfig(next, source, destination, planned, unmoved, themeRoot, hostRoot);
       next = rewriteHookExport(next, destination);
     }
-    if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteActiveThemeUse(next, destination, hostRoot, theme);
+    if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteThemeVariable(next, destination, hostRoot, theme).text;
     if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteHookImports(next, destination, hostRoot);
     if (destination === file || destination.startsWith(`${hostRoot}${sep}`)) next = rewriteRootFirstTestContracts(next, destination, hostRoot, theme);
     if (!preservedRootProxy && (destination === file || destination.startsWith(`${hostRoot}${sep}`))) next = rewriteRemovedMiddlewareApi(next, destination, hostRoot);
@@ -3811,6 +3887,7 @@ function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated:
   console.log('Migration complete.');
   console.log(`  moved: ${result.moved} owned file(s); verified and deduplicated: ${result.deduplicated}`);
   console.log(`  rewritten: ${result.rewritten} file(s)${result.envRemoved ? '; removed NEXT_PUBLIC_ACTIVE_THEME from .env.example' : ''}`);
+  if (report.themeVariable.replaced.length + report.themeVariable.left.length > 0) console.log(`  NEXT_PUBLIC_ACTIVE_THEME: ${report.themeVariable.replaced.length} read(s) replaced, ${report.themeVariable.left.length} mention(s) left; the report above lists where, to delete the theme logic they leave behind`);
   console.log(`  nextspark.config.ts: ${result.configCreated ? 'created' : 'preserved'}; core scripts renamed: ${result.scriptsRenamed}`);
   console.log(`  legacy contents/ imports in moved output: ${remainingContentsImports}`);
   console.log(`  contents/: ${result.contentsRemoved ? 'removed' : result.remainingContents.map(item => `${item.path} (${item.reason})`).join('; ') || 'still exists (no ordinary entries could be enumerated)'}`);

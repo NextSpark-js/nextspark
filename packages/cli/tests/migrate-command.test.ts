@@ -1322,6 +1322,74 @@ test('migrate rebases nested theme tsconfig and jest roots after moving tests to
   }
 })
 
+test('migrate replaces the reads of NEXT_PUBLIC_ACTIVE_THEME in code, leaves every other mention as written, names no other variable, and lists both', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/lib/theme.ts', [
+      '// NEXT_PUBLIC_ACTIVE_THEME chooses the theme: process.env.NEXT_PUBLIC_ACTIVE_THEME',
+      'export const a = process.env.NEXT_PUBLIC_ACTIVE_THEME',
+      "export const b = process.env['NEXT_PUBLIC_ACTIVE_THEME'] ?? process.env[\"NEXT_PUBLIC_ACTIVE_THEME\"]",
+      'export const c = process.env?.NEXT_PUBLIC_ACTIVE_THEME',
+      'export const env = { NEXT_PUBLIC_ACTIVE_THEME: process.env.NEXT_PUBLIC_ACTIVE_THEME }',
+      "export const label = 'NEXT_PUBLIC_ACTIVE_THEME'",
+      '',
+    ].join('\n'))
+    await write(root, 'contents/themes/acme/docs/theme.md', 'Set `NEXT_PUBLIC_ACTIVE_THEME=acme`, read as `process.env.NEXT_PUBLIC_ACTIVE_THEME`.\n')
+    await write(root, 'scripts/start.mjs', "const theme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'acme'\nconsole.log(theme)\n")
+    await commitFixture(root)
+
+    const dry = run(root, ['--dry-run', '--json'])
+    assert.equal(dry.status, 0, `${dry.stdout}\n${dry.stderr}`)
+    const { themeVariable } = JSON.parse(dry.stdout)
+    const byPath = (uses: { path: string, line: number }[]) => [...uses].sort((x, y) => x.path.localeCompare(y.path) || x.line - y.line)
+    assert.deepEqual(byPath(themeVariable.replaced), [
+      { path: 'lib/theme.ts', line: 2 }, { path: 'lib/theme.ts', line: 3 }, { path: 'lib/theme.ts', line: 4 }, { path: 'lib/theme.ts', line: 5 },
+      { path: 'scripts/start.mjs', line: 1 },
+    ])
+    assert.deepEqual(byPath(themeVariable.left), [
+      { path: 'docs/theme.md', line: 1 }, { path: 'lib/theme.ts', line: 1 }, { path: 'lib/theme.ts', line: 5 }, { path: 'lib/theme.ts', line: 6 },
+    ])
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /NEXT_PUBLIC_ACTIVE_THEME \(a root-first project never sets it\)\n(?: {2}.*\n)* {2}lib\/theme\.ts:2: read replaced with undefined/)
+    assert.match(result.stdout, / {2}docs\/theme\.md:1: left as written/)
+    assert.match(result.stdout, /NEXT_PUBLIC_ACTIVE_THEME: 5 read\(s\) replaced, 4 mention\(s\) left/)
+    assert.equal(await readFile(join(root, 'lib/theme.ts'), 'utf8'), [
+      '// NEXT_PUBLIC_ACTIVE_THEME chooses the theme: process.env.NEXT_PUBLIC_ACTIVE_THEME',
+      'export const a = undefined',
+      'export const b = undefined ?? undefined',
+      'export const c = undefined',
+      'export const env = { NEXT_PUBLIC_ACTIVE_THEME: undefined }',
+      "export const label = 'NEXT_PUBLIC_ACTIVE_THEME'",
+      '',
+    ].join('\n'))
+    assert.equal(await readFile(join(root, 'docs/theme.md'), 'utf8'), 'Set `NEXT_PUBLIC_ACTIVE_THEME=acme`, read as `process.env.NEXT_PUBLIC_ACTIVE_THEME`.\n')
+    assert.equal(await readFile(join(root, 'scripts/start.mjs'), 'utf8'), "const theme = undefined || 'acme'\nconsole.log(theme)\n")
+    const named = spawnSync('grep', ['-rl', '--exclude-dir=.git', '--exclude-dir=node_modules', 'ROOT_FIRST_PROJECT', '.'], { cwd: root, encoding: 'utf8' })
+    assert.equal(named.stdout, '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate stops before writing on a destructuring read of NEXT_PUBLIC_ACTIVE_THEME', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/lib/env.ts', "const {\n  DATABASE_URL,\n  NEXT_PUBLIC_ACTIVE_THEME: theme = 'acme',\n} = process.env\nexport { DATABASE_URL, theme }\n")
+    await commitFixture(root)
+    const dry = run(root, ['--dry-run', '--json'])
+    assert.equal(dry.status, 1, `${dry.stdout}\n${dry.stderr}`)
+    assert.ok(JSON.parse(dry.stdout).appConversion.blockers.some((line: string) => line.startsWith('lib/env.ts:3: reads NEXT_PUBLIC_ACTIVE_THEME by destructuring process.env, which migrate does not rewrite.')))
+    const refused = run(root, ['--yes'])
+    assert.notEqual(refused.status, 0)
+    assert.match(refused.stderr, /lib\/env\.ts:3: reads NEXT_PUBLIC_ACTIVE_THEME by destructuring process\.env/)
+    assert.equal(git_status(root), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate rebases root-inspecting tests and preserves their local middleware binding', async () => {
   const { root } = await moveFixture()
   try {
