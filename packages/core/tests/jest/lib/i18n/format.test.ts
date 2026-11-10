@@ -1,7 +1,7 @@
 /**
  * #413: formatLocaleDate does not throw on an invalid date, and a date with no time is the same calendar day in every time zone.
  */
-import { formatLocaleDate, formatLocaleRelative } from '../../../../src/lib/i18n/format'
+import { formatLocaleDate, formatLocaleNumber, formatLocaleRelative } from '../../../../src/lib/i18n/format'
 
 describe('formatLocaleDate', () => {
   const zone = process.env.TZ
@@ -34,5 +34,15 @@ describe('formatLocaleDate', () => {
 
   test('a date with a time is formatted in the local zone, in the locale', () => {
     expect(formatLocaleDate('2026-12-24T12:00:00Z', 'de')).toContain('Dez')
+  })
+})
+
+describe('formatLocaleNumber (#422)', () => {
+  test('takes Intl options: a percentage and a currency are written the way the locale does', () => {
+    const percent = { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 } as const
+    expect(formatLocaleNumber(0.425, 'en', percent)).toBe('42.5%')
+    expect(formatLocaleNumber(0.425, 'de', percent).replace(/\s/g, ' ')).toBe('42,5 %')
+    expect(formatLocaleNumber(1500, 'es', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })).toContain('1500')
+    expect(formatLocaleNumber(1234567, 'de')).toBe('1.234.567')
   })
 })

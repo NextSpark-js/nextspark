@@ -41,8 +41,8 @@ export function formatLocaleRelative(value: string | number | Date, locale: stri
   return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.trunc(seconds / size), unit)
 }
 
-export function formatLocaleNumber(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale).format(value)
+export function formatLocaleNumber(value: number, locale: string, options?: Intl.NumberFormatOptions): string {
+  return new Intl.NumberFormat(locale, options).format(value)
 }
 
 /** An amount in cents as dollars, with no decimals when it is a whole number of dollars (the plan prices of the matrices). */

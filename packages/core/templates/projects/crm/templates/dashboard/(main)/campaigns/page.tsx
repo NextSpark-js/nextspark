@@ -91,12 +91,12 @@ function StatusBadge({ status }: { status: Campaign['status'] }) {
 }
 
 // Budget progress bar
-function BudgetProgress({ budget: rawBudget, spent: rawSpent }: { budget?: number | string; spent?: number | string }) {
-    const locale = useLocale()
+function BudgetProgress({ budget: rawBudget, spent: rawSpent, locale }: { budget?: number | string; spent?: number | string; locale: string }) {
     const budget = toNumber(rawBudget)
     const spent = toNumber(rawSpent)
     if (!budget) return <span className="text-muted-foreground">-</span>
 
+    const money = (value: number) => formatLocaleNumber(value, locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
     const percentage = spent ? Math.min((spent / budget) * 100, 100) : 0
     let barColor = 'bg-emerald-500'
     if (percentage >= 90) barColor = 'bg-destructive'
@@ -106,7 +106,7 @@ function BudgetProgress({ budget: rawBudget, spent: rawSpent }: { budget?: numbe
         <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
-                    ${formatLocaleNumber(spent || 0, locale)} / ${formatLocaleNumber(budget, locale)}
+                    {money(spent || 0)} / {money(budget)}
                 </span>
             </div>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -234,7 +234,7 @@ export default function CampaignsPage() {
             header: t('campaigns.columns.budget'),
             sortable: true,
             render: (_, campaign) => (
-                <BudgetProgress budget={campaign.budget} spent={campaign.spent} />
+                <BudgetProgress budget={campaign.budget} spent={campaign.spent} locale={locale} />
             ),
             width: '150px',
         },

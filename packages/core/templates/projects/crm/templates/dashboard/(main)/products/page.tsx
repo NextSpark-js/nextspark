@@ -22,6 +22,7 @@ import {
     Percent
 } from 'lucide-react'
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
+import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { sumNumeric, toNumber } from '@/lib/crm-utils'
@@ -61,7 +62,7 @@ function StatusBadge({ status }: { status: Product['status'] }) {
 }
 
 // Margin indicator
-function MarginIndicator({ price: rawPrice, cost: rawCost }: { price: number | string; cost?: number | string }) {
+function MarginIndicator({ price: rawPrice, cost: rawCost, locale }: { price: number | string; cost?: number | string; locale: string }) {
     const price = toNumber(rawPrice)
     const cost = toNumber(rawCost)
     if (!price || !cost) return <span className="text-muted-foreground">-</span>
@@ -77,7 +78,7 @@ function MarginIndicator({ price: rawPrice, cost: rawCost }: { price: number | s
     return (
         <div className={cn('flex items-center gap-1.5 text-sm font-medium', colorClass)}>
             <Percent className="w-3.5 h-3.5" />
-            <span>{margin.toFixed(1)}%</span>
+            <span>{formatLocaleNumber(margin / 100, locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
         </div>
     )
 }
@@ -183,7 +184,7 @@ export default function ProductsPage() {
             key: 'margin',
             header: t('products.columns.margin'),
             render: (_, product) => (
-                <MarginIndicator price={product.price} cost={product.cost} />
+                <MarginIndicator price={product.price} cost={product.cost} locale={locale} />
             ),
         },
         {

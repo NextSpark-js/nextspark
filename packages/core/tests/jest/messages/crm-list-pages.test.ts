@@ -46,6 +46,20 @@ const leaves = (node: unknown, prefix = ''): Record<string, string> =>
     ? { [prefix]: node }
     : Object.entries(node as object).reduce((all, [key, value]) => ({ ...all, ...leaves(value, prefix ? `${prefix}.${key}` : key) }), {})
 
+describe('the amounts and percentages of the crm lists follow the locale', () => {
+  const source = (page: string) => readFileSync(path.join(CRM, `templates/dashboard/(main)/${page}/page.tsx`), 'utf8')
+
+  test('the margin of a product is a percentage formatted for the locale, not a toFixed with a fixed "%"', () => {
+    expect(source('products')).not.toMatch(/toFixed\(/)
+    expect(source('products')).toMatch(/style: 'percent'/)
+  })
+
+  test('the budget of a campaign is a currency amount, not a number after a fixed "$"', () => {
+    expect(source('campaigns')).not.toMatch(/\$\{formatLocaleNumber/)
+    expect(source('campaigns')).toMatch(/style: 'currency'/)
+  })
+})
+
 describe('the crm list pages write no text in the source', () => {
   test.each(FILES)('%s', file => {
     expect(fixedTexts(parseSource(path.join(CRM, file)), STAYS)).toEqual([])
