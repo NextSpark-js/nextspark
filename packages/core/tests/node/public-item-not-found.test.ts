@@ -1,7 +1,7 @@
 /**
- * A public item or archive URL with nothing behind it must end in notFound(), never in a "not found" element
- * returned with a 200: under the legacy host that is a real 404; under Cache Components the status was already sent
- * with the shell, and notFound() is what makes Next render the not-found page and add noindex
+ * A public item or archive URL with nothing behind it must end in notFound() under the legacy host, never in a "not
+ * found" element returned with a 200: that is its real 404. Under Cache Components the status was already sent with
+ * the shell, so the item route renders the not-found page in place instead, and its metadata adds noindex (#423)
  * (docs/18-page-builder/07-public-rendering.md, "The status of a URL that has no page").
  */
 import { test } from 'node:test'
@@ -16,7 +16,10 @@ const read = (file: string) => fs.readFileSync(path.join(internal, file), 'utf8'
 test('the public item route calls notFound() when there is no published item', () => {
   const source = read('public-item-route.tsx')
   assert.match(source, /import \{ notFound \} from 'next\/navigation'/)
-  assert.match(source, /if \(!item\) notFound\(\)/)
+  // Without a not-found view (the legacy host binds none) a missing item throws notFound()
+  assert.match(source, /const missing = NotFoundView \? \(\) => <NotFoundView \/> : \(\) => notFound\(\)/)
+  assert.match(source, /return item \?\? missing\(\)/)
+  assert.match(source, /const databaseRoutes = bindPublicItemRoutes\(databaseSource\)\n/)
 })
 
 test('the public archive route calls notFound() for an entity without an archive page', () => {
@@ -24,8 +27,9 @@ test('the public archive route calls notFound() for an entity without an archive
   assert.match(source, /if \(!config\.ui\?\.public\?\.hasArchivePage\) notFound\(\)/)
 })
 
-test('the Cache Components item route shares the same notFound() path', () => {
-  assert.match(read('public-item-route.cc.tsx'), /bindPublicItemRoutes\(cachedSource\)/)
+test('the Cache Components item route renders a not-found view in place, and its metadata says noindex (#423)', () => {
+  assert.match(read('public-item-route.cc.tsx'), /bindPublicItemRoutes\(cachedSource, BuiltinNotFound\)/)
+  assert.match(read('public-item-route.tsx'), /noindexMissing \? \{ robots: \{ index: false \} \}/)
 })
 
 test("core's default public layout does not put the page behind a Suspense boundary", () => {
