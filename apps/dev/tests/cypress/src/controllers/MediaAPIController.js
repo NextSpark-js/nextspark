@@ -11,10 +11,10 @@ class MediaAPIController extends BaseAPIController {
   /**
    * @param {string} baseUrl - Base URL for API requests
    * @param {string|null} apiKey - API key for authentication
+   * @param {string|null} teamId - Team sent as x-team-id (null: no team context)
    */
-  constructor(baseUrl = 'http://localhost:5173', apiKey = null) {
-    // Media does not require x-team-id (no team context)
-    super(baseUrl, apiKey, null, { slug: 'media' })
+  constructor(baseUrl = 'http://localhost:5173', apiKey = null, teamId = null) {
+    super(baseUrl, apiKey, teamId, { slug: 'media' })
   }
 
   // ============================================================

@@ -1,5 +1,6 @@
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
+import { useLocale } from 'next-intl'
 import Image from 'next/image'
 
 interface Category {
@@ -19,6 +20,7 @@ interface PostHeaderProps {
 }
 
 export function PostHeader({ post }: PostHeaderProps) {
+  const locale = useLocale()
   return (
     <div className="w-full" data-cy="post-header">
       {/* Featured Image */}
@@ -79,7 +81,7 @@ export function PostHeader({ post }: PostHeaderProps) {
             dateTime={new Date(post.createdAt).toISOString()}
             suppressHydrationWarning
           >
-            {new Date(post.createdAt).toLocaleDateString('en-US', {
+            {new Date(post.createdAt).toLocaleDateString(locale, {
               year: 'numeric',
               month: 'long',
               day: 'numeric',
