@@ -103,9 +103,7 @@ interface SubscriptionsData {
     monthly: number;
     yearly: number;
     mrr: number;
-    mrrFormatted: string;
     arr: number;
-    arrFormatted: string;
   };
   planDistribution: PlanDistribution[];
   subscriptions: Subscription[];
@@ -351,7 +349,7 @@ function SubscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              {stats?.mrrFormatted || formatLocaleDollars(0, locale)}
+              {formatLocaleDollars(stats?.mrr ?? 0, locale)}
             </div>
             <p className="text-xs text-muted-foreground">
               {t("stats.fromMonthly", { count: stats?.monthly || 0 })}
@@ -367,7 +365,7 @@ function SubscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700">
-              {stats?.arrFormatted || formatLocaleDollars(0, locale)}
+              {formatLocaleDollars(stats?.arr ?? 0, locale)}
             </div>
             <p className="text-xs text-muted-foreground">
               {t("stats.fromYearly", { count: stats?.yearly || 0 })}

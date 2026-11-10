@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The MRR and ARR of the subscriptions page are written in the active locale.** The page preferred the English strings of the API over the amounts in cents. (#413)
 - **A `NUMERIC` value, which the database returns as text, is written in the active locale.** A number field showed "3.00" in every language. (#413)
 - **The sidebar's entity links keep a `data-cy` built from the entity's slug.** It came from the displayed name, which is translated since the entity catalogs are read, so the selector changed with the language. (#421)
 - **The profile's language picker lists every supported locale of the project, each in its own language.** It offered a fixed English/Spanish pair, so a project with German could not pick it. (#413)
