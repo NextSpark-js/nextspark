@@ -1410,6 +1410,33 @@ test('migrate replaces a cy-run-prod.cjs core published with the installed templ
   }
 })
 
+test('migrate leaves a write or a delete of NEXT_PUBLIC_ACTIVE_THEME as written and lists it, also under tests/', async () => {
+  const { root } = await moveFixture()
+  try {
+    const lib = [
+      "process.env.NEXT_PUBLIC_ACTIVE_THEME = 'acme'",
+      'delete process.env.NEXT_PUBLIC_ACTIVE_THEME',
+      "process.env['NEXT_PUBLIC_ACTIVE_THEME'] ??= 'acme'",
+      "process.env.NEXT_PUBLIC_ACTIVE_THEME ||= 'acme'",
+      "export const same = process.env.NEXT_PUBLIC_ACTIVE_THEME === 'acme'",
+      '',
+    ].join('\n')
+    await write(root, 'contents/themes/acme/lib/write.ts', lib)
+    await write(root, 'contents/themes/acme/tests/jest/env.test.ts', "process.env.NEXT_PUBLIC_ACTIVE_THEME = 'acme'\nexpect(process.env.NEXT_PUBLIC_ACTIVE_THEME).toBe('acme')\n")
+    await commitFixture(root)
+    const dry = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    const sorted = (uses: { path: string, line: number }[]) => [...uses].sort((x, y) => x.path.localeCompare(y.path) || x.line - y.line)
+    assert.deepEqual(sorted(dry.themeVariable.replaced), [{ path: 'lib/write.ts', line: 5 }, { path: 'tests/jest/env.test.ts', line: 2 }])
+    assert.deepEqual(sorted(dry.themeVariable.left), [1, 2, 3, 4].map(line => ({ path: 'lib/write.ts', line })).concat([{ path: 'tests/jest/env.test.ts', line: 1 }]))
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'lib/write.ts'), 'utf8'), lib.replace("export const same = process.env.NEXT_PUBLIC_ACTIVE_THEME === 'acme'", "export const same = undefined === 'acme'"))
+    assert.equal(await readFile(join(root, 'tests/jest/env.test.ts'), 'utf8'), "process.env.NEXT_PUBLIC_ACTIVE_THEME = 'acme'\nexpect(\"acme\").toBe('acme')\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate stops before writing on a destructuring read of NEXT_PUBLIC_ACTIVE_THEME', async () => {
   const { root } = await moveFixture()
   try {

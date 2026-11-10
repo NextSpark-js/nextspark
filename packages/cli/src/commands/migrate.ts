@@ -3192,8 +3192,11 @@ function scaffoldPlan(hostRoot: string, templates: string | null): MigrateReport
 }
 
 const THEME_VARIABLE = 'NEXT_PUBLIC_ACTIVE_THEME';
-/** A read of the variable 0.x chose the theme with: `process.env.X`, `process.env?.X`, `process.env['X']` */
-const THEME_READ = /\bprocess\.env(?:\?\.|\.)NEXT_PUBLIC_ACTIVE_THEME\b|\bprocess\.env(?:\?\.)?\[\s*(['"`])NEXT_PUBLIC_ACTIVE_THEME\1\s*\]/g;
+/**
+ * A read of the variable 0.x chose the theme with: `process.env.X`, `process.env?.X`, `process.env['X']`. A write
+ * (`=`, `??=`, `||=`, `&&=`) or a `delete` is not a read: it is left as written and listed.
+ */
+const THEME_READ = /(?<!\bdelete\s+)(?:\bprocess\.env(?:\?\.|\.)NEXT_PUBLIC_ACTIVE_THEME\b|\bprocess\.env(?:\?\.)?\[\s*(['"`])NEXT_PUBLIC_ACTIVE_THEME\1\s*\])(?!\s*(?:=(?!=)|\?\?=|\|\|=|&&=))/g;
 /** `const { NEXT_PUBLIC_ACTIVE_THEME } = process.env`, renamed or with a default too: a read migrate does not rewrite */
 const THEME_DESTRUCTURE = /\{[^{}]*\bNEXT_PUBLIC_ACTIVE_THEME\b[^{}]*\}\s*=\s*process\.env\b/g;
 const CODE_FILE = /\.(?:[cm]?[jt]sx?)$/;
