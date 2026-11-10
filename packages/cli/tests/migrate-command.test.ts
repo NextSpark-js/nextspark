@@ -1378,6 +1378,20 @@ test('migrate replaces a cy-run-prod.cjs core published with the installed templ
   // what core 0.1.0-beta.184 published as templates/scripts/cy-run-prod.cjs: it chooses a theme from contents/themes
   const published = await readFile(join(PKG_ROOT, 'tests/fixtures/cy-run-prod-0.1.0-beta.184.cjs'), 'utf8')
   const template = await readFile(join(CORE_SOURCE, 'templates/scripts/cy-run-prod.cjs'), 'utf8')
+  // already the current template: nothing to replace, nothing to warn about
+  {
+    const { root } = await moveFixture()
+    try {
+      await write(root, 'node_modules/@nextsparkjs/core/templates/scripts/cy-run-prod.cjs', template)
+      await write(root, 'scripts/cy-run-prod.cjs', template)
+      await commitFixture(root)
+      const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+      assert.deepEqual(report.scaffolds, { replaced: [], kept: [] })
+      assert.equal(report.warnings.some((warning: string) => warning.includes('cy-run-prod.cjs')), false)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
   const cases: [string, string, boolean][] = [
     ['published, with CRLF line ends and other indentation', published.replace(/\n {2}/g, '\r\n    '), true],
     ['changed by the project', published.replace('const PORT = 3000', 'const PORT = 4000'), false],
