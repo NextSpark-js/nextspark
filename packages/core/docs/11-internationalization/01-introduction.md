@@ -21,7 +21,7 @@ The application currently supports two locales with easy extensibility for addit
 
 **Locale Detection Strategy**:
 1. **Database User Preference** (authenticated users)
-2. **Cookie** (`NEXT_LOCALE`)
+2. **Cookie** (`locale`)
 3. **Accept-Language Header** (browser preference)
 4. **Default Locale** (`en`)
 
@@ -331,7 +331,7 @@ export const I18N_CONFIG = {
 
   // Locale detection strategy priority
   localeDetection: {
-    cookie: 'NEXT_LOCALE',
+    cookie: 'locale',
     header: 'accept-language',
     userPreference: true  // Check database for authenticated users
   },
