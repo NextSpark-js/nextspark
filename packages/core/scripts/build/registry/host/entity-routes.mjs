@@ -192,6 +192,8 @@ export function routableEntities(entities) {
 const arg = {
   config: entity => ({ import: { name: entity.exportName, specifier: entity.configPath.replace(/\.tsx?$/, '') } }),
   template: () => ({ template: true }),
+  // The project's not-found nearest to the route (planHost resolves it, `route.notFound`), or nothing
+  notFound: () => ({ notFound: true }),
   literal: value => ({ literal: value }),
 }
 
@@ -350,7 +352,13 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
         continue
       }
       const item = {
-        default: { factory: factory('createPublicItemRoute', publicItemModule), args: [config, arg.template()] },
+        default: {
+          factory: factory('createPublicItemRoute', publicItemModule),
+          args: [config, arg.template()],
+          // Cache Components: with a project not-found for the route (planHost's `route.notFound`), this factory renders it
+          // for a missing item (#423)
+          ...(ccOnly ? { withNotFound: { factory: factory('createPublicItemRouteWithNotFound', publicItemModule), args: [config, arg.notFound(), arg.template()] } } : {}),
+        },
         named: [{ name: 'generateMetadata', factory: factory('createPublicItemMetadata', publicItemModule), args: [config] }],
         literals: revalidates ? [{ name: 'revalidate', value: PUBLIC_REVALIDATE }] : [],
         // The template's own, when it has one, adapted to the route's slug shape: without it Next.js sees no params and prerenders nothing (#370)

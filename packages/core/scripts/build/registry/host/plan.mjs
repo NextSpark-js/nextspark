@@ -471,9 +471,30 @@ export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], with
   }
 
   notices.push(...slotDefaultNotices(routes))
+  attachNotFound(routes)
 
   const clean = routes.map(({ layer, ...route }) => ({ ...route, origin: layer }))
   return { routes: applySitemap(clean, sitemap).sort((a, b) => compareTargets(a.target, b.target)), diagnostics, notices }
+}
+
+/**
+ * The not-found page Next.js would show for a public item route that can render one in place (`entityRoute.default.withNotFound`,
+ * #423): the `not-found` file of the route's own directory or the nearest one above it, of the mode the route serves.
+ * Mutates the routes; a route with none above it keeps the factory that renders Next.js's own.
+ */
+function attachNotFound(routes) {
+  const notFound = new Map(routes.filter(route => route.kind === 'not-found' && route.mode !== 'isr').map(route => [posix.dirname(route.target), route]))
+  for (const [index, route] of routes.entries()) {
+    if (!route.entityRoute?.default?.withNotFound) continue
+    for (let dir = posix.dirname(route.target); ; dir = posix.dirname(dir)) {
+      const found = notFound.get(dir)
+      if (found) {
+        routes[index] = { ...route, notFound: { specifier: found.specifier, file: found.file, source: found.source } }
+        break
+      }
+      if (dir === '.') break
+    }
+  }
 }
 
 /**

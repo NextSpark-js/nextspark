@@ -341,6 +341,9 @@ about what a navigation would wait for. What it found in the starter, and the fi
   `entity-edit-route.cc`, written for a host with `cacheComponents` on and nothing else) sit behind a boundary of their own
   (`_internal/suspended-route`); the `/signup` variant and core's default home (`(public)/page.cc`) render the page that redirects behind one too, and the public archive and the permission-denied
   page read `searchParams` behind one. The status a visitor gets does not change: the layouts already streamed these pages after their shell.
+  A public item route renders a missing item's not-found page in place instead of throwing `notFound()` (#423): when the project has a `not-found`
+  file in the route's directory or one above it, the facade imports it and calls `createPublicItemRouteWithNotFound(config, NextSparkNotFound[, Template])`
+  (`plan.mjs` resolves it as `route.notFound`); otherwise `createPublicItemRoute`, which renders Next.js's own.
 - A project without `public/favicon.ico` made the browser's own `GET /favicon.ico` hit the public `[slug]` page (an HTML "not found" with a 200);
   new projects ship a favicon, and a request for a page that does not exist is now answered inside a boundary the check accepts.
 - `/superadmin` and `/devtools` (#213): their client guards hid the page from the server render until the session loaded, and each segment awaited

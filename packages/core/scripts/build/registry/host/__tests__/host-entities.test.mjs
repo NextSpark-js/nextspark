@@ -32,7 +32,7 @@ const CORE_MODULES = {
   [ENTITY_MODULES.detailCc]: ['core/entity-detail-route.cc.tsx', factories('createEntityDetailRoute')],
   [ENTITY_MODULES.editCc]: ['core/entity-edit-route.cc.tsx', factories('createEntityEditRoute')],
   [ENTITY_MODULES.publicItem]: ['core/public-item-route.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata', 'createPublicItemStaticParams')],
-  [ENTITY_MODULES.publicItemCc]: ['core/public-item-route.cc.tsx', factories('createPublicItemRoute', 'createPublicItemMetadata', 'createPublicItemStaticParams')],
+  [ENTITY_MODULES.publicItemCc]: ['core/public-item-route.cc.tsx', factories('createPublicItemRoute', 'createPublicItemRouteWithNotFound', 'createPublicItemMetadata', 'createPublicItemStaticParams')],
   [ENTITY_MODULES.publicArchive]: ['core/public-archive-route.tsx', factories('createPublicArchiveRoute', 'createPublicArchiveMetadata')],
 }
 
@@ -881,6 +881,44 @@ test('a public entity route that Next.js could not tell from a core route is a d
       { coreRoutes: [{ kind: 'page', target: '(auth)/[token]/page.tsx', specifier: '@nextsparkjs/core/routes/t', file: '/core/t.tsx', protected: false }] }
     )
     assert.deepEqual(diagnostics.map(d => d.code), [PLAN_DIAGNOSTICS.DYNAMIC_SEGMENT_CONFLICT])
+  } finally {
+    w.cleanup()
+  }
+})
+
+test("a Cache Components item route renders the project's nearest not-found for a missing item; ISR and a project without one keep createPublicItemRoute (#423)", async () => {
+  const NOT_FOUND = 'export default function NotFound() { return null }\n'
+  const PAGES = "slug: 'pages', enabled: true, access: { public: true, basePath: '/', allowNestedSlugs: true }, builder: { enabled: true }"
+  const cases = [
+    // [project files, cacheComponents, expected default export of each route, expected not-found import of each route]
+    [{}, true, 'createPublicItemRoute(postsEntityConfig)', null],
+    [{ 'templates/not-found.tsx': NOT_FOUND }, true, 'createPublicItemRouteWithNotFound(postsEntityConfig, NextSparkNotFound)', '@/templates/not-found'],
+    [{ 'templates/not-found.tsx': NOT_FOUND, 'templates/(public)/not-found.tsx': NOT_FOUND }, true, 'createPublicItemRouteWithNotFound(postsEntityConfig, NextSparkNotFound)', '@/templates/(public)/not-found'],
+    [{ 'templates/(public)/blog/not-found.tsx': NOT_FOUND }, true, 'createPublicItemRouteWithNotFound(postsEntityConfig, NextSparkNotFound)', '@/templates/(public)/blog/not-found'],
+    [{ 'templates/not-found.tsx': NOT_FOUND, 'templates/(public)/blog/[slug]/page.tsx': PAGE }, true, 'createPublicItemRouteWithNotFound(postsEntityConfig, NextSparkNotFound, NextSparkTemplate)', '@/templates/not-found'],
+    [{ 'templates/not-found.tsx': NOT_FOUND }, false, 'createPublicItemRoute(postsEntityConfig)', null],
+  ]
+  for (const [files, cacheComponents, expected, specifier] of cases) {
+    const w = world(files)
+    try {
+      const { routes, diagnostics } = await plan(w, [entity('posts', 'postsEntityConfig')], { posts: await factsOf(BLOG) }, { cacheComponents })
+      assert.deepEqual(diagnostics, [])
+      const result = await render(routes)
+      assert.deepEqual(result.diagnostics ?? [], [])
+      const content = at(result, '(public)/blog/[...slug]/page.tsx')
+      assert.ok(content.includes(`export default ${expected}\n`), `${JSON.stringify(files)}: ${content}`)
+      assert.equal(content.match(/import NextSparkNotFound from "([^"]+)"/)?.[1] ?? null, specifier, content)
+      const violations = validateGeneratedModule({ ts, source: content, file: 'page.tsx', grammar: 'composed-facade', wrappers: CORE_COMPOSITION_WRAPPERS })
+      assert.deepEqual(violations, [])
+    } finally {
+      w.cleanup()
+    }
+  }
+  // The root `[...slug]` route of an entity at "/" (nested slugs) takes the same not-found
+  const w = world({ 'templates/(public)/not-found.tsx': NOT_FOUND })
+  try {
+    const { routes } = await plan(w, [entity('pages', 'taskEntityConfig')], { pages: await factsOf(PAGES) }, { cacheComponents: true })
+    assert.match(at(await render(routes), '(public)/[...slug]/page.tsx'), /export default createPublicItemRouteWithNotFound\(taskEntityConfig, NextSparkNotFound\)/)
   } finally {
     w.cleanup()
   }

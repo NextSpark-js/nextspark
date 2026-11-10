@@ -90,7 +90,7 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   [`${INTERNAL}entity-detail-route.cc`]: ['createEntityDetailRoute'],
   [`${INTERNAL}entity-edit-route.cc`]: ['createEntityEditRoute'],
   [`${INTERNAL}public-item-route`]: ['createPublicItemRoute', 'createPublicItemMetadata', 'createPublicItemStaticParams'],
-  [`${INTERNAL}public-item-route.cc`]: ['createPublicItemRoute', 'createPublicItemMetadata', 'createPublicItemStaticParams'],
+  [`${INTERNAL}public-item-route.cc`]: ['createPublicItemRoute', 'createPublicItemRouteWithNotFound', 'createPublicItemMetadata', 'createPublicItemStaticParams'],
   [`${INTERNAL}public-archive-route`]: ['createPublicArchiveRoute', 'createPublicArchiveMetadata'],
   [`${INTERNAL}billing-webhooks`]: ['createStripeWebhookRoute', 'createPolarWebhookRoute', 'createLemonSqueezyWebhookRoute'],
   // /sitemap.xml and /robots.txt with the project's settings (sitemap.mjs).
