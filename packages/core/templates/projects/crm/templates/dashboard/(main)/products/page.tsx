@@ -25,7 +25,7 @@ import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
-import { sumNumeric, toNumber } from '@/lib/crm-utils'
+import { sumNumeric, toNumber, withProductStatus } from '@/lib/crm-utils'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
@@ -34,6 +34,8 @@ interface Product {
     name: string
     description?: string
     sku?: string
+    code?: string
+    isActive?: boolean
     category?: string
     price: number
     cost?: number
@@ -103,7 +105,7 @@ export default function ProductsPage() {
                 const response = await fetchWithTeam('/api/v1/products')
                 if (!response.ok) throw new Error('Failed to fetch products')
                 const result = await response.json()
-                setProducts(result.data || [])
+                setProducts((result.data || []).map(withProductStatus))
             } catch (error) {
                 console.error('Error loading products:', error)
             } finally {

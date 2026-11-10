@@ -13,6 +13,8 @@ const catalog = (locale: string) => JSON.parse(readFileSync(path.join(CRM, `mess
 
 let mockLocale = 'es'
 let mockRows: unknown[] = []
+// the rows of an endpoint other than the one the page lists (the lookups of the company names and counters)
+let mockOther: Record<string, unknown[]> = {}
 
 /** The ICU subset the list catalogs use: `{name}` and `{count, plural, one {..} other {..}}` (the catalog test checks the real syntax). */
 function format(text: string, values: Record<string, unknown> = {}): string {
@@ -38,10 +40,11 @@ jest.mock('@nextsparkjs/core/contexts/TeamContext', () => ({ useTeamContext: () 
 jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: () => true }))
 jest.mock('@nextsparkjs/core/components/permissions/PermissionGate', () => ({ PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
-  fetchWithTeam: async () => ({ ok: true, json: async () => ({ data: mockRows }) }),
+  fetchWithTeam: async (url: string) => ({ ok: true, json: async () => ({ data: mockOther[url.split('?')[0]] ?? mockRows }) }),
 }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 
+import CompaniesPage from '../../../templates/projects/crm/templates/dashboard/(main)/companies/page'
 import ContactsPage from '../../../templates/projects/crm/templates/dashboard/(main)/contacts/page'
 import OpportunitiesPage from '../../../templates/projects/crm/templates/dashboard/(main)/opportunities/page'
 import ProductsPage from '../../../templates/projects/crm/templates/dashboard/(main)/products/page'
@@ -108,6 +111,53 @@ describe.each([
     const average = new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(2000.25)
     await waitFor(() => expect(document.body.textContent).toContain(average))
     expect(document.body.textContent).not.toContain('NaN')
+  })
+})
+
+describe('what the API sends: the columns of the table (#422)', () => {
+  beforeEach(() => {
+    mockLocale = 'es'
+    mockRows = []
+    mockOther = {}
+  })
+  afterEach(() => {
+    mockOther = {}
+  })
+
+  test('a contact shows the name of its company, which the API sends only as an id', async () => {
+    mockRows = [{ id: 'c1', firstName: 'Ana', lastName: 'Ruiz', email: 'a@example.com', companyId: 'co1' }]
+    mockOther = { '/api/v1/contacts': mockRows, '/api/v1/companies': [{ id: 'co1', name: 'Acme Corp' }] }
+    render(<ContactsPage />)
+    await waitFor(() => expect(screen.getAllByText('Acme Corp').length).toBeGreaterThan(0))
+  })
+
+  test('the counters of a company come from its contacts and its open opportunities', async () => {
+    mockRows = [{ id: 'co1', name: 'Acme' }, { id: 'co2', name: 'Globex' }]
+    mockOther = {
+      '/api/v1/companies': mockRows,
+      '/api/v1/contacts': [{ id: 'c1', companyId: 'co1' }, { id: 'c2', companyId: 'co1' }, { id: 'c3', companyId: 'co2' }],
+      '/api/v1/opportunities': [
+        { id: 'o1', companyId: 'co1', amount: '1000.00', status: 'open' },
+        { id: 'o2', companyId: 'co1', amount: '5000', status: 'won' },
+        { id: 'o3', companyId: 'co2', amount: 250, status: 'open' },
+      ],
+    }
+    render(<CompaniesPage />)
+    // 3 contacts, 3 opportunities, 1250 of open pipeline
+    const pipeline = new Intl.NumberFormat('es', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(1250)
+    await waitFor(() => expect(document.body.textContent).toContain(pipeline))
+    expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(2)
+  })
+
+  test('a product is active by its isActive column, and the active ones are counted', async () => {
+    mockRows = [
+      { id: 'p1', name: 'A', price: '10', isActive: true, code: 'SKU-1' },
+      { id: 'p2', name: 'B', price: '20', isActive: true },
+      { id: 'p3', name: 'C', price: '30', isActive: false },
+    ]
+    render(<ProductsPage />)
+    await waitFor(() => expect(screen.getByText(text('es', 'products.stats.active')).previousElementSibling?.textContent).toBe('2'))
+    expect(document.body.textContent).toContain(text('es', 'products.sku').replace('{sku}', 'SKU-1'))
   })
 })
 

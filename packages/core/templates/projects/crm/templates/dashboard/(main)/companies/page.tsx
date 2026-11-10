@@ -23,7 +23,7 @@ import {
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
-import { sumNumeric } from '@/lib/crm-utils'
+import { fetchRows, sumNumeric, withCompanyCounts } from '@/lib/crm-utils'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
@@ -88,7 +88,12 @@ export default function CompaniesPage() {
                 const response = await fetchWithTeam('/api/v1/companies')
                 if (!response.ok) throw new Error('Failed to fetch companies')
                 const result = await response.json()
-                setCompanies(result.data || [])
+                // the companies table has no counters: they come from the contacts and the opportunities that point to each company
+                const [contacts, opportunities] = await Promise.all([
+                    fetchRows<{ companyId?: string }>('/api/v1/contacts'),
+                    fetchRows<{ companyId?: string; amount?: unknown; status?: string }>('/api/v1/opportunities'),
+                ])
+                setCompanies(withCompanyCounts<Company>(result.data || [], contacts, opportunities))
             } catch (error) {
                 console.error('Error loading companies:', error)
             } finally {

@@ -26,7 +26,7 @@ import {
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
-import { sumNumeric, toNumber } from '@/lib/crm-utils'
+import { fetchRows, sumNumeric, toNumber, withCompanyName } from '@/lib/crm-utils'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
 interface Opportunity {
@@ -118,7 +118,9 @@ export default function OpportunitiesPage() {
                 const response = await fetchWithTeam('/api/v1/opportunities')
                 if (!response.ok) throw new Error('Failed to fetch opportunities')
                 const result = await response.json()
-                setOpportunities(result.data || [])
+                // the API sends the id of the company, not its name
+                const companies = await fetchRows<{ id: string; name?: string }>('/api/v1/companies')
+                setOpportunities(withCompanyName<Opportunity>(result.data || [], companies))
             } catch (error) {
                 console.error('Error loading opportunities:', error)
             } finally {

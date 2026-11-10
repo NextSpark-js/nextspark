@@ -4,6 +4,7 @@
  */
 
 import { formatLocaleDate, formatLocaleRelative } from '@nextsparkjs/core/lib/i18n/format'
+import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 
 /**
  * A number from a value that may arrive as a number or as a string (the API returns NUMERIC columns as strings),
@@ -17,6 +18,56 @@ export function toNumber(value: unknown): number | null {
 /** The sum of the valid numbers in `values`: one that is not a finite number is ignored instead of turning the total into NaN. */
 export function sumNumeric(values: unknown[]): number {
     return values.reduce<number>((sum, value) => sum + (toNumber(value) ?? 0), 0)
+}
+
+/**
+ * The rows of a list endpoint for a lookup (company names, counters); an endpoint that fails gives no rows, so the page still renders.
+ * The API sends the columns of the table only: a contact carries `companyId`, not the name of the company.
+ */
+export async function fetchRows<T>(endpoint: string): Promise<T[]> {
+    try {
+        const response = await fetchWithTeam(`${endpoint}?limit=100`)
+        if (!response.ok) return []
+        const result = await response.json()
+        return Array.isArray(result.data) ? result.data : []
+    } catch {
+        return []
+    }
+}
+
+/** The rows with `companyName` filled in from their `companyId` (a row that has its own name keeps it). */
+export function withCompanyName<T extends { companyId?: string | null; companyName?: string }>(rows: T[], companies: { id: string; name?: string }[]): T[] {
+    const names = new Map(companies.map(company => [company.id, company.name]))
+    return rows.map(row => ({ ...row, companyName: row.companyName || (row.companyId ? names.get(row.companyId) : undefined) }))
+}
+
+/**
+ * The companies with the number of contacts and of opportunities that point to them, and the value of the open ones:
+ * the companies table has no such columns.
+ */
+export function withCompanyCounts<C extends { id: string }>(
+    companies: C[],
+    contacts: { companyId?: string | null }[],
+    opportunities: { companyId?: string | null; amount?: unknown; status?: string | null }[],
+): (C & { contactCount: number; opportunityCount: number; totalPipelineValue: number })[] {
+    return companies.map(company => {
+        const own = opportunities.filter(opportunity => opportunity.companyId === company.id)
+        return {
+            ...company,
+            contactCount: contacts.filter(contact => contact.companyId === company.id).length,
+            opportunityCount: own.length,
+            totalPipelineValue: sumNumeric(own.filter(opportunity => (opportunity.status ?? 'open') === 'open').map(opportunity => opportunity.amount)),
+        }
+    })
+}
+
+/** A product with the `status` and `sku` the list reads: the table has `isActive` and `code`. */
+export function withProductStatus<T extends { status?: string; isActive?: boolean | null; sku?: string; code?: string | null }>(product: T): T {
+    return {
+        ...product,
+        status: product.status ?? (product.isActive === false ? 'inactive' : 'active'),
+        sku: product.sku ?? product.code ?? undefined,
+    }
 }
 
 /**

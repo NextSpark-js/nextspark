@@ -24,6 +24,7 @@ import {
     Send
 } from 'lucide-react'
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
+import { fetchRows, withCompanyName } from '@/lib/crm-utils'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
@@ -109,7 +110,9 @@ export default function ContactsPage() {
                 const response = await fetchWithTeam('/api/v1/contacts')
                 if (!response.ok) throw new Error('Failed to fetch contacts')
                 const result = await response.json()
-                setContacts(result.data || [])
+                // the API sends the id of the company, not its name
+                const companies = await fetchRows<{ id: string; name?: string }>('/api/v1/companies')
+                setContacts(withCompanyName<Contact>(result.data || [], companies))
             } catch (error) {
                 console.error('Error loading contacts:', error)
             } finally {
