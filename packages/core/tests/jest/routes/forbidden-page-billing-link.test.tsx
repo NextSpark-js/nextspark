@@ -12,7 +12,7 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(search),
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
 jest.mock('sonner', () => ({ Toaster: () => null, toast: Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() }) }))
 jest.mock('@/core/hooks/useAuth', () => ({
   useAuth: () => mockAuth,

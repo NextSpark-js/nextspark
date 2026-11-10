@@ -37,6 +37,7 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => 'de',
 }))
 
 jest.mock('@/core/components/ui/sonner', () => ({

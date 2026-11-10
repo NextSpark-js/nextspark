@@ -5,6 +5,7 @@ import { QueryClientContext } from '@tanstack/react-query'
 import { QueryProvider } from './query-provider'
 import { TeamProvider, useOptionalTeamContext } from '../contexts/TeamContext'
 import { SubscriptionProvider } from '../contexts/SubscriptionContext'
+import { HtmlLang } from './html-lang'
 import { Toaster } from '../components/ui/sonner'
 
 /**
@@ -28,6 +29,11 @@ import { Toaster } from '../components/ui/sonner'
  * Used by: dashboard/layout.tsx, superadmin/layout.tsx, devtools/layout.tsx
  */
 export function DashboardProviders({ children }: { children: React.ReactNode }) {
+  // these areas render per request: `<html lang>` follows their locale (#413)
+  return <><HtmlLang /><AreaProviders>{children}</AreaProviders></>
+}
+
+function AreaProviders({ children }: { children: React.ReactNode }) {
   const rootTeamContext = useOptionalTeamContext()
   const rootQueryClient = useContext(QueryClientContext)
 
