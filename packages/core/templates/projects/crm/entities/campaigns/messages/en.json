@@ -102,8 +102,7 @@
     },
     "roi": {
       "label": "ROI (%)",
-      "description": "Return on investment percentage",
-      "placeholder": "0.00"
+      "description": "Return on investment percentage"
     },
     "assignedTo": {
       "label": "Campaign Manager",

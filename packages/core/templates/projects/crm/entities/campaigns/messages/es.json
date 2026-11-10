@@ -102,8 +102,7 @@
     },
     "roi": {
       "label": "ROI (%)",
-      "description": "Retorno de inversión",
-      "placeholder": "0.00"
+      "description": "Retorno de inversión"
     },
     "assignedTo": {
       "label": "Responsable",
