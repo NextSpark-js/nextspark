@@ -64,12 +64,10 @@ import { countries, timezones } from '@nextsparkjs/core/lib/countries-timezones'
 import { sel } from '@nextsparkjs/core/lib/selectors'
 import { useLocale, useTranslations } from 'next-intl'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { formatLanguageName } from '@nextsparkjs/core/lib/i18n/format'
 
-// Language options
-const languages = [
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' },
-] as const
+// Language options: every locale of the project, each named in its own language (#413)
+const languages = I18N_CONFIG.supportedLocales.map((value) => ({ value, label: formatLanguageName(value) }))
 
 function ProfilePage() {
   const { profile, isLoading, error } = useUserProfile()

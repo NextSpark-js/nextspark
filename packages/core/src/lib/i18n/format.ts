@@ -54,3 +54,10 @@ export function formatLocaleDollars(cents: number, locale: string, { whole = fal
     maximumFractionDigits: whole ? 0 : 2,
   }).format(cents / 100)
 }
+
+/** A locale named in its own language ("Deutsch", "Español"), the way a language picker lists it. */
+export function formatLanguageName(locale: string): string {
+  let name: string | undefined
+  try { name = new Intl.DisplayNames(locale, { type: 'language' }).of(locale) } catch { /* a code Intl does not know */ }
+  return name && name !== locale ? name.charAt(0).toLocaleUpperCase(locale) + name.slice(1) : locale
+}
