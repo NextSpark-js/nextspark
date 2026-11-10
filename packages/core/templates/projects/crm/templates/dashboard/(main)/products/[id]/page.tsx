@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
 import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -157,6 +158,7 @@ function DetailItem({
 }
 
 export default function ProductDetailPage() {
+    const locale = useLocale()
     const router = useRouter()
     const params = useParams()
     const productId = params.id as string
@@ -197,7 +199,7 @@ export default function ProductDetailPage() {
 
     // Currency formatter
     const formatCurrency = (value: number, currency: string = 'USD') => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: currency || 'USD', // Handle null case
             minimumFractionDigits: 2,
@@ -488,7 +490,7 @@ export default function ProductDetailPage() {
             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-4 border-t">
                 <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
-                    Created: {new Date(product.createdAt).toLocaleDateString('en-US', {
+                    Created: {new Date(product.createdAt).toLocaleDateString(locale, {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
@@ -497,7 +499,7 @@ export default function ProductDetailPage() {
                 {product.updatedAt && (
                     <div className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />
-                        Updated: {new Date(product.updatedAt).toLocaleDateString('en-US', {
+                        Updated: {new Date(product.updatedAt).toLocaleDateString(locale, {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric',

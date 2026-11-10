@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -67,6 +68,7 @@ function SizeBadge({ size }: { size?: Company['size'] | string }) {
 }
 
 export default function CompaniesPage() {
+    const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
     const [companies, setCompanies] = useState<Company[]>([])
@@ -109,7 +111,7 @@ export default function CompaniesPage() {
     }, [companies])
 
     const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: 'USD',
             minimumFractionDigits: 0,

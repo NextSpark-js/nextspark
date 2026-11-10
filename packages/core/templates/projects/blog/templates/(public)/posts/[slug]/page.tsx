@@ -7,6 +7,7 @@
  * centered content, and optimized typography.
  */
 
+import { useLocale } from 'next-intl'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -90,10 +91,10 @@ async function fetchPost(identifier: string): Promise<Post | null> {
   }
 }
 
-function formatDate(dateString: string | null): string {
+function formatDate(dateString: string | null, locale: string): string {
   if (!dateString) return 'Not published'
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -168,6 +169,7 @@ async function fetchRelatedPosts(currentPostId: string): Promise<RelatedPost[]> 
 }
 
 export default function PostPage({ params }: PageProps) {
+  const locale = useLocale()
   const { slug } = use(params)
   const [post, setPost] = useState<Post | null>(null)
   const [relatedPosts, setRelatedPosts] = useState<RelatedPost[]>([])
@@ -255,7 +257,7 @@ export default function PostPage({ params }: PageProps) {
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
               <time dateTime={toISODateString(post.publishedAt)}>
-                {formatDate(post.publishedAt)}
+                {formatDate(post.publishedAt, locale)}
               </time>
             </span>
             <span className="text-border">|</span>

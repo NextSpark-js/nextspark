@@ -145,7 +145,7 @@ export default function OpportunitiesPage() {
     }, [opportunities])
 
     const formatCurrency = (value: number, currency = 'USD') => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency,
             minimumFractionDigits: 0,

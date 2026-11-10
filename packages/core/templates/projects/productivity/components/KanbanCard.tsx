@@ -1,5 +1,6 @@
 'use client'
 
+import { useLocale } from 'next-intl'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Calendar, Clock, MessageSquare, Paperclip, CheckSquare, AlertCircle } from 'lucide-react'
@@ -48,6 +49,7 @@ const labelColors: Record<string, { bg: string; text: string }> = {
 }
 
 export function KanbanCard({ card, onClick }: KanbanCardProps) {
+  const locale = useLocale()
   const {
     attributes,
     listeners,
@@ -82,7 +84,7 @@ export function KanbanCard({ card, onClick }: KanbanCardProps) {
     if (date.toDateString() === tomorrow.toDateString()) {
       return 'Tomorrow'
     }
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
   }
 
   const getDueDateStatus = () => {

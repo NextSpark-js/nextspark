@@ -115,6 +115,7 @@ function BudgetProgress({ budget, spent }: { budget?: number; spent?: number }) 
 }
 
 export default function CampaignsPage() {
+    const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
     const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -160,7 +161,7 @@ export default function CampaignsPage() {
     }, [campaigns])
 
     const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: 'USD',
             minimumFractionDigits: 0,
@@ -170,7 +171,7 @@ export default function CampaignsPage() {
 
     const formatDate = (date?: string) => {
         if (!date) return '-'
-        return new Date(date).toLocaleDateString('en-US', {
+        return new Date(date).toLocaleDateString(locale, {
             month: 'short',
             day: 'numeric',
         })

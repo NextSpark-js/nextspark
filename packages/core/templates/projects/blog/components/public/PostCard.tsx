@@ -7,6 +7,7 @@
  * title, excerpt, author info, and reading time.
  */
 
+import { useLocale } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, Clock, User } from 'lucide-react'
@@ -30,10 +31,10 @@ interface PostCardProps {
   className?: string
 }
 
-function formatDate(dateString: string | null | undefined): string {
+function formatDate(dateString: string | null | undefined, locale: string): string {
   if (!dateString) return 'Draft'
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -57,6 +58,7 @@ export function PostCard({
   variant = 'default',
   className
 }: PostCardProps) {
+  const locale = useLocale()
   const postUrl = `/posts/${slug || id}`
   const authorUrl = authorUsername ? `/author/${authorUsername}` : undefined
 
@@ -149,7 +151,7 @@ export function PostCard({
             )}
             <span data-cy={`post-card-date-${id}`} className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {formatDate(publishedAt)}
+              {formatDate(publishedAt, locale)}
             </span>
             <span data-cy={`post-card-reading-time-${id}`} className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
@@ -194,7 +196,7 @@ export function PostCard({
             </h3>
           </Link>
           <div data-cy={`post-card-meta-${id}`} className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-            <span data-cy={`post-card-date-${id}`}>{formatDate(publishedAt)}</span>
+            <span data-cy={`post-card-date-${id}`}>{formatDate(publishedAt, locale)}</span>
             <span>·</span>
             <span data-cy={`post-card-reading-time-${id}`}>{readingTime} min</span>
           </div>
@@ -291,7 +293,7 @@ export function PostCard({
           <div className="flex items-center gap-3">
             <span data-cy={`post-card-date-${id}`} className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {formatDate(publishedAt)}
+              {formatDate(publishedAt, locale)}
             </span>
             <span data-cy={`post-card-reading-time-${id}`} className="flex items-center gap-1">
               <Clock className="w-3 h-3" />

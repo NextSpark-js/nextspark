@@ -27,7 +27,8 @@ import {
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { Calendar as CalendarIcon, Trash2, AlertCircle } from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
-import { format } from 'date-fns'
+import { useLocale } from 'next-intl'
+import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import type { CardData } from './KanbanCard'
 
 interface CardDetailModalProps {
@@ -52,6 +53,7 @@ export function CardDetailModal({
   onUpdate,
   onDelete,
 }: CardDetailModalProps) {
+  const locale = useLocale()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<string>('')
@@ -225,7 +227,7 @@ export function CardDetailModal({
               <div>
                 <Label className="text-muted-foreground text-xs">Due Date</Label>
                 <p className="text-sm mt-1">
-                  {card.dueDate ? format(new Date(card.dueDate), 'PPP') : 'None'}
+                  {card.dueDate ? formatLocaleDate(card.dueDate, locale, 'long') : 'None'}
                 </p>
               </div>
             }>
@@ -242,7 +244,7 @@ export function CardDetailModal({
                       data-cy="cards-modal-due-date"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, 'PPP') : 'Pick a date'}
+                      {dueDate ? formatLocaleDate(dueDate, locale, 'long') : 'Pick a date'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">

@@ -64,7 +64,7 @@ export function CRMMetricCard({
 function formatValue(value: number, format: string, currency: string, locale: string): string {
     switch (format) {
         case 'currency':
-            return formatCurrency(value, currency)
+            return formatCurrency(value, currency, locale)
         case 'compact':
             return formatCompactNumber(value)
         case 'percentage':

@@ -9,6 +9,7 @@
  * - Quick actions (write post, view blog)
  */
 
+import { useLocale } from 'next-intl'
 import { useUserProfile } from '@nextsparkjs/core/hooks/useUserProfile'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { useRouter } from 'next/navigation'
@@ -87,7 +88,7 @@ async function fetchPosts(teamId: string): Promise<{ stats: PostStats; recent: R
   }
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, locale: string): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -104,13 +105,14 @@ function formatDate(dateString: string): string {
   if (diffDays === 1) return 'Yesterday'
   if (diffDays < 7) return `${diffDays} days ago`
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric'
   })
 }
 
 export default function BlogDashboardPage() {
+  const locale = useLocale()
   const { user, isLoading: userLoading } = useUserProfile()
   const router = useRouter()
   const teamId = useTeamContext().currentTeam?.id
@@ -311,7 +313,7 @@ export default function BlogDashboardPage() {
                           )}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          Updated {formatDate(post.updatedAt)}
+                          Updated {formatDate(post.updatedAt, locale)}
                         </span>
                       </div>
                     </div>

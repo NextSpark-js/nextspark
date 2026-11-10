@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -78,6 +79,7 @@ function MarginIndicator({ price, cost }: { price: number; cost?: number }) {
 }
 
 export default function ProductsPage() {
+    const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
     const [products, setProducts] = useState<Product[]>([])
@@ -123,7 +125,7 @@ export default function ProductsPage() {
     }, [products])
 
     const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: 'USD',
             minimumFractionDigits: 0,

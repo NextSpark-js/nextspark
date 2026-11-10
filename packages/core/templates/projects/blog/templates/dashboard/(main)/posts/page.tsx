@@ -10,6 +10,7 @@
  * - Inline actions (edit, view, publish, delete)
  */
 
+import { useLocale } from 'next-intl'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -99,7 +100,7 @@ function buildHeaders(): HeadersInit {
   return headers
 }
 
-function formatDate(dateString: string | null | undefined): string {
+function formatDate(dateString: string | null | undefined, locale: string): string {
   if (!dateString) return '-'
   const date = new Date(dateString)
   const now = new Date()
@@ -118,7 +119,7 @@ function formatDate(dateString: string | null | undefined): string {
   if (diffDays === 1) return 'Yesterday'
   if (diffDays < 7) return `${diffDays}d ago`
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
@@ -152,6 +153,7 @@ function getStatusIcon(status: string) {
 }
 
 export default function PostsListPage() {
+  const locale = useLocale()
   const router = useRouter()
   const teamId = useTeamContext().currentTeam?.id
   const [posts, setPosts] = useState<Post[]>([])
@@ -615,10 +617,10 @@ export default function PostsListPage() {
                         </span>
                       </td>
                       <td className="p-3 text-sm text-muted-foreground hidden lg:table-cell">
-                        {formatDate(post.publishedAt)}
+                        {formatDate(post.publishedAt, locale)}
                       </td>
                       <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
-                        {formatDate(post.updatedAt)}
+                        {formatDate(post.updatedAt, locale)}
                       </td>
                       <td className="p-3 text-right">
                         <DropdownMenu>
@@ -744,7 +746,7 @@ export default function PostsListPage() {
 
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <span className="text-xs text-muted-foreground">
-                      {formatDate(post.updatedAt)}
+                      {formatDate(post.updatedAt, locale)}
                     </span>
                     <div className="flex gap-1">
                       <Button

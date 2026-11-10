@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useLocale } from 'next-intl'
 import React, { useState, useCallback } from 'react'
 import { StageColumn, type Stage } from './StageColumn'
 import { type Deal } from './DealCard'
@@ -39,6 +40,7 @@ export function PipelineKanban({
     onDealMove,
     onAddDeal,
 }: PipelineKanbanProps) {
+    const locale = useLocale()
     const [deals, setDeals] = useState(initialDeals)
     const [isMoving, setIsMoving] = useState(false)
 
@@ -55,7 +57,7 @@ export function PipelineKanban({
     const currency = deals[0]?.currency || 'USD'
 
     const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: currency,
             minimumFractionDigits: 0,

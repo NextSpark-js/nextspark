@@ -7,6 +7,7 @@
  * Modern Trello-like grid design.
  */
 
+import { useLocale } from 'next-intl'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -48,7 +49,7 @@ const boardColorClasses: Record<string, string> = {
   gray: 'bg-[var(--board-gray)]',
 }
 
-function formatRelativeTime(dateString: string): string {
+function formatRelativeTime(dateString: string, locale: string): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -58,10 +59,11 @@ function formatRelativeTime(dateString: string): string {
   if (diffDays === 1) return 'Yesterday'
   if (diffDays < 7) return `${diffDays} days ago`
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
 
 export default function BoardsPage() {
+  const locale = useLocale()
   const [boards, setBoards] = useState<Board[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
@@ -320,7 +322,7 @@ export default function BoardsPage() {
                     {board.updatedAt && (
                       <div className="flex items-center gap-1 ml-auto">
                         <Clock className="h-3 w-3" />
-                        <span>{formatRelativeTime(board.updatedAt)}</span>
+                        <span>{formatRelativeTime(board.updatedAt, locale)}</span>
                       </div>
                     )}
                   </div>

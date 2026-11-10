@@ -6,6 +6,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useLocale } from 'next-intl'
 import { DealCard, type Deal } from './DealCard'
 import { formatCurrency } from '@/lib/crm-utils'
 import { Inbox, Plus } from 'lucide-react'
@@ -28,6 +29,7 @@ interface StageColumnProps {
 }
 
 export function StageColumn({ stage, deals, onDealClick, onDrop, onAddDeal }: StageColumnProps) {
+    const locale = useLocale()
     const [isDragOver, setIsDragOver] = useState(false)
     const totalAmount = deals.reduce((sum, deal) => sum + deal.amount, 0)
     const avgCurrency = deals[0]?.currency || 'USD'
@@ -83,13 +85,13 @@ export function StageColumn({ stage, deals, onDealClick, onDrop, onAddDeal }: St
                     <div>
                         <p className="text-muted-foreground mb-0.5">Total Value</p>
                         <p className="font-semibold text-foreground">
-                            {formatCurrency(totalAmount, avgCurrency)}
+                            {formatCurrency(totalAmount, avgCurrency, locale)}
                         </p>
                     </div>
                     <div>
                         <p className="text-muted-foreground mb-0.5">Weighted</p>
                         <p className="font-semibold text-primary">
-                            {formatCurrency(weightedValue, avgCurrency)}
+                            {formatCurrency(weightedValue, avgCurrency, locale)}
                         </p>
                     </div>
                 </div>

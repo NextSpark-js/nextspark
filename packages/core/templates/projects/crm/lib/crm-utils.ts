@@ -11,7 +11,7 @@ import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 export function formatCurrency(
     amount: number,
     currency: string = 'USD',
-    locale: string = 'en-US'
+    locale: string = 'en'
 ): string {
     return new Intl.NumberFormat(locale, {
         style: 'currency',

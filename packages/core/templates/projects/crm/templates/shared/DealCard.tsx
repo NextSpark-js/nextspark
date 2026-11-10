@@ -73,7 +73,7 @@ export function DealCard({ deal, onClick, isDragging, rottenDays = 30 }: DealCar
             {/* Amount and Probability */}
             <div className="flex items-end justify-between mb-3">
                 <div className="font-bold text-lg text-primary" data-cy={`deal-card-amount-${deal.id}`}>
-                    {formatCurrency(deal.amount, deal.currency || 'USD')}
+                    {formatCurrency(deal.amount, deal.currency || 'USD', locale)}
                 </div>
 
                 <div className={cn('flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium', probStyle.bg, probStyle.text)}>
