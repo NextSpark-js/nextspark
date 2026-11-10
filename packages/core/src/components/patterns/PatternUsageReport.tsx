@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { usePatternUsages } from '@nextsparkjs/core/hooks/usePatternUsages'
 import { PatternUsageStats } from './PatternUsageStats'
@@ -33,6 +34,7 @@ export function PatternUsageReport({
   patternId,
   pageSize = 20,
 }: PatternUsageReportProps) {
+  const text = useTranslations('admin.patterns.usage')
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all')
   const [page, setPage] = useState(1)
 
@@ -65,12 +67,12 @@ export function PatternUsageReport({
     return (
       <Alert variant="destructive" data-cy={sel('patterns.usageReport.error')}>
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error Loading Usages</AlertTitle>
+        <AlertTitle>{text('errorTitle')}</AlertTitle>
         <AlertDescription className="flex items-center justify-between">
-          <span>{error instanceof Error ? error.message : 'Failed to load pattern usages'}</span>
+          <span>{error instanceof Error ? error.message : text('loadFailed')}</span>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Retry
+            {text('retry')}
           </Button>
         </AlertDescription>
       </Alert>
@@ -89,13 +91,13 @@ export function PatternUsageReport({
       {/* Filter Section */}
       <div className="flex items-center justify-between" data-cy={sel('patterns.usageReport.filters')}>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">Filter by type:</span>
+          <span className="text-sm text-muted-foreground">{text('filterByType')}</span>
           <Select value={entityTypeFilter} onValueChange={handleFilterChange}>
             <SelectTrigger className="w-[180px]" data-cy={sel('patterns.usageReport.filterSelect')}>
-              <SelectValue placeholder="All entity types" />
+              <SelectValue placeholder={text('allTypes')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All entity types</SelectItem>
+              <SelectItem value="all">{text('allTypes')}</SelectItem>
               {counts.map((item) => (
                 <SelectItem key={item.entityType} value={item.entityType}>
                   {item.entityType.charAt(0).toUpperCase() + item.entityType.slice(1)} ({item.count})
@@ -118,7 +120,7 @@ export function PatternUsageReport({
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
+              {text('pageOf', { page, totalPages })}
             </span>
             <Button
               variant="outline"
@@ -139,15 +141,15 @@ export function PatternUsageReport({
         isLoading={isLoading}
         emptyMessage={
           entityTypeFilter !== 'all'
-            ? `This pattern is not used in any ${entityTypeFilter}`
-            : 'This pattern is not used in any entities yet'
+            ? text('notUsedIn', { entityType: entityTypeFilter })
+            : text('notUsedYet')
         }
       />
 
       {/* Results Info */}
       {!isLoading && usages.length > 0 && (
         <p className="text-sm text-muted-foreground" data-cy={sel('patterns.usageReport.resultsInfo')}>
-          Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} usages
+          {text('showing', { from: (page - 1) * pageSize + 1, to: Math.min(page * pageSize, total), total })}
         </p>
       )}
     </div>

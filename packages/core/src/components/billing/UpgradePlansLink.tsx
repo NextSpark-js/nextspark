@@ -5,14 +5,16 @@ import { DashboardProviders } from '../../providers/DashboardProviders'
 import { usePermission } from '../../lib/permissions/hooks'
 import type { Permission } from '../../lib/permissions/types'
 import { Button } from '../ui/button'
+import { useTranslations } from 'next-intl'
 
 function PlansLink() {
   const canAccessBilling = usePermission('settings.billing' as Permission)
+  const t = useTranslations('permissions.forbidden')
   if (!canAccessBilling) return null
   return (
     <Link href="/dashboard/settings/billing" className="block mt-2">
       <Button variant="outline" size="sm" className="w-full">
-        View plans
+        {t('viewPlans')}
       </Button>
     </Link>
   )

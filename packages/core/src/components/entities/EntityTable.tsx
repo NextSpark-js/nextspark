@@ -17,6 +17,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -119,6 +120,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
   headerActions,
   showHeader = true,
 }: EntityTableProps<T>) {
+  const ui = useTranslations('entities.ui')
   const actionsText = useCommonText('a11y', 'actions', 'Actions')
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu')
   const selectAllText = useCommonText('a11y', 'selectAll', 'Select all')
@@ -224,7 +226,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     if (canUpdate) {
       actions.push({
         id: 'edit',
-        label: 'Edit',
+        label: ui('edit'),
         icon: <Edit className="h-3 w-3" />,
         onClick: (item) => {
           router.push(`${basePath || `/dashboard/${slug}`}/${item.id}/edit`)
@@ -237,7 +239,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     if (publicBasePath) {
       actions.push({
         id: 'view-public',
-        label: 'View',
+        label: ui('view'),
         icon: <ExternalLink className="h-3 w-3" />,
         onClick: (item) => {
           const url = getPublicUrlForItem(item)
@@ -249,7 +251,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     }
 
     return actions
-  }, [useDefaultActions, canUpdate, basePath, slug, router, publicBasePath, getPublicUrlForItem, isPublished])
+  }, [useDefaultActions, canUpdate, basePath, slug, router, publicBasePath, getPublicUrlForItem, isPublished, ui])
 
   const defaultDropdownActions = useMemo<DropdownAction<T>[]>(() => {
     if (!useDefaultActions) return []
@@ -258,7 +260,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
 
     actions.push({
       id: 'view',
-      label: 'View',
+      label: ui('view'),
       icon: <Eye className="h-4 w-4" />,
       onClick: (item) => {
         router.push(`${basePath || `/dashboard/${slug}`}/${item.id}`)
@@ -269,7 +271,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     if (canUpdate) {
       actions.push({
         id: 'edit',
-        label: 'Edit',
+        label: ui('edit'),
         icon: <Edit className="h-4 w-4" />,
         onClick: (item) => {
           router.push(`${basePath || `/dashboard/${slug}`}/${item.id}/edit`)
@@ -281,7 +283,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     if (canUpdate && onDuplicate) {
       actions.push({
         id: 'duplicate',
-        label: 'Duplicate',
+        label: ui('duplicate'),
         icon: <Copy className="h-4 w-4" />,
         onClick: (item) => {
           onDuplicate(item.id)
@@ -295,7 +297,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     if (publicBasePath) {
       actions.push({
         id: 'view-public',
-        label: 'View Public',
+        label: ui('viewPublic'),
         icon: <ExternalLink className="h-4 w-4" />,
         onClick: (item) => {
           const url = getPublicUrlForItem(item)
@@ -310,17 +312,17 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     if (canDelete && onDelete) {
       actions.push({
         id: 'delete',
-        label: 'Delete',
+        label: ui('delete'),
         icon: <Trash2 className="h-4 w-4" />,
         onClick: () => {}, // Handled by confirmation
         variant: 'destructive',
         separator: true,
         requiresConfirmation: true,
-        confirmationTitle: (item) =>
-          `Delete ${entityConfig.names.singular}?`,
+        confirmationTitle: () =>
+          ui('deleteTitle', { entity: entityConfig.names.singular }),
         confirmationDescription: (item) => {
           const name = getItemName?.(item) || (item as Record<string, unknown>).name || (item as Record<string, unknown>).title || item.id
-          return `This will permanently delete "${name}". This action cannot be undone.`
+          return ui('deleteDescription', { name: String(name) })
         },
         dataCySuffix: 'delete',
       })
@@ -500,21 +502,21 @@ export function EntityTable<T extends { id: string } = { id: string }>({
   // Get confirmation dialog text
   const getConfirmationTitle = useCallback(() => {
     const { action, item } = confirmDialog
-    if (!action || !item) return 'Are you sure?'
+    if (!action || !item) return ui('areYouSure')
     if (typeof action.confirmationTitle === 'function') {
       return action.confirmationTitle(item)
     }
-    return action.confirmationTitle || 'Are you sure?'
-  }, [confirmDialog])
+    return action.confirmationTitle || ui('areYouSure')
+  }, [confirmDialog, ui])
 
   const getConfirmationDescription = useCallback(() => {
     const { action, item } = confirmDialog
-    if (!action || !item) return 'This action cannot be undone.'
+    if (!action || !item) return ui('cannotUndo')
     if (typeof action.confirmationDescription === 'function') {
       return action.confirmationDescription(item)
     }
-    return action.confirmationDescription || 'This action cannot be undone.'
-  }, [confirmDialog])
+    return action.confirmationDescription || ui('cannotUndo')
+  }, [confirmDialog, ui])
 
   // Loading state
   if (loading) {
@@ -537,7 +539,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             <div className="space-y-1">
               <h2 className="text-2xl font-bold tracking-tight">{entityConfig.names.plural}</h2>
               <p className="text-muted-foreground">
-                Manage your {entityConfig.names.plural.toLowerCase()}
+                {ui('manage', { entities: entityConfig.names.plural.toLowerCase() })}
               </p>
             </div>
 
@@ -546,7 +548,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder={`Search ${entityConfig.names.plural.toLowerCase()}...`}
+                    placeholder={ui('searchEntities', { entities: entityConfig.names.plural.toLowerCase() })}
                     value={localSearchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
                     className="pl-8 w-full sm:w-[300px]"
@@ -564,7 +566,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                     data-cy={sel('entities.list.addButton', { slug })}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Add {entityConfig.names.singular}
+                    {ui('add', { entity: entityConfig.names.singular })}
                   </Link>
                 </Button>
               )}
@@ -578,7 +580,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             className="text-sm text-muted-foreground"
             data-cy={sel('entities.list.selectionCount', { slug })}
           >
-            {selectedIds.size} of {totalItems} selected
+            {ui('selectedOf', { selected: selectedIds.size, total: totalItems })}
           </div>
         )}
 
@@ -593,18 +595,18 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                   className: 'h-16 w-16 text-muted-foreground/50 mb-4',
                 })}
               <h3 className="text-lg font-medium mb-2">
-                No {entityConfig.names.plural.toLowerCase()} found
+                {ui('noneFound', { entities: entityConfig.names.plural.toLowerCase() })}
               </h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm">
                 {localSearchQuery
-                  ? `No ${entityConfig.names.plural.toLowerCase()} match your search criteria.`
-                  : `Get started by creating your first ${entityConfig.names.singular.toLowerCase()}.`}
+                  ? ui('noMatch', { entities: entityConfig.names.plural.toLowerCase() })
+                  : ui('getStarted', { entity: entityConfig.names.singular.toLowerCase() })}
               </p>
               {!localSearchQuery && canCreate && (
                 <Button className="mt-4" asChild>
                   <Link href={`${basePath || `/dashboard/${slug}`}/create`}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add {entityConfig.names.singular}
+                    {ui('add', { entity: entityConfig.names.singular })}
                   </Link>
                 </Button>
               )}
@@ -833,7 +835,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                 <div className="flex items-center gap-2">
                   {pagination?.showPageSizeSelector && (
                     <>
-                      <span className="text-sm text-muted-foreground">Rows per page:</span>
+                      <span className="text-sm text-muted-foreground">{ui('rowsPerPage')}</span>
                       <Select
                         value={String(pageSize)}
                         onValueChange={(value: string) => handlePageSizeChange(Number(value))}
@@ -866,10 +868,9 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                     className="text-sm text-muted-foreground"
                     data-cy={sel('entities.list.pagination.info', { slug })}
                   >
-                    Page {currentPage} of {totalPages}
+                    {ui('pageOf', { current: currentPage, total: totalPages })}
                     <span className="ml-2 text-xs">
-                      ({(currentPage - 1) * pageSize + 1}-
-                      {Math.min(currentPage * pageSize, totalItems)} of {totalItems})
+                      {ui('rangeOf', { from: (currentPage - 1) * pageSize + 1, to: Math.min(currentPage * pageSize, totalItems), total: totalItems })}
                     </span>
                   </span>
 
@@ -956,7 +957,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel data-cy={sel('entities.list.confirm.cancel', { slug })}>
-                Cancel
+                {ui('cancel')}
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmAction}
@@ -970,10 +971,10 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                 {isDeleting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
+                    {ui('deleting')}
                   </>
                 ) : (
-                  confirmDialog.action?.label || 'Confirm'
+                  confirmDialog.action?.label || ui('confirm')
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>

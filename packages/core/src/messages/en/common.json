@@ -256,7 +256,7 @@
       "uploaded": "Uploaded file"
     },
     "taskCard": "Task card: {title}. Status: {status}",
-    "toggleTask": "Mark task '{title}' as {action}",
+    "toggleTask": "Mark task “{title}” as {action}",
     "createdDate": "Created on {date}",
     "deleteTask": "Delete task: {title}",
     "completedTaskCard": "Completed task: {title}",

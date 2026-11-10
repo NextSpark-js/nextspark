@@ -102,6 +102,10 @@
     },
     "actions": {
       "cancel": "Cancel"
+    },
+    "errors": {
+      "updateFailed": "Failed to update profile",
+      "deleteFailed": "Failed to delete account"
     }
   },
   "password": {
@@ -366,6 +370,18 @@
         "showing": "Showing {start} to {end} of {total} invoices",
         "previous": "Previous",
         "next": "Next"
+      },
+      "document": {
+        "billTo": "Bill To",
+        "team": "Team",
+        "invoiceDate": "Invoice Date",
+        "description": "Description",
+        "item": "Item",
+        "amount": "Amount",
+        "monthlySubscription": "Monthly subscription",
+        "subtotal": "Subtotal",
+        "total": "Total",
+        "thanks": "Thank you for your business"
       }
     },
     "features": {
@@ -389,10 +405,171 @@
   },
   "plans": {
     "title": "Pricing Plans",
-    "description": "Choose the plan that best fits your needs"
+    "description": "Choose the plan that best fits your needs",
+    "changed": "Plan changed successfully",
+    "changeFailed": "Failed to process plan change",
+    "checkoutFailed": "Failed to start checkout"
   },
   "pages": {
     "plans": "Plans",
     "plansDescription": "Compare plans and upgrade your subscription"
+  },
+  "apiKeys": {
+    "title": "API Keys",
+    "description": "Manage API keys for external integration",
+    "createButton": "Create API Key",
+    "createFirst": "Create first API Key",
+    "emptyTitle": "No API Keys",
+    "emptyDescription": "You don't have any API keys yet. Create one to start using the external API.",
+    "restrictedTitle": "Restricted access",
+    "restrictedDescription": "Only administrators can manage API keys. Contact an administrator if you need access to this feature.",
+    "loadError": "Error loading API keys: {message}",
+    "fetchError": "Failed to fetch API keys",
+    "revokeError": "Failed to revoke API key",
+    "updateError": "Failed to update API key",
+    "revoked": "API key \"{name}\" has been revoked",
+    "revokeFailed": "Failed to revoke API key: {message}",
+    "activated": "API key \"{name}\" has been activated",
+    "deactivated": "API key \"{name}\" has been deactivated",
+    "updateFailed": "Failed to update API key: {message}",
+    "copied": "Copied to clipboard",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expired"
+    },
+    "menu": {
+      "viewDetails": "View details",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "revoke": "Revoke"
+    },
+    "permissions": "Permissions:",
+    "stats": {
+      "totalRequests": "Total requests",
+      "last24h": "Last 24h",
+      "avgTime": "Avg time"
+    },
+    "notAvailable": "N/A",
+    "created": "Created: {date}",
+    "lastUsed": "Last used: {date}",
+    "expires": "Expires: {date}",
+    "details": {
+      "fetchError": "Failed to fetch API key details",
+      "title": "API Key Details",
+      "description": "Usage statistics and configuration",
+      "basicInfo": "Basic information",
+      "name": "Name:",
+      "status": "Status:",
+      "usageStats": "Usage statistics",
+      "totalRequests": "Total requests:",
+      "last24h": "Last 24 hours:",
+      "last7d": "Last 7 days:",
+      "last30d": "Last 30 days:",
+      "avgResponse": "Avg response time:",
+      "successRate": "Success rate:"
+    },
+    "display": {
+      "copiedToast": "API key copied to clipboard",
+      "copyFailed": "Failed to copy to clipboard",
+      "created": "API Key created successfully",
+      "important": "Important!",
+      "yourKey": "Your new API Key:",
+      "copied": "Copied!",
+      "copy": "Copy",
+      "howToUse": "How to use your API Key:",
+      "stepHeader": "1. Include the API key in the Authorization header:",
+      "stepCurl": "2. Example with curl:",
+      "stepJavaScript": "3. Example with JavaScript:",
+      "securityTips": "Security tips:",
+      "tipShare": "Never share your API key publicly",
+      "tipStore": "Store it as an environment variable in your application",
+      "tipRevoke": "Revoke the key immediately if you think it's compromised",
+      "tipHttps": "Always use HTTPS when making requests to the API",
+      "limits": "API limits:",
+      "limitRate": "1,000 requests per minute",
+      "limitHeaders": "Rate limiting headers included in responses",
+      "limitDocs": "Full documentation available at /docs",
+      "keyCopied": "API Key Copied!",
+      "copyKey": "Copy API Key",
+      "gotIt": "Got it"
+    },
+    "create": {
+      "createFailed": "Failed to create API key",
+      "created": "API key created successfully",
+      "createFailedWithMessage": "Failed to create API key: {message}",
+      "nameRequired": "Please enter a name for the API key",
+      "scopeRequired": "Please select at least one scope",
+      "title": "Create new API Key",
+      "description": "Create an API key to securely access the external endpoints.",
+      "nameLabel": "API Key Name",
+      "namePlaceholder": "e.g. My mobile app",
+      "nameHelp": "A descriptive name to identify this API key",
+      "expiration": "Expiration",
+      "expiry": {
+        "never": "Never expires",
+        "days30": "30 days",
+        "days90": "90 days",
+        "year1": "1 year",
+        "custom": "Custom date"
+      },
+      "permissions": "Permissions (Scopes)",
+      "permissionsHelp": "Choose the permissions this API key will have",
+      "permissionsNotice": "You can only assign permissions that your current role allows. Permissions cannot be changed after creating the API key.",
+      "selectedPermissions": "Selected permissions ({count})",
+      "important": "Important:",
+      "importantNotice": "The API key will only be shown once after creation. Store it somewhere safe, as you won't be able to see it again.",
+      "cancel": "Cancel",
+      "creating": "Creating...",
+      "submit": "Create API Key",
+      "appScopeName": "Application",
+      "appScopeDescription": "Scopes this application defines for its own routes"
+    },
+    "scopeLabels": {
+      "users:read": "Read user information",
+      "users:write": "Create and update users",
+      "users:delete": "Delete users",
+      "tasks:read": "Read tasks",
+      "tasks:write": "Create and update tasks",
+      "tasks:delete": "Delete tasks",
+      "media:read": "Read file and media information",
+      "media:write": "Upload and update files",
+      "media:delete": "Delete files",
+      "teams:read": "Read teams, members and invitations",
+      "teams:write": "Create and update teams, members and invitations",
+      "teams:delete": "Delete teams",
+      "billing:read": "Read subscriptions, invoices and usage",
+      "billing:write": "Manage subscriptions, checkout, plan changes and usage",
+      "admin:api-keys": "Manage API keys",
+      "admin:users": "Full user administration",
+      "admin:devtools": "Access to DevTools APIs (registries, testing, scheduled actions)",
+      "*": "Full access (superadmin or developer only)"
+    },
+    "scopeCategories": {
+      "users": {
+        "name": "Users",
+        "description": "System user management"
+      },
+      "tasks": {
+        "name": "Tasks",
+        "description": "Task and TODO management"
+      },
+      "teams": {
+        "name": "Teams",
+        "description": "Teams, members and invitations"
+      },
+      "billing": {
+        "name": "Billing",
+        "description": "Subscriptions, invoices, usage and plans"
+      },
+      "admin": {
+        "name": "Administration",
+        "description": "Administrative functions"
+      },
+      "system": {
+        "name": "System",
+        "description": "Full system access"
+      }
+    }
   }
 }

@@ -18,6 +18,7 @@ interface SidebarProps {
 
 export function Sidebar({ className, entities }: SidebarProps) {
   const t = useTranslations('common')
+  const tDashboard = useTranslations('dashboard')
   const { isCollapsed } = useSidebar()
   const appName = APP_NAME
   const [statusMessage, setStatusMessage] = useState('')
@@ -104,7 +105,7 @@ export function Sidebar({ className, entities }: SidebarProps) {
                   id="nav-heading"
                   className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3"
                 >
-                  Navigation
+                  {tDashboard('sidebar.navigationHeading')}
                 </h3>
               )}
               <div>

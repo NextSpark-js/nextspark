@@ -5,6 +5,7 @@ import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 interface NoPermissionProps {
   /** Entity name for the message */
@@ -36,29 +37,11 @@ export function NoPermission({
   redirectPath = '/dashboard',
 }: NoPermissionProps) {
   const router = useRouter()
+  const t = useTranslations('entities.denied')
 
-  const getActionText = () => {
-    switch (action) {
-      case 'list':
-        return 'view the list of'
-      case 'read':
-        return 'view the details of'
-      case 'create':
-        return 'create'
-      case 'update':
-        return 'edit'
-      case 'delete':
-        return 'delete'
-      default:
-        return 'access'
-    }
-  }
-
-  const defaultTitle = title || 'Access denied'
+  const defaultTitle = title || t('title')
   const defaultDescription = description || (
-    entityName
-      ? `You don't have permission to ${getActionText()} ${entityName}. Contact your administrator if you need access.`
-      : "You don't have permission to access this section. Contact your administrator if you need access."
+    entityName ? t(action, { entity: entityName }) : t('section')
   )
 
   return (
@@ -85,14 +68,14 @@ export function NoPermission({
                 className="w-full"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Go back
+                {t('back')}
               </Button>
             )}
             {showHomeButton && (
               <Button asChild className="w-full">
                 <Link href={redirectPath}>
                   <Home className="mr-2 h-4 w-4" />
-                  Go to Dashboard
+                  {t('dashboard')}
                 </Link>
               </Button>
             )}

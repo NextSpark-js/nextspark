@@ -256,7 +256,7 @@
       "uploaded": "File caricato"
     },
     "taskCard": "Scheda task: {title}. Stato: {status}",
-    "toggleTask": "Segna task '{title}' come {action}",
+    "toggleTask": "Segna task “{title}” come {action}",
     "createdDate": "Creato il {date}",
     "deleteTask": "Elimina task: {title}",
     "completedTaskCard": "Task completato: {title}",

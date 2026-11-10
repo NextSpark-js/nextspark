@@ -30,17 +30,17 @@ function PlansPage() {
         window.location.href = data.data.url
       } else if (data.success && data.data?.changed) {
         // Plan changed via proration (existing subscription)
-        toast.success('Plan changed successfully')
+        toast.success(t('plans.changed'))
         window.location.reload()
       } else {
-        toast.error(data.error || 'Failed to process plan change')
+        toast.error(data.error || t('plans.changeFailed'))
       }
     } catch {
-      toast.error('Failed to start checkout')
+      toast.error(t('plans.checkoutFailed'))
     } finally {
       setLoading(null)
     }
-  }, [])
+  }, [t])
 
   return (
     <div className="max-w-6xl" data-cy="plans-settings-main">

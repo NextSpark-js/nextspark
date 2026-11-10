@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Alert, AlertDescription } from '../../ui/alert';
@@ -17,6 +18,7 @@ interface ApiKeyDisplayProps {
 }
 
 export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDisplayProps) {
+  const t = useTranslations('settings.apiKeys.display');
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -24,15 +26,24 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
     try {
       await navigator.clipboard.writeText(apiKey);
       setCopied(true);
-      toast.success('API key copied to clipboard');
+      toast.success(t('copiedToast'));
       
       // Reset copied state after 3 seconds
       setTimeout(() => setCopied(false), 3000);
     } catch {
-      toast.error('Failed to copy to clipboard');
+      toast.error(t('copyFailed'));
     }
   };
 
+  const shownKey = isVisible ? apiKey : 'YOUR_API_KEY';
+  const curlExample = `curl -H "Authorization: Bearer ${shownKey}" \\
+     https://yourapp.com/api/v1/users`;
+  const fetchExample = `fetch('/api/v1/users', {
+  headers: {
+    'Authorization': 'Bearer ${shownKey}',
+    'Content-Type': 'application/json'
+  }
+})`;
   const maskedKey = apiKey.substring(0, 16) + '••••••••••••••••••••••••••••••••••••••••••••••••••••';
 
   return (
@@ -42,7 +53,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
             <CardTitle className="text-green-800">
-              API Key created successfully
+              {t('created')}
             </CardTitle>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -62,7 +73,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Important!</strong> {warning}
+              <strong>{t('important')}</strong> {warning}
             </AlertDescription>
           </Alert>
         )}
@@ -70,7 +81,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
         {/* API Key Display */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-green-800">
-            Your new API Key:
+            {t('yourKey')}
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -101,7 +112,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
               data-cy={sel('settings.apiKeys.newKeyDisplay.copyButton')}
             >
               <Copy className="h-4 w-4 mr-2" />
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? t('copied') : t('copy')}
             </Button>
           </div>
         </div>
@@ -109,34 +120,28 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
         {/* Usage Instructions */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-green-800">
-            How to use your API Key:
+            {t('howToUse')}
           </h4>
 
           <div className="space-y-2 text-sm">
             <div>
-              <strong>1. Include the API key in the Authorization header:</strong>
+              <strong>{t('stepHeader')}</strong>
               <div className="mt-1 p-2 bg-gray-100 rounded font-mono text-xs overflow-x-auto">
                 Authorization: Bearer {isVisible ? apiKey : 'sk_live_••••••••••••••••••••••••••••••••••••••••••••••••••••'}
               </div>
             </div>
 
             <div>
-              <strong>2. Example with curl:</strong>
+              <strong>{t('stepCurl')}</strong>
               <div className="mt-1 p-2 bg-gray-100 rounded font-mono text-xs overflow-x-auto">
-                {`curl -H "Authorization: Bearer ${isVisible ? apiKey : 'YOUR_API_KEY'}" \\
-     https://yourapp.com/api/v1/users`}
+                {curlExample}
               </div>
             </div>
 
             <div>
-              <strong>3. Example with JavaScript:</strong>
+              <strong>{t('stepJavaScript')}</strong>
               <div className="mt-1 p-2 bg-gray-100 rounded font-mono text-xs overflow-x-auto">
-                {`fetch('/api/v1/users', {
-  headers: {
-    'Authorization': 'Bearer ${isVisible ? apiKey : 'YOUR_API_KEY'}',
-    'Content-Type': 'application/json'
-  }
-})`}
+                {fetchExample}
               </div>
             </div>
           </div>
@@ -145,25 +150,25 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
         {/* Security Tips */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-green-800">
-            Security tips:
+            {t('securityTips')}
           </h4>
           <ul className="text-sm text-green-700 space-y-1 list-disc list-inside">
-            <li>Never share your API key publicly</li>
-            <li>Store it as an environment variable in your application</li>
-            <li>Revoke the key immediately if you think it's compromised</li>
-            <li>Always use HTTPS when making requests to the API</li>
+            <li>{t('tipShare')}</li>
+            <li>{t('tipStore')}</li>
+            <li>{t('tipRevoke')}</li>
+            <li>{t('tipHttps')}</li>
           </ul>
         </div>
 
         {/* Rate Limits Info */}
         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
           <h4 className="text-sm font-medium text-blue-800 mb-1">
-            API limits:
+            {t('limits')}
           </h4>
           <div className="text-sm text-blue-700 space-y-1">
-            <div>• 1,000 requests per minute</div>
-            <div>• Rate limiting headers included in responses</div>
-            <div>• Full documentation available at /docs</div>
+            <div>• {t('limitRate')}</div>
+            <div>• {t('limitHeaders')}</div>
+            <div>• {t('limitDocs')}</div>
           </div>
         </div>
 
@@ -175,10 +180,10 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
             className="flex-1"
           >
             <Copy className="h-4 w-4 mr-2" />
-            {copied ? 'API Key Copied!' : 'Copy API Key'}
+            {copied ? t('keyCopied') : t('copyKey')}
           </Button>
           <Button onClick={onClose} variant="outline">
-            Got it
+            {t('gotIt')}
           </Button>
         </div>
       </CardContent>

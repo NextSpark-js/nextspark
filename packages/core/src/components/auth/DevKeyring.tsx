@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState, useCallback, useMemo } from 'react'
 import { Key, ChevronDown, User, Shield, Crown, ShieldCheck, UserCircle } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
@@ -133,6 +134,7 @@ function UserRoleBadges({ teamRoles }: { teamRoles: string | undefined }) {
  * SECURITY: Only renders when NODE_ENV !== 'production'
  */
 export function DevKeyring({ config }: DevKeyringProps) {
+  const text = useTranslations('auth.devKeyring')
   const [isOpen, setIsOpen] = useState(false)
 
   // SECURITY: Never render in production
@@ -207,7 +209,7 @@ export function DevKeyring({ config }: DevKeyringProps) {
             data-cy={sel('auth.devKeyring.trigger')}
           >
             <Key className="h-3 w-3" />
-            <span>Dev Keyring</span>
+            <span>{text('trigger')}</span>
             <ChevronDown className="h-3 w-3" />
           </Button>
         </PopoverTrigger>
@@ -221,13 +223,13 @@ export function DevKeyring({ config }: DevKeyringProps) {
           <div className="px-3 py-2 border-b">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-amber-500" />
-              <span className="text-sm font-medium">Test Credentials</span>
+              <span className="text-sm font-medium">{text('credentials')}</span>
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                DEV ONLY
+                {text('devOnly')}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Select a user to auto-fill the login form
+              {text('hint')}
             </p>
           </div>
 
@@ -261,8 +263,8 @@ export function DevKeyring({ config }: DevKeyringProps) {
 
           {/* Footer */}
           <div className="px-3 py-2 border-t text-[10px] text-muted-foreground text-center space-y-0.5">
-            <div>Core: <code className="bg-muted px-1 rounded">Pandora1234</code></div>
-            <div>Demo: <code className="bg-muted px-1 rounded">Test1234</code></div>
+            <div>{text('core')} <code className="bg-muted px-1 rounded">Pandora1234</code></div>
+            <div>{text('demo')} <code className="bg-muted px-1 rounded">Test1234</code></div>
           </div>
         </PopoverContent>
       </Popover>

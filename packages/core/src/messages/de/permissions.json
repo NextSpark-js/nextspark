@@ -25,5 +25,13 @@
       "title": "Betrachter",
       "description": "Nur Lesezugriff auf Teaminhalte"
     }
+  },
+  "forbidden": {
+    "defaultReason": "Sie haben keine Berechtigung, auf diese Ressource zuzugreifen",
+    "title": "⚠️ Hoppla, dazu haben Sie keine Berechtigung",
+    "upgradeRequired": "Für diese Funktion ist ein Upgrade Ihres aktuellen Tarifs erforderlich.",
+    "back": "Zurück",
+    "dashboard": "Dashboard",
+    "viewPlans": "Tarife ansehen"
   }
 }

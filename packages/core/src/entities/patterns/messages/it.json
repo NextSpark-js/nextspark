@@ -71,6 +71,7 @@
     "title": "Inserisci Modello",
     "search": "Cerca modelli...",
     "noResults": "Nessun modello trovato",
-    "selectPattern": "Seleziona un modello da inserire"
+    "selectPattern": "Seleziona un modello da inserire",
+    "loading": "Caricamento dei modelli..."
   }
 }

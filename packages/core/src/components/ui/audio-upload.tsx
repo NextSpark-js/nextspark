@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import * as React from "react"
 import { X, Play, Pause, Download, Music } from "lucide-react"
 import { Button } from './button'
@@ -43,6 +44,7 @@ export function AudioUpload({
   acceptedTypes,
   showPlayer = true,
 }: AudioUploadProps) {
+  const text = useTranslations('entities.audioUpload')
   const [isDragOver, setIsDragOver] = React.useState(false)
   const [playingId, setPlayingId] = React.useState<string | null>(null)
   const [progress, setProgress] = React.useState<Record<string, number>>({})
@@ -253,15 +255,15 @@ export function AudioUpload({
       >
         <Music className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          Drag audio files here or{" "}
-          <span className="font-medium text-primary">click to select</span>
+          {text('dragHere')}{" "}
+          <span className="font-medium text-primary">{text('clickToSelect')}</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {maxAudios > 1 ? `Up to ${maxAudios} audio files` : "One audio file"}
-          {maxSize && `, maximum ${maxSize}MB each`}
+          {maxAudios > 1 ? text('upTo', { max: maxAudios }) : text('one')}
+          {maxSize && `, ${text('maxSizeEach', { size: maxSize })}`}
         </p>
         <p className="text-xs text-muted-foreground">
-          Formats: {acceptedFormats.join(", ")}
+          {text('formats')} {acceptedFormats.join(", ")}
         </p>
         
         <input

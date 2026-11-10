@@ -1,4 +1,7 @@
+'use client'
+
 import { Card, CardContent, CardHeader } from '../ui/card'
+import { useTranslations } from 'next-intl'
 import { Skeleton } from '../ui/skeleton'
 
 interface SettingsPageSkeletonProps {
@@ -77,10 +80,13 @@ export function SettingsPageSkeleton({
 
 // Skeleton for the notifications page
 export function NotificationsPageSkeleton() {
+  const t = useTranslations('settings.notifications')
+  const title = t('title')
+  const description = t('description')
   return (
     <SettingsPageSkeleton
-      title="Notifications"
-      description="Choose how and when you want to be notified."
+      title={title}
+      description={description}
       sectionsCount={3}
       itemsPerSection={3}
     />
@@ -89,15 +95,18 @@ export function NotificationsPageSkeleton() {
 
 // Skeleton for the security page
 export function SecurityPageSkeleton() {
+  const t = useTranslations('settings.security')
+  const title = t('title')
+  const description = t('description')
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       {/* Page Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Security</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
             <p className="text-muted-foreground">
-              Keep your account safe with these security settings.
+              {description}
             </p>
           </div>
           <Skeleton className="h-10 w-32" /> {/* Save button skeleton */}

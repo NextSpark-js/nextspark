@@ -1,13 +1,13 @@
 {
   "entity": {
-    "singular": "Publicacion",
+    "singular": "Publicación",
     "plural": "Publicaciones"
   },
   "fields": {
     "title": {
-      "label": "Titulo",
-      "placeholder": "Ingresa el titulo...",
-      "description": "Titulo de la publicacion"
+      "label": "Título",
+      "placeholder": "Ingresa el título...",
+      "description": "Título de la publicación"
     },
     "slug": {
       "label": "Slug",
@@ -16,7 +16,7 @@
     },
     "status": {
       "label": "Estado",
-      "description": "Estado de publicacion",
+      "description": "Estado de publicación",
       "options": {
         "draft": "Borrador",
         "published": "Publicado",
@@ -26,30 +26,30 @@
     },
     "excerpt": {
       "label": "Extracto",
-      "placeholder": "Breve descripcion...",
+      "placeholder": "Breve descripción...",
       "description": "Resumen corto mostrado en listados"
     },
     "featuredImage": {
       "label": "Imagen Destacada",
-      "description": "Imagen principal de la publicacion"
+      "description": "Imagen principal de la publicación"
     },
     "categories": {
-      "label": "Categorias",
-      "placeholder": "Selecciona categorias...",
-      "description": "Categorias de la publicacion"
+      "label": "Categorías",
+      "placeholder": "Selecciona categorías...",
+      "description": "Categorías de la publicación"
     }
   },
   "actions": {
-    "create": "Crear Publicacion",
-    "edit": "Editar Publicacion",
-    "delete": "Eliminar Publicacion",
+    "create": "Crear Publicación",
+    "edit": "Editar Publicación",
+    "delete": "Eliminar Publicación",
     "publish": "Publicar",
     "unpublish": "Despublicar"
   },
   "messages": {
-    "created": "Publicacion creada exitosamente",
-    "updated": "Publicacion actualizada exitosamente",
-    "deleted": "Publicacion eliminada exitosamente",
-    "published": "Publicacion publicada exitosamente"
+    "created": "Publicación creada exitosamente",
+    "updated": "Publicación actualizada exitosamente",
+    "deleted": "Publicación eliminada exitosamente",
+    "published": "Publicación publicada exitosamente"
   }
 }

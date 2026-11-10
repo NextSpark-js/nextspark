@@ -17,6 +17,7 @@ import {
 
 import { cn } from '../../lib/utils'
 import { Button, buttonVariants } from './button'
+import { useActiveLocale } from '../../lib/i18n/common-text'
 
 function Calendar({
   className,
@@ -31,6 +32,7 @@ function Calendar({
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
+  const locale = useActiveLocale()
 
   return (
     <DayPicker
@@ -44,7 +46,11 @@ function Calendar({
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+          date.toLocaleString(locale, { month: "short" }),
+        formatCaption: (date) =>
+          date.toLocaleString(locale, { month: "long", year: "numeric" }),
+        formatWeekdayName: (date) =>
+          date.toLocaleString(locale, { weekday: "short" }),
         ...formatters,
       }}
       classNames={{

@@ -1008,5 +1008,14 @@
       "upgradeSuccessful": "Upgrade Successful",
       "yourSubscriptionHasBeen": "Your subscription has been upgraded to Pro. Enjoy the new features!"
     }
+  },
+  "guard": {
+    "title": "Developer Access Only",
+    "description": "You need developer privileges to access this area.",
+    "body": "This section is restricted to platform developers only. If you believe this is an error, please contact the development team.",
+    "sessionNotFound": "Session not found. Please sign in again.",
+    "signIn": "Sign In",
+    "goBack": "Go Back",
+    "dashboard": "Dashboard"
   }
 }

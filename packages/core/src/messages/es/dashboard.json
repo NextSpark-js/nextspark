@@ -37,5 +37,16 @@
     "basic": "básico",
     "solo": "individual",
     "low": "bajo"
+  },
+  "sidebar": {
+    "navigationHeading": "Navegación"
+  },
+  "mobileNav": {
+    "superAdminPanel": "Panel de superadministrador"
+  },
+  "meta": {
+    "title": "Panel",
+    "listDescription": "Administra las entidades de tu panel",
+    "detailDescription": "Ver los detalles de la entidad"
   }
 }

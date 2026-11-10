@@ -256,7 +256,7 @@
       "uploaded": "Arquivo enviado"
     },
     "taskCard": "Card de tarefa: {title}. Status: {status}",
-    "toggleTask": "Marcar tarefa '{title}' como {action}",
+    "toggleTask": "Marcar tarefa “{title}” como {action}",
     "createdDate": "Criada em {date}",
     "deleteTask": "Excluir tarefa: {title}",
     "completedTaskCard": "Tarefa concluída: {title}",

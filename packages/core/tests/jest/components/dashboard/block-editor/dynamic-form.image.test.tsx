@@ -10,7 +10,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { DynamicForm } from '@/core/components/dashboard/block-editor/dynamic-form'
 import { resolveMediaUrl, type FieldDefinition } from '@/core/types/blocks'
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+const mockT = (key: string) => key
+jest.mock('next-intl', () => ({ useTranslations: () => mockT, useLocale: () => 'en' }))
 jest.mock('@/core/lib/test', () => ({ sel: (path: string) => path }))
 // Shows what the field was given and lets the test pick, replace or clear an upload
 jest.mock('@/core/components/ui/image-upload', () => ({

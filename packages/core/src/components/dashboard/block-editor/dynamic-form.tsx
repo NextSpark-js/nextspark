@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
 import { Input } from '../../ui/input'
 import { Textarea } from '../../ui/textarea'
@@ -25,7 +25,6 @@ import { RadioGroup, RadioGroupItem } from '../../ui/radio-group'
 import { Calendar } from '../../ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { Button } from '../../ui/button'
-import { format } from 'date-fns'
 import { ArrayField } from './array-field'
 import { resolveFieldRenderer } from './editor-extensions'
 import { fetchWithTeam } from '../../../lib/api/entities'
@@ -341,6 +340,7 @@ function RelationshipField({
  */
 export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: DynamicFormProps) {
   const t = useTranslations('admin.blockEditor.form')
+  const locale = useLocale()
   const [formValues, setFormValues] = useState(values)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
@@ -642,7 +642,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange, flushRef }: Dy
                 data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(String(value)), "PPP") : t('pickDate')}
+                {value ? new Date(String(value)).toLocaleDateString(locale, { dateStyle: 'long' }) : t('pickDate')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">

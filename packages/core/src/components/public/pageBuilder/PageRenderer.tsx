@@ -16,17 +16,18 @@ import type { BlockInstance } from '../../../types/blocks'
 import { privateReadsEnabled, signBlocksMedia } from '../../../lib/media/storage/display'
 import { normalizeBlockProps } from '../../../lib/blocks/loader'
 import { getBlockComponentSSR } from '../../../lib/blocks/loader.server'
+import { getPublicTranslations } from '../../../lib/i18n/public-translations'
 
 // Error display for missing blocks
-function BlockError({ blockSlug }: { blockSlug: string }) {
+function BlockError({ blockSlug, text }: { blockSlug: string; text: { failed: string; hint: string } }) {
   return (
     <div className="w-full py-12 px-4 bg-destructive/10 border border-destructive/20 rounded">
       <div className="max-w-7xl mx-auto text-center">
         <p className="text-destructive">
-          Failed to load block: <code className="font-mono">{blockSlug}</code>
+          {text.failed} <code className="font-mono">{blockSlug}</code>
         </p>
         <p className="text-sm text-muted-foreground mt-2">
-          This block may not be available or there was an error rendering it.
+          {text.hint}
         </p>
       </div>
     </div>
@@ -34,12 +35,12 @@ function BlockError({ blockSlug }: { blockSlug: string }) {
 }
 
 // Synchronous block renderer — no Suspense, direct component rendering
-function BlockRenderer({ block }: { block: BlockInstance }) {
+function BlockRenderer({ block, errorText }: { block: BlockInstance; errorText: { failed: string; hint: string } }) {
   const BlockComponent = getBlockComponentSSR(block.blockSlug)
 
   if (!BlockComponent) {
     console.warn(`Block component not found for slug: ${block.blockSlug}`)
-    return <BlockError blockSlug={block.blockSlug} />
+    return <BlockError blockSlug={block.blockSlug} text={errorText} />
   }
 
   const normalizedProps = normalizeBlockProps(block.props)
@@ -63,6 +64,7 @@ export interface PageRendererProps {
 }
 
 export async function PageRenderer({ page }: PageRendererProps) {
+  const t = await getPublicTranslations('public.pageBuilder')
   // Ensure blocks is an array
   let blocks = Array.isArray(page.blocks) ? page.blocks : []
 
@@ -79,7 +81,7 @@ export async function PageRenderer({ page }: PageRendererProps) {
         <div className="text-center max-w-md mx-auto px-4">
           <h1 className="text-2xl font-bold mb-2">{page.title}</h1>
           <p className="text-muted-foreground">
-            This page does not have any content yet.
+            {t('emptyPage')}
           </p>
         </div>
       </div>
@@ -95,7 +97,7 @@ export async function PageRenderer({ page }: PageRendererProps) {
           data-block-id={block.id}
           data-block-slug={block.blockSlug}
         >
-          <BlockRenderer block={block} />
+          <BlockRenderer block={block} errorText={{ failed: t('blockFailed'), hint: t('blockHint') }} />
         </div>
       ))}
     </div>

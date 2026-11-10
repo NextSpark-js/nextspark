@@ -7,6 +7,7 @@ import { cn } from '../../lib/utils'
 import { useTeam } from '../../hooks/useTeam'
 import { withBasePath } from '../../lib/base-path'
 import { TEAM_ID_HEADER } from '../../lib/api/client-headers'
+import { useMessageText, useSectionText } from '../../lib/i18n/common-text'
 
 interface UserDisplayProps {
   value: string | null | undefined
@@ -38,7 +39,9 @@ export function UserDisplay({
 }: UserDisplayProps) {
   const [userData, setUserData] = React.useState<UserData | null>(null)
   const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
+  const text = useSectionText('entities.userDisplay', { user: 'User' })
+  const loadingText = useMessageText('common.status.loading', 'Loading...')
+  const [error, setError] = React.useState(false)
 
   // Get team from context if not provided via props
   const { teamId: contextTeamId } = useTeam()
@@ -64,7 +67,7 @@ export function UserDisplay({
 
     const fetchUser = async () => {
       setLoading(true)
-      setError(null)
+      setError(false)
 
       try {
         const response = await fetch(withBasePath(`/api/v1/teams/${effectiveTeamId}/members`), {
@@ -98,15 +101,15 @@ export function UserDisplay({
               loadedRef.current = { userId: value, teamId: effectiveTeamId }
             } else {
               // User not found in team members - show ID as fallback
-              setError('User not found')
+              setError(true)
             }
           }
         } else {
-          setError('Error loading user')
+          setError(true)
         }
       } catch (err) {
         console.error('[UserDisplay] Error fetching user:', err)
-        setError('Error loading user')
+        setError(true)
       } finally {
         setLoading(false)
       }
@@ -122,7 +125,7 @@ export function UserDisplay({
 
   // Loading state
   if (loading) {
-    return <span className={cn("text-muted-foreground", className)}>Loading...</span>
+    return <span className={cn("text-muted-foreground", className)}>{loadingText}</span>
   }
 
   // Error state - show user ID as fallback
@@ -153,7 +156,7 @@ export function UserDisplay({
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Avatar className="h-6 w-6">
-        <AvatarImage src={userData.image || undefined} alt={userData.name || 'User'} />
+        <AvatarImage src={userData.image || undefined} alt={userData.name || text.user} />
         <AvatarFallback className="text-xs">
           {getInitials(userData.name)}
         </AvatarFallback>

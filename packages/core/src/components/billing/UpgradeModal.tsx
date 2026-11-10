@@ -45,7 +45,7 @@ export function UpgradeModal({ open, onOpenChange, onSelectPlan }: UpgradeModalP
             {t('upgrade')}
           </DialogTitle>
           <DialogDescription data-cy="upgrade-modal-description">
-            {t('upgradeDescription') || 'Choose the plan that best fits your needs'}
+            {t('upgradeDescription')}
           </DialogDescription>
         </DialogHeader>
 

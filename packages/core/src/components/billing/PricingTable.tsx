@@ -181,7 +181,7 @@ export function PricingTable({ onSelectPlan, className }: PricingTableProps) {
                 {/* Features */}
                 <div className="space-y-3 mb-6" data-cy="pricing-plan-features">
                   <h4 className="font-semibold text-sm text-muted-foreground">
-                    {t('features.title') || 'Features'}
+                    {t('features.title')}
                   </h4>
                   <ul className="space-y-2">
                     {Object.entries(BILLING_REGISTRY.features).map(([slug, feature]) => {
@@ -205,7 +205,7 @@ export function PricingTable({ onSelectPlan, className }: PricingTableProps) {
                 {/* Limits */}
                 <div className="space-y-3 mb-6" data-cy="pricing-plan-limits">
                   <h4 className="font-semibold text-sm text-muted-foreground">
-                    {t('limits.title') || 'Limits'}
+                    {t('limits.title')}
                   </h4>
                   <ul className="space-y-2">
                     {Object.entries(BILLING_REGISTRY.limits).map(([slug, limit]) => {

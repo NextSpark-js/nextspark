@@ -47,19 +47,21 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: DocsPageProps): Promise<Metadata> {
   const resolvedParams = await params
   const { section: sectionSlug, page: pageSlug } = resolvedParams
+  const notFoundTitle = (await getPublicTranslations('docs.notFound'))('title')
 
   const section = DOCS_REGISTRY.public.find(s => s.slug === sectionSlug)
-  if (!section) return { title: 'Page Not Found' }
+  if (!section) return { title: notFoundTitle }
 
   const page = section.pages.find(p => p.slug === pageSlug)
-  if (!page) return { title: 'Page Not Found' }
+  if (!page) return { title: notFoundTitle }
 
   const filePath = path.join(process.cwd(), page.path)
   const { metadata } = await parseMarkdownFile(filePath)
+  const tIndex = await getPublicTranslations('docs.index')
 
   return pageMetadata({
-    title: `${metadata.title} | Documentation`,
-    description: metadata.description || `Documentation for ${metadata.title}`,
+    title: tIndex('pageTitle', { title: metadata.title }),
+    description: metadata.description || tIndex('pageDescription', { title: metadata.title }),
     path: `/docs/${sectionSlug}/${pageSlug}`
   })
 }

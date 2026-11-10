@@ -140,9 +140,10 @@
     "past_due": "Zahlung überfällig",
     "canceled": "Gekündigt",
     "expired": "Abgelaufen",
-    "trialEnds": "Testphase endet {date}",
+    "trialEnds": "Testzeitraum endet am {date}",
     "renewsOn": "Verlängert sich am {date}",
-    "cancelsOn": "Wird gekündigt am {date}"
+    "cancelsOn": "Wird gekündigt am {date}",
+    "nextBilling": "Nächste Abrechnung: {date}"
   },
 
   "invoices": {

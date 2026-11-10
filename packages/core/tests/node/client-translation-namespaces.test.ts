@@ -38,6 +38,10 @@ function renderedGroups(file: string): TranslationGroup[] {
   if (relative.startsWith('apps/dev/src/app/devtools/')) return ['devtools']
   if (relative.startsWith('apps/dev/src/app/(public)/') || relative.startsWith('apps/dev/templates/(public)/')) return ['public']
   if (relative.includes('/components/app/layouts/')) return ['public']
+  // the public entity views render in the public routes; the 403 page in the root layout; the entity error page in the dashboard
+  if (relative.includes('/components/public/')) return ['public']
+  if (relative.startsWith('apps/dev/src/app/403/')) return ['root']
+  if (relative.endsWith('/_internal/entity-error.tsx')) return ['dashboard']
   if (relative.includes('/components/app/misc/ThemeToggle')) return ['dashboard']
   if (relative.includes('/components/auth/')) return ['auth']
   // the layout of the superadmin area (its mobile header reads the namespace on the server)
@@ -55,8 +59,8 @@ function renderedGroups(file: string): TranslationGroup[] {
   if (relative.includes('/components/dashboard/') || relative.includes('/components/billing/') ||
       relative.includes('/components/entities/') || relative.includes('/components/media/') ||
       relative.includes('/components/patterns/') || relative.includes('/components/permissions/') ||
-      relative.includes('/components/settings/') || relative.includes('/components/teams/') || relative.includes('/components/ui/simple-relation-select') ||
-      relative.includes('/components/ui/upload-status') || relative.includes('/components/ui/image-upload') || relative.includes('/hooks/useFieldUpload') || relative.includes('/hooks/useMediaUpload') ||
+      relative.includes('/components/settings/') || relative.includes('/components/api/keys/') || relative.includes('/components/teams/') || relative.includes('/components/ui/simple-relation-select') ||
+      relative.includes('/components/ui/upload-status') || relative.includes('/components/ui/image-upload') || relative.includes('/components/ui/file-upload') || relative.includes('/components/ui/audio-upload') || relative.includes('/components/ui/video-upload') || relative.includes('/hooks/useFieldUpload') || relative.includes('/hooks/useMediaUpload') ||
       relative.includes('/utils/dev/TranslationDebugger') || relative.includes('/hooks/useContentTranslation')) return ['dashboard']
   if (relative.includes('/hooks/useValidationSchemas')) return ['auth', 'dashboard']
   if (relative.startsWith('plugins/langchain/components/observability/')) return ['superadmin']
@@ -154,7 +158,7 @@ const DYNAMIC_TRANSLATION_ALLOWLIST: Record<string, { groups: TranslationGroup[]
     namespaces: 'top-level APP_CONFIG_MERGED.mobileNav.items label keys',
     reason: 'mobile navigation label keys resolve from APP_CONFIG_MERGED.mobileNav.items.',
   },
-  'packages/core/src/components/dashboard/mobile/MobileMoreSheet.tsx:81': {
+  'packages/core/src/components/dashboard/mobile/MobileMoreSheet.tsx:82': {
     groups: ['dashboard'],
     namespaces: 'top-level APP_CONFIG_MERGED.mobileNav.moreSheetItems label keys',
     reason: 'mobile navigation label keys resolve from APP_CONFIG_MERGED.mobileNav.moreSheetItems.',

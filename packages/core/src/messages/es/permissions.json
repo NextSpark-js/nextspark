@@ -25,5 +25,13 @@
       "title": "Lector",
       "description": "Acceso de solo lectura al contenido del equipo"
     }
+  },
+  "forbidden": {
+    "defaultReason": "No tienes permiso para acceder a este recurso",
+    "title": "⚠️ Ups, no tienes permiso para hacer esto",
+    "upgradeRequired": "Esta función requiere mejorar tu plan actual.",
+    "back": "Atrás",
+    "dashboard": "Panel",
+    "viewPlans": "Ver planes"
   }
 }

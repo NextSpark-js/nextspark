@@ -102,6 +102,10 @@
     },
     "actions": {
       "cancel": "Cancelar"
+    },
+    "errors": {
+      "updateFailed": "Não foi possível atualizar o perfil",
+      "deleteFailed": "Não foi possível excluir a conta"
     }
   },
   "password": {
@@ -366,6 +370,18 @@
         "showing": "Mostrando {start} a {end} de {total} faturas",
         "previous": "Anterior",
         "next": "Próximo"
+      },
+      "document": {
+        "billTo": "Cobrar de",
+        "team": "Equipe",
+        "invoiceDate": "Data da fatura",
+        "description": "Descrição",
+        "item": "Item",
+        "amount": "Valor",
+        "monthlySubscription": "Assinatura mensal",
+        "subtotal": "Subtotal",
+        "total": "Total",
+        "thanks": "Obrigado pela sua preferência"
       }
     },
     "features": {
@@ -389,10 +405,171 @@
   },
   "plans": {
     "title": "Planos de Preços",
-    "description": "Escolha o plano que melhor se adapta às suas necessidades"
+    "description": "Escolha o plano que melhor se adapta às suas necessidades",
+    "changed": "Plano alterado com sucesso",
+    "changeFailed": "Não foi possível processar a alteração do plano",
+    "checkoutFailed": "Não foi possível iniciar o pagamento"
   },
   "pages": {
     "plans": "Planos",
     "plansDescription": "Compare planos e faça upgrade da sua assinatura"
+  },
+  "apiKeys": {
+    "title": "Chaves de API",
+    "description": "Gerencie as chaves de API para integração externa",
+    "createButton": "Criar chave de API",
+    "createFirst": "Criar a primeira chave de API",
+    "emptyTitle": "Nenhuma chave de API",
+    "emptyDescription": "Você ainda não tem chaves de API. Crie uma para começar a usar a API externa.",
+    "restrictedTitle": "Acesso restrito",
+    "restrictedDescription": "Somente administradores podem gerenciar chaves de API. Entre em contato com um administrador se precisar de acesso a este recurso.",
+    "loadError": "Erro ao carregar as chaves de API: {message}",
+    "fetchError": "Não foi possível obter as chaves de API",
+    "revokeError": "Não foi possível revogar a chave de API",
+    "updateError": "Não foi possível atualizar a chave de API",
+    "revoked": "A chave de API “{name}” foi revogada",
+    "revokeFailed": "Não foi possível revogar a chave de API: {message}",
+    "activated": "A chave de API “{name}” foi ativada",
+    "deactivated": "A chave de API “{name}” foi desativada",
+    "updateFailed": "Não foi possível atualizar a chave de API: {message}",
+    "copied": "Copiado para a área de transferência",
+    "status": {
+      "active": "Ativa",
+      "inactive": "Inativa",
+      "expired": "Expirada"
+    },
+    "menu": {
+      "viewDetails": "Ver detalhes",
+      "deactivate": "Desativar",
+      "activate": "Ativar",
+      "revoke": "Revogar"
+    },
+    "permissions": "Permissões:",
+    "stats": {
+      "totalRequests": "Total de solicitações",
+      "last24h": "Últimas 24 h",
+      "avgTime": "Tempo médio"
+    },
+    "notAvailable": "N/D",
+    "created": "Criada: {date}",
+    "lastUsed": "Último uso: {date}",
+    "expires": "Expira: {date}",
+    "details": {
+      "fetchError": "Não foi possível obter os detalhes da chave de API",
+      "title": "Detalhes da chave de API",
+      "description": "Estatísticas de uso e configuração",
+      "basicInfo": "Informações básicas",
+      "name": "Nome:",
+      "status": "Status:",
+      "usageStats": "Estatísticas de uso",
+      "totalRequests": "Total de solicitações:",
+      "last24h": "Últimas 24 horas:",
+      "last7d": "Últimos 7 dias:",
+      "last30d": "Últimos 30 dias:",
+      "avgResponse": "Tempo médio de resposta:",
+      "successRate": "Taxa de sucesso:"
+    },
+    "display": {
+      "copiedToast": "Chave de API copiada para a área de transferência",
+      "copyFailed": "Não foi possível copiar para a área de transferência",
+      "created": "Chave de API criada com sucesso",
+      "important": "Importante!",
+      "yourKey": "Sua nova chave de API:",
+      "copied": "Copiada!",
+      "copy": "Copiar",
+      "howToUse": "Como usar sua chave de API:",
+      "stepHeader": "1. Inclua a chave de API no cabeçalho Authorization:",
+      "stepCurl": "2. Exemplo com curl:",
+      "stepJavaScript": "3. Exemplo com JavaScript:",
+      "securityTips": "Dicas de segurança:",
+      "tipShare": "Nunca compartilhe sua chave de API publicamente",
+      "tipStore": "Armazene-a como variável de ambiente na sua aplicação",
+      "tipRevoke": "Revogue a chave imediatamente se achar que ela foi comprometida",
+      "tipHttps": "Use sempre HTTPS ao fazer solicitações à API",
+      "limits": "Limites da API:",
+      "limitRate": "1.000 solicitações por minuto",
+      "limitHeaders": "As respostas incluem cabeçalhos de limite de uso",
+      "limitDocs": "Documentação completa disponível em /docs",
+      "keyCopied": "Chave de API copiada!",
+      "copyKey": "Copiar chave de API",
+      "gotIt": "Entendi"
+    },
+    "create": {
+      "createFailed": "Não foi possível criar a chave de API",
+      "created": "Chave de API criada com sucesso",
+      "createFailedWithMessage": "Não foi possível criar a chave de API: {message}",
+      "nameRequired": "Informe um nome para a chave de API",
+      "scopeRequired": "Selecione pelo menos uma permissão",
+      "title": "Criar nova chave de API",
+      "description": "Crie uma chave de API para acessar com segurança os endpoints externos.",
+      "nameLabel": "Nome da chave de API",
+      "namePlaceholder": "ex.: Meu aplicativo móvel",
+      "nameHelp": "Um nome descritivo para identificar esta chave de API",
+      "expiration": "Expiração",
+      "expiry": {
+        "never": "Nunca expira",
+        "days30": "30 dias",
+        "days90": "90 dias",
+        "year1": "1 ano",
+        "custom": "Data personalizada"
+      },
+      "permissions": "Permissões (escopos)",
+      "permissionsHelp": "Escolha as permissões que esta chave de API terá",
+      "permissionsNotice": "Você só pode atribuir as permissões que sua função atual permite. As permissões não podem ser alteradas depois de criar a chave de API.",
+      "selectedPermissions": "Permissões selecionadas ({count})",
+      "important": "Importante:",
+      "importantNotice": "A chave de API será exibida apenas uma vez após a criação. Guarde-a em um lugar seguro, pois você não poderá vê-la novamente.",
+      "cancel": "Cancelar",
+      "creating": "Criando...",
+      "submit": "Criar chave de API",
+      "appScopeName": "Aplicação",
+      "appScopeDescription": "Permissões que esta aplicação define para as próprias rotas"
+    },
+    "scopeLabels": {
+      "users:read": "Ler informações de usuários",
+      "users:write": "Criar e atualizar usuários",
+      "users:delete": "Excluir usuários",
+      "tasks:read": "Ler tarefas",
+      "tasks:write": "Criar e atualizar tarefas",
+      "tasks:delete": "Excluir tarefas",
+      "media:read": "Ler informações de arquivos e mídia",
+      "media:write": "Enviar e atualizar arquivos",
+      "media:delete": "Excluir arquivos",
+      "teams:read": "Ler equipes, membros e convites",
+      "teams:write": "Criar e atualizar equipes, membros e convites",
+      "teams:delete": "Excluir equipes",
+      "billing:read": "Ler assinaturas, faturas e uso",
+      "billing:write": "Gerenciar assinaturas, pagamentos, mudanças de plano e uso",
+      "admin:api-keys": "Gerenciar chaves de API",
+      "admin:users": "Administração completa de usuários",
+      "admin:devtools": "Acesso às APIs do DevTools (registros, testes, ações agendadas)",
+      "*": "Acesso total (somente superadministradores ou desenvolvedores)"
+    },
+    "scopeCategories": {
+      "users": {
+        "name": "Usuários",
+        "description": "Gerenciamento de usuários do sistema"
+      },
+      "tasks": {
+        "name": "Tarefas",
+        "description": "Gerenciamento de tarefas e pendências"
+      },
+      "teams": {
+        "name": "Equipes",
+        "description": "Equipes, membros e convites"
+      },
+      "billing": {
+        "name": "Faturamento",
+        "description": "Assinaturas, faturas, uso e planos"
+      },
+      "admin": {
+        "name": "Administração",
+        "description": "Funções administrativas"
+      },
+      "system": {
+        "name": "Sistema",
+        "description": "Acesso total ao sistema"
+      }
+    }
   }
 }

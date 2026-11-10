@@ -48,8 +48,8 @@ function world(files = {}) {
     writeFileSync(join(root, path), content)
   }
   for (const [file, content] of Object.values(CORE_MODULES)) write(file, content)
-  write('core/entity-page.tsx', "export const metadata = { title: 'Dashboard' }\n")
-  write('core/entity-detail-page.tsx', "export const metadata = { title: 'Dashboard' }\n")
+  write('core/entity-page.tsx', "export async function generateMetadata() { return { title: 'Dashboard' } }\n")
+  write('core/entity-detail-page.tsx', "export async function generateMetadata() { return { title: 'Dashboard' } }\n")
   write('core/entity-error.tsx', "'use client'\nexport default function E() { return null }\n")
   write('core/entity-loading.tsx', 'export default function L() { return null }\n')
   for (const [path, content] of Object.entries(files)) write(`source/${path}`, content)
@@ -188,7 +188,7 @@ test('every entity the dashboard serves gets its own layout, error, loading, lis
         'import { taskEntityConfig } from "@/entities/tasks/tasks.config"',
         `import { createEntityListRoute } from "${ENTITY_MODULES.list}"`,
         'export default createEntityListRoute(taskEntityConfig)',
-        'export { metadata } from "@nextsparkjs/core/routes/_internal/entity-list-metadata"',
+        'export { generateMetadata } from "@nextsparkjs/core/routes/_internal/entity-list-metadata"',
         '',
       ].join('\n')
     )
@@ -235,7 +235,7 @@ test('a project template for an entity page is composed into the route: it runs 
         'import { taskEntityConfig } from "@/entities/tasks/tasks.config"',
         `import { createEntityListRoute } from "${ENTITY_MODULES.list}"`,
         'export default createEntityListRoute(taskEntityConfig, NextSparkTemplate)',
-        'export { metadata } from "@nextsparkjs/core/routes/_internal/entity-list-metadata"',
+        'export { generateMetadata } from "@nextsparkjs/core/routes/_internal/entity-list-metadata"',
         '',
       ].join('\n')
     )

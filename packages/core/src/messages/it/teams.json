@@ -103,7 +103,9 @@
     "description": "Gestisci chi ha accesso a questo team",
     "empty": "Nessun membro ancora",
     "you": "(Tu)",
-    "joined": "Iscritto {date}"
+    "joined": "Iscritto {date}",
+    "sectionDescription": "Gestisci i membri del team e gli inviti",
+    "unknown": "Sconosciuto"
   },
 
   "invitations": {
@@ -122,7 +124,8 @@
     "cancelDescription": "Sei sicuro di voler annullare questo invito?",
     "cancelConfirm": "Sì, Annulla",
     "cancelSuccess": "Invito annullato",
-    "cancelError": "Errore nell'annullamento dell'invito"
+    "cancelError": "Errore nell'annullamento dell'invito",
+    "fetchError": "Impossibile recuperare gli inviti"
   },
 
   "invite": {

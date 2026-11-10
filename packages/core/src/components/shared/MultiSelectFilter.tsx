@@ -9,7 +9,7 @@ import {
 } from '../ui/popover'
 import { ChevronDown, Check, X } from 'lucide-react'
 import { useState } from 'react'
-import { useCommonText } from '../../lib/i18n/common-text'
+import { useCommonText, useMessageText } from '../../lib/i18n/common-text'
 
 // ============================================================================
 // Types
@@ -68,10 +68,12 @@ export function MultiSelectFilter({
   values,
   onChange,
   className,
-  clearLabel = 'Clear',
+  clearLabel: clearLabelProp,
   'data-cy': dataCy = 'multi-select-filter',
 }: MultiSelectFilterProps) {
   const [open, setOpen] = useState(false)
+  const defaultClearLabel = useMessageText('entities.multiSelectFilter.clear', 'Clear')
+  const clearLabel = clearLabelProp ?? defaultClearLabel
   const removeItemText = useCommonText('a11y', 'removeItem', 'Remove {name}')
   const clearFilterText = useCommonText('a11y', 'clearFilter', 'Clear {name} filter')
 

@@ -4,6 +4,7 @@ import * as React from "react"
 import { parseClientChildEntity as parseChildEntity, getClientEntityApiPath as getEntityApiPath } from '../../lib/entities/client-entity-meta'
 import { withBasePath } from '../../lib/base-path'
 import { TEAM_ID_HEADER } from '../../lib/api/client-headers'
+import { useMessageText } from '../../lib/i18n/common-text'
 
 interface RelationDisplayProps {
   value: string | string[] | null
@@ -27,6 +28,7 @@ export function RelationDisplay({
   multiple = false,
   teamId
 }: RelationDisplayProps) {
+  const loadingText = useMessageText('common.status.loading', 'Loading...')
   const [titles, setTitles] = React.useState<Record<string, string>>({})
   const [loading, setLoading] = React.useState(false)
 
@@ -160,7 +162,7 @@ export function RelationDisplay({
   }
 
   if (loading && Object.keys(titles).length === 0) {
-    return <span className="text-muted-foreground">Loading...</span>
+    return <span className="text-muted-foreground">{loadingText}</span>
   }
 
   const displayValues = ids.map(id => titles[id] || id)

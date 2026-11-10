@@ -166,7 +166,7 @@
     "pathParams": "Parámetros de ruta",
     "queryParams": "Parámetros de query",
     "headers": "Headers Personalizados",
-    "headersInfo": "Content-Type se establece automaticamente. Agrega headers personalizados abajo.",
+    "headersInfo": "Content-Type se establece automáticamente. Agrega headers personalizados abajo.",
     "authentication": "Autenticación",
     "requestBody": "Cuerpo del Request (JSON)",
     "sendRequest": "Enviar Request",
@@ -181,7 +181,7 @@
       "useApiKey": "Usar API key",
       "apiKeyPlaceholder": "Ingresa tu API key...",
       "adminBypass": "Acceso cross-team",
-      "adminBypassTooltip": "Habilitar para acceder datos de cualquier equipo. Requiere membresia en NextSpark Team.",
+      "adminBypassTooltip": "Habilitar para acceder datos de cualquier equipo. Requiere membresía en NextSpark Team.",
       "actAsUser": "Actuar como usuario",
       "actAsUserHelp": "Solo para desarrolladores. Resuelve los endpoints de sesión (p. ej. /me/*) como el usuario indicado sin cambiar tu sesión. Requiere el rol developer, un entorno que no sea de producción y ALLOW_ACT_AS_USER=true. Déjalo vacío para usar tu propia sesión.",
       "actAsUserPlaceholder": "ID de usuario (vacío = tu propia sesión)"
@@ -1008,5 +1008,14 @@
       "description": "Recursos y documentación adicionales",
       "docs": "Documentación de {name}"
     }
+  },
+  "guard": {
+    "title": "Acceso solo para desarrolladores",
+    "description": "Necesitas privilegios de desarrollador para acceder a esta área.",
+    "body": "Esta sección está restringida a los desarrolladores de la plataforma. Si crees que se trata de un error, contacta al equipo de desarrollo.",
+    "sessionNotFound": "No se encontró la sesión. Inicia sesión de nuevo.",
+    "signIn": "Iniciar sesión",
+    "goBack": "Volver",
+    "dashboard": "Panel"
   }
 }

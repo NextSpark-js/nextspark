@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils'
 import { Bold, Italic, Link, List, ListOrdered } from 'lucide-react'
 import { Button } from './button'
 import { Textarea } from './textarea'
+import { useSectionText } from '../../lib/i18n/common-text'
 
 interface RichTextEditorProps {
   value: string
@@ -29,11 +30,21 @@ interface RichTextEditorProps {
 export function RichTextEditor({
   value,
   onChange,
-  placeholder = 'Enter content...',
+  placeholder: placeholderProp,
   className,
   disabled = false,
   'data-cy': dataCy,
 }: RichTextEditorProps) {
+  const text = useSectionText('entities.richTextEditor', {
+    placeholder: 'Enter content...',
+    bold: 'Bold',
+    italic: 'Italic',
+    insertLink: 'Insert Link',
+    bulletList: 'Bullet List',
+    numberedList: 'Numbered List',
+    help: 'Supports HTML formatting. Use toolbar buttons or write HTML directly.',
+  })
+  const placeholder = placeholderProp ?? text.placeholder
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
 
   const insertTag = (openTag: string, closeTag: string) => {
@@ -79,7 +90,7 @@ export function RichTextEditor({
           className="h-8 w-8 p-0"
           onClick={handleBold}
           disabled={disabled}
-          title="Bold"
+          title={text.bold}
         >
           <Bold className="h-4 w-4" />
         </Button>
@@ -90,7 +101,7 @@ export function RichTextEditor({
           className="h-8 w-8 p-0"
           onClick={handleItalic}
           disabled={disabled}
-          title="Italic"
+          title={text.italic}
         >
           <Italic className="h-4 w-4" />
         </Button>
@@ -101,7 +112,7 @@ export function RichTextEditor({
           className="h-8 w-8 p-0"
           onClick={handleLink}
           disabled={disabled}
-          title="Insert Link"
+          title={text.insertLink}
         >
           <Link className="h-4 w-4" />
         </Button>
@@ -113,7 +124,7 @@ export function RichTextEditor({
           className="h-8 w-8 p-0"
           onClick={handleList}
           disabled={disabled}
-          title="Bullet List"
+          title={text.bulletList}
         >
           <List className="h-4 w-4" />
         </Button>
@@ -124,7 +135,7 @@ export function RichTextEditor({
           className="h-8 w-8 p-0"
           onClick={handleOrderedList}
           disabled={disabled}
-          title="Numbered List"
+          title={text.numberedList}
         >
           <ListOrdered className="h-4 w-4" />
         </Button>
@@ -144,7 +155,7 @@ export function RichTextEditor({
 
       {/* Help text */}
       <p className="text-xs text-muted-foreground">
-        Supports HTML formatting. Use toolbar buttons or write HTML directly.
+        {text.help}
       </p>
     </div>
   )

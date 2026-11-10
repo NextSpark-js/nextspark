@@ -71,6 +71,7 @@
     "title": "Inserir Padrão",
     "search": "Pesquisar padrões...",
     "noResults": "Nenhum padrão encontrado",
-    "selectPattern": "Selecione um padrão para inserir"
+    "selectPattern": "Selecione um padrão para inserir",
+    "loading": "Carregando padrões..."
   }
 }

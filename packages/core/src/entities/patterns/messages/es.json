@@ -81,6 +81,7 @@
     "title": "Insertar Patrón",
     "search": "Buscar patrones...",
     "noResults": "No se encontraron patrones",
-    "selectPattern": "Selecciona un patrón para insertar"
+    "selectPattern": "Selecciona un patrón para insertar",
+    "loading": "Cargando patrones..."
   }
 }

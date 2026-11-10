@@ -4,6 +4,7 @@ import * as React from "react"
 import { X } from "lucide-react"
 import { Badge } from './badge'
 import { Button } from './button'
+import { useMessageText, useSectionText } from '../../lib/i18n/common-text'
 import {
   Command,
   CommandEmpty,
@@ -40,12 +41,19 @@ export function MultiSelect({
   options,
   value = [],
   onChange,
-  placeholder = "Select options...",
-  searchPlaceholder = "Search options...",
+  placeholder: placeholderProp,
+  searchPlaceholder: searchPlaceholderProp,
   maxSelected,
   disabled = false,
   className,
 }: MultiSelectProps) {
+  const text = useSectionText('entities.multiSelect', {
+    placeholder: 'Select options...',
+    searchPlaceholder: 'Search options...',
+  })
+  const noOptionsText = useMessageText('entities.noOptions', 'No options found.')
+  const placeholder = placeholderProp ?? text.placeholder
+  const searchPlaceholder = searchPlaceholderProp ?? text.searchPlaceholder
   const [open, setOpen] = React.useState(false)
 
   const handleSelect = (optionValue: string | number) => {
@@ -123,7 +131,7 @@ export function MultiSelect({
         <PopoverContent className="p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
           <Command>
             <CommandInput placeholder={searchPlaceholder} />
-            <CommandEmpty>No options found.</CommandEmpty>
+            <CommandEmpty>{noOptionsText}</CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto">
               {availableOptions.map((option) => (
                 <CommandItem

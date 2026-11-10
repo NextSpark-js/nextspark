@@ -9,6 +9,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { EntityDetail, CustomSectionConfig } from '../EntityDetail'
 import { Alert, AlertDescription } from '../../ui/alert'
@@ -46,6 +47,7 @@ export function EntityDetailWrapper({
   className,
   customFormComponents = {},
 }: EntityDetailWrapperProps) {
+  const text = useTranslations('entities.wrapper')
   // Use the new centralized hook for entity configuration
   const { config: entityConfig, isLoading: isLoadingConfig, error: configError, isOverride } = useEntityConfig(entityType)
   
@@ -154,7 +156,7 @@ export function EntityDetailWrapper({
     if (dataLoadedRef.current) return // Prevent re-fetching if already loaded
 
     if (!entityConfig.enabled) {
-      const error = new Error(`Entity "${entityType}" is disabled`)
+      const error = new Error(text('disabled', { entity: entityType }))
       setDataError(error.message)
       onError?.(error)
       return
@@ -183,7 +185,7 @@ export function EntityDetailWrapper({
           })
 
           if (!response.ok) {
-            throw new Error(`Failed to load ${entityType} with children: ${response.status}`)
+            throw new Error(text('loadFailed', { entity: entityType, status: response.status }))
           }
 
           const apiResult = await response.json()
@@ -213,7 +215,7 @@ export function EntityDetailWrapper({
         dataLoadedRef.current = true // Mark as loaded
       } catch (err) {
         console.error(`[EntityDetailWrapper] Error loading data for "${entityType}" ${id}:`, err)
-        const errorMessage = `Error loading data: ${err instanceof Error ? err.message : 'Unknown error'}`
+        const errorMessage = text('errorLoading', { message: err instanceof Error ? err.message : text('unknownError') })
         setDataError(errorMessage)
         setData(null)
 
@@ -229,7 +231,7 @@ export function EntityDetailWrapper({
 
     loadEntityData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityConfig?.slug, entityType, id, signedIn, teamReady])
+  }, [entityConfig?.slug, entityType, id, signedIn, teamReady, text])
 
   // Handler functions for child entity operations
   const handleEdit = useCallback(() => {
@@ -245,10 +247,10 @@ export function EntityDetailWrapper({
       router.push(`/dashboard/${entityConfig?.slug || entityType}`)
     } catch (error) {
       console.error('Error deleting entity:', error)
-      onError?.(error instanceof Error ? error : new Error('Error deleting entity'))
+      onError?.(error instanceof Error ? error : new Error(text('deleteFailed')))
       throw error // Re-throw to let EntityDetail handle loading state
     }
-  }, [entityType, id, router, entityConfig, onError])
+  }, [entityType, id, router, entityConfig, onError, text])
 
   // Refresh function - declared early to be used by other callbacks
   const handleRefresh = useCallback(async () => {
@@ -276,7 +278,7 @@ export function EntityDetailWrapper({
         })
 
         if (!response.ok) {
-          throw new Error(`Failed to reload ${entityType} with children: ${response.status}`)
+          throw new Error(text('reloadFailed', { entity: entityType, status: response.status }))
         }
         
         const apiResult = await response.json()
@@ -296,12 +298,12 @@ export function EntityDetailWrapper({
       setDataError(null)
     } catch (err) {
       console.error(`[EntityDetailWrapper] Error reloading data:`, err)
-      const errorMessage = `Error reloading data: ${err instanceof Error ? err.message : 'Unknown error'}`
+      const errorMessage = text('errorReloading', { message: err instanceof Error ? err.message : text('unknownError') })
       setDataError(errorMessage)
     } finally {
       setIsLoadingData(false)
     }
-  }, [entityConfig, entityType, id, hasChildEntities])
+  }, [entityConfig, entityType, id, hasChildEntities, text])
 
   const handleChildAdd = useCallback(async (childName: string, childData: Record<string, unknown>) => {
     try {
@@ -322,12 +324,12 @@ export function EntityDetailWrapper({
       if (!response.ok) {
         const errorText = await response.text()
         if (process.env.NODE_ENV === 'development') console.log(`[EntityDetailWrapper] Error response: ${errorText}`)
-        throw new Error(`Failed to create ${childName}: ${response.status}`)
+        throw new Error(text('createFailed', { entity: childName, status: response.status }))
       }
       
       const result = await response.json()
       if (!result.success || !result.data) {
-        throw new Error('Invalid response format')
+        throw new Error(text('invalidResponse'))
       }
       
       // Update only the specific child data instead of reloading everything
@@ -340,7 +342,7 @@ export function EntityDetailWrapper({
       console.error(`Error creating child ${childName}:`, error)
       throw error
     }
-  }, [id, entityType, entityConfig])
+  }, [id, entityType, entityConfig, text])
 
   const handleChildEdit = useCallback(async (childName: string, childId: string, childData: Record<string, unknown>) => {
     try {
@@ -354,12 +356,12 @@ export function EntityDetailWrapper({
       })
       
       if (!response.ok) {
-        throw new Error(`Failed to update ${childName}: ${response.status}`)
+        throw new Error(text('updateFailed', { entity: childName, status: response.status }))
       }
       
       const result = await response.json()
       if (!result.success || !result.data) {
-        throw new Error('Invalid response format')
+        throw new Error(text('invalidResponse'))
       }
       
       // Update only the specific item in child data instead of reloading everything
@@ -374,7 +376,7 @@ export function EntityDetailWrapper({
       console.error(`Error updating child ${childName}:`, error)
       throw error
     }
-  }, [id, entityType, entityConfig])
+  }, [id, entityType, entityConfig, text])
 
   const handleChildDelete = useCallback(async (childName: string, childId: string) => {
     try {
@@ -387,7 +389,7 @@ export function EntityDetailWrapper({
       })
       
       if (!response.ok) {
-        throw new Error(`Failed to delete ${childName}: ${response.status}`)
+        throw new Error(text('deleteChildFailed', { entity: childName, status: response.status }))
       }
       
       // Remove only the specific item from child data instead of reloading everything
@@ -402,7 +404,7 @@ export function EntityDetailWrapper({
       console.error(`Error deleting child ${childName}:`, error)
       throw error
     }
-  }, [id, entityType, entityConfig])
+  }, [id, entityType, entityConfig, text])
 
   if (isLoadingConfig) {
     return <SkeletonEntityDetail />
@@ -412,7 +414,7 @@ export function EntityDetailWrapper({
     return (
       <Alert>
         <AlertDescription>
-          {configError || `Could not load the configuration for entity "${entityType}".`}
+          {configError || text('configError', { entity: entityType })}
         </AlertDescription>
       </Alert>
     )
@@ -440,7 +442,7 @@ export function EntityDetailWrapper({
     return (
       <Alert>
         <AlertDescription>
-          No data found for this entity.
+          {text('noData')}
         </AlertDescription>
       </Alert>
     )

@@ -662,5 +662,14 @@
     "pricePerYear": "{price}/yr",
     "trialEnds": "Trial ends {date}",
     "viewTeam": "View Team"
+  },
+  "guard": {
+    "title": "Access Denied",
+    "description": "You need superadmin or developer privileges to access this area.",
+    "body": "This section is restricted to system administrators only. If you believe this is an error, please contact support.",
+    "sessionNotFound": "Session not found. Please sign in again.",
+    "signIn": "Sign In",
+    "goBack": "Go Back",
+    "dashboard": "Dashboard"
   }
 }

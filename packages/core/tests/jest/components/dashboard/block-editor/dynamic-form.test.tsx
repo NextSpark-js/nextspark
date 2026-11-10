@@ -10,7 +10,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { DynamicForm } from '@/core/components/dashboard/block-editor/dynamic-form'
 import type { FieldDefinition } from '@/core/types/blocks'
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+const mockT = (key: string) => key
+jest.mock('next-intl', () => ({ useTranslations: () => mockT, useLocale: () => 'en' }))
 jest.mock('@/core/lib/test', () => ({ sel: (path: string) => path }))
 // Field widgets and data hooks the text field does not use (they pull in the media library and the auth client)
 jest.mock('@/core/components/ui/image-upload', () => ({ ImageUpload: () => null }))

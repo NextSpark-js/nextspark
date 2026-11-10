@@ -4,7 +4,7 @@ import * as React from "react"
 import { Button } from './button'
 import { Badge } from './badge'
 import { X } from "lucide-react"
-import { useTranslations } from 'next-intl'
+import { useMessageText, useSectionText } from '../../lib/i18n/common-text'
 import { parseClientChildEntity as parseChildEntity, getClientEntityApiPath as getEntityApiPath } from '../../lib/entities/client-entity-meta'
 import { fetchWithTeam } from '../../lib/api/entities'
 
@@ -67,8 +67,8 @@ export function SimpleRelationSelect({
   entityType,
   titleField,
   multiple = false,
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
+  placeholder: placeholderProp,
+  searchPlaceholder: searchPlaceholderProp,
   disabled = false,
   parentId,
   propField,
@@ -80,7 +80,15 @@ export function SimpleRelationSelect({
   filter,
   id,
 }: SimpleRelationSelectProps) {
-  const t = useTranslations('common')
+  const text = useSectionText('entities.relationSelect', {
+    placeholder: 'Select...',
+    searchPlaceholder: 'Search...',
+    dynamic: 'Dynamic',
+  })
+  const loadingText = useMessageText('common.status.loading', 'Loading...')
+  const noOptionsText = useMessageText('entities.noOptions', 'No options found.')
+  const placeholder = placeholderProp ?? text.placeholder
+  const searchPlaceholder = searchPlaceholderProp ?? text.searchPlaceholder
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const [searching, setSearching] = React.useState(false)
@@ -695,7 +703,7 @@ export function SimpleRelationSelect({
           <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty>
-              {loading || searching ? t('status.loading') : "No options found."}
+              {loading || searching ? loadingText : noOptionsText}
             </CommandEmpty>
             <CommandGroup>
               {usePropertyMode ? (
@@ -733,7 +741,7 @@ export function SimpleRelationSelect({
                         <div className="flex-1">
                           <div className="font-medium">{option.label}</div>
                           {!option.isStatic && (
-                            <div className="text-sm text-muted-foreground">Dynamic</div>
+                            <div className="text-sm text-muted-foreground">{text.dynamic}</div>
                           )}
                         </div>
                         {selectedValues.includes(option.value) && (

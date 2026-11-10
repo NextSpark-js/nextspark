@@ -103,7 +103,9 @@
     "description": "Manage who has access to this team",
     "empty": "No members yet",
     "you": "(You)",
-    "joined": "Joined {date}"
+    "joined": "Joined {date}",
+    "sectionDescription": "Manage team members and invitations",
+    "unknown": "Unknown"
   },
 
   "invitations": {
@@ -122,7 +124,8 @@
     "cancelDescription": "Are you sure you want to cancel this invitation?",
     "cancelConfirm": "Yes, Cancel",
     "cancelSuccess": "Invitation cancelled",
-    "cancelError": "Failed to cancel invitation"
+    "cancelError": "Failed to cancel invitation",
+    "fetchError": "Failed to fetch invitations"
   },
 
   "invite": {

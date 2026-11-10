@@ -75,7 +75,7 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
     queryKey: ['team-invitations', teamId],
     queryFn: async () => {
       const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/invitations?status=pending`))
-      if (!response.ok) throw new Error('Failed to fetch invitations')
+      if (!response.ok) throw new Error(t('invitations.fetchError'))
       const json = await response.json()
       return json.data || []
     },
@@ -90,7 +90,7 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
       })
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to cancel invitation')
+        throw new Error(error.error || t('invitations.cancelError'))
       }
       return response.json()
     },

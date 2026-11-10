@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React from 'react'
 import { Input } from '../ui/input'
 import { Textarea } from '../ui/textarea'
@@ -53,6 +54,7 @@ import type { Address } from '../ui/address-input'
 import type { MediaRef } from '../../types/blocks'
 import { resolveMediaUrl } from '../../types/blocks'
 import { withBasePathIfInApp } from '../../lib/base-path'
+import { useSectionText } from '../../lib/i18n/common-text'
 
 export interface EntityFieldRendererProps {
   field: EntityField
@@ -75,7 +77,10 @@ export interface EntityFieldRendererProps {
 /**
  * Format value for display mode
  */
-function formatDisplayValue(value: unknown, field: EntityField): string {
+/** The texts the field renderers read (see `useSectionText('entities.field', ...)` in the component). */
+type FieldText = ReturnType<typeof useTranslations>
+
+function formatDisplayValue(text: FieldText, value: unknown, field: EntityField): string {
   if (value === null || value === undefined) {
     return '-'
   }
@@ -95,7 +100,7 @@ function formatDisplayValue(value: unknown, field: EntityField): string {
       return typeof value === 'number' ? value.toLocaleString() : String(value || '')
 
     case 'boolean':
-      return value ? 'Yes' : 'No'
+      return value ? text('yes') : text('no')
 
     case 'date':
       return value ? new Date(value as string).toLocaleDateString() : ''
@@ -199,6 +204,7 @@ function optionTestId(fieldTestId: string | undefined, value: unknown): string |
 }
 
 function renderFormField(
+  text: FieldText,
   field: EntityField,
   value: unknown,
   onChange: (value: unknown) => void,
@@ -324,7 +330,7 @@ function renderFormField(
               onChange(e.target.value)
             }
           }}
-          placeholder={field.display.placeholder || 'Enter valid JSON...'}
+          placeholder={field.display.placeholder || text('jsonPlaceholder')}
           required={required}
           className="min-h-[120px] font-mono text-sm"
         />
@@ -452,7 +458,7 @@ function renderFormField(
             step={1}
           />
           <div className="text-xs text-muted-foreground text-center">
-            Value: {typeof value === 'number' ? value : 0}
+            {text('value', { value: typeof value === 'number' ? value : 0 })}
           </div>
         </div>
       )
@@ -582,7 +588,7 @@ function renderFormField(
       const relationConfig = field.relation
       if (!relationConfig?.entity) {
         console.error('Relation field missing entity configuration:', field.name)
-        return <div>Error: Relation configuration missing</div>
+        return <div>{text('relationMissing')}</div>
       }
       
       const relationEntityType = relationConfig.entity
@@ -641,8 +647,8 @@ function renderFormField(
           disabled={disabled || (dependsOnParent && !parentValue)}
           placeholder={
             dependsOnParent && !parentValue
-              ? `Select ${parentFieldName?.replace('Id', '').toLowerCase()} first`
-              : field.display.placeholder || `Select ${field.display.label?.toLowerCase() || relationEntityType}...`
+              ? text('selectFirst', { parent: parentFieldName?.replace('Id', '').toLowerCase() ?? '' })
+              : field.display.placeholder || text('selectEntity', { entity: field.display.label?.toLowerCase() || relationEntityType })
           }
           parentId={parentIdForRelation}
           userFiltered={relationConfig.userFiltered}
@@ -659,7 +665,7 @@ function renderFormField(
       const propRelationConfig = field.relation
       if (!propRelationConfig?.entity || !propRelationConfig?.prop) {
         console.error('Property relation field missing entity or prop configuration:', field.name)
-        return <div>Error: Property relation configuration missing</div>
+        return <div>{text('propRelationMissing')}</div>
       }
       
       const propEntityType = propRelationConfig.entity
@@ -721,8 +727,8 @@ function renderFormField(
           disabled={disabled || (propDependsOnParent && !propParentValue)}
           placeholder={
             propDependsOnParent && !propParentValue
-              ? `Select ${propParentFieldName?.replace('Id', '').toLowerCase()} first`
-              : field.display.placeholder || `Select ${field.display.label?.toLowerCase()}...`
+              ? text('selectFirst', { parent: propParentFieldName?.replace('Id', '').toLowerCase() ?? '' })
+              : field.display.placeholder || text('selectEntity', { entity: field.display.label?.toLowerCase() ?? '' })
           }
           parentId={propParentIdForRelation}
           userFiltered={propRelationConfig.userFiltered}
@@ -760,7 +766,7 @@ function renderFormField(
         <RichTextEditor
           value={String(value || '')}
           onChange={onChange}
-          placeholder={field.display.placeholder || 'Enter rich text content...'}
+          placeholder={field.display.placeholder || text('richPlaceholder')}
           disabled={disabled}
           data-cy={testId}
         />
@@ -774,7 +780,7 @@ function renderFormField(
           {...baseProps}
           value={String(value || '')}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={field.display.placeholder || `Enter ${field.type}...`}
+          placeholder={field.display.placeholder || text('enterType', { type: field.type })}
           required={required}
           className={field.type === 'code' ? "min-h-[150px] font-mono text-sm" : "min-h-[150px]"}
         />
@@ -796,7 +802,7 @@ function renderFormField(
 /**
  * Render display field for read-only mode
  */
-function renderDisplayField(field: EntityField, value: unknown, mode: 'display' | 'list', context?: EntityFieldContext) {
+function renderDisplayField(text: FieldText, field: EntityField, value: unknown, mode: 'display' | 'list', context?: EntityFieldContext) {
   // Handle user fields specially with UserDisplay component
   if (field.type === 'user') {
     // For user fields, value is stored as user ID string (or array for multi)
@@ -867,7 +873,7 @@ function renderDisplayField(field: EntityField, value: unknown, mode: 'display' 
     }
   }
 
-  const formattedValue = formatDisplayValue(value, field)
+  const formattedValue = formatDisplayValue(text, value, field)
 
   if (mode === 'list') {
     // Compact list mode
@@ -957,6 +963,7 @@ export function EntityFieldRenderer({
   testId,
   context,
 }: EntityFieldRendererProps) {
+  const text = useTranslations('entities.field')
   if (mode === 'form') {
     if (!onChange) {
       throw new Error('onChange is required for form mode')
@@ -977,7 +984,7 @@ export function EntityFieldRenderer({
           </p>
         )}
         
-        {renderFormField(field, value, onChange, error, disabled, required, testId, context)}
+        {renderFormField(text, field, value, onChange, error, disabled, required, testId, context)}
         
         {error && (
           <p 
@@ -994,7 +1001,7 @@ export function EntityFieldRenderer({
 
   return (
     <div className={className}>
-      {renderDisplayField(field, value, mode, context)}
+      {renderDisplayField(text, field, value, mode, context)}
     </div>
   )
 }

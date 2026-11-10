@@ -141,8 +141,9 @@
     },
     "block": {
       "error": {
-        "notFound": "Bloc '{slug}' non trouvé"
-      }
+        "notFound": "Bloc « {slug} » non trouvé"
+      },
+      "moreProps": "+{count} de plus"
     },
     "settings": {
       "empty": {
@@ -179,7 +180,9 @@
       "selectEntity": "Sélectionner {entity}...",
       "pickDate": "Choisir une date",
       "arrayItemsCount": "{count} éléments",
-      "configured": "configuré"
+      "configured": "configuré",
+      "browseMedia": "Cliquez pour téléverser ou parcourir les images",
+      "changeImage": "Modifier"
     }
   },
   "builder": {
@@ -209,7 +212,8 @@
     },
     "viewMode": {
       "layout": "Mise en page",
-      "preview": "Aperçu"
+      "preview": "Aperçu",
+      "settings": "Paramètres"
     },
     "sidebar": {
       "blocks": "Blocs",
@@ -217,13 +221,188 @@
       "fieldsTitle": "Champs d'entité",
       "fieldsDescription": "Configurez les propriétés supplémentaires",
       "noFields": "Aucun champ supplémentaire disponible",
-      "noCategories": "Aucune catégorie disponible"
+      "noCategories": "Aucune catégorie disponible",
+      "addBlock": "Ajouter un bloc",
+      "categories": {
+        "all": "Tous",
+        "title": "Catégories"
+      },
+      "empty": "Aucun bloc trouvé",
+      "search": {
+        "placeholder": "Rechercher des blocs..."
+      },
+      "tabs": {
+        "blocks": "Blocs",
+        "layout": "Mise en page",
+        "patterns": "Modèles"
+      },
+      "select": "Sélectionner..."
     },
     "messages": {
       "saved": "Enregistré avec succès",
       "created": "Créé avec succès",
       "saveBlocked": "La page n'a pas été enregistrée",
-      "hookFailed": "La page n'a pas été enregistrée : {message}"
+      "hookFailed": "La page n'a pas été enregistrée : {message}",
+      "blockCopied": "Bloc copié dans le presse-papiers",
+      "blockPasted": "Bloc collé",
+      "fetchPatternsFailed": "Impossible de récupérer les modèles",
+      "fetchFailed": "Impossible de récupérer {entity}",
+      "saveFailed": "Impossible d'enregistrer {entity}"
+    },
+    "canvas": {
+      "editingBadge": "Modification",
+      "empty": {
+        "subtitle": "Ajoutez des blocs depuis la barre latérale gauche",
+        "title": "Aucun bloc pour l'instant"
+      },
+      "error": {
+        "blockNotFound": "Bloc introuvable"
+      }
+    },
+    "config": {
+      "entityFields": "Champs de l'entité",
+      "seo": "SEO"
+    },
+    "floatingToolbar": {
+      "copy": "Copier le bloc",
+      "delete": "Supprimer le bloc",
+      "duplicate": "Dupliquer le bloc"
+    },
+    "header": {
+      "actions": {
+        "publish": "Publier",
+        "saveDraft": "Enregistrer le brouillon",
+        "update": "Mettre à jour"
+      }
+    },
+    "layout": {
+      "empty": "Aucun bloc ajouté pour l'instant",
+      "pasteBlock": "Coller le bloc",
+      "pasteBlocks": "Coller {count} blocs"
+    },
+    "multiSelect": {
+      "clipboardEmpty": "Le presse-papiers est vide",
+      "copied": "{count, plural, one {Bloc copié} other {# blocs copiés}}",
+      "copy": "Copier",
+      "delete": "Supprimer",
+      "deleted": "{count, plural, one {Bloc supprimé} other {# blocs supprimés}}",
+      "deselectAll": "Tout désélectionner",
+      "duplicate": "Dupliquer",
+      "duplicated": "{count, plural, one {Bloc dupliqué} other {# blocs dupliqués}}",
+      "paste": "Coller",
+      "pasted": "{count, plural, one {Bloc collé} other {# blocs collés}}",
+      "pastedPartial": "{pasted} bloc(s) sur {total} collé(s) ({skipped} incompatible(s))",
+      "selected": "{count, plural, one {# bloc sélectionné} other {# blocs sélectionnés}}",
+      "settingsHint": "Utilisez la barre d'actions pour gérer les blocs sélectionnés"
+    },
+    "settingsPanel": {
+      "empty": {
+        "hint": "Sélectionnez un bloc dans le canevas pour modifier ses paramètres",
+        "message": "Aucun bloc sélectionné"
+      },
+      "error": {
+        "notFound": "Configuration du bloc introuvable"
+      },
+      "noFields": "Ce bloc n'a aucun champ configurable",
+      "pattern": {
+        "actions": {
+          "edit": "Modifier le modèle",
+          "remove": "Dissocier le modèle"
+        },
+        "locked": {
+          "description": "Il s'agit d'une référence à un modèle. Modifiez directement le modèle pour apporter des changements.",
+          "title": "Bloc verrouillé"
+        },
+        "title": "Référence de modèle"
+      },
+      "tabs": {
+        "advanced": "Avancé",
+        "content": "Contenu",
+        "design": "Design",
+        "noAdvancedFields": "Aucun champ avancé",
+        "noContentFields": "Aucun champ de contenu",
+        "noDesignFields": "Aucun champ de design"
+      },
+      "title": "Propriétés du bloc"
+    },
+    "pattern": {
+      "fetchFailed": "Impossible de récupérer le modèle : {status}",
+      "blockNotFound": "Bloc introuvable :"
+    },
+    "tree": {
+      "pattern": "Modèle",
+      "unknownBlock": "Bloc inconnu"
+    },
+    "viewport": {
+      "mobile": "Vue mobile (375 px)",
+      "desktop": "Vue bureau (100 %)"
+    }
+  },
+  "patterns": {
+    "delete": {
+      "cancel": "Annuler",
+      "cleanupNote": "Les références seront supprimées automatiquement lors de la modification de chaque entité.",
+      "confirm": "Voulez-vous vraiment supprimer",
+      "deleteAction": "Supprimer",
+      "deleting": "Suppression...",
+      "error": "Erreur lors de la vérification de l'utilisation du modèle.",
+      "inUse": "Ce modèle est utilisé dans {count, plural, one {# entité} other {# entités}} :",
+      "loading": "Vérification de l'utilisation...",
+      "moreItems": "... et {count} de plus",
+      "notInUse": "Ce modèle n'est pas utilisé actuellement.",
+      "title": "Supprimer le modèle",
+      "trigger": "Supprimer"
+    },
+    "placeholder": {
+      "description": "Ce modèle a été supprimé et sera retiré à l'enregistrement.",
+      "remove": "Retirer",
+      "title": "Modèle supprimé"
+    },
+    "usage": {
+      "totalUses": "Utilisations totales",
+      "acrossOne": "Sur {count} type d'entité",
+      "acrossMany": "Sur {count} types d'entité",
+      "percentOfTotal": "{percent} % du total",
+      "emptyMessage": "Aucune utilisation trouvée",
+      "entity": "Entité",
+      "type": "Type",
+      "status": "Statut",
+      "lastUpdated": "Dernière mise à jour",
+      "actions": "Actions",
+      "noUsagesTitle": "Aucune utilisation trouvée",
+      "viewEntity": "Voir l'entité (s'ouvre dans un nouvel onglet)",
+      "errorTitle": "Erreur lors du chargement des utilisations",
+      "loadFailed": "Impossible de charger les utilisations du modèle",
+      "retry": "Réessayer",
+      "filterByType": "Filtrer par type :",
+      "allTypes": "Tous les types d'entité",
+      "pageOf": "Page {page} sur {totalPages}",
+      "notUsedIn": "Ce modèle n'est utilisé dans aucun {entityType}",
+      "notUsedYet": "Ce modèle n'est encore utilisé dans aucune entité",
+      "showing": "Affichage de {from} à {to} sur {total} utilisations"
+    },
+    "list": {
+      "unknownError": "Erreur inconnue",
+      "errorLoading": "Erreur lors du chargement des données : {message}",
+      "deleted": "Modèle supprimé avec succès",
+      "deleteError": "Erreur lors de la suppression : {message}",
+      "deletedMany": "{count} modèles supprimés avec succès",
+      "viewUsages": "Voir les utilisations",
+      "configError": "Impossible de charger la configuration de l'entité « {entity} »."
+    },
+    "reports": {
+      "idRequired": "L'ID du modèle est requis",
+      "notEnabled": "L'entité des modèles n'est pas configurée ou n'est pas activée",
+      "loadFailed": "Impossible de charger le modèle",
+      "errorTitle": "Erreur",
+      "back": "Retour aux modèles",
+      "notFoundTitle": "Modèle introuvable",
+      "notFoundDescription": "Le modèle que vous recherchez n'existe pas ou a été supprimé.",
+      "subtitle": "Rapports d'utilisation et analyses",
+      "edit": "Modifier le modèle"
+    },
+    "page": {
+      "notEnabled": "L'entité des modèles n'est pas configurée ou n'est pas activée."
     }
   }
 }

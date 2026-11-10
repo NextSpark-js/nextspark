@@ -662,5 +662,14 @@
     "pricePerYear": "{price}/ano",
     "trialEnds": "O teste termina em {date}",
     "viewTeam": "Ver equipe"
+  },
+  "guard": {
+    "title": "Acesso negado",
+    "description": "Você precisa de privilégios de superadministrador ou desenvolvedor para acessar esta área.",
+    "body": "Esta seção é restrita aos administradores do sistema. Se você acha que isso é um erro, entre em contato com o suporte.",
+    "sessionNotFound": "Sessão não encontrada. Entre novamente.",
+    "signIn": "Entrar",
+    "goBack": "Voltar",
+    "dashboard": "Painel"
   }
 }

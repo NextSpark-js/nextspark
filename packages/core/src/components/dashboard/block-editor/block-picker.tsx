@@ -102,7 +102,7 @@ export function BlockPicker({
       const response = await fetch(withBasePath('/api/v1/patterns?status=published'), {
         headers: buildApiHeaders(),
       })
-      if (!response.ok) throw new Error('Failed to fetch patterns')
+      if (!response.ok) throw new Error(t('messages.fetchPatternsFailed'))
       return response.json()
     },
     enabled: showPatternsTab && activeTab === 'patterns',
@@ -360,7 +360,7 @@ export function BlockPicker({
           <ScrollArea className="flex-1 p-4" data-cy={sel('blockEditor.blockPicker.patternsList')}>
             {patternsLoading ? (
               <div className="text-center py-8 text-muted-foreground">
-                <p className="text-sm">{tPatterns('picker.loading') || 'Loading patterns...'}</p>
+                <p className="text-sm">{tPatterns('picker.loading')}</p>
               </div>
             ) : filteredPatterns.length === 0 ? (
               <div

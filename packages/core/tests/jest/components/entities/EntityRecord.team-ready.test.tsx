@@ -56,7 +56,8 @@ jest.mock('@/core/components/entities/EntityDetailHeader', () => ({ EntityDetail
 jest.mock('@/core/components/dashboard/block-editor/builder-editor-view', () => ({ BuilderEditorView: () => null }))
 jest.mock('@/core/components/patterns/PatternUsageReport', () => ({ PatternUsageReport: () => null }))
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en', useMessages: () => ({}) }))
+const mockT = (key: string) => key
+jest.mock('next-intl', () => ({ useTranslations: () => mockT, useLocale: () => 'en', useMessages: () => ({}) }))
 
 import { EntityDetailWrapper } from '@/core/components/entities/wrappers/EntityDetailWrapper'
 import { EntityFormWrapper } from '@/core/components/entities/wrappers/EntityFormWrapper'

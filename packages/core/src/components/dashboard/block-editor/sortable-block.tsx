@@ -114,7 +114,7 @@ export function SortableBlock({
                     ))}
                     {Object.keys(block.props).length > 3 && (
                       <span className="text-xs text-muted-foreground">
-                        +{Object.keys(block.props).length - 3} more
+                        {t('moreProps', { count: Object.keys(block.props).length - 3 })}
                       </span>
                     )}
                   </div>

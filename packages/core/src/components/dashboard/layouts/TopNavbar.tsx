@@ -658,7 +658,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                                     data-cy={sel('dashboard.topnav.mobileMenu.linkProfile')}
                 >
                   <User className="inline mr-2 h-4 w-4" aria-hidden="true" />
-                  Profile
+                  {t('navigation.profile')}
                 </Link>
                 <Link
                   href="/dashboard/settings"
@@ -668,7 +668,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                                     data-cy={sel('dashboard.topnav.mobileMenu.linkSettings')}
                 >
                   <Settings className="inline mr-2 h-4 w-4" aria-hidden="true" />
-                  Settings
+                  {t('navigation.settings')}
                 </Link>
                 {canAccessBilling && (
                   <Link
@@ -679,7 +679,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                     data-cy={sel('dashboard.topnav.mobileMenu.linkBilling')}
                   >
                     <CreditCard className="inline mr-2 h-4 w-4" aria-hidden="true" />
-                    Billing
+                    {t('navigation.billing')}
                   </Link>
                 )}
                 <button
@@ -692,7 +692,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                                     data-cy={sel('dashboard.topnav.mobileMenu.signout')}
                 >
                   <LogOut className="inline mr-2 h-4 w-4" aria-hidden="true" />
-                  Sign out
+                  {t('buttons.signOut')}
                 </button>
               </>
             ) : (
@@ -704,7 +704,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   aria-label={t('a11y.signIn')}
                                     data-cy={sel('dashboard.topnav.signin')}
                 >
-                  Sign in
+                  {t('buttons.signIn')}
                 </Link>
                 <Link
                   href="/signup"
@@ -713,7 +713,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   aria-label={t('a11y.signUp')}
                                     data-cy={sel('dashboard.topnav.signup')}
                 >
-                  Sign up
+                  {t('buttons.signUp')}
                 </Link>
               </>
             )}

@@ -25,5 +25,13 @@
       "title": "Lecteur",
       "description": "Accès en lecture seule au contenu de l'équipe"
     }
+  },
+  "forbidden": {
+    "defaultReason": "Vous n'avez pas l'autorisation d'accéder à cette ressource",
+    "title": "⚠️ Oups, vous n'avez pas l'autorisation de faire cela",
+    "upgradeRequired": "Cette fonctionnalité nécessite de faire évoluer votre forfait actuel.",
+    "back": "Retour",
+    "dashboard": "Tableau de bord",
+    "viewPlans": "Voir les forfaits"
   }
 }

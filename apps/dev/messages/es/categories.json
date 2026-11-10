@@ -26,7 +26,7 @@
   "deleteSuccess": "Categoría eliminada exitosamente",
   "placeholders": {
     "name": "Tecnología",
-    "slug": "tecnologia",
+    "slug": "tecnología",
     "description": "Posts sobre tecnología y desarrollo de software"
   },
   "errors": {

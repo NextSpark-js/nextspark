@@ -10,7 +10,7 @@ import fs from 'fs'
 import path from 'path'
 import { render, screen } from '@testing-library/react'
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => Object.assign((key: string) => key, { rich: (key: string, tags: Record<string, (chunks: string) => unknown>) => [key, ...Object.values(tags).map(tag => tag('x'))] }) }))
 
 import { PublicFooter } from '@/core/components/app/layouts/PublicFooter'
 

@@ -1,5 +1,7 @@
 {
   "docs": "Documentazione",
   "resources": "Risorse",
-  "cookieSettings": "Impostazioni cookie"
+  "cookieSettings": "Impostazioni cookie",
+  "allRightsReserved": "Tutti i diritti riservati.",
+  "builtWith": "Realizzato con ❤️ usando <nextjs>Next.js</nextjs>, <supabase>Supabase</supabase> e <shadcn>shadcn/ui</shadcn>"
 }

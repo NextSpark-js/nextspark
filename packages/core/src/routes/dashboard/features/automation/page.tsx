@@ -27,7 +27,7 @@ function TaskAutomationPage() {
         {/* Contenido real cuando se implemente */}
         <div data-cy="automation-content">
           <h1 className="text-2xl font-bold">{t('automation.title')}</h1>
-          <p className="text-muted-foreground mt-2">Task automation coming soon...</p>
+          <p className="text-muted-foreground mt-2">{t('automation.comingSoon')}</p>
         </div>
       </FeatureGate>
     </div>

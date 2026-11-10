@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -38,6 +39,8 @@ interface PatternItem {
 }
 
 export default function PatternsListPage() {
+  const text = useTranslations('admin.patterns.list')
+  const ui = useTranslations('entities.ui')
   const entityType = 'patterns'
   const router = useRouter()
 
@@ -133,13 +136,13 @@ export default function PatternsListPage() {
       setDataError(null)
     } catch (err) {
       console.error(`[PatternsListPage] Error loading data:`, err)
-      setDataError(`Error loading data: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setDataError(text('errorLoading', { message: err instanceof Error ? err.message : text('unknownError') }))
       setData([])
     } finally {
       setIsInitialLoad(false)
       setIsSearching(false)
     }
-  }, [entityConfig, entityType, buildApiFilters])
+  }, [entityConfig, entityType, buildApiFilters, text])
 
   // Track previous filters and schema to detect changes
   const filtersKey = JSON.stringify(filters)
@@ -205,7 +208,7 @@ export default function PatternsListPage() {
     setIsDeleting(true)
     try {
       await deleteEntityData(entityType, deleteTarget.id)
-      toast.success(`Pattern deleted successfully`)
+      toast.success(text('deleted'))
       setSelectedIds(prev => {
         const newSet = new Set(prev)
         newSet.delete(deleteTarget.id)
@@ -214,26 +217,26 @@ export default function PatternsListPage() {
       await loadData(false)
     } catch (err) {
       console.error(`[PatternsListPage] Error deleting pattern:`, err)
-      toast.error(`Error deleting: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(text('deleteError', { message: err instanceof Error ? err.message : text('unknownError') }))
     } finally {
       setIsDeleting(false)
       setIsDeleteDialogOpen(false)
       setDeleteTarget(null)
     }
-  }, [deleteTarget, entityType, loadData])
+  }, [deleteTarget, entityType, loadData, text])
 
   // Handle bulk delete
   const handleBulkDelete = useCallback(async (ids: string[]) => {
     try {
       await Promise.all(ids.map(id => deleteEntityData(entityType, id)))
-      toast.success(`${ids.length} pattern${ids.length === 1 ? '' : 's'} deleted successfully`)
+      toast.success(ids.length === 1 ? text('deleted') : text('deletedMany', { count: ids.length }))
       await loadData(false)
     } catch (err) {
       console.error(`[PatternsListPage] Error bulk deleting patterns:`, err)
-      toast.error(`Error deleting: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(text('deleteError', { message: err instanceof Error ? err.message : text('unknownError') }))
       throw err
     }
-  }, [entityType, loadData])
+  }, [entityType, loadData, text])
 
   // Handle select all
   const handleSelectAll = useCallback(() => {
@@ -256,7 +259,7 @@ export default function PatternsListPage() {
     () => [
       {
         id: 'view-usages',
-        label: 'View Usages',
+        label: text('viewUsages'),
         icon: <BarChart3 className="h-4 w-4" />,
         onClick: (item: PatternItem) => {
           router.push(`/dashboard/patterns/${item.id}/reports`)
@@ -264,7 +267,7 @@ export default function PatternsListPage() {
         dataCySuffix: 'usages',
       },
     ],
-    [router]
+    [router, text]
   )
 
   // Custom dropdownActions - replace default delete with PatternDeleteDialog
@@ -272,14 +275,14 @@ export default function PatternsListPage() {
     () => [
       {
         id: 'edit',
-        label: 'Edit',
+        label: ui('edit'),
         icon: <Pencil className="h-4 w-4" />,
         onClick: (item) => router.push(`/dashboard/patterns/${item.id}/edit`),
         dataCySuffix: 'edit',
       },
       {
         id: 'delete',
-        label: 'Delete',
+        label: ui('delete'),
         icon: <Trash2 className="h-4 w-4" />,
         onClick: handleDeleteClick,
         variant: 'destructive',
@@ -287,7 +290,7 @@ export default function PatternsListPage() {
         dataCySuffix: 'delete',
       },
     ],
-    [router, handleDeleteClick]
+    [router, handleDeleteClick, ui]
   )
 
   if (isLoading) {
@@ -298,7 +301,7 @@ export default function PatternsListPage() {
     return (
       <Alert>
         <AlertDescription>
-          {configError || `Could not load configuration for entity "${entityType}".`}
+          {configError || text('configError', { entity: entityType })}
         </AlertDescription>
       </Alert>
     )
@@ -329,7 +332,7 @@ export default function PatternsListPage() {
               {entityConfig.names.plural}
             </h1>
             <p className="text-muted-foreground">
-              Manage your {entityConfig.names.plural.toLowerCase()}
+              {ui('manage', { entities: entityConfig.names.plural.toLowerCase() })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -337,7 +340,7 @@ export default function PatternsListPage() {
               <Button asChild data-cy={sel('entities.list.addButton', { slug: entityConfig.slug })}>
                 <Link href={`/dashboard/${entityConfig.slug}/create`}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add {entityConfig.names.singular}
+                  {ui('add', { entity: entityConfig.names.singular })}
                 </Link>
               </Button>
             )}
@@ -349,7 +352,7 @@ export default function PatternsListPage() {
           <div className="flex flex-col sm:flex-row gap-3 items-center flex-wrap">
             {enableSearch && (
               <SearchInput
-                placeholder={`Search ${entityConfig.names.plural.toLowerCase()}...`}
+                placeholder={ui('searchEntities', { entities: entityConfig.names.plural.toLowerCase() })}
                 value={searchValue}
                 onChange={(e) => handleSearch(e.target.value)}
                 containerClassName="flex-1 max-w-md"

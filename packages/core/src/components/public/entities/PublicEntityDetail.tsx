@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations, useLocale } from 'next-intl'
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '../../ui/button'
@@ -30,6 +31,8 @@ interface PublicEntityDetailProps {
 }
 
 export function PublicEntityDetail({ entityType, entitySlug, id, className }: PublicEntityDetailProps) {
+  const text = useTranslations('public.entities')
+  const locale = useLocale()
   const [data, setData] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,7 +59,7 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
         setData(result)
       } catch (err) {
         console.error('Error loading public entity:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load data')
+        setError(err instanceof Error ? err.message : text('loadFailed'))
       } finally {
         setLoading(false)
       }
@@ -93,7 +96,7 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
   // Format date
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
+      return new Date(dateString).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -107,16 +110,16 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
 
   // Format field value for display
   const formatFieldValue = (field: EntityField, value: unknown): React.ReactNode => {
-    if (value === null || value === undefined) return 'Not specified'
+    if (value === null || value === undefined) return text('notSpecified')
     
     switch (field.type) {
       case 'date':
       case 'datetime':
         return formatDate(value as string)
       case 'boolean':
-        return value ? 'Yes' : 'No'
+        return value ? text('yes') : text('no')
       case 'number':
-        return typeof value === 'number' ? value.toLocaleString() : String(value)
+        return typeof value === 'number' ? value.toLocaleString(locale) : String(value)
       case 'email':
         return (
           <a href={`mailto:${value}`} className="text-primary hover:underline">
@@ -187,13 +190,13 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          {entityConfig?.names.singular || 'Entity'} not found
+          {text('notFound', { entity: entityConfig?.names.singular || text('entityFallback') })}
         </AlertDescription>
       </Alert>
     )
   }
 
-  const title = titleField ? (data[titleField.name] as string) : `${entityConfig?.names.singular || 'Entity'} ${id}`
+  const title = titleField ? (data[titleField.name] as string) : text('titleFallback', { entity: entityConfig?.names.singular || text('entityFallback'), id })
   const description = descriptionField ? (data[descriptionField.name] as string) : undefined
 
   return (
@@ -203,12 +206,12 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
         <Button variant="outline" size="sm" asChild>
           <Link href={`/${entityConfig?.slug || ''}`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to {entityConfig?.names.plural || 'List'}
+            {text('backTo', { list: entityConfig?.names.plural || text('listFallback') })}
           </Link>
         </Button>
         
         <Badge variant="outline">
-          {entityConfig?.names.singular || 'Entity'}
+          {entityConfig?.names.singular || text('entityFallback')}
         </Badge>
       </div>
 
@@ -229,7 +232,7 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
           {/* Content Fields */}
           {contentFields.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Details</h3>
+              <h3 className="text-lg font-semibold">{text('details')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {contentFields.map((field) => (
                   <div key={field.name} className="space-y-1">
@@ -271,7 +274,7 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
       <div className="flex justify-center">
         <Button variant="outline" asChild>
           <Link href={`/${entityConfig?.slug || ''}`}>
-            View More {entityConfig?.names.plural || 'Items'}
+            {text('viewMore', { items: entityConfig?.names.plural || text('itemsFallback') })}
           </Link>
         </Button>
       </div>

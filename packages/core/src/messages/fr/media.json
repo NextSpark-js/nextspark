@@ -1,0 +1,159 @@
+{
+  "actions": {
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "select": "Sélectionner",
+    "viewDetails": "Voir les détails",
+    "save": "Enregistrer"
+  },
+  "dashboard": {
+    "bulkDelete": "Supprimer",
+    "bulkDeleteConfirm": "Supprimer {count, plural, one {# fichier} other {# fichiers}} ?",
+    "bulkDeleteConfirmDesc": "Cette action est irréversible. Les fichiers seront supprimés définitivement.",
+    "bulkDeleteSuccess": "{count, plural, one {# fichier supprimé} other {# fichiers supprimés}}",
+    "bulkDeleting": "Suppression de {current} sur {total}...",
+    "clearSelection": "Effacer",
+    "deselectAll": "Tout désélectionner",
+    "filterByTag": "Filtrer par étiquette...",
+    "hideUpload": "Masquer le téléversement",
+    "nextPage": "Suivant",
+    "noTags": "Aucune étiquette",
+    "pagination": "Affichage de {from} à {to} sur {total}",
+    "prevPage": "Précédent",
+    "selected": "{count, plural, one {# sélectionné} other {# sélectionnés}}",
+    "subtitle": "{count, plural, =0 {Aucun fichier} one {# fichier} other {# fichiers}} dans votre bibliothèque",
+    "tags": "Étiquettes",
+    "allTags": "Toutes les étiquettes"
+  },
+  "delete": {
+    "cancel": "Annuler",
+    "confirm": "Supprimer",
+    "error": "Impossible de supprimer le média",
+    "message": "Voulez-vous vraiment supprimer ce fichier média ? Cette action est irréversible.",
+    "success": "Média supprimé avec succès",
+    "title": "Supprimer le média"
+  },
+  "detail": {
+    "altLabel": "Texte alternatif",
+    "altPlaceholder": "Décrivez cette image pour l'accessibilité...",
+    "cancel": "Annuler",
+    "captionLabel": "Légende",
+    "captionPlaceholder": "Ajoutez une légende...",
+    "info": {
+      "url": "URL",
+      "filename": "Nom du fichier",
+      "fileSize": "Taille du fichier",
+      "mimeType": "Type",
+      "dimensions": "Dimensions",
+      "uploadedBy": "Téléversé par",
+      "uploadedAt": "Téléversé"
+    },
+    "save": "Enregistrer les modifications",
+    "saved": "Modifications enregistrées",
+    "saving": "Enregistrement...",
+    "title": "Détails du média",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "Donnez un titre à ce fichier...",
+    "titleDescription": "Nom d'affichage facultatif pour ce média",
+    "altDescription": "Texte alternatif pour les lecteurs d'écran et le SEO",
+    "captionDescription": "Description facultative affichée sous le média"
+  },
+  "empty": {
+    "title": "Aucun fichier média pour l'instant",
+    "description": "Téléversez des images ou des vidéos pour commencer",
+    "uploadBtn": "Téléverser des fichiers"
+  },
+  "errors": {
+    "loadFailed": "Impossible de charger les médias",
+    "unauthorized": "Vous n'avez pas l'autorisation d'accéder aux médias",
+    "notFound": "Média introuvable",
+    "uploadFailed": "Échec du téléversement : {error}"
+  },
+  "footer": {
+    "cancel": "Annuler",
+    "itemsSelected": "{count} élément sélectionné",
+    "itemsSelectedPlural": "{count} éléments sélectionnés",
+    "select": "Sélectionner"
+  },
+  "grid": {
+    "dimensions": "{width} × {height}",
+    "noResults": "Aucun média trouvé",
+    "selected": "Sélectionné",
+    "loading": "Chargement des médias..."
+  },
+  "list": {
+    "actions": "Actions",
+    "dimensions": "Dimensions",
+    "filename": "Nom du fichier",
+    "size": "Taille",
+    "type": "Type",
+    "uploaded": "Téléversé"
+  },
+  "selector": {
+    "change": "Modifier",
+    "noSelection": "Aucun média sélectionné",
+    "remove": "Retirer",
+    "selectMedia": "Sélectionner un média"
+  },
+  "subtitle": "Gérez vos images et vidéos",
+  "tags": {
+    "add": "Ajouter une étiquette",
+    "createPlaceholder": "Nom de la nouvelle étiquette...",
+    "empty": "Aucune étiquette attribuée",
+    "title": "Étiquettes",
+    "remove": "Retirer",
+    "create": "Créer une étiquette",
+    "applied": "Étiquette ajoutée",
+    "removed": "Étiquette retirée"
+  },
+  "title": "Médiathèque",
+  "toolbar": {
+    "columns": "Colonnes",
+    "search": "Rechercher des fichiers...",
+    "sort": {
+      "nameAsc": "Nom A-Z",
+      "nameDesc": "Nom Z-A",
+      "newest": "Plus récents d'abord",
+      "oldest": "Plus anciens d'abord",
+      "sizeAsc": "Plus petits d'abord",
+      "sizeDesc": "Plus grands d'abord"
+    },
+    "typeFilter": {
+      "all": "Tous les types",
+      "images": "Images",
+      "videos": "Vidéos"
+    },
+    "upload": "Téléverser",
+    "viewGrid": "Vue en grille",
+    "viewList": "Vue en liste"
+  },
+  "upload": {
+    "browse": "parcourir pour téléverser",
+    "cancelUpload": "Annuler le téléversement de {name}",
+    "dragDrop": "Glissez-déposez des fichiers ici ou",
+    "duplicateFound": "{count, plural, one {# fichier existe déjà} other {# fichiers existent déjà}} dans votre bibliothèque",
+    "duplicateSkip": "Ignorer les doublons",
+    "duplicateUploadAll": "Tout téléverser",
+    "duplicateConfirm": "Téléverser quand même ?",
+    "error": "Impossible de téléverser le fichier",
+    "maxSelectionsReached": "{maxSelections} sélections maximum autorisées",
+    "maxSize": "Taille maximale du fichier : {maxSize} Mo",
+    "success": "Fichier téléversé avec succès",
+    "successMultiple": "{count} fichiers téléversés avec succès",
+    "tooLarge": "Le fichier est trop volumineux",
+    "uploading": "Téléversement...",
+    "uploadingName": "Téléversement de {name}",
+    "uploadingFile": "Téléversement de {filename}...",
+    "invalidType": "Type de fichier non autorisé",
+    "typeNotAllowed": "Le type de fichier {type} n'est pas autorisé.",
+    "typeNotAccepted": "Type de fichier non autorisé. Types acceptés : {types}",
+    "tooLargeNamed": "Le fichier {name} est trop volumineux. La taille maximale est de {max} Mo.",
+    "tooManyFiles": "{max} fichiers maximum par téléversement",
+    "cancelled": "Téléversement annulé",
+    "noFileReturned": "Le téléversement n'a renvoyé aucun fichier",
+    "failed": "Échec du téléversement",
+    "storageFailed": "Échec du téléversement vers le stockage",
+    "storageFailedStatus": "Échec du téléversement vers le stockage (statut {status})"
+  }
+}

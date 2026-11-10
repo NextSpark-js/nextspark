@@ -5,15 +5,18 @@ import { BookOpen, Folder, FileText, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
 import type { Metadata } from 'next'
+import { getPublicTranslations } from '@nextsparkjs/core/lib/i18n/public-translations'
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Documentation',
-  description: 'Complete documentation for the application',
-  path: '/docs'
-})
+export async function generateMetadata(): Promise<Metadata> {
+  const title = (await getPublicTranslations('docs'))('title')
+  const description = (await getPublicTranslations('docs.index'))('description')
+  return pageMetadata({ title, description, path: '/docs' })
+}
 
-export default function DocsPage() {
+export default async function DocsPage() {
   const sections = DOCS_REGISTRY.public
+  const title = (await getPublicTranslations('docs'))('title')
+  const text = await getPublicTranslations('docs.index')
 
   return (
     <div className="container max-w-7xl mx-auto px-4 py-8">
@@ -21,13 +24,13 @@ export default function DocsPage() {
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium mb-4">
           <BookOpen className="h-4 w-4" />
-          Documentation
+          {title}
         </div>
         <h1 className="text-4xl font-bold mb-4">
-          Documentation
+          {title}
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Guides and reference documentation to help you get the most out of the application.
+          {text('intro')}
         </p>
       </div>
 
@@ -46,7 +49,7 @@ export default function DocsPage() {
                   </div>
                 </div>
                 <CardDescription>
-                  {section.pages.length} {section.pages.length === 1 ? 'page' : 'pages'}
+                  {text(section.pages.length === 1 ? 'pagesOne' : 'pagesMany', { count: section.pages.length })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -72,9 +75,9 @@ export default function DocsPage() {
       ) : (
         <div className="text-center py-12">
           <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No Documentation Available</h2>
+          <h2 className="text-xl font-semibold mb-2">{text('emptyTitle')}</h2>
           <p className="text-muted-foreground">
-            Documentation will appear here once it is added to the project.
+            {text('emptyDescription')}
           </p>
         </div>
       )}

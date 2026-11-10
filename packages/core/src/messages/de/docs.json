@@ -25,5 +25,16 @@
   "notFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Dokumentationsseite existiert nicht."
+  },
+  "index": {
+    "description": "Vollständige Dokumentation der Anwendung",
+    "intro": "Anleitungen und Referenzdokumentation, damit Sie die Anwendung optimal nutzen können.",
+    "emptyTitle": "Keine Dokumentation verfügbar",
+    "emptyDescription": "Die Dokumentation erscheint hier, sobald sie dem Projekt hinzugefügt wurde.",
+    "pagesOne": "{count} Seite",
+    "pagesMany": "{count} Seiten",
+    "loading": "Wird geladen ...",
+    "pageTitle": "{title} | Dokumentation",
+    "pageDescription": "Dokumentation zu {title}"
   }
 }

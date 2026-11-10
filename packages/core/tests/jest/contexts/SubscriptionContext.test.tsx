@@ -33,6 +33,7 @@ jest.mock('@/core/contexts/TeamContext', () => ({
 }))
 
 jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
   useTranslations: () => (key: string) => key,
 }))
 

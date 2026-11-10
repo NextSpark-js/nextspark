@@ -142,7 +142,8 @@
     "expired": "Expired",
     "trialEnds": "Trial ends {date}",
     "renewsOn": "Renews on {date}",
-    "cancelsOn": "Cancels on {date}"
+    "cancelsOn": "Cancels on {date}",
+    "nextBilling": "Next billing: {date}"
   },
 
   "invoices": {

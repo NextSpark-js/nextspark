@@ -10,5 +10,44 @@
     "getStarted": "Get Started",
     "learnMore": "Learn More",
     "contactUs": "Contact Us"
+  },
+  "entities": {
+    "itemFallback": "Item {id}",
+    "notAvailable": "N/A",
+    "yes": "Yes",
+    "no": "No",
+    "loadFailed": "Failed to load data",
+    "notSpecified": "Not specified",
+    "entityFallback": "Entity",
+    "notFound": "{entity} not found",
+    "titleFallback": "{entity} {id}",
+    "listFallback": "List",
+    "backTo": "Back to {list}",
+    "details": "Details",
+    "itemsFallback": "Items",
+    "viewMore": "View More {items}",
+    "searchEntities": "Search {entities}...",
+    "search": "Search...",
+    "sortBy": "Sort by...",
+    "showing": "Showing {shown} of {total} {entities}",
+    "noneFound": "No {entities} found",
+    "tryAdjusting": "Try adjusting your search terms",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "pageBuilder": {
+    "blockFailed": "Failed to load block:",
+    "blockHint": "This block may not be available or there was an error rendering it.",
+    "emptyPage": "This page does not have any content yet."
+  },
+  "defaultPage": {
+    "title": "Default Public Page",
+    "description": "This is the default public page (no theme override)",
+    "template": "Default Template",
+    "path": "Path: {path}"
+  },
+  "route": {
+    "notFound": "Not Found",
+    "browseAll": "Browse all {entities}"
   }
 }

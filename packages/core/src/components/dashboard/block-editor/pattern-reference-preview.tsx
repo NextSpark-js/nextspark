@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense } from 'react'
 import { Layers, X } from 'lucide-react'
 import { useEntityTranslation } from '../../../hooks/useContentTranslation'
@@ -73,6 +74,7 @@ export function PatternReferencePreview({
   onRemove,
 }: PatternReferencePreviewProps) {
   const { t } = useEntityTranslation('patterns')
+  const text = useTranslations('admin.builder.pattern')
 
   // Fetch pattern data
   const { data: patternData, isLoading, isError } = useQuery({
@@ -82,7 +84,7 @@ export function PatternReferencePreview({
         headers: buildApiHeaders(),
       })
       if (!response.ok) {
-        throw new Error(`Failed to fetch pattern: ${response.statusText}`)
+        throw new Error(text('fetchFailed', { status: response.statusText }))
       }
       return response.json()
     },
@@ -198,7 +200,7 @@ export function PatternReferencePreview({
               >
                 <div className="max-w-7xl mx-auto text-center">
                   <p className="text-destructive text-sm">
-                    Block not found: <code className="font-mono">{block.blockSlug}</code>
+                    {text('blockNotFound')} <code className="font-mono">{block.blockSlug}</code>
                   </p>
                 </div>
               </div>

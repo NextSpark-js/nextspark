@@ -29,8 +29,8 @@
   },
 
   "roleDescriptions": {
-    "owner": "Control total del equipo, incluyendo eliminacion y facturacion",
-    "admin": "Puede gestionar miembros, configuracion y la mayoria de operaciones",
+    "owner": "Control total del equipo, incluyendo eliminación y facturación",
+    "admin": "Puede gestionar miembros, configuración y la mayoría de operaciones",
     "member": "Puede ver el contenido del equipo y colaborar con otros miembros",
     "viewer": "Acceso de solo lectura al contenido del equipo"
   },
@@ -72,7 +72,7 @@
     "namePlaceholder": "Ingresa el nombre del equipo",
     "slugLabel": "URL del Equipo",
     "slugPlaceholder": "url-del-equipo",
-    "descriptionLabel": "Descripcion",
+    "descriptionLabel": "Descripción",
     "descriptionPlaceholder": "Describe para que es este equipo",
     "success": "Equipo creado exitosamente",
     "error": "Error al crear el equipo"
@@ -101,7 +101,7 @@
 
   "deleteTeam": {
     "title": "Eliminar Equipo",
-    "description": "Estas seguro de que deseas eliminar este equipo? Esta accion no se puede deshacer.",
+    "description": "¿Estás seguro de que quieres eliminar este equipo? Esta acción no se puede deshacer.",
     "confirmButton": "Eliminar Equipo",
     "success": "Equipo eliminado exitosamente",
     "error": "Error al eliminar el equipo"
@@ -109,10 +109,12 @@
 
   "members": {
     "title": "Miembros del Equipo",
-    "description": "Gestiona quien tiene acceso a este equipo",
-    "empty": "Sin miembros aun",
+    "description": "Gestiona quién tiene acceso a este equipo",
+    "empty": "Sin miembros aún",
     "you": "(Tu)",
-    "joined": "Se unio {date}"
+    "joined": "Se unió {date}",
+    "sectionDescription": "Administra los miembros del equipo y las invitaciones",
+    "unknown": "Desconocido"
   },
 
   "invitations": {
@@ -126,43 +128,44 @@
     "expiresAt": "Expira",
     "invitedBy": "Invitado por",
     "resend": "Reenviar",
-    "cancel": "Cancelar Invitacion",
-    "cancelTitle": "Cancelar Invitacion",
-    "cancelDescription": "¿Estas seguro de que deseas cancelar esta invitacion?",
+    "cancel": "Cancelar Invitación",
+    "cancelTitle": "Cancelar Invitación",
+    "cancelDescription": "¿Estás seguro de que quieres cancelar esta invitación?",
     "cancelConfirm": "Si, Cancelar",
-    "cancelSuccess": "Invitacion cancelada",
-    "cancelError": "Error al cancelar la invitacion"
+    "cancelSuccess": "Invitación cancelada",
+    "cancelError": "Error al cancelar la invitación",
+    "fetchError": "No se pudieron obtener las invitaciones"
   },
 
   "invite": {
     "limitReached": "Límite de miembros del equipo alcanzado ({limit})",
     "title": "Invitar Miembro",
     "description": "Invita a alguien a unirse a este equipo",
-    "emailLabel": "Correo Electronico",
+    "emailLabel": "Correo Electrónico",
     "emailPlaceholder": "colega@ejemplo.com",
     "roleLabel": "Rol",
     "rolePlaceholder": "Selecciona un rol",
-    "sendButton": "Enviar Invitacion",
-    "success": "Invitacion enviada exitosamente",
-    "error": "Error al enviar la invitacion"
+    "sendButton": "Enviar Invitación",
+    "success": "Invitación enviada exitosamente",
+    "error": "Error al enviar la invitación"
   },
 
   "acceptInvite": {
-    "title": "Invitacion al Equipo",
+    "title": "Invitación al Equipo",
     "description": "Has sido invitado a unirte a",
-    "accept": "Aceptar Invitacion",
+    "accept": "Aceptar Invitación",
     "decline": "Rechazar",
-    "expired": "Esta invitacion ha expirado",
-    "invalid": "Esta invitacion ya no es valida",
+    "expired": "Esta invitación ha expirado",
+    "invalid": "Esta invitación ya no es válida",
     "success": "Te has unido al equipo!",
-    "error": "Error al aceptar la invitacion"
+    "error": "Error al aceptar la invitación"
   },
 
   "settings": {
-    "title": "Configuracion del Equipo",
+    "title": "Configuración del Equipo",
     "general": "General",
     "members": "Miembros",
-    "billing": "Facturacion",
+    "billing": "Facturación",
     "danger": "Zona de Peligro"
   },
 
@@ -176,15 +179,15 @@
   "errors": {
     "notFound": "Equipo no encontrado",
     "notMember": "No eres miembro de este equipo",
-    "permissionDenied": "No tienes permiso para realizar esta accion",
+    "permissionDenied": "No tienes permiso para realizar esta acción",
     "cannotDeletePersonal": "No se puede eliminar el equipo personal",
     "cannotLeaveOwner": "Los propietarios no pueden abandonar. Transfiere la propiedad primero.",
-    "lastAdmin": "No se puede eliminar al ultimo administrador del equipo",
-    "ownerOnlyEdit": "Solo los propietarios del equipo pueden editar el nombre y descripcion"
+    "lastAdmin": "No se puede eliminar al último administrador del equipo",
+    "ownerOnlyEdit": "Solo los propietarios del equipo pueden editar el nombre y descripción"
   },
 
   "empty": {
-    "title": "Sin equipos aun",
+    "title": "Sin equipos aún",
     "description": "Crea tu primer equipo para comenzar a colaborar"
   },
 

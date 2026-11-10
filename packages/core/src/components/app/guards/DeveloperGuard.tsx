@@ -82,12 +82,12 @@ export function DeveloperGuard({ children, fallback, serverChecked = false }: De
               {t('common.status.error')}
             </CardTitle>
             <CardDescription>
-              Session not found. Please sign in again.
+              {t('devtools.guard.sessionNotFound')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/login')} className="w-full bg-purple-600 hover:bg-purple-700">
-              Sign In
+              {t('devtools.guard.signIn')}
             </Button>
           </CardContent>
         </Card>
@@ -110,16 +110,15 @@ export function DeveloperGuard({ children, fallback, serverChecked = false }: De
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
               <AlertTriangle className="h-5 w-5" />
-              Developer Access Only
+              {t('devtools.guard.title')}
             </CardTitle>
             <CardDescription>
-              You need developer privileges to access this area.
+              {t('devtools.guard.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This section is restricted to platform developers only.
-              If you believe this is an error, please contact the development team.
+              {t('devtools.guard.body')}
             </p>
             <div className="flex gap-2">
               <Button
@@ -128,13 +127,13 @@ export function DeveloperGuard({ children, fallback, serverChecked = false }: De
                 className="flex items-center gap-2 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Go Back
+                {t('devtools.guard.goBack')}
               </Button>
               <Button
                 onClick={() => router.push('/dashboard')}
                 className="bg-purple-600 hover:bg-purple-700"
               >
-                Dashboard
+                {t('devtools.guard.dashboard')}
               </Button>
             </div>
           </CardContent>

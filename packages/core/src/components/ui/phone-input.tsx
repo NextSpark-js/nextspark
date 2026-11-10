@@ -4,6 +4,7 @@ import * as React from "react"
 import { Phone } from "lucide-react"
 import { Input } from './input'
 import { cn } from '../../lib/utils'
+import { useMessageText } from '../../lib/i18n/common-text'
 
 interface PhoneInputProps {
   value: string
@@ -32,12 +33,14 @@ const countryCodes = [
 export function PhoneInput({
   value = "",
   onChange,
-  placeholder = "Phone number",
+  placeholder: placeholderProp,
   disabled = false,
   className,
   showCountryCode = true,
   defaultCountry = "AR",
 }: PhoneInputProps) {
+  const defaultPlaceholder = useMessageText('entities.phoneInput.placeholder', 'Phone number')
+  const placeholder = placeholderProp ?? defaultPlaceholder
   const [selectedCountry, setSelectedCountry] = React.useState(
     countryCodes.find(c => c.country === defaultCountry) || countryCodes[0]
   )

@@ -12,8 +12,10 @@ import { clientEntityRegistry, ensureClientInitialized, type ClientEntityConfig 
 import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
+import { useTranslations } from 'next-intl'
 
 function PatternsCreatePage() {
+  const t = useTranslations('admin.patterns.page')
   const router = useRouter()
   const [entityConfig, setEntityConfig] = useState<ClientEntityConfig | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,7 +51,7 @@ function PatternsCreatePage() {
     return (
       <Alert>
         <AlertDescription>
-          Patterns entity is not configured or not enabled.
+          {t('notEnabled')}
         </AlertDescription>
       </Alert>
     )

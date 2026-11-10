@@ -662,5 +662,14 @@
     "pricePerYear": "{price}/anno",
     "trialEnds": "La prova termina il {date}",
     "viewTeam": "Vedi team"
+  },
+  "guard": {
+    "title": "Accesso negato",
+    "description": "Servono i privilegi di super amministratore o sviluppatore per accedere a quest'area.",
+    "body": "Questa sezione è riservata agli amministratori di sistema. Se pensi che si tratti di un errore, contatta il supporto.",
+    "sessionNotFound": "Sessione non trovata. Accedi di nuovo.",
+    "signIn": "Accedi",
+    "goBack": "Indietro",
+    "dashboard": "Dashboard"
   }
 }

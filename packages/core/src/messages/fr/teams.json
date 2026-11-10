@@ -103,7 +103,9 @@
     "description": "Gérez qui a accès à cette équipe",
     "empty": "Aucun membre pour le moment",
     "you": "(Vous)",
-    "joined": "A rejoint le {date}"
+    "joined": "A rejoint le {date}",
+    "sectionDescription": "Gérez les membres de l'équipe et les invitations",
+    "unknown": "Inconnu"
   },
 
   "invitations": {
@@ -122,7 +124,8 @@
     "cancelDescription": "Êtes-vous sûr de vouloir annuler cette invitation ?",
     "cancelConfirm": "Oui, Annuler",
     "cancelSuccess": "Invitation annulée",
-    "cancelError": "Erreur lors de l'annulation de l'invitation"
+    "cancelError": "Erreur lors de l'annulation de l'invitation",
+    "fetchError": "Impossible de récupérer les invitations"
   },
 
   "invite": {

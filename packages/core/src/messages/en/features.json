@@ -3,18 +3,21 @@
     "title": "Advanced Analytics",
     "benefit1": "Real-time dashboard metrics",
     "benefit2": "Custom report builder",
-    "benefit3": "Export to PDF/CSV"
+    "benefit3": "Export to PDF/CSV",
+    "comingSoon": "Analytics dashboard coming soon..."
   },
   "webhooks": {
     "title": "Webhooks",
     "benefit1": "HTTP callbacks for events",
     "benefit2": "Custom payload templates",
-    "benefit3": "Retry logic and logging"
+    "benefit3": "Retry logic and logging",
+    "comingSoon": "Webhooks configuration coming soon..."
   },
   "automation": {
     "title": "Task Automation",
     "benefit1": "Automated task creation",
     "benefit2": "Scheduled actions",
-    "benefit3": "Workflow triggers"
+    "benefit3": "Workflow triggers",
+    "comingSoon": "Task automation coming soon..."
   }
 }

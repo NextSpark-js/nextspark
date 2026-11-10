@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
   Table,
@@ -50,9 +51,9 @@ function getStatusVariant(status?: string): 'default' | 'secondary' | 'destructi
 /**
  * Format date for display
  */
-function formatDate(dateString?: string): string {
+function formatDate(dateString: string | undefined, locale: string | undefined): string {
   if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -83,19 +84,22 @@ function getEntityDisplayName(usage: PatternUsage): string {
 export function PatternUsageTable({
   usages,
   isLoading,
-  emptyMessage = 'No usages found',
+  emptyMessage: emptyMessageProp,
 }: PatternUsageTableProps) {
+  const text = useTranslations('admin.patterns.usage')
+  const locale = useLocale()
+  const emptyMessage = emptyMessageProp ?? text('emptyMessage')
   if (isLoading) {
     return (
       <div className="rounded-md border" data-cy={sel('patterns.usageTable.loading')}>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Entity</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Updated</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
+              <TableHead>{text('entity')}</TableHead>
+              <TableHead>{text('type')}</TableHead>
+              <TableHead>{text('status')}</TableHead>
+              <TableHead>{text('lastUpdated')}</TableHead>
+              <TableHead className="w-[80px]">{text('actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -121,7 +125,7 @@ export function PatternUsageTable({
         data-cy={sel('patterns.usageTable.empty')}
       >
         <LayoutGrid className="h-12 w-12 text-muted-foreground/50" />
-        <h3 className="mt-4 text-lg font-semibold">No Usages Found</h3>
+        <h3 className="mt-4 text-lg font-semibold">{text('noUsagesTitle')}</h3>
         <p className="mt-2 text-sm text-muted-foreground">{emptyMessage}</p>
       </div>
     )
@@ -132,11 +136,11 @@ export function PatternUsageTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Entity</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Last Updated</TableHead>
-            <TableHead className="w-[80px]">Actions</TableHead>
+            <TableHead>{text('entity')}</TableHead>
+            <TableHead>{text('type')}</TableHead>
+            <TableHead>{text('status')}</TableHead>
+            <TableHead>{text('lastUpdated')}</TableHead>
+            <TableHead className="w-[80px]">{text('actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -165,7 +169,7 @@ export function PatternUsageTable({
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {formatDate(usage.entityUpdatedAt || usage.createdAt)}
+                  {formatDate(usage.entityUpdatedAt || usage.createdAt, locale)}
                 </TableCell>
                 <TableCell>
                   <Button
@@ -178,7 +182,7 @@ export function PatternUsageTable({
                       href={entityUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="View entity (opens in new tab)"
+                      title={text('viewEntity')}
                     >
                       <ExternalLink className="h-4 w-4" />
                     </Link>

@@ -37,5 +37,16 @@
     "basic": "base",
     "solo": "individuale",
     "low": "basso"
+  },
+  "sidebar": {
+    "navigationHeading": "Navigazione"
+  },
+  "mobileNav": {
+    "superAdminPanel": "Pannello super amministratore"
+  },
+  "meta": {
+    "title": "Dashboard",
+    "listDescription": "Gestisci le entità nella tua dashboard",
+    "detailDescription": "Visualizza i dettagli dell'entità"
   }
 }

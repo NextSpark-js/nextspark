@@ -662,5 +662,14 @@
     "pricePerYear": "{price}/an",
     "trialEnds": "L’essai se termine le {date}",
     "viewTeam": "Voir l’équipe"
+  },
+  "guard": {
+    "title": "Accès refusé",
+    "description": "Vous avez besoin de privilèges de super-administrateur ou de développeur pour accéder à cette zone.",
+    "body": "Cette section est réservée aux administrateurs système. Si vous pensez qu'il s'agit d'une erreur, veuillez contacter le support.",
+    "sessionNotFound": "Session introuvable. Veuillez vous reconnecter.",
+    "signIn": "Se connecter",
+    "goBack": "Retour",
+    "dashboard": "Tableau de bord"
   }
 }

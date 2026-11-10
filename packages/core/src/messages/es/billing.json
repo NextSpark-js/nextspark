@@ -140,9 +140,10 @@
     "past_due": "Pago Pendiente",
     "canceled": "Cancelada",
     "expired": "Expirada",
-    "trialEnds": "La prueba termina {date}",
+    "trialEnds": "La prueba termina el {date}",
     "renewsOn": "Se renueva el {date}",
-    "cancelsOn": "Se cancela el {date}"
+    "cancelsOn": "Se cancela el {date}",
+    "nextBilling": "Próxima facturación: {date}"
   },
 
   "invoices": {
@@ -171,11 +172,11 @@
   },
 
   "quota": {
-    "limitReached": "Llegaste al l\u00edmite de {entity}",
-    "limitReachedDetail": "Tu plan actual no permite crear m\u00e1s {entity}. Mejor\u00e1 tu plan para seguir creciendo.",
-    "featureNotIncluded": "Esta funci\u00f3n no est\u00e1 en tu plan",
-    "featureNotIncludedDetail": "Esta funcionalidad no est\u00e1 disponible en tu plan actual.",
-    "upgradePrompt": "Mejor\u00e1 tu plan para desbloquear m\u00e1s capacidad.",
+    "limitReached": "Llegaste al límite de {entity}",
+    "limitReachedDetail": "Tu plan actual no permite crear más {entity}. Mejorá tu plan para seguir creciendo.",
+    "featureNotIncluded": "Esta función no está en tu plan",
+    "featureNotIncludedDetail": "Esta funcionalidad no está disponible en tu plan actual.",
+    "upgradePrompt": "Mejorá tu plan para desbloquear más capacidad.",
     "viewPlans": "Ver Planes",
     "goBack": "Volver"
   },

@@ -10,5 +10,44 @@
     "getStarted": "Inizia",
     "learnMore": "Scopri di più",
     "contactUs": "Contattaci"
+  },
+  "entities": {
+    "itemFallback": "Elemento {id}",
+    "notAvailable": "N/D",
+    "yes": "Sì",
+    "no": "No",
+    "loadFailed": "Impossibile caricare i dati",
+    "notSpecified": "Non specificato",
+    "entityFallback": "Entità",
+    "notFound": "{entity} non trovato",
+    "titleFallback": "{entity} {id}",
+    "listFallback": "Elenco",
+    "backTo": "Torna a {list}",
+    "details": "Dettagli",
+    "itemsFallback": "Elementi",
+    "viewMore": "Vedi altri {items}",
+    "searchEntities": "Cerca {entities}...",
+    "search": "Cerca...",
+    "sortBy": "Ordina per...",
+    "showing": "Visualizzazione di {shown} su {total} {entities}",
+    "noneFound": "Nessun risultato in {entities}",
+    "tryAdjusting": "Prova a modificare i termini di ricerca",
+    "previous": "Precedente",
+    "next": "Successivo"
+  },
+  "pageBuilder": {
+    "blockFailed": "Impossibile caricare il blocco:",
+    "blockHint": "Questo blocco potrebbe non essere disponibile o si è verificato un errore durante la visualizzazione.",
+    "emptyPage": "Questa pagina non ha ancora contenuti."
+  },
+  "defaultPage": {
+    "title": "Pagina pubblica predefinita",
+    "description": "Questa è la pagina pubblica predefinita (senza override del tema)",
+    "template": "Template predefinito",
+    "path": "Percorso: {path}"
+  },
+  "route": {
+    "notFound": "Non trovato",
+    "browseAll": "Sfoglia tutti i {entities}"
   }
 }

@@ -103,7 +103,9 @@
     "description": "Verwalten Sie, wer Zugriff auf dieses Team hat",
     "empty": "Noch keine Mitglieder",
     "you": "(Sie)",
-    "joined": "Beigetreten {date}"
+    "joined": "Beigetreten {date}",
+    "sectionDescription": "Teammitglieder und Einladungen verwalten",
+    "unknown": "Unbekannt"
   },
 
   "invitations": {
@@ -122,7 +124,8 @@
     "cancelDescription": "Sind Sie sicher, dass Sie diese Einladung abbrechen möchten?",
     "cancelConfirm": "Ja, Abbrechen",
     "cancelSuccess": "Einladung abgebrochen",
-    "cancelError": "Fehler beim Abbrechen der Einladung"
+    "cancelError": "Fehler beim Abbrechen der Einladung",
+    "fetchError": "Die Einladungen konnten nicht abgerufen werden"
   },
 
   "invite": {

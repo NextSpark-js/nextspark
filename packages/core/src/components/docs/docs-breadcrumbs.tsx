@@ -9,10 +9,10 @@ export interface BreadcrumbItem {
 interface DocsBreadcrumbsProps {
   items: BreadcrumbItem[]
   /** The accessible name of the nav, in the language of the page. */
-  label?: string
+  label: string
 }
 
-export function DocsBreadcrumbs({ items, label = 'Breadcrumb' }: DocsBreadcrumbsProps) {
+export function DocsBreadcrumbs({ items, label }: DocsBreadcrumbsProps) {
   return (
     <nav
       aria-label={label}

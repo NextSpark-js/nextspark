@@ -25,5 +25,13 @@
       "title": "Visualizzatore",
       "description": "Accesso in sola lettura al contenuto del team"
     }
+  },
+  "forbidden": {
+    "defaultReason": "Non hai il permesso di accedere a questa risorsa",
+    "title": "⚠️ Ops, non hai il permesso di farlo",
+    "upgradeRequired": "Questa funzione richiede un upgrade del tuo piano attuale.",
+    "back": "Indietro",
+    "dashboard": "Dashboard",
+    "viewPlans": "Visualizza i piani"
   }
 }

@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './avatar'
 import { cn } from '../../lib/utils'
 import { useTeam } from '../../hooks/useTeam'
 import { withBasePath } from '../../lib/base-path'
+import { fillText, useMessageText, useSectionText } from '../../lib/i18n/common-text'
 
 export interface SelectedUser {
   id: string | number
@@ -48,14 +49,29 @@ export function UserSelect({
   maxUsers,
   disabled = false,
   className,
-  placeholder = "Select users...",
-  searchPlaceholder = "Search users...",
+  placeholder: placeholderProp,
+  searchPlaceholder: searchPlaceholderProp,
   onSearch,
   onCreate,
   allowCreate = false,
   roleFilter = [],
   teamId,
 }: UserSelectProps) {
+  const text = useSectionText('entities.userSelect', {
+    placeholder: 'Select users...',
+    searchPlaceholder: 'Search users...',
+    selectedOne: '1 user selected',
+    selectedMany: '{count} users selected',
+    dialogTitle: 'Select Users',
+    filteringByRoles: 'Filtering by roles: {roles}',
+    invite: 'Invite new user',
+    searching: 'Searching users...',
+    noneFound: 'No users found',
+    noneAvailable: 'No users available',
+  })
+  const loadingText = useMessageText('common.status.loading', 'Loading...')
+  const placeholder = placeholderProp ?? text.placeholder
+  const searchPlaceholder = searchPlaceholderProp ?? text.searchPlaceholder
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [searchResults, setSearchResults] = React.useState<SelectedUser[]>([])
@@ -318,13 +334,13 @@ export function UserSelect({
             {isLoadingMembers ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading...
+                {loadingText}
               </>
             ) : (
               <>
                 <User className="mr-2 h-4 w-4" />
                 {resolvedValue.length > 0
-                  ? `${resolvedValue.length} user${resolvedValue.length > 1 ? 's' : ''} selected`
+                  ? resolvedValue.length > 1 ? fillText(text.selectedMany, { count: resolvedValue.length }) : text.selectedOne
                   : placeholder
                 }
               </>
@@ -333,7 +349,7 @@ export function UserSelect({
         </DialogTrigger>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Select Users</DialogTitle>
+            <DialogTitle>{text.dialogTitle}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -351,7 +367,7 @@ export function UserSelect({
             {/* Role Filter Info */}
             {stableRoleFilter.length > 0 && (
               <div className="text-xs text-muted-foreground">
-                Filtering by roles: {stableRoleFilter.join(", ")}
+                {fillText(text.filteringByRoles, { roles: stableRoleFilter.join(", ") })}
               </div>
             )}
 
@@ -363,7 +379,7 @@ export function UserSelect({
                 onClick={onCreate}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Invite new user
+                {text.invite}
               </Button>
             )}
 
@@ -372,7 +388,7 @@ export function UserSelect({
               {isSearching ? (
                 <div className="text-center text-muted-foreground py-4">
                   <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                  Searching users...
+                  {text.searching}
                 </div>
               ) : displayUsers.length > 0 ? (
                 displayUsers.map((user) => (
@@ -417,7 +433,7 @@ export function UserSelect({
                 ))
               ) : (
                 <div className="text-center text-muted-foreground py-4">
-                  {searchQuery ? "No users found" : "No users available"}
+                  {searchQuery ? text.noneFound : text.noneAvailable}
                 </div>
               )}
             </div>

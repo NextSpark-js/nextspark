@@ -1,11 +1,11 @@
 {
   "pages": {
-    "title": "Paginas",
-    "description": "Administra tus paginas dinamicas",
-    "loading": "Cargando paginas...",
-    "empty": "No se encontraron paginas. Crea tu primera pagina para comenzar.",
+    "title": "Páginas",
+    "description": "Administra tus páginas dinámicas",
+    "loading": "Cargando páginas...",
+    "empty": "No se encontraron páginas. Crea tu primera página para comenzar.",
     "search": {
-      "placeholder": "Buscar paginas..."
+      "placeholder": "Buscar páginas..."
     },
     "filters": {
       "locale": "Idioma",
@@ -16,11 +16,11 @@
       "draft": "Borrador"
     },
     "table": {
-      "title": "Titulo",
+      "title": "Título",
       "slug": "Slug",
       "locale": "Idioma",
       "status": "Estado",
-      "updated": "Ultima Actualizacion"
+      "updated": "Última Actualización"
     },
     "status": {
       "published": "Publicado",
@@ -28,7 +28,7 @@
       "unsaved": "Cambios sin guardar"
     },
     "actions": {
-      "create": "Crear Pagina",
+      "create": "Crear Página",
       "edit": "Editar",
       "view": "Ver",
       "delete": "Eliminar",
@@ -38,15 +38,15 @@
       "preview": "Vista Previa"
     },
     "new": {
-      "title": "Crear Nueva Pagina",
-      "description": "Crea una nueva pagina dinamica para tu sitio web",
-      "back": "Volver a Paginas",
-      "success": "Pagina creada exitosamente",
+      "title": "Crear Nueva Página",
+      "description": "Crea una nueva página dinámica para tu sitio web",
+      "back": "Volver a Páginas",
+      "success": "Página creada exitosamente",
       "form": {
-        "title": "Detalles de la Pagina",
-        "description": "Ingresa la informacion basica de tu pagina",
+        "title": "Detalles de la Página",
+        "description": "Ingresa la información básica de tu página",
         "fields": {
-          "title": "Titulo de la Pagina",
+          "title": "Título de la Página",
           "slug": "Slug de URL",
           "locale": "Idioma"
         },
@@ -55,25 +55,25 @@
           "slug": "acerca-de-nosotros"
         },
         "hints": {
-          "slug": "Version amigable para URL del titulo (minusculas, sin espacios)"
+          "slug": "Versión amigable para URL del título (minúsculas, sin espacios)"
         },
         "actions": {
           "cancel": "Cancelar",
-          "create": "Crear Pagina",
+          "create": "Crear Página",
           "creating": "Creando..."
         }
       }
     },
     "edit": {
-      "title": "Editar Pagina",
-      "loading": "Cargando pagina...",
-      "back": "Volver a Paginas",
+      "title": "Editar Página",
+      "loading": "Cargando página...",
+      "back": "Volver a Páginas",
       "fields": {
-        "title": "Titulo",
+        "title": "Título",
         "slug": "Slug"
       },
       "placeholders": {
-        "title": "Titulo de pagina",
+        "title": "Título de página",
         "slug": "slug-de-pagina"
       },
       "status": {
@@ -88,22 +88,22 @@
         "viewPage": "Ver"
       },
       "viewMode": {
-        "layout": "Diseno",
+        "layout": "Diseño",
         "preview": "Preview"
       },
       "messages": {
-        "saved": "Pagina guardada exitosamente"
+        "saved": "Página guardada exitosamente"
       }
     },
     "settings": {
-      "title": "Configuracion de Pagina",
+      "title": "Configuración de Página",
       "seo": {
-        "title": "Configuracion SEO",
-        "metaTitle": "Meta Titulo",
-        "metaTitlePlaceholder": "Ingresa el titulo para motores de busqueda",
+        "title": "Configuración SEO",
+        "metaTitle": "Meta Título",
+        "metaTitlePlaceholder": "Ingresa el título para motores de búsqueda",
         "metaTitleHint": "Recomendado: 50-60 caracteres",
-        "metaDescription": "Meta Descripcion",
-        "metaDescriptionPlaceholder": "Ingresa una breve descripcion para motores de busqueda",
+        "metaDescription": "Meta Descripción",
+        "metaDescriptionPlaceholder": "Ingresa una breve descripción para motores de búsqueda",
         "characters": "caracteres",
         "metaKeywords": "Palabras Clave",
         "metaKeywordsPlaceholder": "palabra1, palabra2, palabra3",
@@ -135,22 +135,23 @@
     },
     "canvas": {
       "empty": {
-        "message": "No se agregaron bloques aun",
-        "hint": "Arrastra bloques desde la biblioteca para comenzar a construir tu pagina"
+        "message": "No se agregaron bloques aún",
+        "hint": "Arrastra bloques desde la biblioteca para comenzar a construir tu página"
       }
     },
     "block": {
       "error": {
-        "notFound": "Bloque '{slug}' no encontrado"
-      }
+        "notFound": "Bloque “{slug}” no encontrado"
+      },
+      "moreProps": "+{count} más"
     },
     "settings": {
       "empty": {
         "message": "No hay bloque seleccionado",
-        "hint": "Selecciona un bloque del canvas para editar su configuracion"
+        "hint": "Selecciona un bloque del canvas para editar su configuración"
       },
       "error": {
-        "notFound": "Configuracion del bloque no encontrada"
+        "notFound": "Configuración del bloque no encontrada"
       },
       "noFields": "Este bloque no tiene campos configurables",
       "actions": {
@@ -159,15 +160,15 @@
       },
       "tabs": {
         "content": "Contenido",
-        "design": "Diseno",
+        "design": "Diseño",
         "advanced": "Avanzado",
         "noContentFields": "No hay campos de contenido disponibles",
-        "noDesignFields": "No hay campos de diseno disponibles",
+        "noDesignFields": "No hay campos de diseño disponibles",
         "noAdvancedFields": "No hay campos avanzados disponibles"
       }
     },
     "form": {
-      "selectPlaceholder": "Selecciona una opcion",
+      "selectPlaceholder": "Selecciona una opción",
       "emptyArray": "No hay elementos agregados",
       "itemNumber": "Elemento {number}",
       "addItem": "Agregar elemento",
@@ -189,13 +190,13 @@
     "back": "Volver",
     "loading": "Cargando...",
     "fields": {
-      "title": "Titulo",
+      "title": "Título",
       "slug": "Slug"
     },
     "placeholders": {
-      "title": "Ingresa el titulo...",
+      "title": "Ingresa el título...",
       "slug": "url-slug",
-      "excerpt": "Breve descripcion...",
+      "excerpt": "Breve descripción...",
       "imageUrl": "https://ejemplo.com/imagen.jpg"
     },
     "status": {
@@ -211,7 +212,7 @@
       "viewPage": "Ver"
     },
     "viewMode": {
-      "layout": "Diseno",
+      "layout": "Diseño",
       "preview": "Vista previa",
       "settings": "Configuración"
     },
@@ -228,25 +229,27 @@
       "fieldsTitle": "Campos de Entidad",
       "fieldsDescription": "Configura propiedades adicionales",
       "noFields": "No hay campos adicionales disponibles",
-      "noCategories": "No hay categorias disponibles",
+      "noCategories": "No hay categorías disponibles",
       "tabs": {
         "blocks": "Bloques",
         "patterns": "Patterns",
         "layout": "Layout",
-        "config": "Configuracion"
+        "config": "Configuración"
       },
       "search": {
         "placeholder": "Buscar bloques..."
       },
       "categories": {
-        "all": "Todos"
+        "all": "Todos",
+        "title": "Categorías"
       },
       "addBlock": "Agregar bloque",
-      "empty": "No se encontraron bloques"
+      "empty": "No se encontraron bloques",
+      "select": "Seleccionar..."
     },
     "canvas": {
       "empty": {
-        "title": "Aun no hay bloques",
+        "title": "Aún no hay bloques",
         "subtitle": "Agrega bloques desde la barra lateral izquierda"
       },
       "editingBadge": "Editando",
@@ -263,11 +266,11 @@
     "settingsPanel": {
       "title": "Propiedades del Bloque",
       "empty": {
-        "message": "Ningun bloque seleccionado",
-        "hint": "Selecciona un bloque del canvas para editar su configuracion"
+        "message": "Ningún bloque seleccionado",
+        "hint": "Selecciona un bloque del canvas para editar su configuración"
       },
       "error": {
-        "notFound": "Configuracion del bloque no encontrada"
+        "notFound": "Configuración del bloque no encontrada"
       },
       "actions": {
         "reset": "Restablecer",
@@ -278,7 +281,7 @@
         "design": "Diseño",
         "advanced": "Avanzado",
         "noContentFields": "No hay campos de contenido",
-        "noDesignFields": "No hay campos de diseno",
+        "noDesignFields": "No hay campos de diseño",
         "noAdvancedFields": "No hay campos avanzados"
       },
       "pattern": {
@@ -312,10 +315,13 @@
     "messages": {
       "saved": "Guardado exitosamente",
       "created": "Creado exitosamente",
-      "saveBlocked": "La pagina no se guardo",
-      "hookFailed": "La pagina no se guardo: {message}",
+      "saveBlocked": "La página no se guardó",
+      "hookFailed": "La página no se guardó: {message}",
       "blockCopied": "Bloque copiado al portapapeles",
-      "blockPasted": "Bloque pegado"
+      "blockPasted": "Bloque pegado",
+      "fetchPatternsFailed": "No se pudieron obtener los patrones",
+      "fetchFailed": "No se pudo obtener {entity}",
+      "saveFailed": "No se pudo guardar {entity}"
     },
     "multiSelect": {
       "selected": "{count, plural, one {# bloque seleccionado} other {# bloques seleccionados}}",
@@ -334,6 +340,18 @@
       "patternSkipped": "Las referencias a patterns fueron excluidas de la selección",
       "clipboardEmpty": "El portapapeles está vacío",
       "settingsHint": "Usa la barra de acciones para gestionar los bloques seleccionados"
+    },
+    "pattern": {
+      "fetchFailed": "No se pudo obtener el patrón: {status}",
+      "blockNotFound": "Bloque no encontrado:"
+    },
+    "tree": {
+      "pattern": "Patrón",
+      "unknownBlock": "Bloque desconocido"
+    },
+    "viewport": {
+      "mobile": "Vista móvil (375 px)",
+      "desktop": "Vista de escritorio (100%)"
     }
   },
   "patterns": {
@@ -355,6 +373,52 @@
       "title": "Pattern eliminado",
       "description": "Este pattern fue eliminado y será removido al guardar.",
       "remove": "Remover"
+    },
+    "usage": {
+      "totalUses": "Usos totales",
+      "acrossOne": "En {count} tipo de entidad",
+      "acrossMany": "En {count} tipos de entidad",
+      "percentOfTotal": "{percent}% del total",
+      "emptyMessage": "No se encontraron usos",
+      "entity": "Entidad",
+      "type": "Tipo",
+      "status": "Estado",
+      "lastUpdated": "Última actualización",
+      "actions": "Acciones",
+      "noUsagesTitle": "No se encontraron usos",
+      "viewEntity": "Ver entidad (se abre en una pestaña nueva)",
+      "errorTitle": "Error al cargar los usos",
+      "loadFailed": "No se pudieron cargar los usos del patrón",
+      "retry": "Reintentar",
+      "filterByType": "Filtrar por tipo:",
+      "allTypes": "Todos los tipos de entidad",
+      "pageOf": "Página {page} de {totalPages}",
+      "notUsedIn": "Este patrón no se usa en ningún {entityType}",
+      "notUsedYet": "Este patrón todavía no se usa en ninguna entidad",
+      "showing": "Mostrando {from} a {to} de {total} usos"
+    },
+    "list": {
+      "unknownError": "Error desconocido",
+      "errorLoading": "Error al cargar los datos: {message}",
+      "deleted": "Patrón eliminado correctamente",
+      "deleteError": "Error al eliminar: {message}",
+      "deletedMany": "{count} patrones eliminados correctamente",
+      "viewUsages": "Ver usos",
+      "configError": "No se pudo cargar la configuración de la entidad \"{entity}\"."
+    },
+    "reports": {
+      "idRequired": "Se requiere el ID del patrón",
+      "notEnabled": "La entidad de patrones no está configurada o no está habilitada",
+      "loadFailed": "No se pudo cargar el patrón",
+      "errorTitle": "Error",
+      "back": "Volver a patrones",
+      "notFoundTitle": "Patrón no encontrado",
+      "notFoundDescription": "El patrón que buscas no existe o fue eliminado.",
+      "subtitle": "Informes de uso y analíticas",
+      "edit": "Editar patrón"
+    },
+    "page": {
+      "notEnabled": "La entidad de patrones no está configurada o no está habilitada."
     }
   }
 }

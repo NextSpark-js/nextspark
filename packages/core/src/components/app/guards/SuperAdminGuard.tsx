@@ -78,12 +78,12 @@ export function SuperAdminGuard({ children, fallback, serverChecked = false }: S
               {t('common.status.error')}
             </CardTitle>
             <CardDescription>
-              Session not found. Please sign in again.
+              {t('superadmin.guard.sessionNotFound')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/login')} className="w-full">
-              Sign In
+              {t('superadmin.guard.signIn')}
             </Button>
           </CardContent>
         </Card>
@@ -106,16 +106,15 @@ export function SuperAdminGuard({ children, fallback, serverChecked = false }: S
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Access Denied
+              {t('superadmin.guard.title')}
             </CardTitle>
             <CardDescription>
-              You need superadmin or developer privileges to access this area.
+              {t('superadmin.guard.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This section is restricted to system administrators only. 
-              If you believe this is an error, please contact support.
+              {t('superadmin.guard.body')}
             </p>
             <div className="flex gap-2">
               <Button 
@@ -124,10 +123,10 @@ export function SuperAdminGuard({ children, fallback, serverChecked = false }: S
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Go Back
+                {t('superadmin.guard.goBack')}
               </Button>
               <Button onClick={() => router.push('/dashboard')}>
-                Dashboard
+                {t('superadmin.guard.dashboard')}
               </Button>
             </div>
           </CardContent>

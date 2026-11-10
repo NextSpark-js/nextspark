@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { sel } from '../../lib/test'
+import { fillText, useMessageText } from '../../lib/i18n/common-text'
 
 interface CopyableIdProps {
   /** The full ID to copy */
@@ -29,6 +30,7 @@ export function CopyableId({
   className
 }: CopyableIdProps) {
   const [copied, setCopied] = useState(false)
+  const idText = useMessageText('entities.copyableId.label', 'ID: {id}')
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(id)
@@ -44,7 +46,7 @@ export function CopyableId({
       className={`flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${className || ''}`}
       data-cy={entitySlug ? sel('entities.detail.copyId', { slug: entitySlug }) : sel('entities.detail.copyId', { slug: 'generic' })}
     >
-      <span className="font-mono">ID: {displayId}</span>
+      <span className="font-mono">{fillText(idText, { id: displayId })}</span>
       {copied ? (
         <Check className="h-3 w-3 text-green-500" />
       ) : (

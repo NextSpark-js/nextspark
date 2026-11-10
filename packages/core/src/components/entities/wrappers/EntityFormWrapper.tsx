@@ -13,6 +13,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { EntityForm } from '../EntityForm'
@@ -45,6 +46,7 @@ export function EntityFormWrapper({
   className,
   headerActions: additionalHeaderActions
 }: EntityFormWrapperProps) {
+  const text = useTranslations('entities.wrapper')
   // Nothing is requested while there is no user: during a sign-out the session store empties before the page is left,
   // and a load started then is answered with a 401.
   const { user } = useAuth()
@@ -86,7 +88,7 @@ export function EntityFormWrapper({
     const loadInitialData = async () => {
       if (mode === 'edit' && id && entityConfig && signedIn && teamReady) {
         if (!entityConfig.enabled) {
-          onErrorRef.current?.(new Error(`Entity "${entityType}" is disabled`))
+          onErrorRef.current?.(new Error(text('disabled', { entity: entityType })))
           return
         }
         
@@ -101,7 +103,7 @@ export function EntityFormWrapper({
           setAbsentFields(data ? entityConfig.fields.filter(field => !(field.name in data)).map(field => field.name) : [])
         } catch (error) {
           console.error(`[EntityFormWrapper] Error loading data for ${entityType} ${id}:`, error)
-          onErrorRef.current?.(error instanceof Error ? error : new Error(`Failed to load ${entityType} data`))
+          onErrorRef.current?.(error instanceof Error ? error : new Error(text('loadDataFailed', { entity: entityType })))
         } finally {
           setRecordLoaded(true)
           setIsLoadingData(false)
@@ -110,12 +112,12 @@ export function EntityFormWrapper({
     }
 
     loadInitialData()
-  }, [mode, id, entityType, entityConfig, isOverride, propsInitialData, signedIn, teamReady])
+  }, [mode, id, entityType, entityConfig, isOverride, propsInitialData, signedIn, teamReady, text])
 
   const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
     setSubmitError(null)
     try {
-      if (process.env.NODE_ENV === 'development') console.log(`${mode === 'create' ? 'Creating' : 'Updating'} ${entityType}:`, data)
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityFormWrapper] submit (${mode}) ${entityType}:`, data)
 
       if (mode === 'create') {
         const created = await createEntityData(entityType, data)
@@ -128,12 +130,12 @@ export function EntityFormWrapper({
         onSuccess?.(id)
       }
     } catch (error) {
-      const failure = error instanceof Error ? error : new Error(`Failed to ${mode} ${entityType}`)
+      const failure = error instanceof Error ? error : new Error(text(mode === 'create' ? 'createEntityFailed' : 'editEntityFailed', { entity: entityType }))
       console.error(`❌ Failed to ${mode} ${entityType}:`, failure)
       setSubmitError(failure.message)
       onError?.(failure)
     }
-  }, [entityType, mode, id, absentFields, onSuccess, onError])
+  }, [entityType, mode, id, absentFields, onSuccess, onError, text])
 
   // An edit form waits for its record: rendered earlier it would show fields the record turns out not to have.
   // Only when it will load one (config known and enabled, signed in), so a config error still reaches the Alert below.
@@ -161,7 +163,7 @@ export function EntityFormWrapper({
     return (
       <Alert>
         <AlertDescription>
-          {configError || `Could not load the configuration for entity "${entityType}".`}
+          {configError || text('configError', { entity: entityType })}
         </AlertDescription>
       </Alert>
     )

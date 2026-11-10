@@ -9,6 +9,13 @@ interface GoogleIconProps {
  * Google icon component using CSS variables for theme compliance
  * Replaces hardcoded colors with theme-aware variables
  */
+const GOOGLE_COLORS = `
+  .google-blue { fill: var(--google-blue, #4285F4); }
+  .google-green { fill: var(--google-green, #34A853); }
+  .google-yellow { fill: var(--google-yellow, #FBBC05); }
+  .google-red { fill: var(--google-red, #EA4335); }
+`
+
 export function GoogleIcon({ className, 'data-cy': dataCy }: GoogleIconProps) {
   return (
     <svg
@@ -17,14 +24,7 @@ export function GoogleIcon({ className, 'data-cy': dataCy }: GoogleIconProps) {
       aria-hidden="true"
       data-cy={dataCy}
     >
-      <style>
-        {`
-          .google-blue { fill: var(--google-blue, #4285F4); }
-          .google-green { fill: var(--google-green, #34A853); }
-          .google-yellow { fill: var(--google-yellow, #FBBC05); }
-          .google-red { fill: var(--google-red, #EA4335); }
-        `}
-      </style>
+      <style>{GOOGLE_COLORS}</style>
       <path
         className="google-blue"
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

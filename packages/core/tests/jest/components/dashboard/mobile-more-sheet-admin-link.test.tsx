@@ -21,5 +21,5 @@ import { MobileMoreSheet } from '@/core/components/dashboard/mobile/MobileMoreSh
 it.each([['superadmin', true], ['developer', true], ['member', false]] as const)('as a %s, the admin panel link: %s', (r, shown) => {
   role = r
   render(<MobileMoreSheet isOpen onOpenChange={() => {}} />)
-  expect(screen.queryByText('Super Admin Panel') !== null).toBe(shown)
+  expect(screen.queryByText('mobileNav.superAdminPanel') !== null).toBe(shown)
 })

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import type { EntityConfig } from '../../lib/entities/types'
 import { deleteEntityData } from '../../lib/api/entities'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { EntityPageHeader } from './EntityPageHeader'
 
 export interface EntityDetailPageProps {
@@ -42,13 +42,14 @@ export function EntityDetailPage({
 }: EntityDetailPageProps) {
   const router = useRouter()
   const locale = useLocale()
+  const text = useTranslations('entities.detail')
   const [isDeleting, setIsDeleting] = useState(false)
 
   const formatDateTime = (value: string) =>
     new Date(value).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete this ${entityConfig.names.singular.toLowerCase()}?`)) {
+    if (!confirm(text('confirmDelete', { entity: entityConfig.names.singular.toLowerCase() }))) {
       return
     }
 
@@ -58,7 +59,7 @@ export function EntityDetailPage({
       router.push(`/dashboard/${entityConfig.slug}`)
     } catch (error) {
       console.error('Error deleting entity:', error)
-      alert('Error deleting. Please try again.')
+      alert(text('deleteFailed'))
     } finally {
       setIsDeleting(false)
     }
@@ -73,7 +74,7 @@ export function EntityDetailPage({
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <Alert>
-            <AlertDescription>Loading data...</AlertDescription>
+            <AlertDescription>{text('loading')}</AlertDescription>
           </Alert>
         </div>
       </div>
@@ -96,12 +97,12 @@ export function EntityDetailPage({
     <>
       <Button variant="outline" size="sm" onClick={handleCopyId}>
         <Copy className="h-4 w-4 mr-2" />
-        Copy ID
+        {text('copyId')}
       </Button>
       <Link href={`/dashboard/${entityConfig.slug}/${data.id}/edit`}>
         <Button variant="outline" size="sm">
           <Edit className="h-4 w-4 mr-2" />
-          Edit
+          {text('edit')}
         </Button>
       </Link>
       <Button
@@ -111,7 +112,7 @@ export function EntityDetailPage({
         disabled={isDeleting}
       >
         <Trash2 className="h-4 w-4 mr-2" />
-        {isDeleting ? 'Deleting...' : 'Delete'}
+        {isDeleting ? text('deleting') : text('delete')}
       </Button>
     </>
   )
@@ -131,9 +132,9 @@ export function EntityDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle>{text('details')}</CardTitle>
               <CardDescription>
-                Main information for the {entityConfig.names.singular.toLowerCase()}
+                {text('mainInfo', { entity: entityConfig.names.singular.toLowerCase() })}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -150,15 +151,15 @@ export function EntityDetailPage({
                       </dt>
                       <dd className="text-sm">
                         {field.type === 'date' || field.type === 'datetime' ? (
-                          value ? formatDateTime(value as string) : 'Not specified'
+                          value ? formatDateTime(value as string) : text('notSpecified')
                         ) : field.type === 'boolean' ? (
                           <Badge variant={value ? 'default' : 'secondary'}>
-                            {value ? 'Yes' : 'No'}
+                            {value ? text('yes') : text('no')}
                           </Badge>
                         ) : field.type === 'number' && field.name === 'price' ? (
                           `$${value}`
                         ) : (
-                          String(value) || 'Not specified'
+                          String(value) || text('notSpecified')
                         )}
                       </dd>
                     </div>
@@ -173,17 +174,17 @@ export function EntityDetailPage({
           {/* Metadata Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Metadata</CardTitle>
+              <CardTitle>{text('metadata')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 <div>
-                  <div className="font-medium">Created</div>
+                  <div className="font-medium">{text('created')}</div>
                   <div>
                     {data.createdAt && typeof data.createdAt === 'string'
                       ? formatDateTime(data.createdAt)
-                      : 'Not available'
+                      : text('notAvailable')
                     }
                   </div>
                 </div>
@@ -193,7 +194,7 @@ export function EntityDetailPage({
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
                   <div>
-                    <div className="font-medium">Last updated</div>
+                    <div className="font-medium">{text('lastUpdated')}</div>
                     <div>
                       {formatDateTime(data.updatedAt)}
                     </div>

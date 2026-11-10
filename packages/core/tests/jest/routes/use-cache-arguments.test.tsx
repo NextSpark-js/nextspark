@@ -25,7 +25,14 @@ jest.mock('@nextsparkjs/core/lib/docs/parser', () => ({ parseMarkdownFile: (...a
 jest.mock('@nextsparkjs/core/components/docs/docs-breadcrumbs', () => ({ DocsBreadcrumbs: () => null }))
 jest.mock('@nextsparkjs/core/components/docs/docs-content', () => ({ DocsContent: () => null }))
 jest.mock('@nextsparkjs/core/components/docs/superadmin-docs-sidebar', () => ({ SuperadminDocsSidebar: () => null }))
-jest.mock('next-intl/server', () => ({ getTranslations: async () => (k: string) => k }))
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const mockEnglish = (namespace?: string) => (key: string, values: Record<string, unknown> = {}) => {
+  const text = [namespace, key].filter(Boolean).join('.').split('.').reduce((node: any, part) => node?.[part], require('../../../src/messages/en/index').default)
+  return typeof text === 'string' ? text.replace(/\{(\w+)\}/g, (_, name) => String(values[name])) : key
+}
+jest.mock('next-intl/server', () => ({
+  getTranslations: async (arg?: string | { namespace?: string }) => mockEnglish(typeof arg === 'string' ? arg : arg?.namespace),
+}))
 jest.mock('../../../src/routes/_internal/area-access', () => ({ requireAreaAccess: (a: string) => requireAreaAccess(a) }))
 jest.mock('../../../src/routes/_internal/suspended-route', () => ({ behindSuspense: (x: unknown) => x }))
 jest.mock('@nextsparkjs/registries/docs-registry', () => {

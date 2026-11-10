@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, ClipboardCopy, Copy, Trash2, Check } from 'lucide-react'
@@ -32,6 +33,7 @@ export function TreeViewNode({
   onRemove,
   isPartOfPattern = false
 }: TreeViewNodeProps) {
+  const labels = useTranslations('admin.builder.tree')
   const text = useLocalizedText()
   const {
     attributes,
@@ -57,7 +59,7 @@ export function TreeViewNode({
     : BlockService.get(block.blockSlug)
 
   const iconName = blockConfig?.icon || 'LayoutGrid'
-  const blockName = text(blockConfig?.name) || (isPatternReference(block) ? 'Pattern' : 'Unknown Block')
+  const blockName = text(blockConfig?.name) || (isPatternReference(block) ? labels('pattern') : labels('unknownBlock'))
 
   return (
     <div

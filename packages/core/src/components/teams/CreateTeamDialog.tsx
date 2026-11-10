@@ -103,7 +103,7 @@ export function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialogProps) 
                 name="slug"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="team-url-slug"
+                placeholder={t('createTeam.slugPlaceholder')}
                 pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
                 required
                 data-cy="team-slug-input"

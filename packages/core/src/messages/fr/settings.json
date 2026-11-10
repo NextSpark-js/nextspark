@@ -102,6 +102,10 @@
     },
     "actions": {
       "cancel": "Annuler"
+    },
+    "errors": {
+      "updateFailed": "Impossible de mettre à jour le profil",
+      "deleteFailed": "Impossible de supprimer le compte"
     }
   },
   "password": {
@@ -366,6 +370,18 @@
         "showing": "Affichage de {start} à {end} sur {total} factures",
         "previous": "Précédent",
         "next": "Suivant"
+      },
+      "document": {
+        "billTo": "Facturer à",
+        "team": "Équipe",
+        "invoiceDate": "Date de la facture",
+        "description": "Description",
+        "item": "Article",
+        "amount": "Montant",
+        "monthlySubscription": "Abonnement mensuel",
+        "subtotal": "Sous-total",
+        "total": "Total",
+        "thanks": "Merci pour votre confiance"
       }
     },
     "features": {
@@ -389,10 +405,171 @@
   },
   "plans": {
     "title": "Plans tarifaires",
-    "description": "Choisissez le plan qui correspond le mieux à vos besoins"
+    "description": "Choisissez le plan qui correspond le mieux à vos besoins",
+    "changed": "Forfait modifié avec succès",
+    "changeFailed": "Impossible de traiter le changement de forfait",
+    "checkoutFailed": "Impossible de démarrer le paiement"
   },
   "pages": {
     "plans": "Plans",
     "plansDescription": "Comparez les plans et mettez à niveau votre abonnement"
+  },
+  "apiKeys": {
+    "title": "Clés API",
+    "description": "Gérez les clés API pour l'intégration externe",
+    "createButton": "Créer une clé API",
+    "createFirst": "Créer la première clé API",
+    "emptyTitle": "Aucune clé API",
+    "emptyDescription": "Vous n'avez pas encore de clé API. Créez-en une pour commencer à utiliser l'API externe.",
+    "restrictedTitle": "Accès restreint",
+    "restrictedDescription": "Seuls les administrateurs peuvent gérer les clés API. Contactez un administrateur si vous avez besoin d'accéder à cette fonctionnalité.",
+    "loadError": "Erreur lors du chargement des clés API : {message}",
+    "fetchError": "Impossible de récupérer les clés API",
+    "revokeError": "Impossible de révoquer la clé API",
+    "updateError": "Impossible de mettre à jour la clé API",
+    "revoked": "La clé API « {name} » a été révoquée",
+    "revokeFailed": "Impossible de révoquer la clé API : {message}",
+    "activated": "La clé API « {name} » a été activée",
+    "deactivated": "La clé API « {name} » a été désactivée",
+    "updateFailed": "Impossible de mettre à jour la clé API : {message}",
+    "copied": "Copié dans le presse-papiers",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expirée"
+    },
+    "menu": {
+      "viewDetails": "Voir les détails",
+      "deactivate": "Désactiver",
+      "activate": "Activer",
+      "revoke": "Révoquer"
+    },
+    "permissions": "Autorisations :",
+    "stats": {
+      "totalRequests": "Requêtes totales",
+      "last24h": "24 dernières h",
+      "avgTime": "Temps moyen"
+    },
+    "notAvailable": "N/D",
+    "created": "Créée : {date}",
+    "lastUsed": "Dernière utilisation : {date}",
+    "expires": "Expire : {date}",
+    "details": {
+      "fetchError": "Impossible de récupérer les détails de la clé API",
+      "title": "Détails de la clé API",
+      "description": "Statistiques d'utilisation et configuration",
+      "basicInfo": "Informations de base",
+      "name": "Nom :",
+      "status": "Statut :",
+      "usageStats": "Statistiques d'utilisation",
+      "totalRequests": "Requêtes totales :",
+      "last24h": "24 dernières heures :",
+      "last7d": "7 derniers jours :",
+      "last30d": "30 derniers jours :",
+      "avgResponse": "Temps de réponse moyen :",
+      "successRate": "Taux de réussite :"
+    },
+    "display": {
+      "copiedToast": "Clé API copiée dans le presse-papiers",
+      "copyFailed": "Impossible de copier dans le presse-papiers",
+      "created": "Clé API créée avec succès",
+      "important": "Important !",
+      "yourKey": "Votre nouvelle clé API :",
+      "copied": "Copiée !",
+      "copy": "Copier",
+      "howToUse": "Comment utiliser votre clé API :",
+      "stepHeader": "1. Incluez la clé API dans l'en-tête Authorization :",
+      "stepCurl": "2. Exemple avec curl :",
+      "stepJavaScript": "3. Exemple avec JavaScript :",
+      "securityTips": "Conseils de sécurité :",
+      "tipShare": "Ne partagez jamais votre clé API publiquement",
+      "tipStore": "Stockez-la dans une variable d'environnement de votre application",
+      "tipRevoke": "Révoquez immédiatement la clé si vous pensez qu'elle est compromise",
+      "tipHttps": "Utilisez toujours HTTPS pour vos requêtes à l'API",
+      "limits": "Limites de l'API :",
+      "limitRate": "1 000 requêtes par minute",
+      "limitHeaders": "Les réponses incluent des en-têtes de limitation de débit",
+      "limitDocs": "Documentation complète disponible sur /docs",
+      "keyCopied": "Clé API copiée !",
+      "copyKey": "Copier la clé API",
+      "gotIt": "Compris"
+    },
+    "create": {
+      "createFailed": "Impossible de créer la clé API",
+      "created": "Clé API créée avec succès",
+      "createFailedWithMessage": "Impossible de créer la clé API : {message}",
+      "nameRequired": "Veuillez saisir un nom pour la clé API",
+      "scopeRequired": "Veuillez sélectionner au moins une autorisation",
+      "title": "Créer une nouvelle clé API",
+      "description": "Créez une clé API pour accéder en toute sécurité aux points de terminaison externes.",
+      "nameLabel": "Nom de la clé API",
+      "namePlaceholder": "p. ex. Mon application mobile",
+      "nameHelp": "Un nom descriptif pour identifier cette clé API",
+      "expiration": "Expiration",
+      "expiry": {
+        "never": "N'expire jamais",
+        "days30": "30 jours",
+        "days90": "90 jours",
+        "year1": "1 an",
+        "custom": "Date personnalisée"
+      },
+      "permissions": "Autorisations (scopes)",
+      "permissionsHelp": "Choisissez les autorisations de cette clé API",
+      "permissionsNotice": "Vous ne pouvez attribuer que les autorisations permises par votre rôle actuel. Les autorisations ne peuvent plus être modifiées après la création de la clé API.",
+      "selectedPermissions": "Autorisations sélectionnées ({count})",
+      "important": "Important :",
+      "importantNotice": "La clé API ne sera affichée qu'une seule fois après sa création. Conservez-la en lieu sûr, car vous ne pourrez plus la consulter.",
+      "cancel": "Annuler",
+      "creating": "Création...",
+      "submit": "Créer la clé API",
+      "appScopeName": "Application",
+      "appScopeDescription": "Autorisations que cette application définit pour ses propres routes"
+    },
+    "scopeLabels": {
+      "users:read": "Lire les informations des utilisateurs",
+      "users:write": "Créer et mettre à jour des utilisateurs",
+      "users:delete": "Supprimer des utilisateurs",
+      "tasks:read": "Lire les tâches",
+      "tasks:write": "Créer et mettre à jour des tâches",
+      "tasks:delete": "Supprimer des tâches",
+      "media:read": "Lire les informations des fichiers et des médias",
+      "media:write": "Téléverser et mettre à jour des fichiers",
+      "media:delete": "Supprimer des fichiers",
+      "teams:read": "Lire les équipes, les membres et les invitations",
+      "teams:write": "Créer et mettre à jour des équipes, des membres et des invitations",
+      "teams:delete": "Supprimer des équipes",
+      "billing:read": "Lire les abonnements, les factures et l'utilisation",
+      "billing:write": "Gérer les abonnements, les paiements, les changements de forfait et l'utilisation",
+      "admin:api-keys": "Gérer les clés API",
+      "admin:users": "Administration complète des utilisateurs",
+      "admin:devtools": "Accès aux API DevTools (registres, tests, actions planifiées)",
+      "*": "Accès complet (super-administrateur ou développeur uniquement)"
+    },
+    "scopeCategories": {
+      "users": {
+        "name": "Utilisateurs",
+        "description": "Gestion des utilisateurs du système"
+      },
+      "tasks": {
+        "name": "Tâches",
+        "description": "Gestion des tâches et des to-do"
+      },
+      "teams": {
+        "name": "Équipes",
+        "description": "Équipes, membres et invitations"
+      },
+      "billing": {
+        "name": "Facturation",
+        "description": "Abonnements, factures, utilisation et forfaits"
+      },
+      "admin": {
+        "name": "Administration",
+        "description": "Fonctions administratives"
+      },
+      "system": {
+        "name": "Système",
+        "description": "Accès complet au système"
+      }
+    }
   }
 }

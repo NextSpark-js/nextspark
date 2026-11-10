@@ -662,5 +662,14 @@
     "pricePerYear": "{price}/año",
     "trialEnds": "La prueba termina el {date}",
     "viewTeam": "Ver equipo"
+  },
+  "guard": {
+    "title": "Acceso denegado",
+    "description": "Necesitas privilegios de superadministrador o desarrollador para acceder a esta área.",
+    "body": "Esta sección está restringida a los administradores del sistema. Si crees que se trata de un error, contacta al soporte.",
+    "sessionNotFound": "No se encontró la sesión. Inicia sesión de nuevo.",
+    "signIn": "Iniciar sesión",
+    "goBack": "Volver",
+    "dashboard": "Panel"
   }
 }

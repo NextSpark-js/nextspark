@@ -37,7 +37,7 @@ export function DocsSidebar({ sections }: DocsSidebarProps) {
 
   const activeSection = getActiveSection()
 
-  const publicConfig = getPublicDocsCategory(DOCS_CONFIG) ?? { enabled: true, open: true, label: 'Documentation' }
+  const publicConfig = getPublicDocsCategory(DOCS_CONFIG) ?? { enabled: true, open: true, label: t('title') }
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     // Expand active section by default

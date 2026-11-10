@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -71,6 +72,7 @@ export function EntityNavigation({
   className,
   onNavigate,
 }: EntityNavigationProps) {
+  const navText = useTranslations('entities.navigation')
   const { user } = useAuth()
   const pathname = usePathname()
 
@@ -162,17 +164,17 @@ export function EntityNavigation({
                   <TooltipContent side="right" className="space-y-1">
                     <p className="font-medium">{entity.names.plural}</p>
                     <p className="text-xs text-muted-foreground">
-                      Manage your {entity.names.plural.toLowerCase()}
+                      {navText('manage', { entities: entity.names.plural.toLowerCase() })}
                     </p>
                     {limits && (
                       <div className="text-xs">
                         <p>
-                          Usage: {limits.currentUsage || 0}
+                          {navText('usage', { current: limits.currentUsage || 0 })}
                           {limits.maxRecords !== 'unlimited' && ` / ${limits.maxRecords}`}
                         </p>
                         {limits.isNearLimit && (
                           <p className="text-yellow-600">
-                            Approaching limit
+                            {navText('nearLimit')}
                           </p>
                         )}
                       </div>
@@ -357,6 +359,7 @@ export function FullEntityNavigation({
   onNavigate,
   entities,
 }: FullEntityNavigationProps & { entities: EntityConfig[] }) {
+  const sectionText = useTranslations('entities.navigation')
   const { user } = useAuth()
 
   const entitySections = useMemo(() => {
@@ -371,19 +374,19 @@ export function FullEntityNavigation({
     // Group entities by features or create logical sections
     const sections = [
       {
-        title: 'Core',
+        title: sectionText('core'),
         entities: allEntities.filter(entity =>
           ['user', 'task'].includes(entity.slug)
         ),
       },
       {
-        title: 'Business',
+        title: sectionText('business'),
         entities: allEntities.filter(entity =>
           ['client', 'project', 'invoice', 'order'].includes(entity.slug)
         ),
       },
       {
-        title: 'Other',
+        title: sectionText('other'),
         entities: allEntities.filter(entity =>
           !['user', 'task', 'client', 'project', 'invoice', 'order'].includes(entity.slug)
         ),

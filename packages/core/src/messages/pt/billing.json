@@ -140,9 +140,10 @@
     "past_due": "Pagamento Pendente",
     "canceled": "Cancelada",
     "expired": "Expirada",
-    "trialEnds": "O teste termina {date}",
+    "trialEnds": "O teste termina em {date}",
     "renewsOn": "Renova em {date}",
-    "cancelsOn": "Cancela em {date}"
+    "cancelsOn": "Cancela em {date}",
+    "nextBilling": "Próxima cobrança: {date}"
   },
 
   "invoices": {

@@ -6,6 +6,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React from 'react'
 import Link from 'next/link'
 import { Button } from '../ui/button'
@@ -27,15 +28,16 @@ export function EntityPageHeader({
   actions,
   className
 }: EntityPageHeaderProps) {
+  const text = useTranslations('entities.header')
   const Icon = entityConfig.icon
 
   // Determine title based on mode
   const getTitle = (): string => {
     switch (mode) {
       case 'create':
-        return `Create ${entityConfig.names.singular}`
+        return text('create', { entity: entityConfig.names.singular })
       case 'edit':
-        return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : `Edit ${entityConfig.names.singular}`)
+        return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : text('edit', { entity: entityConfig.names.singular }))
       case 'view':
       default:
         return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : entityConfig.names.singular)
@@ -46,12 +48,12 @@ export function EntityPageHeader({
   const getSubtitle = (): string => {
     switch (mode) {
       case 'create':
-        return `New ${entityConfig.names.singular.toLowerCase()}`
+        return text('newEntity', { entity: entityConfig.names.singular.toLowerCase() })
       case 'edit':
-        return `Editing ${entityConfig.names.singular.toLowerCase()} • ID: ${typeof data?.id === 'string' ? data.id : 'N/A'}`
+        return text('editing', { entity: entityConfig.names.singular.toLowerCase(), id: typeof data?.id === 'string' ? data.id : text('notAvailable') })
       case 'view':
       default:
-        return `${entityConfig.names.singular} • ID: ${typeof data?.id === 'string' ? data.id : 'N/A'}`
+        return text('viewing', { entity: entityConfig.names.singular, id: typeof data?.id === 'string' ? data.id : text('notAvailable') })
     }
   }
 
@@ -62,7 +64,7 @@ export function EntityPageHeader({
         <Link href={`/dashboard/${entityConfig.slug}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to {entityConfig.names.plural}
+            {text('back', { entities: entityConfig.names.plural })}
           </Button>
         </Link>
       </div>

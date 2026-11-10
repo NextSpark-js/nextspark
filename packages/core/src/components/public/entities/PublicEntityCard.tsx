@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations, useLocale } from 'next-intl'
 import React from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card'
@@ -22,6 +23,8 @@ interface PublicEntityCardProps {
 }
 
 export function PublicEntityCard({ entityConfig, entitySlug, data, className }: PublicEntityCardProps) {
+  const text = useTranslations('public.entities')
+  const locale = useLocale()
   const entityId = data.id as string
 
   // Use entityConfig if available, otherwise use fallback logic
@@ -56,7 +59,7 @@ export function PublicEntityCard({ entityConfig, entitySlug, data, className }: 
     entityDisplayName = entityConfig.names.singular
   } else {
     // Fallback when entityConfig is not loaded
-    title = (data.title || data.name || `Item ${entityId}`) as string
+    title = (data.title || data.name || text('itemFallback', { id: entityId })) as string
     description = data.description as string | undefined
     entityDisplayName = entitySlug.charAt(0).toUpperCase() + entitySlug.slice(1)
   }
@@ -66,7 +69,7 @@ export function PublicEntityCard({ entityConfig, entitySlug, data, className }: 
   // Format date
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
+      return new Date(dateString).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -78,16 +81,16 @@ export function PublicEntityCard({ entityConfig, entitySlug, data, className }: 
 
   // Format field value for display
   const formatFieldValue = (field: EntityField, value: unknown): React.ReactNode => {
-    if (value === null || value === undefined) return 'N/A'
+    if (value === null || value === undefined) return text('notAvailable')
     
     switch (field.type) {
       case 'date':
       case 'datetime':
         return formatDate(value as string)
       case 'boolean':
-        return value ? 'Yes' : 'No'
+        return value ? text('yes') : text('no')
       case 'number':
-        return typeof value === 'number' ? value.toLocaleString() : String(value)
+        return typeof value === 'number' ? value.toLocaleString(locale) : String(value)
       case 'select':
         // Find option label if available
         const option = field.options?.find(opt => opt.value === value)

@@ -10,5 +10,44 @@
     "getStarted": "Começar",
     "learnMore": "Saiba mais",
     "contactUs": "Fale Conosco"
+  },
+  "entities": {
+    "itemFallback": "Item {id}",
+    "notAvailable": "N/D",
+    "yes": "Sim",
+    "no": "Não",
+    "loadFailed": "Não foi possível carregar os dados",
+    "notSpecified": "Não especificado",
+    "entityFallback": "Entidade",
+    "notFound": "{entity} não encontrado",
+    "titleFallback": "{entity} {id}",
+    "listFallback": "Lista",
+    "backTo": "Voltar para {list}",
+    "details": "Detalhes",
+    "itemsFallback": "Itens",
+    "viewMore": "Ver mais {items}",
+    "searchEntities": "Pesquisar {entities}...",
+    "search": "Pesquisar...",
+    "sortBy": "Ordenar por...",
+    "showing": "Exibindo {shown} de {total} {entities}",
+    "noneFound": "Nenhum resultado em {entities}",
+    "tryAdjusting": "Tente ajustar os termos de busca",
+    "previous": "Anterior",
+    "next": "Próxima"
+  },
+  "pageBuilder": {
+    "blockFailed": "Não foi possível carregar o bloco:",
+    "blockHint": "Este bloco pode não estar disponível ou ocorreu um erro ao exibi-lo.",
+    "emptyPage": "Esta página ainda não tem conteúdo."
+  },
+  "defaultPage": {
+    "title": "Página pública padrão",
+    "description": "Esta é a página pública padrão (sem personalização do tema)",
+    "template": "Modelo padrão",
+    "path": "Caminho: {path}"
+  },
+  "route": {
+    "notFound": "Não encontrado",
+    "browseAll": "Explore todos os {entities}"
   }
 }

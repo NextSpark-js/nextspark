@@ -179,7 +179,7 @@
       "uploaded": "Fichier téléchargé"
     },
     "taskCard": "Carte de tâche : {title}. Statut : {status}",
-    "toggleTask": "Marquer la tâche '{title}' comme {action}",
+    "toggleTask": "Marquer la tâche « {title} » comme {action}",
     "createdDate": "Créée le {date}",
     "deleteTask": "Supprimer la tâche : {title}",
     "completedTaskCard": "Tâche terminée : {title}",

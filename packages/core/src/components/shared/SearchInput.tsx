@@ -5,6 +5,7 @@ import { Input } from '../ui/input'
 import { Search, X } from 'lucide-react'
 import type { ReactNode, InputHTMLAttributes } from 'react'
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useCommonText } from '../../lib/i18n/common-text'
 
 // ============================================================================
 // Types
@@ -43,12 +44,13 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
       className,
       containerClassName,
       icon,
-      clearLabel = 'Clear search',
+      clearLabel: clearLabelProp,
       'data-cy': dataCy = 'search-input',
       ...props
     },
     ref
   ) => {
+    const clearLabel = useCommonText('search', 'clear', 'Clear search', clearLabelProp)
     const innerRef = useRef<HTMLInputElement>(null)
     useImperativeHandle(ref, () => innerRef.current as HTMLInputElement)
 

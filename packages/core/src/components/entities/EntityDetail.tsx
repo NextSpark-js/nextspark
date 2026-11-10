@@ -17,6 +17,7 @@ import { getEntity, getEntityRegistry, getEntityMetadata } from '../../lib/entit
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { EntityChildManager } from './EntityChildManager'
 import { EntityDetailHeader } from './EntityDetailHeader'
+import { useTranslations } from 'next-intl'
 import { sel } from '../../lib/test'
 import { useTeam } from '../../hooks/useTeam'
 import { usePermissions } from '../../lib/permissions/hooks'
@@ -93,6 +94,7 @@ export function EntityDetail({
   customFormComponents = {},
   customSections = [],
 }: EntityDetailProps) {
+  const tDetail = useTranslations('entities.detail')
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Get current team ID for team-scoped operations like user display
@@ -268,7 +270,7 @@ export function EntityDetail({
             fields: childEntityConfig.fields,
             display: {
               title: (childEntityConfig as any).names?.plural || (childEntityConfig as any).display?.title || childName,
-              description: `Manage ${((childEntityConfig as any).names?.plural || (childEntityConfig as any).display?.title || childName).toLowerCase()} for this ${entityConfig.names.singular.toLowerCase()}`,
+              description: tDetail('manageChild', { entities: ((childEntityConfig as any).names?.plural || (childEntityConfig as any).display?.title || childName).toLowerCase(), entity: entityConfig.names.singular.toLowerCase() }),
               mode: 'table' as const
             }
           }

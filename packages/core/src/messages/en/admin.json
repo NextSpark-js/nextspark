@@ -141,8 +141,9 @@
     },
     "block": {
       "error": {
-        "notFound": "Block '{slug}' not found"
-      }
+        "notFound": "Block “{slug}” not found"
+      },
+      "moreProps": "+{count} more"
     },
     "settings": {
       "empty": {
@@ -239,10 +240,12 @@
         "placeholder": "Search blocks..."
       },
       "categories": {
-        "all": "All"
+        "all": "All",
+        "title": "Categories"
       },
       "addBlock": "Add block",
-      "empty": "No blocks found"
+      "empty": "No blocks found",
+      "select": "Select..."
     },
     "canvas": {
       "empty": {
@@ -315,7 +318,10 @@
       "saveBlocked": "The page was not saved",
       "hookFailed": "The page was not saved: {message}",
       "blockCopied": "Block copied to clipboard",
-      "blockPasted": "Block pasted"
+      "blockPasted": "Block pasted",
+      "fetchPatternsFailed": "Failed to fetch patterns",
+      "fetchFailed": "Failed to fetch {entity}",
+      "saveFailed": "Failed to save {entity}"
     },
     "multiSelect": {
       "selected": "{count, plural, one {# block selected} other {# blocks selected}}",
@@ -334,6 +340,18 @@
       "patternSkipped": "Pattern references excluded from selection",
       "clipboardEmpty": "Clipboard is empty",
       "settingsHint": "Use the action bar to manage selected blocks"
+    },
+    "pattern": {
+      "fetchFailed": "Failed to fetch pattern: {status}",
+      "blockNotFound": "Block not found:"
+    },
+    "tree": {
+      "pattern": "Pattern",
+      "unknownBlock": "Unknown Block"
+    },
+    "viewport": {
+      "mobile": "Mobile view (375px)",
+      "desktop": "Desktop view (100%)"
     }
   },
   "patterns": {
@@ -355,6 +373,52 @@
       "title": "Pattern deleted",
       "description": "This pattern was deleted and will be removed on save.",
       "remove": "Remove"
+    },
+    "usage": {
+      "totalUses": "Total Uses",
+      "acrossOne": "Across {count} entity type",
+      "acrossMany": "Across {count} entity types",
+      "percentOfTotal": "{percent}% of total",
+      "emptyMessage": "No usages found",
+      "entity": "Entity",
+      "type": "Type",
+      "status": "Status",
+      "lastUpdated": "Last Updated",
+      "actions": "Actions",
+      "noUsagesTitle": "No Usages Found",
+      "viewEntity": "View entity (opens in new tab)",
+      "errorTitle": "Error Loading Usages",
+      "loadFailed": "Failed to load pattern usages",
+      "retry": "Retry",
+      "filterByType": "Filter by type:",
+      "allTypes": "All entity types",
+      "pageOf": "Page {page} of {totalPages}",
+      "notUsedIn": "This pattern is not used in any {entityType}",
+      "notUsedYet": "This pattern is not used in any entities yet",
+      "showing": "Showing {from} to {to} of {total} usages"
+    },
+    "list": {
+      "unknownError": "Unknown error",
+      "errorLoading": "Error loading data: {message}",
+      "deleted": "Pattern deleted successfully",
+      "deleteError": "Error deleting: {message}",
+      "deletedMany": "{count} patterns deleted successfully",
+      "viewUsages": "View Usages",
+      "configError": "Could not load configuration for entity \"{entity}\"."
+    },
+    "reports": {
+      "idRequired": "Pattern ID is required",
+      "notEnabled": "Patterns entity is not configured or not enabled",
+      "loadFailed": "Failed to load pattern",
+      "errorTitle": "Error",
+      "back": "Back to Patterns",
+      "notFoundTitle": "Pattern Not Found",
+      "notFoundDescription": "The pattern you are looking for does not exist or has been deleted.",
+      "subtitle": "Usage reports and analytics",
+      "edit": "Edit Pattern"
+    },
+    "page": {
+      "notEnabled": "Patterns entity is not configured or not enabled."
     }
   }
 }

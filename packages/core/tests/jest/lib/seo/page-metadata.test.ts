@@ -3,7 +3,7 @@
  * against the app URL the public layout declares as `metadataBase`.
  */
 jest.mock('@nextsparkjs/core/lib/config/public-config-client', () => ({ APP_NAME: 'Test App' }))
-jest.mock('next-intl/server', () => ({ getMessages: async () => ({}) }))
+jest.mock('next-intl/server', () => ({ getMessages: async () => ({}), getTranslations: async () => (key: string) => key }))
 jest.mock('next-intl', () => ({ NextIntlClientProvider: () => null }))
 jest.mock('@nextsparkjs/core/components/public/entities/PublicEntityGrid', () => ({ PublicEntityGrid: () => null }))
 

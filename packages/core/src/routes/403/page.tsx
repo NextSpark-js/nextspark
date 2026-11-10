@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, Home } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
@@ -13,7 +14,8 @@ const UpgradePlansLink = dynamic(() => import('@nextsparkjs/core/components/bill
 
 function ForbiddenContent() {
   const searchParams = useSearchParams()!
-  const reason = searchParams.get('reason') || 'You do not have permission to access this resource'
+  const text = useTranslations('permissions.forbidden')
+  const reason = searchParams.get('reason') || text('defaultReason')
   const upgrade = searchParams.get('upgrade') === 'true'
 
   return (
@@ -24,7 +26,7 @@ function ForbiddenContent() {
             <AlertTriangle className="h-8 w-8 text-yellow-600" />
           </div>
           <CardTitle className="text-2xl">
-            ⚠️ Oops, you do not have permission to do this
+            {text('title')}
           </CardTitle>
           <CardDescription className="text-gray-600">
             {reason}
@@ -35,7 +37,7 @@ function ForbiddenContent() {
           {upgrade && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
-                This feature requires an upgrade to your current plan.
+                {text('upgradeRequired')}
               </p>
               <UpgradePlansLink />
             </div>
@@ -48,13 +50,13 @@ function ForbiddenContent() {
               onClick={() => window.history.back()}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {text('back')}
             </Button>
 
             <Link href="/dashboard" className="flex-1">
               <Button className="w-full">
                 <Home className="h-4 w-4 mr-2" />
-                Dashboard
+                {text('dashboard')}
               </Button>
             </Link>
           </div>
@@ -65,6 +67,7 @@ function ForbiddenContent() {
 }
 
 function ForbiddenPage() {
+  const text = useTranslations('permissions.forbidden')
   return (
     <Suspense fallback={
       <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -74,7 +77,7 @@ function ForbiddenPage() {
               <AlertTriangle className="h-8 w-8 text-yellow-600" />
             </div>
             <CardTitle className="text-2xl">
-              ⚠️ Oops, you do not have permission to do this
+              {text('title')}
             </CardTitle>
           </CardHeader>
         </Card>

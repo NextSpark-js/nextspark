@@ -28,6 +28,9 @@ import ts from 'typescript'
 
 export type NotTranslatable = Record<string, string>
 
+/** The hooks that read a text from the catalog and fall back to the English one written in the call (components/ui and shared only). */
+const FALLBACK_HELPERS = new Set(['useSectionText', 'useMessageText', 'useCommonText'])
+
 export function walkSource(dir: string, extensions = ['.ts', '.tsx']): string[] {
   return readdirSync(dir).flatMap(name => {
     const full = path.join(dir, name)
@@ -92,6 +95,9 @@ export function fixedTexts(source: ts.SourceFile, notTranslatable: NotTranslatab
   }
 
   const visit = (node: ts.Node) => {
+    // the default texts a component passes to the helpers that read the catalog without a provider are checked against the catalog
+    // (the key test compares each with the English text), so what is written in their arguments is not a fixed text
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && FALLBACK_HELPERS.has(node.expression.text)) return
     if (ts.isJsxText(node)) {
       const text = node.text.replace(/\s+/g, ' ').trim()
       if (text && letters(text) && !stays(text) && !insideCode(node)) at(node, text)
@@ -135,23 +141,48 @@ export function fixedTexts(source: ts.SourceFile, notTranslatable: NotTranslatab
 
 // --- the keys a source reads --------------------------------------------------------------------------------------
 
-/** The `t('key')` calls of a source, with the namespace of the `useTranslations`/`getTranslations` they come from. */
+const TRANSLATION_FACTORIES = ['useTranslations', 'getTranslations', 'getPublicTranslations']
+
+/**
+ * The `t('key')` calls of a source, with the namespace of the `useTranslations`/`getTranslations`/`getPublicTranslations` they come
+ * from (no argument: the root, so the key is the full path). A key written as a ternary (`t(ok ? 'a' : 'b')`) reads both branches,
+ * a template (`t(`status.${x}`)`) its fixed head, and `(await getPublicTranslations('docs'))('title')` is read as well.
+ */
 export function keysRead(source: ts.SourceFile): { key: string; dynamic: boolean }[] {
   const namespaces: Record<string, string> = {}
   const reads: { key: string; dynamic: boolean }[] = []
+  const factoryNamespace = (call: ts.Node): string | undefined => {
+    const init = ts.isAwaitExpression(call) ? call.expression : call
+    if (ts.isCallExpression(init) && ts.isIdentifier(init.expression) && TRANSLATION_FACTORIES.includes(init.expression.text)) {
+      const first = init.arguments[0]
+      if (!first) return ''
+      if (ts.isStringLiteral(first)) return first.text
+    }
+    return undefined
+  }
+  const push = (namespace: string, arg: ts.Node) => {
+    const join = (key: string) => (namespace ? `${namespace}.${key}` : key)
+    if (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg)) reads.push({ key: join(arg.text), dynamic: false })
+    else if (ts.isTemplateExpression(arg)) reads.push({ key: join(arg.head.text), dynamic: true })
+    else if (ts.isConditionalExpression(arg)) {
+      push(namespace, arg.whenTrue)
+      push(namespace, arg.whenFalse)
+    } else if (ts.isParenthesizedExpression(arg)) push(namespace, arg.expression)
+  }
   const visit = (node: ts.Node) => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      const init = ts.isAwaitExpression(node.initializer) ? node.initializer.expression : node.initializer
-      if (ts.isCallExpression(init) && ['useTranslations', 'getTranslations'].includes(init.expression.getText(source)) && init.arguments[0] && ts.isStringLiteral(init.arguments[0])) {
-        namespaces[node.name.text] = init.arguments[0].text
-      }
+      const namespace = factoryNamespace(node.initializer)
+      if (namespace !== undefined) namespaces[node.name.text] = namespace
     }
     if (ts.isCallExpression(node)) {
-      const callee = node.expression.getText(source).replace(/\.(rich|has)$/, '')
       const arg = node.arguments[0]
-      if (callee in namespaces && arg && !/\.has$/.test(node.expression.getText(source))) {
-        if (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg)) reads.push({ key: `${namespaces[callee]}.${arg.text}`, dynamic: false })
-        else if (ts.isTemplateExpression(arg)) reads.push({ key: `${namespaces[callee]}.${arg.head.text}`, dynamic: true })
+      const calleeText = node.expression.getText(source)
+      const callee = calleeText.replace(/\.(rich|has)$/, '')
+      if (callee in namespaces && arg && !/\.has$/.test(calleeText)) push(namespaces[callee], arg)
+      // (await getPublicTranslations('docs'))('title')
+      else if (arg && ts.isParenthesizedExpression(node.expression)) {
+        const namespace = factoryNamespace(node.expression.expression)
+        if (namespace !== undefined) push(namespace, arg)
       }
     }
     ts.forEachChild(node, visit)

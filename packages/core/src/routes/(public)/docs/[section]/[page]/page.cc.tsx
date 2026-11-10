@@ -63,11 +63,13 @@ async function loadDoc(sectionSlug: string, pageSlug: string) {
 export async function generateMetadata({ params }: DocsPageProps): Promise<Metadata> {
   const { section: sectionSlug, page: pageSlug } = await params
   const doc = await loadDoc(sectionSlug, pageSlug)
-  if (!doc) return { title: 'Page Not Found' }
+  const notFoundTitle = (await getPublicTranslations('docs.notFound'))('title')
+  if (!doc) return { title: notFoundTitle }
+  const tIndex = await getPublicTranslations('docs.index')
 
   return pageMetadata({
-    title: `${doc.metadata.title} | Documentation`,
-    description: doc.metadata.description || `Documentation for ${doc.metadata.title}`,
+    title: tIndex('pageTitle', { title: doc.metadata.title }),
+    description: doc.metadata.description || tIndex('pageDescription', { title: doc.metadata.title }),
     path: `/docs/${sectionSlug}/${pageSlug}`
   })
 }

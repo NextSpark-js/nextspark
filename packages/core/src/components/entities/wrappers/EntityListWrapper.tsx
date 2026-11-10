@@ -17,6 +17,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -49,6 +50,8 @@ export function EntityListWrapper({
   className,
   headerActions
 }: EntityListWrapperProps) {
+  const text = useTranslations('entities.wrapper')
+  const ui = useTranslations('entities.ui')
   // Nothing is requested while there is no user: during a sign-out the session store empties before the page is left,
   // and a load started then is answered with a 401.
   const { user } = useAuth()
@@ -153,13 +156,13 @@ export function EntityListWrapper({
       setDataError(null)
     } catch (err) {
       console.error(`[EntityListWrapper] Error loading data for "${entityType}":`, err)
-      setDataError(`Error loading data: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setDataError(text('errorLoading', { message: err instanceof Error ? err.message : text('unknownError') }))
       setData([])
     } finally {
       setIsInitialLoad(false)
       setIsSearching(false)
     }
-  }, [entityConfig, entityType, isOverride, buildApiFilters])
+  }, [entityConfig, entityType, isOverride, buildApiFilters, text])
 
   // Track previous filters and schema to detect changes
   const filtersKey = JSON.stringify(filters)
@@ -227,7 +230,7 @@ export function EntityListWrapper({
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteEntityData(entityType, id)
-      toast.success(`${entityConfig?.names.singular || 'Item'} deleted successfully`)
+      toast.success(text('deleted', { entity: entityConfig?.names.singular || text('item') }))
       // Clear selection if deleted item was selected
       setSelectedIds(prev => {
         const newSet = new Set(prev)
@@ -238,30 +241,30 @@ export function EntityListWrapper({
       await loadData(false)
     } catch (err) {
       console.error(`[EntityListWrapper] Error deleting ${entityType}:`, err)
-      toast.error(`Error deleting: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(text('deleteError', { message: err instanceof Error ? err.message : text('unknownError') }))
       throw err
     }
-  }, [entityType, entityConfig?.names.singular, loadData])
+  }, [entityType, entityConfig?.names.singular, loadData, text])
 
   // Handle bulk delete
   const handleBulkDelete = useCallback(async (ids: string[]) => {
     try {
       // Delete all selected items
       await Promise.all(ids.map(id => deleteEntityData(entityType, id)))
-      toast.success(`${ids.length} ${ids.length === 1 ? entityConfig?.names.singular || 'item' : entityConfig?.names.plural || 'items'} deleted successfully`)
+      toast.success(text('deletedMany', { count: ids.length, entities: ids.length === 1 ? entityConfig?.names.singular || text('itemLower') : entityConfig?.names.plural || text('itemsLower') }))
       // Reload data after delete (preserving current filters)
       await loadData(false)
     } catch (err) {
       console.error(`[EntityListWrapper] Error bulk deleting ${entityType}:`, err)
-      toast.error(`Error deleting: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(text('deleteError', { message: err instanceof Error ? err.message : text('unknownError') }))
       throw err
     }
-  }, [entityType, entityConfig?.names.singular, entityConfig?.names.plural, loadData])
+  }, [entityType, entityConfig?.names.singular, entityConfig?.names.plural, loadData, text])
 
   const handleDuplicate = useCallback(async (id: string) => {
     try {
       const created = await duplicateEntityData(entityType, id)
-      toast.success(`${entityConfig?.names.singular || 'Item'} duplicated successfully`)
+      toast.success(text('duplicated', { entity: entityConfig?.names.singular || text('item') }))
       await loadData(false)
 
       const newId = (created as Record<string, unknown>)?.id
@@ -270,10 +273,10 @@ export function EntityListWrapper({
       }
     } catch (err) {
       console.error(`[EntityListWrapper] Error duplicating ${entityType}:`, err)
-      toast.error(`Error duplicating: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(text('duplicateError', { message: err instanceof Error ? err.message : text('unknownError') }))
       throw err
     }
-  }, [entityType, entityConfig?.names.singular, loadData, router])
+  }, [entityType, entityConfig?.names.singular, loadData, router, text])
 
   // Handle select all (for bulk actions bar)
   const handleSelectAll = useCallback(() => {
@@ -299,7 +302,7 @@ export function EntityListWrapper({
     return (
       <Alert>
         <AlertDescription>
-          {configError || `Could not load the configuration for entity "${entityType}".`}
+          {configError || text('configError', { entity: entityType })}
         </AlertDescription>
       </Alert>
     )
@@ -333,7 +336,7 @@ export function EntityListWrapper({
             {entityConfig.names.plural}
           </h1>
           <p className="text-muted-foreground">
-            Manage your {entityConfig.names.plural.toLowerCase()}
+            {ui('manage', { entities: entityConfig.names.plural.toLowerCase() })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -342,7 +345,7 @@ export function EntityListWrapper({
             <Button asChild data-cy={sel('entities.list.addButton', { slug: entityConfig.slug })}>
               <Link href={`/dashboard/${entityConfig.slug}/create`}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add {entityConfig.names.singular}
+                {ui('add', { entity: entityConfig.names.singular })}
               </Link>
             </Button>
           )}
@@ -354,7 +357,7 @@ export function EntityListWrapper({
         <div className="flex flex-col sm:flex-row gap-3 items-center flex-wrap">
           {enableSearch && (
             <SearchInput
-              placeholder={`Search ${entityConfig.names.plural.toLowerCase()}...`}
+              placeholder={ui('searchEntities', { entities: entityConfig.names.plural.toLowerCase() })}
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
               containerClassName="flex-1 max-w-md"

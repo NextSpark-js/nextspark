@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useMessageText } from '../../lib/i18n/common-text'
 import { X } from "lucide-react"
 import { Badge } from './badge'
 import { Input } from './input'
@@ -20,13 +21,15 @@ interface TagsInputProps {
 export function TagsInput({
   value = [],
   onChange,
-  placeholder = "Add tags...",
+  placeholder: placeholderProp,
   maxTags,
   disabled = false,
   className,
   allowDuplicates = false,
   separator = ",",
 }: TagsInputProps) {
+  const defaultPlaceholder = useMessageText('entities.tagsInput.placeholder', 'Add tags...')
+  const placeholder = placeholderProp ?? defaultPlaceholder
   const [inputValue, setInputValue] = React.useState("")
   const inputRef = React.useRef<HTMLInputElement>(null)
 

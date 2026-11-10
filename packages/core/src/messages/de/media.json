@@ -1,0 +1,159 @@
+{
+  "actions": {
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "select": "Auswählen",
+    "viewDetails": "Details anzeigen",
+    "save": "Speichern"
+  },
+  "dashboard": {
+    "bulkDelete": "Löschen",
+    "bulkDeleteConfirm": "{count, plural, one {# Datei} other {# Dateien}} löschen?",
+    "bulkDeleteConfirmDesc": "Diese Aktion kann nicht rückgängig gemacht werden. Die Dateien werden endgültig gelöscht.",
+    "bulkDeleteSuccess": "{count, plural, one {# Datei gelöscht} other {# Dateien gelöscht}}",
+    "bulkDeleting": "{current} von {total} werden gelöscht ...",
+    "clearSelection": "Zurücksetzen",
+    "deselectAll": "Auswahl aufheben",
+    "filterByTag": "Nach Tag filtern ...",
+    "hideUpload": "Upload ausblenden",
+    "nextPage": "Weiter",
+    "noTags": "Keine Tags",
+    "pagination": "{from}–{to} von {total} werden angezeigt",
+    "prevPage": "Zurück",
+    "selected": "{count, plural, one {# ausgewählt} other {# ausgewählt}}",
+    "subtitle": "{count, plural, =0 {Keine Dateien} one {# Datei} other {# Dateien}} in Ihrer Bibliothek",
+    "tags": "Tags",
+    "allTags": "Alle Tags"
+  },
+  "delete": {
+    "cancel": "Abbrechen",
+    "confirm": "Löschen",
+    "error": "Medium konnte nicht gelöscht werden",
+    "message": "Möchten Sie diese Mediendatei wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "success": "Medium erfolgreich gelöscht",
+    "title": "Medium löschen"
+  },
+  "detail": {
+    "altLabel": "Alternativtext",
+    "altPlaceholder": "Beschreiben Sie dieses Bild für die Barrierefreiheit ...",
+    "cancel": "Abbrechen",
+    "captionLabel": "Bildunterschrift",
+    "captionPlaceholder": "Bildunterschrift hinzufügen ...",
+    "info": {
+      "url": "URL",
+      "filename": "Dateiname",
+      "fileSize": "Dateigröße",
+      "mimeType": "Typ",
+      "dimensions": "Abmessungen",
+      "uploadedBy": "Hochgeladen von",
+      "uploadedAt": "Hochgeladen"
+    },
+    "save": "Änderungen speichern",
+    "saved": "Änderungen gespeichert",
+    "saving": "Wird gespeichert ...",
+    "title": "Mediendetails",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "Geben Sie dieser Datei einen Titel ...",
+    "titleDescription": "Optionaler Anzeigename für dieses Medium",
+    "altDescription": "Alternativtext für Screenreader und SEO",
+    "captionDescription": "Optionale Beschreibung unterhalb des Mediums"
+  },
+  "empty": {
+    "title": "Noch keine Mediendateien",
+    "description": "Laden Sie Bilder oder Videos hoch, um zu beginnen",
+    "uploadBtn": "Dateien hochladen"
+  },
+  "errors": {
+    "loadFailed": "Medien konnten nicht geladen werden",
+    "unauthorized": "Sie haben keine Berechtigung, auf Medien zuzugreifen",
+    "notFound": "Medium nicht gefunden",
+    "uploadFailed": "Upload fehlgeschlagen: {error}"
+  },
+  "footer": {
+    "cancel": "Abbrechen",
+    "itemsSelected": "{count} Element ausgewählt",
+    "itemsSelectedPlural": "{count} Elemente ausgewählt",
+    "select": "Auswählen"
+  },
+  "grid": {
+    "dimensions": "{width} × {height}",
+    "noResults": "Keine Medien gefunden",
+    "selected": "Ausgewählt",
+    "loading": "Medien werden geladen ..."
+  },
+  "list": {
+    "actions": "Aktionen",
+    "dimensions": "Abmessungen",
+    "filename": "Dateiname",
+    "size": "Größe",
+    "type": "Typ",
+    "uploaded": "Hochgeladen"
+  },
+  "selector": {
+    "change": "Ändern",
+    "noSelection": "Kein Medium ausgewählt",
+    "remove": "Entfernen",
+    "selectMedia": "Medium auswählen"
+  },
+  "subtitle": "Verwalten Sie Ihre Bilder und Videos",
+  "tags": {
+    "add": "Tag hinzufügen",
+    "createPlaceholder": "Name des neuen Tags ...",
+    "empty": "Keine Tags zugewiesen",
+    "title": "Tags",
+    "remove": "Entfernen",
+    "create": "Tag erstellen",
+    "applied": "Tag hinzugefügt",
+    "removed": "Tag entfernt"
+  },
+  "title": "Medienbibliothek",
+  "toolbar": {
+    "columns": "Spalten",
+    "search": "Dateien suchen ...",
+    "sort": {
+      "nameAsc": "Name A–Z",
+      "nameDesc": "Name Z–A",
+      "newest": "Neueste zuerst",
+      "oldest": "Älteste zuerst",
+      "sizeAsc": "Kleinste zuerst",
+      "sizeDesc": "Größte zuerst"
+    },
+    "typeFilter": {
+      "all": "Alle Typen",
+      "images": "Bilder",
+      "videos": "Videos"
+    },
+    "upload": "Hochladen",
+    "viewGrid": "Rasteransicht",
+    "viewList": "Listenansicht"
+  },
+  "upload": {
+    "browse": "zum Hochladen durchsuchen",
+    "cancelUpload": "Upload von {name} abbrechen",
+    "dragDrop": "Dateien hierher ziehen und ablegen oder",
+    "duplicateFound": "{count, plural, one {# Datei existiert} other {# Dateien existieren}} bereits in Ihrer Bibliothek",
+    "duplicateSkip": "Duplikate überspringen",
+    "duplicateUploadAll": "Alle hochladen",
+    "duplicateConfirm": "Trotzdem hochladen?",
+    "error": "Datei konnte nicht hochgeladen werden",
+    "maxSelectionsReached": "Es sind maximal {maxSelections} Elemente auswählbar",
+    "maxSize": "Maximale Dateigröße: {maxSize} MB",
+    "success": "Datei erfolgreich hochgeladen",
+    "successMultiple": "{count} Dateien erfolgreich hochgeladen",
+    "tooLarge": "Die Datei ist zu groß",
+    "uploading": "Wird hochgeladen ...",
+    "uploadingName": "{name} wird hochgeladen",
+    "uploadingFile": "{filename} wird hochgeladen ...",
+    "invalidType": "Dateityp nicht zulässig",
+    "typeNotAllowed": "Der Dateityp {type} ist nicht zulässig.",
+    "typeNotAccepted": "Dateityp nicht zulässig. Zulässige Typen: {types}",
+    "tooLargeNamed": "Die Datei {name} ist zu groß. Die maximale Größe beträgt {max} MB.",
+    "tooManyFiles": "Höchstens {max} Dateien pro Upload",
+    "cancelled": "Upload abgebrochen",
+    "noFileReturned": "Der Upload hat keine Datei zurückgegeben",
+    "failed": "Upload fehlgeschlagen",
+    "storageFailed": "Upload in den Speicher fehlgeschlagen",
+    "storageFailedStatus": "Upload in den Speicher fehlgeschlagen (Status {status})"
+  }
+}

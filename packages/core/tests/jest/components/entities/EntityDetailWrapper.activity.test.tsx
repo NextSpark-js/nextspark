@@ -10,6 +10,8 @@ import { render, waitFor } from '@testing-library/react'
 const mockGetEntityData = jest.fn()
 const CONFIG = { slug: 'tasks', enabled: true, names: { singular: 'Task', plural: 'Tasks' }, access: {}, fields: [] }
 
+const mockT = (key: string) => key
+jest.mock('next-intl', () => ({ useTranslations: () => mockT, useLocale: () => 'en' }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
 jest.mock('@/core/hooks/useTeam', () => ({ useTeam: () => ({ teamId: 't1', isReady: true }) }))

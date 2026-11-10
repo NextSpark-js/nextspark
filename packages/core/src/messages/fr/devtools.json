@@ -1008,5 +1008,14 @@
       "description": "Ressources et documentation supplémentaires",
       "docs": "Documentation de {name}"
     }
+  },
+  "guard": {
+    "title": "Accès réservé aux développeurs",
+    "description": "Vous avez besoin de privilèges de développeur pour accéder à cette zone.",
+    "body": "Cette section est réservée aux développeurs de la plateforme. Si vous pensez qu'il s'agit d'une erreur, veuillez contacter l'équipe de développement.",
+    "sessionNotFound": "Session introuvable. Veuillez vous reconnecter.",
+    "signIn": "Se connecter",
+    "goBack": "Retour",
+    "dashboard": "Tableau de bord"
   }
 }

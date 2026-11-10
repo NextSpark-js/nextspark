@@ -6,6 +6,19 @@ import { APP_NAME, CONSENT_CONFIG } from '../../../lib/config/public-config-clie
 import { CookieSettingsLink } from '../../consent/CookieSettingsLink'
 import { CurrentYear } from './CurrentYear'
 
+function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="font-medium underline underline-offset-4 hover:text-foreground transition-colors"
+    >
+      {children}
+    </Link>
+  )
+}
+
 export function PublicFooter() {
   const t = useTranslations('footer')
   const appName = APP_NAME
@@ -41,40 +54,18 @@ export function PublicFooter() {
               <span className="text-primary-foreground font-bold text-xs">{appName.charAt(0)}</span>
             </div>
             <span className="text-sm text-muted-foreground">
-              © <CurrentYear /> {appName}. All rights reserved.
+              © <CurrentYear /> {appName}. {t('allRightsReserved')}
             </span>
           </div>
 
           <div className="flex items-center space-x-6 text-sm text-muted-foreground">
             {CONSENT_CONFIG.enabled && <CookieSettingsLink label={t('cookieSettings')} />}
             <p className="text-center md:text-left">
-              Built with ❤️ using{" "}
-              <Link
-                href="https://nextjs.org"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium underline underline-offset-4 hover:text-foreground transition-colors"
-              >
-                Next.js
-              </Link>
-              ,{" "}
-              <Link
-                href="https://supabase.com"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium underline underline-offset-4 hover:text-foreground transition-colors"
-              >
-                Supabase
-              </Link>
-              {" "}and{" "}
-              <Link
-                href="https://ui.shadcn.com"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium underline underline-offset-4 hover:text-foreground transition-colors"
-              >
-                shadcn/ui
-              </Link>
+              {t.rich('builtWith', {
+                nextjs: (chunks) => <ExternalLink href="https://nextjs.org">{chunks}</ExternalLink>,
+                supabase: (chunks) => <ExternalLink href="https://supabase.com">{chunks}</ExternalLink>,
+                shadcn: (chunks) => <ExternalLink href="https://ui.shadcn.com">{chunks}</ExternalLink>,
+              })}
             </p>
           </div>
         </div>

@@ -9,6 +9,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
@@ -42,14 +43,15 @@ export function EntityBulkActions({
   config,
 }: EntityBulkActionsProps) {
   const clearSelectionText = useCommonText('a11y', 'clearSelection', 'Clear selection')
+  const bulk = useTranslations('entities.bulk')
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
 
   const selectedCount = selectedIds.size
-  const itemLabel = config.itemLabel || 'item'
-  const itemLabelPlural = config.itemLabelPlural || 'items'
+  const itemLabel = config.itemLabel || bulk('item')
+  const itemLabelPlural = config.itemLabelPlural || bulk('items')
 
   // Don't render if nothing is selected
   if (selectedCount === 0) {
@@ -112,7 +114,7 @@ export function EntityBulkActions({
           className="text-sm font-medium px-2 py-1 bg-primary/10 text-primary rounded"
           data-cy={sel('entities.list.bulk.count', { slug: entitySlug })}
         >
-          {selectedCount} selected
+          {bulk('selected', { count: selectedCount })}
         </span>
 
         {/* Divider */}
@@ -128,7 +130,7 @@ export function EntityBulkActions({
             data-cy={sel('entities.list.bulk.selectAll', { slug: entitySlug })}
           >
             <CheckSquare className="h-4 w-4" />
-            Select all
+            {bulk('selectAll')}
             {config.totalItems !== undefined && (
               <span className="text-muted-foreground">({config.totalItems})</span>
             )}
@@ -150,7 +152,7 @@ export function EntityBulkActions({
             data-cy={sel('entities.list.bulk.statusButton', { slug: entitySlug })}
           >
             <Pencil className="h-4 w-4" />
-            Change status
+            {bulk('changeStatus')}
           </Button>
         )}
 
@@ -164,7 +166,7 @@ export function EntityBulkActions({
             data-cy={sel('entities.list.bulk.deleteButton', { slug: entitySlug })}
           >
             <Trash2 className="h-4 w-4" />
-            Delete
+            {bulk('delete')}
           </Button>
         )}
 
@@ -188,18 +190,17 @@ export function EntityBulkActions({
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
         <DialogContent data-cy={sel('entities.list.bulk.statusDialog', { slug: entitySlug })}>
           <DialogHeader>
-            <DialogTitle>Change Status</DialogTitle>
+            <DialogTitle>{bulk('statusTitle')}</DialogTitle>
             <DialogDescription>
-              Change the status of {selectedCount}{' '}
-              {selectedCount === 1 ? itemLabel : itemLabelPlural}.
+              {bulk('statusDescription', { count: selectedCount, items: selectedCount === 1 ? itemLabel : itemLabelPlural })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
-            <label className="text-sm font-medium mb-2 block">New Status</label>
+            <label className="text-sm font-medium mb-2 block">{bulk('newStatus')}</label>
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
               <SelectTrigger data-cy={sel('entities.list.bulk.statusSelect', { slug: entitySlug })}>
-                <SelectValue placeholder="Select a status..." />
+                <SelectValue placeholder={bulk('statusPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {config.statusOptions?.map((option) => (
@@ -222,7 +223,7 @@ export function EntityBulkActions({
               disabled={isProcessing}
               data-cy={sel('entities.list.bulk.statusCancel', { slug: entitySlug })}
             >
-              Cancel
+              {bulk('cancel')}
             </Button>
             <Button
               onClick={handleConfirmStatusChange}
@@ -232,10 +233,10 @@ export function EntityBulkActions({
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  {bulk('updating')}
                 </>
               ) : (
-                'Update Status'
+                bulk('updateStatus')
               )}
             </Button>
           </DialogFooter>
@@ -247,11 +248,10 @@ export function EntityBulkActions({
         <DialogContent data-cy={sel('entities.list.bulk.deleteDialog', { slug: entitySlug })}>
           <DialogHeader>
             <DialogTitle>
-              Delete {selectedCount} {selectedCount === 1 ? itemLabel : itemLabelPlural}?
+              {bulk('deleteTitle', { count: selectedCount, items: selectedCount === 1 ? itemLabel : itemLabelPlural })}
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selectedCount}{' '}
-              {selectedCount === 1 ? itemLabel : itemLabelPlural}? This action cannot be undone.
+              {bulk('deleteDescription', { count: selectedCount, items: selectedCount === 1 ? itemLabel : itemLabelPlural })}
             </DialogDescription>
           </DialogHeader>
 
@@ -262,7 +262,7 @@ export function EntityBulkActions({
               disabled={isProcessing}
               data-cy={sel('entities.list.bulk.deleteCancel', { slug: entitySlug })}
             >
-              Cancel
+              {bulk('cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -273,10 +273,10 @@ export function EntityBulkActions({
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
+                  {bulk('deleting')}
                 </>
               ) : (
-                'Delete'
+                bulk('delete')
               )}
             </Button>
           </DialogFooter>

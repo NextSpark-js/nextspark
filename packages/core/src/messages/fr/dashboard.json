@@ -37,5 +37,16 @@
     "basic": "basique",
     "solo": "individuel",
     "low": "faible"
+  },
+  "sidebar": {
+    "navigationHeading": "Navigation"
+  },
+  "mobileNav": {
+    "superAdminPanel": "Panneau de super-administrateur"
+  },
+  "meta": {
+    "title": "Tableau de bord",
+    "listDescription": "Gérez les entités de votre tableau de bord",
+    "detailDescription": "Voir les détails de l'entité"
   }
 }

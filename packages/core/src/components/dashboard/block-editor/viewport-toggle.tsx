@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Monitor, Smartphone } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
@@ -16,6 +17,7 @@ interface ViewportToggleProps {
 }
 
 export function ViewportToggle({ value, onChange, className }: ViewportToggleProps) {
+  const labels = useTranslations('admin.builder.viewport')
   return (
     <div
       data-cy={sel('blockEditor.header.viewportToggle.container')}
@@ -33,7 +35,7 @@ export function ViewportToggle({ value, onChange, className }: ViewportTogglePro
         )}
         onClick={() => onChange('mobile')}
         data-cy={sel('blockEditor.header.viewportToggle.mobileBtn')}
-        title="Mobile view (375px)"
+        title={labels('mobile')}
       >
         <Smartphone className="h-4 w-4" />
       </Button>
@@ -46,7 +48,7 @@ export function ViewportToggle({ value, onChange, className }: ViewportTogglePro
         )}
         onClick={() => onChange('desktop')}
         data-cy={sel('blockEditor.header.viewportToggle.desktopBtn')}
-        title="Desktop view (100%)"
+        title={labels('desktop')}
       >
         <Monitor className="h-4 w-4" />
       </Button>

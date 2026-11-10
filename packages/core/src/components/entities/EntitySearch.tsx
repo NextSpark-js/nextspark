@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '../ui/card'
@@ -302,7 +303,7 @@ function highlightMatches(text: string, highlights: HighlightRange[]): React.Rea
 
 export function EntitySearch({
   entities,
-  placeholder = 'Search everything...',
+  placeholder: placeholderProp,
   variant = 'inline',
   onResultClick,
   onSearch,
@@ -310,6 +311,8 @@ export function EntitySearch({
   maxResults = 20,
   className,
 }: EntitySearchProps) {
+  const text = useTranslations('entities.search')
+  const placeholder = placeholderProp ?? text('placeholder')
   const { user } = useAuth()
   const router = useRouter()
   const [query, setQuery] = useState('')
@@ -435,21 +438,21 @@ export function EntitySearch({
               {isSearching && (
                 <CommandItem disabled>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Searching...
+                  {text('searching')}
                 </CommandItem>
               )}
               
               {!isSearching && query && results.length === 0 && (
-                <CommandEmpty>No results found.</CommandEmpty>
+                <CommandEmpty>{text('noResultsShort')}</CommandEmpty>
               )}
               
               {results.length > 0 && (
                 <>
                   {enableEntityFilter && (
                     <>
-                      <CommandGroup heading="Filter by Type">
+                      <CommandGroup heading={text('filterByType')}>
                         <CommandItem onSelect={() => handleFilterChange({})}>
-                          All Types
+                          {text('allTypes')}
                         </CommandItem>
                         {accessibleEntities.map((entity) => (
                           <CommandItem
@@ -465,7 +468,7 @@ export function EntitySearch({
                     </>
                   )}
                   
-                  <CommandGroup heading="Results">
+                  <CommandGroup heading={text('results')}>
                     {results.map((result) => (
                       <CommandItem
                         key={`${result.entityName}-${result.id}`}
@@ -533,7 +536,7 @@ export function EntitySearch({
                 <Filter className="mr-2 h-4 w-4" />
                 {filters.entityName 
                   ? accessibleEntities.find(e => e.slug === filters.entityName)?.names.singular
-                  : 'All Types'
+                  : text('allTypes')
                 }
               </Button>
             </PopoverTrigger>
@@ -542,7 +545,7 @@ export function EntitySearch({
                 <CommandList>
                   <CommandGroup>
                     <CommandItem onSelect={() => handleFilterChange({})}>
-                      All Types
+                      {text('allTypes')}
                     </CommandItem>
                     {accessibleEntities.map((entity) => (
                       <CommandItem
@@ -567,7 +570,7 @@ export function EntitySearch({
           <Card>
             <CardContent className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-              <span className="text-muted-foreground">Searching...</span>
+              <span className="text-muted-foreground">{text('searching')}</span>
             </CardContent>
           </Card>
         )}
@@ -576,9 +579,9 @@ export function EntitySearch({
           <Card>
             <CardContent className="text-center py-8">
               <Search className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No results found</h3>
+              <h3 className="text-lg font-medium mb-2">{text('noResults')}</h3>
               <p className="text-sm text-muted-foreground">
-                Try adjusting your search terms or filters
+                {text('tryAdjusting')}
               </p>
             </CardContent>
           </Card>
@@ -635,7 +638,7 @@ export function EntitySearch({
                           ))}
                           {result.matches.length > 2 && (
                             <div className="text-xs text-muted-foreground">
-                              +{result.matches.length - 2} more matches
+                              {text('moreMatches', { count: result.matches.length - 2 })}
                             </div>
                           )}
                         </div>
@@ -682,6 +685,7 @@ export function EntitySearchModal({
   /** REQUIRED: Entity configs must be passed from server component */
   entities: EntityConfig[]
 }) {
+  const tSearch = useTranslations('entities.search')
   return (
     <div
       className={`fixed inset-0 z-50 ${isOpen ? 'block' : 'hidden'}`}
@@ -691,7 +695,7 @@ export function EntitySearchModal({
       <div className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-2xl max-h-[80vh] bg-background border rounded-lg shadow-lg overflow-hidden">
         <div className="border-b p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Search Everything</h2>
+            <h2 className="text-lg font-medium">{tSearch('modalTitle')}</h2>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>

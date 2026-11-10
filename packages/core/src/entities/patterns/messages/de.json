@@ -71,6 +71,7 @@
     "title": "Muster Einfügen",
     "search": "Muster suchen...",
     "noResults": "Keine Muster gefunden",
-    "selectPattern": "Wählen Sie ein Muster zum Einfügen aus"
+    "selectPattern": "Wählen Sie ein Muster zum Einfügen aus",
+    "loading": "Muster werden geladen ..."
   }
 }

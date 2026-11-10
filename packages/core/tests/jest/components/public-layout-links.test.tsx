@@ -8,7 +8,7 @@
  */
 import { render, screen, fireEvent } from '@testing-library/react'
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => Object.assign((key: string) => key, { rich: (key: string, tags: Record<string, (chunks: string) => unknown>) => [key, ...Object.values(tags).map(tag => tag('x'))] }) }))
 jest.mock('@/core/hooks/useAuth', () => ({ useAuth: () => ({ user: null, isLoading: false }) }))
 jest.mock('@/core/components/app/misc/ThemeToggle', () => ({ ThemeToggle: () => null }))
 

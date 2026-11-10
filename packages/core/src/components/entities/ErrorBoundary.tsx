@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { ErrorInfo, ReactNode } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { Button } from '../ui/button'
@@ -20,6 +21,123 @@ interface EntityErrorBoundaryProps {
   fallback?: ReactNode
   onError?: (error: Error, errorInfo: ErrorInfo) => void
   showDetails?: boolean
+}
+
+interface EntityErrorPanelProps {
+  errorType: string
+  entityType?: string
+  error: Error
+  errorInfo?: ErrorInfo
+  errorId?: string
+  showDetails: boolean
+  attemptsRemaining: number
+  onRetry: () => void
+  onReset: () => void
+  onGoHome: () => void
+  onReload: () => void
+}
+
+/** The error card. A function component, so it can read the messages (the boundary itself is a class). */
+function EntityErrorPanel({
+  errorType, entityType, error, errorInfo, errorId, showDetails, attemptsRemaining, onRetry, onReset, onGoHome, onReload,
+}: EntityErrorPanelProps) {
+  const text = useTranslations('entities.errorBoundary')
+  const kind = (['network', 'permission', 'notFound', 'configuration'] as const).find(
+    key => ({ network: 'network', permission: 'permission', notFound: 'not-found', configuration: 'configuration' })[key] === errorType,
+  ) ?? 'unknown'
+  const title = text(`${kind}Title`)
+  const description = entityType ? text(`${kind}For`, { entity: entityType }) : text(kind)
+  const canRetry = attemptsRemaining > 0
+
+  return (
+    <div className="min-h-[400px] flex items-center justify-center p-6">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
+          </div>
+          <CardTitle className="text-xl font-semibold text-gray-900">
+            {title}
+          </CardTitle>
+          <CardDescription className="text-base text-gray-600">
+            {description}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {/* Actions */}
+          <div className="flex flex-wrap gap-3 justify-center">
+            {canRetry && (
+              <Button onClick={onRetry} variant="default" className="inline-flex items-center">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {text('retry', { count: attemptsRemaining })}
+              </Button>
+            )}
+
+            <Button onClick={onReset} variant="outline" className="inline-flex items-center">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {text('reset')}
+            </Button>
+
+            <Button onClick={onGoHome} variant="outline" className="inline-flex items-center">
+              <Home className="h-4 w-4 mr-2" />
+              {text('goToDashboard')}
+            </Button>
+
+            <Button onClick={onReload} variant="ghost" className="inline-flex items-center">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {text('reload')}
+            </Button>
+          </div>
+
+          {/* Error Details (solo en desarrollo o si se habilita explícitamente) */}
+          {(showDetails || process.env.NODE_ENV === 'development') && errorInfo && (
+            <Alert>
+              <Bug className="h-4 w-4" />
+              <AlertTitle>{text('detailsTitle')}</AlertTitle>
+              <AlertDescription className="mt-2">
+                <div className="space-y-2 text-sm font-mono">
+                  <div>
+                    <strong>{text('errorId')}</strong> {errorId}
+                  </div>
+                  <div>
+                    <strong>{text('type')}</strong> {errorType}
+                  </div>
+                  <div>
+                    <strong>{text('entity')}</strong> {entityType || text('notAvailable')}
+                  </div>
+                  <div>
+                    <strong>{text('message')}</strong> {error.message}
+                  </div>
+                  {error.stack && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer font-semibold">{text('stackTrace')}</summary>
+                      <pre className="mt-2 overflow-auto text-xs bg-gray-100 p-2 rounded">
+                        {error.stack}
+                      </pre>
+                    </details>
+                  )}
+                  {errorInfo.componentStack && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer font-semibold">{text('componentStack')}</summary>
+                      <pre className="mt-2 overflow-auto text-xs bg-gray-100 p-2 rounded">
+                        {errorInfo.componentStack}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Help Text */}
+          <div className="text-center text-sm text-gray-500">
+            {text('help')} <code className="bg-gray-100 px-1 rounded">{errorId}</code>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 /**
@@ -54,7 +172,7 @@ export class EntityErrorBoundary extends React.Component<
     const { errorId } = this.state
 
     // Log del error con contexto de entidad
-    console.group(`🚨 Entity Error Boundary [${entityType || 'Unknown'}]`)
+    console.group(`🚨 Entity Error Boundary [${entityType || 'unknown'}]`)
     console.error('Error ID:', errorId)
     console.error('Error:', error)
     console.error('Error Info:', errorInfo)
@@ -149,38 +267,6 @@ export class EntityErrorBoundary extends React.Component<
     return 'unknown'
   }
 
-  private getErrorMessage = (error: Error, entityType?: string): { title: string; description: string } => {
-    const errorType = this.getErrorType(error)
-
-    switch (errorType) {
-      case 'network':
-        return {
-          title: 'Connection Error',
-          description: `Could not connect to the server${entityType ? ` to load ${entityType}` : ''}. Check your internet connection.`
-        }
-      case 'permission':
-        return {
-          title: 'No Permissions',
-          description: `You don't have the necessary permissions to access ${entityType || 'this data'}.`
-        }
-      case 'not-found':
-        return {
-          title: 'Resource Not Found',
-          description: `What you requested${entityType ? ` from ${entityType}` : ''} is not available or has been deleted.`
-        }
-      case 'configuration':
-        return {
-          title: 'Configuration Error',
-          description: `There is a problem with the configuration${entityType ? ` of ${entityType}` : ''}. Contact the administrator.`
-        }
-      default:
-        return {
-          title: 'Unexpected Error',
-          description: `An unexpected error occurred${entityType ? ` while loading ${entityType}` : ''}. Our team has been notified.`
-        }
-    }
-  }
-
   render() {
     const { hasError, error, errorInfo, errorId } = this.state
     const { children, fallback, entityType, showDetails = false } = this.props
@@ -191,114 +277,20 @@ export class EntityErrorBoundary extends React.Component<
         return fallback
       }
 
-      const { title, description } = this.getErrorMessage(error, entityType)
-      const canRetry = this.retryCount < this.maxRetries
-      const errorType = this.getErrorType(error)
-
       return (
-        <div className="min-h-[400px] flex items-center justify-center p-6">
-          <Card className="w-full max-w-2xl">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-              <CardTitle className="text-xl font-semibold text-gray-900">
-                {title}
-              </CardTitle>
-              <CardDescription className="text-base text-gray-600">
-                {description}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
-              {/* Actions */}
-              <div className="flex flex-wrap gap-3 justify-center">
-                {canRetry && (
-                  <Button 
-                    onClick={this.handleRetry} 
-                    variant="default"
-                    className="inline-flex items-center"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry ({this.maxRetries - this.retryCount} attempts remaining)
-                  </Button>
-                )}
-
-                <Button
-                  onClick={this.handleReset}
-                  variant="outline"
-                  className="inline-flex items-center"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Reset
-                </Button>
-
-                <Button
-                  onClick={this.handleGoHome}
-                  variant="outline"
-                  className="inline-flex items-center"
-                >
-                  <Home className="h-4 w-4 mr-2" />
-                  Go to Dashboard
-                </Button>
-
-                <Button
-                  onClick={this.handleReload}
-                  variant="ghost"
-                  className="inline-flex items-center"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Reload Page
-                </Button>
-              </div>
-
-              {/* Error Details (solo en desarrollo o si se habilita explícitamente) */}
-              {(showDetails || process.env.NODE_ENV === 'development') && errorInfo && (
-                <Alert>
-                  <Bug className="h-4 w-4" />
-                  <AlertTitle>Error Details (Development)</AlertTitle>
-                  <AlertDescription className="mt-2">
-                    <div className="space-y-2 text-sm font-mono">
-                      <div>
-                        <strong>Error ID:</strong> {errorId}
-                      </div>
-                      <div>
-                        <strong>Type:</strong> {errorType}
-                      </div>
-                      <div>
-                        <strong>Entity:</strong> {entityType || 'N/A'}
-                      </div>
-                      <div>
-                        <strong>Message:</strong> {error.message}
-                      </div>
-                      {error.stack && (
-                        <details className="mt-2">
-                          <summary className="cursor-pointer font-semibold">Stack Trace</summary>
-                          <pre className="mt-2 overflow-auto text-xs bg-gray-100 p-2 rounded">
-                            {error.stack}
-                          </pre>
-                        </details>
-                      )}
-                      {errorInfo.componentStack && (
-                        <details className="mt-2">
-                          <summary className="cursor-pointer font-semibold">Component Stack</summary>
-                          <pre className="mt-2 overflow-auto text-xs bg-gray-100 p-2 rounded">
-                            {errorInfo.componentStack}
-                          </pre>
-                        </details>
-                      )}
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Help Text */}
-              <div className="text-center text-sm text-gray-500">
-                If the problem persists, contact technical support with the ID: <code className="bg-gray-100 px-1 rounded">{errorId}</code>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <EntityErrorPanel
+          errorType={this.getErrorType(error)}
+          entityType={entityType}
+          error={error}
+          errorInfo={errorInfo}
+          errorId={errorId}
+          showDetails={showDetails}
+          attemptsRemaining={this.maxRetries - this.retryCount}
+          onRetry={this.handleRetry}
+          onReset={this.handleReset}
+          onGoHome={this.handleGoHome}
+          onReload={this.handleReload}
+        />
       )
     }
 

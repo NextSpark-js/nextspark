@@ -48,7 +48,8 @@ jest.mock('@/core/components/entities/EntityForm', () => ({
 }))
 jest.mock('@/core/components/entities/EntityDetailHeader', () => ({ EntityDetailHeader: () => null }))
 jest.mock('@/core/components/dashboard/block-editor/builder-editor-view', () => ({ BuilderEditorView: () => null }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
+const mockT = (key: string) => key
+jest.mock('next-intl', () => ({ useTranslations: () => mockT, useLocale: () => 'en' }))
 
 import { EntityDetailWrapper } from '@/core/components/entities/wrappers/EntityDetailWrapper'
 import { EntityEditView } from '../../../../src/routes/_internal/entity-edit-view'

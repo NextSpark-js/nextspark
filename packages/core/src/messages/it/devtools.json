@@ -1008,5 +1008,14 @@
       "description": "Risorse e documentazione aggiuntive",
       "docs": "Documentazione di {name}"
     }
+  },
+  "guard": {
+    "title": "Accesso riservato agli sviluppatori",
+    "description": "Servono i privilegi di sviluppatore per accedere a quest'area.",
+    "body": "Questa sezione è riservata agli sviluppatori della piattaforma. Se pensi che si tratti di un errore, contatta il team di sviluppo.",
+    "sessionNotFound": "Sessione non trovata. Accedi di nuovo.",
+    "signIn": "Accedi",
+    "goBack": "Indietro",
+    "dashboard": "Dashboard"
   }
 }

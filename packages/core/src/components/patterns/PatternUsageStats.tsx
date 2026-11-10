@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { FileText, LayoutGrid, Newspaper, Hash } from 'lucide-react'
 import { sel } from '@nextsparkjs/core/lib/test'
@@ -40,6 +41,7 @@ function formatEntityType(entityType: string): string {
  * Displays usage count statistics as cards grouped by entity type.
  */
 export function PatternUsageStats({ counts, total, isLoading }: PatternUsageStatsProps) {
+  const text = useTranslations('admin.patterns.usage')
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-cy={sel('patterns.usageStats.loading')}>
@@ -63,13 +65,13 @@ export function PatternUsageStats({ counts, total, isLoading }: PatternUsageStat
       {/* Total Usage Card */}
       <Card data-cy={sel('patterns.usageStats.total')}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Uses</CardTitle>
+          <CardTitle className="text-sm font-medium">{text('totalUses')}</CardTitle>
           <Hash className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{total}</div>
           <p className="text-xs text-muted-foreground">
-            Across {counts.length} entity type{counts.length !== 1 ? 's' : ''}
+            {text(counts.length === 1 ? 'acrossOne' : 'acrossMany', { count: counts.length })}
           </p>
         </CardContent>
       </Card>
@@ -88,7 +90,7 @@ export function PatternUsageStats({ counts, total, isLoading }: PatternUsageStat
             <CardContent>
               <div className="text-2xl font-bold">{item.count}</div>
               <p className="text-xs text-muted-foreground">
-                {((item.count / total) * 100).toFixed(1)}% of total
+                {text('percentOfTotal', { percent: ((item.count / total) * 100).toFixed(1) })}
               </p>
             </CardContent>
           </Card>

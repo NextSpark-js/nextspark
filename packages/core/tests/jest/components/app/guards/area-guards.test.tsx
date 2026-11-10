@@ -51,7 +51,7 @@ describe.each([
   it('with serverChecked, no session once loaded renders no children', async () => {
     sessionState = { data: null, isPending: false }
     render(<Guard serverChecked>{AREA}</Guard>)
-    await waitFor(() => expect(screen.getByText('Session not found. Please sign in again.')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/guard\.sessionNotFound$/)).toBeTruthy())
     expect(screen.queryByText('area content')).toBeNull()
   })
 

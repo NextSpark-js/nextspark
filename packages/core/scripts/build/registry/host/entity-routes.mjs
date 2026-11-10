@@ -52,7 +52,7 @@ export const ENTITY_NOTICES = Object.freeze({
  * The core modules the entity routes are made of, one per kind of route: a route imports only the factory of
  * its own kind, so its module graph holds only the client components that route renders. `listMetadata`,
  * `detailMetadata`, `error` and `loading` are the core route helpers the per-entity routes forward
- * `metadata` from / re-export. A host with another core (the conformance fixture) passes its own as `modules`.
+ * `generateMetadata` from / re-export. A host with another core (the conformance fixture) passes its own as `modules`.
  */
 export const ENTITY_MODULES = Object.freeze({
   layout: `${CORE_ROUTES_SPECIFIER}_internal/entity-layout-route`,
@@ -288,9 +288,9 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
         { ...composed('layout', `${base}/layout.tsx`, 'createEntityLayoutRoute', modules.layout, [config]), protected: true },
         coreFacade('error', `${base}/error.tsx`, modules.error),
         coreFacade('loading', `${base}/loading.tsx`, modules.loading),
-        composed('page', `${base}/page.tsx`, 'createEntityListRoute', modules.list, [config, arg.template()], { acceptsTemplate: true, reexport: [{ names: ['metadata'], specifier: modules.listMetadata }] }),
+        composed('page', `${base}/page.tsx`, 'createEntityListRoute', modules.list, [config, arg.template()], { acceptsTemplate: true, reexport: [{ names: ['generateMetadata'], specifier: modules.listMetadata }] }),
         composed('page', `${base}/create/page.tsx`, 'createEntityCreateRoute', modules.create, [config, arg.template()], { acceptsTemplate: true }),
-        composed('page', `${base}/[id]/page.tsx`, 'createEntityDetailRoute', detailModule, [config, arg.literal(children), arg.template()], { acceptsTemplate: true, reexport: [{ names: ['metadata'], specifier: modules.detailMetadata }] }),
+        composed('page', `${base}/[id]/page.tsx`, 'createEntityDetailRoute', detailModule, [config, arg.literal(children), arg.template()], { acceptsTemplate: true, reexport: [{ names: ['generateMetadata'], specifier: modules.detailMetadata }] }),
         composed('page', `${base}/[id]/edit/page.tsx`, 'createEntityEditRoute', editModule, [config, arg.template()], { acceptsTemplate: true })
       )
     }

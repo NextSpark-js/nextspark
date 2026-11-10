@@ -256,7 +256,7 @@
       "uploaded": "Archivo subido"
     },
     "taskCard": "Tarjeta de tarea: {title}. Estado: {status}",
-    "toggleTask": "Marcar tarea '{title}' como {action}",
+    "toggleTask": "Marcar tarea “{title}” como {action}",
     "createdDate": "Creada el {date}",
     "deleteTask": "Eliminar tarea: {title}",
     "completedTaskCard": "Tarea completada: {title}",

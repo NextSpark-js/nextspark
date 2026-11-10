@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -26,6 +27,7 @@ interface PatternData {
 }
 
 function PatternReportsPage() {
+  const text = useTranslations('admin.patterns.reports')
   const params = useParams()!
   const router = useRouter()
   const patternId = params.id as string
@@ -41,7 +43,7 @@ function PatternReportsPage() {
     if (!teamReady) return
     async function loadPattern() {
       if (!patternId) {
-        setError('Pattern ID is required')
+        setError(text('idRequired'))
         setLoading(false)
         return
       }
@@ -52,7 +54,7 @@ function PatternReportsPage() {
         const config = clientEntityRegistry.getBySlug('patterns')
 
         if (!config || !config.features?.enabled) {
-          setError('Patterns entity is not configured or not enabled')
+          setError(text('notEnabled'))
           setLoading(false)
           return
         }
@@ -62,14 +64,14 @@ function PatternReportsPage() {
         setPattern(data)
       } catch (err) {
         console.error('Error loading pattern:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load pattern')
+        setError(err instanceof Error ? err.message : text('loadFailed'))
       } finally {
         setLoading(false)
       }
     }
 
     loadPattern()
-  }, [patternId, teamReady])
+  }, [patternId, teamReady, text])
 
   if (loading) {
     return (
@@ -93,7 +95,7 @@ function PatternReportsPage() {
     return (
       <div className="p-6" data-cy="pattern-reports-error">
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{text('errorTitle')}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button
@@ -102,7 +104,7 @@ function PatternReportsPage() {
           onClick={() => router.push('/dashboard/patterns')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Patterns
+          {text('back')}
         </Button>
       </div>
     )
@@ -112,9 +114,9 @@ function PatternReportsPage() {
     return (
       <div className="p-6" data-cy="pattern-reports-not-found">
         <Alert>
-          <AlertTitle>Pattern Not Found</AlertTitle>
+          <AlertTitle>{text('notFoundTitle')}</AlertTitle>
           <AlertDescription>
-            The pattern you are looking for does not exist or has been deleted.
+            {text('notFoundDescription')}
           </AlertDescription>
         </Alert>
         <Button
@@ -123,7 +125,7 @@ function PatternReportsPage() {
           onClick={() => router.push('/dashboard/patterns')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Patterns
+          {text('back')}
         </Button>
       </div>
     )
@@ -154,7 +156,7 @@ function PatternReportsPage() {
               </h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Usage reports and analytics
+              {text('subtitle')}
             </p>
           </div>
         </div>
@@ -163,7 +165,7 @@ function PatternReportsPage() {
           <Button variant="outline" asChild data-cy="pattern-reports-edit">
             <Link href={`/dashboard/patterns/${patternId}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit Pattern
+              {text('edit')}
             </Link>
           </Button>
         </div>

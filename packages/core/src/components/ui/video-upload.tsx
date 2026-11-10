@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import * as React from "react"
 import NextImage from "next/image"
 import { X, Play, Download, Video } from "lucide-react"
@@ -43,6 +44,7 @@ export function VideoUpload({
   acceptedFormats = ["mp4", "mov", "avi", "mkv", "webm"],
   acceptedTypes,
 }: VideoUploadProps) {
+  const text = useTranslations('entities.videoUpload')
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const { pending, error, uploadFiles, cancel, claim, release, typeNotAccepted } = useFieldUpload()
@@ -221,15 +223,15 @@ export function VideoUpload({
       >
         <Video className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          Drag videos here or{" "}
-          <span className="font-medium text-primary">click to select</span>
+          {text('dragHere')}{" "}
+          <span className="font-medium text-primary">{text('clickToSelect')}</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {maxVideos > 1 ? `Up to ${maxVideos} videos` : "One video"}
-          {maxSize && `, maximum ${maxSize}MB each`}
+          {maxVideos > 1 ? text('upTo', { max: maxVideos }) : text('one')}
+          {maxSize && `, ${text('maxSizeEach', { size: maxSize })}`}
         </p>
         <p className="text-xs text-muted-foreground">
-          Formats: {acceptedFormats.join(", ")}
+          {text('formats')} {acceptedFormats.join(", ")}
         </p>
         
         <input

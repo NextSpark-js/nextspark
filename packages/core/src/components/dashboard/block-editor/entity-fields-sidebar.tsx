@@ -120,7 +120,7 @@ export function EntityFieldsSidebar({
             value={value || undefined}
             onChange={(v) => onChange(fieldName, v ?? null)}
             userFiltered={fieldConfig.relation.userFiltered}
-            placeholder="Select..."
+            placeholder={t('sidebar.select')}
             limit={fieldConfig.relation.limit}
             filter={fieldConfig.relation.filter}
           />
@@ -135,7 +135,7 @@ export function EntityFieldsSidebar({
           <Label htmlFor={fieldName}>{fieldLabel}</Label>
           <Select value={value || ''} onValueChange={(v) => onChange(fieldName, v)}>
             <SelectTrigger id={fieldName}>
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder={t('sidebar.select')} />
             </SelectTrigger>
             <SelectContent>
               {fieldConfig.options.map((opt) => (
@@ -273,7 +273,7 @@ export function EntityFieldsSidebar({
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground" />
-                <Label>{firstTaxonomy.label || 'Categories'}</Label>
+                <Label>{firstTaxonomy.label || t('sidebar.categories.title')}</Label>
               </div>
 
               {taxonomyLoading ? (
@@ -322,7 +322,7 @@ export function EntityFieldsSidebar({
                         style={cat.color ? { backgroundColor: cat.color, color: '#fff' } : undefined}
                         data-cy={sel('blockEditor.entityFieldsPanel.categoryBadge', { slug: cat.slug })}
                       >
-                        {cat.name} &times;
+                        {cat.name} ×
                       </Badge>
                     ) : null
                   })}

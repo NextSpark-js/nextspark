@@ -155,7 +155,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{member.user?.name || 'Unknown'}</div>
+                        <div className="font-medium">{member.user?.name || t('members.unknown')}</div>
                         <div className="text-sm text-muted-foreground">
                           {member.user?.email}
                         </div>

@@ -1,3 +1,5 @@
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Entities (core default)' }
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: 'Entities (core default)' }
+}

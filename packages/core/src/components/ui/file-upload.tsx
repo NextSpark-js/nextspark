@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import * as React from "react"
 import { Upload, File, X, FileText, Download } from "lucide-react"
 import { Button } from './button'
@@ -41,6 +42,7 @@ export function FileUpload({
   multiple = true,
   dragDrop = true,
 }: FileUploadProps) {
+  const text = useTranslations('entities.fileUpload')
   const [isDragOver, setIsDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const { pending, error, uploadFiles, cancel, claim, release } = useFieldUpload()
@@ -168,12 +170,12 @@ export function FileUpload({
       >
         <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          {dragDrop ? "Drag files here or " : ""}
-          <span className="font-medium text-primary">click to select</span>
+          {dragDrop ? `${text('dragHere')} ` : ""}
+          <span className="font-medium text-primary">{text('clickToSelect')}</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {maxFiles > 1 ? `Up to ${maxFiles} files` : "One file"}
-          {maxSize && `, maximum ${maxSize}MB each`}
+          {maxFiles > 1 ? text('upTo', { max: maxFiles }) : text('one')}
+          {maxSize && `, ${text('maxSizeEach', { size: maxSize })}`}
         </p>
         
         <input

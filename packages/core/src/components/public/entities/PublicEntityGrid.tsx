@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useState, useEffect, useMemo } from 'react'
 import { PublicEntityCard } from './PublicEntityCard'
 import { Button } from '../../ui/button'
@@ -29,6 +30,7 @@ interface PublicEntityGridProps {
 }
 
 export function PublicEntityGrid({ entityType, entitySlug, searchParams, className }: PublicEntityGridProps) {
+  const text = useTranslations('public.entities')
   const [data, setData] = useState<EntityListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +97,7 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
         setData(result)
       } catch (err) {
         console.error('Error loading public entities:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load data')
+        setError(err instanceof Error ? err.message : text('loadFailed'))
       } finally {
         setLoading(false)
       }
@@ -144,7 +146,7 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={entityConfig ? `Search ${entityConfig.names.plural.toLowerCase()}...` : 'Search...'}
+            placeholder={entityConfig ? text('searchEntities', { entities: entityConfig.names.plural.toLowerCase() }) : text('search')}
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-10"
@@ -156,7 +158,7 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
           {sortableFields.length > 0 && (
             <Select value={sortField} onValueChange={setSortField}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by..." />
+                <SelectValue placeholder={text('sortBy')} />
               </SelectTrigger>
               <SelectContent>
                 {sortableFields.map((field) => (
@@ -202,7 +204,7 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
       {/* Results Count */}
       {data && data.info && entityConfig && (
         <div className="text-sm text-muted-foreground">
-          Showing {data.data.length} of {data.info.total} {entityConfig.names.plural.toLowerCase()}
+          {text('showing', { shown: data.data.length, total: data.info.total, entities: entityConfig.names.plural.toLowerCase() })}
         </div>
       )}
 
@@ -234,11 +236,11 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
       {data && data.data.length === 0 && entityConfig && (
         <div className="text-center py-12">
           <div className="text-muted-foreground text-lg mb-2">
-            No {entityConfig.names.plural.toLowerCase()} found
+            {text('noneFound', { entities: entityConfig.names.plural.toLowerCase() })}
           </div>
           {searchTerm && (
             <div className="text-sm text-muted-foreground">
-              Try adjusting your search terms
+              {text('tryAdjusting')}
             </div>
           )}
         </div>
@@ -252,7 +254,7 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
             disabled={!data.info.hasPrevPage}
             onClick={() => handlePageChange(currentPage - 1)}
           >
-            Previous
+            {text('previous')}
           </Button>
           
           <div className="flex items-center gap-1">
@@ -278,7 +280,7 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
             disabled={!data.info.hasNextPage}
             onClick={() => handlePageChange(currentPage + 1)}
           >
-            Next
+            {text('next')}
           </Button>
         </div>
       )}

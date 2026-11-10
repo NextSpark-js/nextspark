@@ -25,5 +25,16 @@
   "notFound": {
     "title": "Página No Encontrada",
     "description": "La página de documentación que buscas no existe."
+  },
+  "index": {
+    "description": "Documentación completa de la aplicación",
+    "intro": "Guías y documentación de referencia para aprovechar al máximo la aplicación.",
+    "emptyTitle": "No hay documentación disponible",
+    "emptyDescription": "La documentación aparecerá aquí cuando se agregue al proyecto.",
+    "pagesOne": "{count} página",
+    "pagesMany": "{count} páginas",
+    "loading": "Cargando...",
+    "pageTitle": "{title} | Documentación",
+    "pageDescription": "Documentación de {title}"
   }
 }

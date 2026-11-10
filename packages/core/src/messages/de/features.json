@@ -3,18 +3,21 @@
     "title": "Erweiterte Analysen",
     "benefit1": "Echtzeit-Metriken",
     "benefit2": "Benutzerdefinierter Report-Builder",
-    "benefit3": "Export nach PDF/CSV"
+    "benefit3": "Export nach PDF/CSV",
+    "comingSoon": "Das Analyse-Dashboard folgt in Kürze ..."
   },
   "webhooks": {
     "title": "Webhooks",
     "benefit1": "HTTP-Callbacks für Ereignisse",
     "benefit2": "Benutzerdefinierte Payload-Vorlagen",
-    "benefit3": "Wiederholungslogik und Protokollierung"
+    "benefit3": "Wiederholungslogik und Protokollierung",
+    "comingSoon": "Die Webhook-Konfiguration folgt in Kürze ..."
   },
   "automation": {
     "title": "Aufgabenautomatisierung",
     "benefit1": "Automatische Aufgabenerstellung",
     "benefit2": "Geplante Aktionen",
-    "benefit3": "Workflow-Trigger"
+    "benefit3": "Workflow-Trigger",
+    "comingSoon": "Die Aufgabenautomatisierung folgt in Kürze ..."
   }
 }

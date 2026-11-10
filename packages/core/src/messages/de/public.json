@@ -10,5 +10,44 @@
     "getStarted": "Jetzt starten",
     "learnMore": "Mehr erfahren",
     "contactUs": "Kontaktieren Sie uns"
+  },
+  "entities": {
+    "itemFallback": "Eintrag {id}",
+    "notAvailable": "k. A.",
+    "yes": "Ja",
+    "no": "Nein",
+    "loadFailed": "Die Daten konnten nicht geladen werden",
+    "notSpecified": "Nicht angegeben",
+    "entityFallback": "Entität",
+    "notFound": "{entity} nicht gefunden",
+    "titleFallback": "{entity} {id}",
+    "listFallback": "Liste",
+    "backTo": "Zurück zu {list}",
+    "details": "Details",
+    "itemsFallback": "Einträge",
+    "viewMore": "Weitere {items} ansehen",
+    "searchEntities": "{entities} suchen ...",
+    "search": "Suchen ...",
+    "sortBy": "Sortieren nach ...",
+    "showing": "{shown} von {total} {entities} werden angezeigt",
+    "noneFound": "Keine {entities} gefunden",
+    "tryAdjusting": "Passen Sie Ihre Suchbegriffe an",
+    "previous": "Zurück",
+    "next": "Weiter"
+  },
+  "pageBuilder": {
+    "blockFailed": "Block konnte nicht geladen werden:",
+    "blockHint": "Dieser Block ist möglicherweise nicht verfügbar oder beim Darstellen ist ein Fehler aufgetreten.",
+    "emptyPage": "Diese Seite hat noch keinen Inhalt."
+  },
+  "defaultPage": {
+    "title": "Standard-Seite",
+    "description": "Dies ist die Standard-Seite (keine Überschreibung durch das Theme)",
+    "template": "Standardvorlage",
+    "path": "Pfad: {path}"
+  },
+  "route": {
+    "notFound": "Nicht gefunden",
+    "browseAll": "Alle {entities} durchsuchen"
   }
 }

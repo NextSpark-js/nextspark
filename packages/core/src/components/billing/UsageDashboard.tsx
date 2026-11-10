@@ -38,7 +38,7 @@ export function UsageDashboard({ className }: UsageDashboardProps) {
 
         {limits.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">
-            {t('usage.noLimits') || 'No usage limits configured'}
+            {t('usage.noLimits')}
           </p>
         )}
       </CardContent>

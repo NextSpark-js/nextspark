@@ -77,6 +77,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
   const { user, signOut } = useAuth()
   // Use common namespace for hardcoded component translations
   const tCommon = useTranslations('common')
+  const tDashboard = useTranslations('dashboard')
   // Use root namespace for dynamic config-based translations (supports both core and theme namespaces)
   const t = useTranslations()
   const canAccessAdmin = useCanAccessAdmin()
@@ -153,7 +154,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
                 data-cy={sel('dashboard.mobile.moreSheet.superadminLink')}
               >
                 <Shield className="h-5 w-5" aria-hidden="true" />
-                <span className="text-sm font-medium">Super Admin Panel</span>
+                <span className="text-sm font-medium">{tDashboard('mobileNav.superAdminPanel')}</span>
               </Link>
             </>
           )}

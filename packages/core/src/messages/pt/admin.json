@@ -141,8 +141,9 @@
     },
     "block": {
       "error": {
-        "notFound": "Bloco '{slug}' não encontrado"
-      }
+        "notFound": "Bloco “{slug}” não encontrado"
+      },
+      "moreProps": "+{count} mais"
     },
     "settings": {
       "empty": {
@@ -179,7 +180,9 @@
       "selectEntity": "Selecione {entity}...",
       "pickDate": "Selecione uma data",
       "arrayItemsCount": "{count} elementos",
-      "configured": "configurado"
+      "configured": "configurado",
+      "browseMedia": "Clique para enviar ou procurar imagens",
+      "changeImage": "Alterar"
     }
   },
   "builder": {
@@ -209,7 +212,8 @@
     },
     "viewMode": {
       "layout": "Layout",
-      "preview": "Visualização"
+      "preview": "Visualização",
+      "settings": "Configurações"
     },
     "sidebar": {
       "blocks": "Blocos",
@@ -217,13 +221,188 @@
       "fieldsTitle": "Campos da Entidade",
       "fieldsDescription": "Configure propriedades adicionais",
       "noFields": "Nenhum campo adicional disponível",
-      "noCategories": "Nenhuma categoria disponível"
+      "noCategories": "Nenhuma categoria disponível",
+      "addBlock": "Adicionar bloco",
+      "categories": {
+        "all": "Todos",
+        "title": "Categorias"
+      },
+      "empty": "Nenhum bloco encontrado",
+      "search": {
+        "placeholder": "Pesquisar blocos..."
+      },
+      "tabs": {
+        "blocks": "Blocos",
+        "layout": "Layout",
+        "patterns": "Padrões"
+      },
+      "select": "Selecionar..."
     },
     "messages": {
       "saved": "Salvo com sucesso",
       "created": "Criado com sucesso",
       "saveBlocked": "A página não foi salva",
-      "hookFailed": "A página não foi salva: {message}"
+      "hookFailed": "A página não foi salva: {message}",
+      "blockCopied": "Bloco copiado para a área de transferência",
+      "blockPasted": "Bloco colado",
+      "fetchPatternsFailed": "Não foi possível obter os padrões",
+      "fetchFailed": "Não foi possível obter {entity}",
+      "saveFailed": "Não foi possível salvar {entity}"
+    },
+    "canvas": {
+      "editingBadge": "Editando",
+      "empty": {
+        "subtitle": "Adicione blocos pela barra lateral esquerda",
+        "title": "Nenhum bloco ainda"
+      },
+      "error": {
+        "blockNotFound": "Bloco não encontrado"
+      }
+    },
+    "config": {
+      "entityFields": "Campos da entidade",
+      "seo": "SEO"
+    },
+    "floatingToolbar": {
+      "copy": "Copiar bloco",
+      "delete": "Excluir bloco",
+      "duplicate": "Duplicar bloco"
+    },
+    "header": {
+      "actions": {
+        "publish": "Publicar",
+        "saveDraft": "Salvar rascunho",
+        "update": "Atualizar"
+      }
+    },
+    "layout": {
+      "empty": "Nenhum bloco adicionado ainda",
+      "pasteBlock": "Colar bloco",
+      "pasteBlocks": "Colar {count} blocos"
+    },
+    "multiSelect": {
+      "clipboardEmpty": "A área de transferência está vazia",
+      "copied": "{count, plural, one {Bloco copiado} other {# blocos copiados}}",
+      "copy": "Copiar",
+      "delete": "Excluir",
+      "deleted": "{count, plural, one {Bloco excluído} other {# blocos excluídos}}",
+      "deselectAll": "Desmarcar tudo",
+      "duplicate": "Duplicar",
+      "duplicated": "{count, plural, one {Bloco duplicado} other {# blocos duplicados}}",
+      "paste": "Colar",
+      "pasted": "{count, plural, one {Bloco colado} other {# blocos colados}}",
+      "pastedPartial": "{pasted} de {total} blocos colados ({skipped} incompatíveis)",
+      "selected": "{count, plural, one {# bloco selecionado} other {# blocos selecionados}}",
+      "settingsHint": "Use a barra de ações para gerenciar os blocos selecionados"
+    },
+    "settingsPanel": {
+      "empty": {
+        "hint": "Selecione um bloco na tela para editar suas configurações",
+        "message": "Nenhum bloco selecionado"
+      },
+      "error": {
+        "notFound": "Configuração do bloco não encontrada"
+      },
+      "noFields": "Este bloco não tem campos configuráveis",
+      "pattern": {
+        "actions": {
+          "edit": "Editar padrão",
+          "remove": "Desvincular padrão"
+        },
+        "locked": {
+          "description": "Esta é uma referência a um padrão. Edite o padrão diretamente para fazer alterações.",
+          "title": "Bloco bloqueado"
+        },
+        "title": "Referência de padrão"
+      },
+      "tabs": {
+        "advanced": "Avançado",
+        "content": "Conteúdo",
+        "design": "Design",
+        "noAdvancedFields": "Nenhum campo avançado",
+        "noContentFields": "Nenhum campo de conteúdo",
+        "noDesignFields": "Nenhum campo de design"
+      },
+      "title": "Propriedades do bloco"
+    },
+    "pattern": {
+      "fetchFailed": "Não foi possível obter o padrão: {status}",
+      "blockNotFound": "Bloco não encontrado:"
+    },
+    "tree": {
+      "pattern": "Padrão",
+      "unknownBlock": "Bloco desconhecido"
+    },
+    "viewport": {
+      "mobile": "Visualização móvel (375 px)",
+      "desktop": "Visualização desktop (100%)"
+    }
+  },
+  "patterns": {
+    "delete": {
+      "cancel": "Cancelar",
+      "cleanupNote": "As referências serão removidas automaticamente ao editar cada entidade.",
+      "confirm": "Tem certeza de que deseja excluir",
+      "deleteAction": "Excluir",
+      "deleting": "Excluindo...",
+      "error": "Erro ao verificar o uso do padrão.",
+      "inUse": "Este padrão está em uso em {count, plural, one {# entidade} other {# entidades}}:",
+      "loading": "Verificando o uso...",
+      "moreItems": "... e mais {count}",
+      "notInUse": "Este padrão não está em uso no momento.",
+      "title": "Excluir padrão",
+      "trigger": "Excluir"
+    },
+    "placeholder": {
+      "description": "Este padrão foi excluído e será removido ao salvar.",
+      "remove": "Remover",
+      "title": "Padrão excluído"
+    },
+    "usage": {
+      "totalUses": "Total de usos",
+      "acrossOne": "Em {count} tipo de entidade",
+      "acrossMany": "Em {count} tipos de entidade",
+      "percentOfTotal": "{percent}% do total",
+      "emptyMessage": "Nenhum uso encontrado",
+      "entity": "Entidade",
+      "type": "Tipo",
+      "status": "Status",
+      "lastUpdated": "Última atualização",
+      "actions": "Ações",
+      "noUsagesTitle": "Nenhum uso encontrado",
+      "viewEntity": "Ver entidade (abre em uma nova guia)",
+      "errorTitle": "Erro ao carregar os usos",
+      "loadFailed": "Não foi possível carregar os usos do padrão",
+      "retry": "Tentar novamente",
+      "filterByType": "Filtrar por tipo:",
+      "allTypes": "Todos os tipos de entidade",
+      "pageOf": "Página {page} de {totalPages}",
+      "notUsedIn": "Este padrão não é usado em nenhum {entityType}",
+      "notUsedYet": "Este padrão ainda não é usado em nenhuma entidade",
+      "showing": "Exibindo {from} a {to} de {total} usos"
+    },
+    "list": {
+      "unknownError": "Erro desconhecido",
+      "errorLoading": "Erro ao carregar os dados: {message}",
+      "deleted": "Padrão excluído com sucesso",
+      "deleteError": "Erro ao excluir: {message}",
+      "deletedMany": "{count} padrões excluídos com sucesso",
+      "viewUsages": "Ver usos",
+      "configError": "Não foi possível carregar a configuração da entidade \"{entity}\"."
+    },
+    "reports": {
+      "idRequired": "O ID do padrão é obrigatório",
+      "notEnabled": "A entidade de padrões não está configurada ou não está ativada",
+      "loadFailed": "Não foi possível carregar o padrão",
+      "errorTitle": "Erro",
+      "back": "Voltar para padrões",
+      "notFoundTitle": "Padrão não encontrado",
+      "notFoundDescription": "O padrão que você procura não existe ou foi excluído.",
+      "subtitle": "Relatórios de uso e análises",
+      "edit": "Editar padrão"
+    },
+    "page": {
+      "notEnabled": "A entidade de padrões não está configurada ou não está ativada."
     }
   }
 }

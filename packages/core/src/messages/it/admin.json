@@ -141,8 +141,9 @@
     },
     "block": {
       "error": {
-        "notFound": "Blocco '{slug}' non trovato"
-      }
+        "notFound": "Blocco “{slug}” non trovato"
+      },
+      "moreProps": "+{count} altri"
     },
     "settings": {
       "empty": {
@@ -179,7 +180,9 @@
       "selectEntity": "Seleziona {entity}...",
       "pickDate": "Seleziona una data",
       "arrayItemsCount": "{count} elementi",
-      "configured": "configurato"
+      "configured": "configurato",
+      "browseMedia": "Fai clic per caricare o sfogliare le immagini",
+      "changeImage": "Cambia"
     }
   },
   "builder": {
@@ -209,7 +212,8 @@
     },
     "viewMode": {
       "layout": "Layout",
-      "preview": "Anteprima"
+      "preview": "Anteprima",
+      "settings": "Impostazioni"
     },
     "sidebar": {
       "blocks": "Blocchi",
@@ -217,13 +221,188 @@
       "fieldsTitle": "Campi Entità",
       "fieldsDescription": "Configura proprietà aggiuntive",
       "noFields": "Nessun campo aggiuntivo disponibile",
-      "noCategories": "Nessuna categoria disponibile"
+      "noCategories": "Nessuna categoria disponibile",
+      "addBlock": "Aggiungi blocco",
+      "categories": {
+        "all": "Tutti",
+        "title": "Categorie"
+      },
+      "empty": "Nessun blocco trovato",
+      "search": {
+        "placeholder": "Cerca blocchi..."
+      },
+      "tabs": {
+        "blocks": "Blocchi",
+        "layout": "Layout",
+        "patterns": "Modelli"
+      },
+      "select": "Seleziona..."
     },
     "messages": {
       "saved": "Salvato con successo",
       "created": "Creato con successo",
       "saveBlocked": "La pagina non è stata salvata",
-      "hookFailed": "La pagina non è stata salvata: {message}"
+      "hookFailed": "La pagina non è stata salvata: {message}",
+      "blockCopied": "Blocco copiato negli appunti",
+      "blockPasted": "Blocco incollato",
+      "fetchPatternsFailed": "Impossibile recuperare i modelli",
+      "fetchFailed": "Impossibile recuperare {entity}",
+      "saveFailed": "Impossibile salvare {entity}"
+    },
+    "canvas": {
+      "editingBadge": "In modifica",
+      "empty": {
+        "subtitle": "Aggiungi blocchi dalla barra laterale sinistra",
+        "title": "Ancora nessun blocco"
+      },
+      "error": {
+        "blockNotFound": "Blocco non trovato"
+      }
+    },
+    "config": {
+      "entityFields": "Campi dell'entità",
+      "seo": "SEO"
+    },
+    "floatingToolbar": {
+      "copy": "Copia blocco",
+      "delete": "Elimina blocco",
+      "duplicate": "Duplica blocco"
+    },
+    "header": {
+      "actions": {
+        "publish": "Pubblica",
+        "saveDraft": "Salva bozza",
+        "update": "Aggiorna"
+      }
+    },
+    "layout": {
+      "empty": "Nessun blocco aggiunto",
+      "pasteBlock": "Incolla blocco",
+      "pasteBlocks": "Incolla {count} blocchi"
+    },
+    "multiSelect": {
+      "clipboardEmpty": "Gli appunti sono vuoti",
+      "copied": "{count, plural, one {Blocco copiato} other {# blocchi copiati}}",
+      "copy": "Copia",
+      "delete": "Elimina",
+      "deleted": "{count, plural, one {Blocco eliminato} other {# blocchi eliminati}}",
+      "deselectAll": "Deseleziona tutto",
+      "duplicate": "Duplica",
+      "duplicated": "{count, plural, one {Blocco duplicato} other {# blocchi duplicati}}",
+      "paste": "Incolla",
+      "pasted": "{count, plural, one {Blocco incollato} other {# blocchi incollati}}",
+      "pastedPartial": "{pasted} blocchi su {total} incollati ({skipped} non compatibili)",
+      "selected": "{count, plural, one {# blocco selezionato} other {# blocchi selezionati}}",
+      "settingsHint": "Usa la barra delle azioni per gestire i blocchi selezionati"
+    },
+    "settingsPanel": {
+      "empty": {
+        "hint": "Seleziona un blocco nell'area di lavoro per modificarne le impostazioni",
+        "message": "Nessun blocco selezionato"
+      },
+      "error": {
+        "notFound": "Configurazione del blocco non trovata"
+      },
+      "noFields": "Questo blocco non ha campi configurabili",
+      "pattern": {
+        "actions": {
+          "edit": "Modifica modello",
+          "remove": "Scollega modello"
+        },
+        "locked": {
+          "description": "Questo è un riferimento a un modello. Modifica direttamente il modello per apportare cambiamenti.",
+          "title": "Blocco bloccato"
+        },
+        "title": "Riferimento al modello"
+      },
+      "tabs": {
+        "advanced": "Avanzate",
+        "content": "Contenuto",
+        "design": "Design",
+        "noAdvancedFields": "Nessun campo avanzato",
+        "noContentFields": "Nessun campo di contenuto",
+        "noDesignFields": "Nessun campo di design"
+      },
+      "title": "Proprietà del blocco"
+    },
+    "pattern": {
+      "fetchFailed": "Impossibile recuperare il modello: {status}",
+      "blockNotFound": "Blocco non trovato:"
+    },
+    "tree": {
+      "pattern": "Modello",
+      "unknownBlock": "Blocco sconosciuto"
+    },
+    "viewport": {
+      "mobile": "Vista mobile (375 px)",
+      "desktop": "Vista desktop (100%)"
+    }
+  },
+  "patterns": {
+    "delete": {
+      "cancel": "Annulla",
+      "cleanupNote": "I riferimenti verranno rimossi automaticamente quando modifichi ogni entità.",
+      "confirm": "Vuoi davvero eliminare",
+      "deleteAction": "Elimina",
+      "deleting": "Eliminazione...",
+      "error": "Errore durante la verifica dell'utilizzo del modello.",
+      "inUse": "Questo modello è in uso in {count, plural, one {# entità} other {# entità}}:",
+      "loading": "Verifica dell'utilizzo...",
+      "moreItems": "... e altri {count}",
+      "notInUse": "Questo modello non è attualmente in uso.",
+      "title": "Elimina modello",
+      "trigger": "Elimina"
+    },
+    "placeholder": {
+      "description": "Questo modello è stato eliminato e verrà rimosso al salvataggio.",
+      "remove": "Rimuovi",
+      "title": "Modello eliminato"
+    },
+    "usage": {
+      "totalUses": "Utilizzi totali",
+      "acrossOne": "In {count} tipo di entità",
+      "acrossMany": "In {count} tipi di entità",
+      "percentOfTotal": "{percent}% del totale",
+      "emptyMessage": "Nessun utilizzo trovato",
+      "entity": "Entità",
+      "type": "Tipo",
+      "status": "Stato",
+      "lastUpdated": "Ultimo aggiornamento",
+      "actions": "Azioni",
+      "noUsagesTitle": "Nessun utilizzo trovato",
+      "viewEntity": "Visualizza entità (si apre in una nuova scheda)",
+      "errorTitle": "Errore nel caricamento degli utilizzi",
+      "loadFailed": "Impossibile caricare gli utilizzi del modello",
+      "retry": "Riprova",
+      "filterByType": "Filtra per tipo:",
+      "allTypes": "Tutti i tipi di entità",
+      "pageOf": "Pagina {page} di {totalPages}",
+      "notUsedIn": "Questo modello non è usato in nessun {entityType}",
+      "notUsedYet": "Questo modello non è ancora usato in nessuna entità",
+      "showing": "Visualizzazione da {from} a {to} di {total} utilizzi"
+    },
+    "list": {
+      "unknownError": "Errore sconosciuto",
+      "errorLoading": "Errore nel caricamento dei dati: {message}",
+      "deleted": "Modello eliminato con successo",
+      "deleteError": "Errore durante l'eliminazione: {message}",
+      "deletedMany": "{count} modelli eliminati con successo",
+      "viewUsages": "Visualizza utilizzi",
+      "configError": "Impossibile caricare la configurazione dell'entità \"{entity}\"."
+    },
+    "reports": {
+      "idRequired": "L'ID del modello è obbligatorio",
+      "notEnabled": "L'entità dei modelli non è configurata o non è attivata",
+      "loadFailed": "Impossibile caricare il modello",
+      "errorTitle": "Errore",
+      "back": "Torna ai modelli",
+      "notFoundTitle": "Modello non trovato",
+      "notFoundDescription": "Il modello che cerchi non esiste o è stato eliminato.",
+      "subtitle": "Report di utilizzo e analisi",
+      "edit": "Modifica modello"
+    },
+    "page": {
+      "notEnabled": "L'entità dei modelli non è configurata o non è attivata."
     }
   }
 }

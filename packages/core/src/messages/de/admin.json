@@ -141,8 +141,9 @@
     },
     "block": {
       "error": {
-        "notFound": "Block '{slug}' nicht gefunden"
-      }
+        "notFound": "Block „{slug}“ nicht gefunden"
+      },
+      "moreProps": "+{count} weitere"
     },
     "settings": {
       "empty": {
@@ -179,7 +180,9 @@
       "selectEntity": "{entity} auswählen...",
       "pickDate": "Datum auswählen",
       "arrayItemsCount": "{count} Elemente",
-      "configured": "konfiguriert"
+      "configured": "konfiguriert",
+      "browseMedia": "Zum Hochladen klicken oder Bilder durchsuchen",
+      "changeImage": "Ändern"
     }
   },
   "builder": {
@@ -209,7 +212,8 @@
     },
     "viewMode": {
       "layout": "Layout",
-      "preview": "Vorschau"
+      "preview": "Vorschau",
+      "settings": "Einstellungen"
     },
     "sidebar": {
       "blocks": "Blöcke",
@@ -217,13 +221,188 @@
       "fieldsTitle": "Entitätsfelder",
       "fieldsDescription": "Zusätzliche Eigenschaften konfigurieren",
       "noFields": "Keine zusätzlichen Felder verfügbar",
-      "noCategories": "Keine Kategorien verfügbar"
+      "noCategories": "Keine Kategorien verfügbar",
+      "addBlock": "Block hinzufügen",
+      "categories": {
+        "all": "Alle",
+        "title": "Kategorien"
+      },
+      "empty": "Keine Blöcke gefunden",
+      "search": {
+        "placeholder": "Blöcke suchen ..."
+      },
+      "tabs": {
+        "blocks": "Blöcke",
+        "layout": "Layout",
+        "patterns": "Muster"
+      },
+      "select": "Auswählen ..."
     },
     "messages": {
       "saved": "Erfolgreich gespeichert",
       "created": "Erfolgreich erstellt",
       "saveBlocked": "Die Seite wurde nicht gespeichert",
-      "hookFailed": "Die Seite wurde nicht gespeichert: {message}"
+      "hookFailed": "Die Seite wurde nicht gespeichert: {message}",
+      "blockCopied": "Block in die Zwischenablage kopiert",
+      "blockPasted": "Block eingefügt",
+      "fetchPatternsFailed": "Die Muster konnten nicht abgerufen werden",
+      "fetchFailed": "{entity} konnte nicht abgerufen werden",
+      "saveFailed": "{entity} konnte nicht gespeichert werden"
+    },
+    "canvas": {
+      "editingBadge": "Wird bearbeitet",
+      "empty": {
+        "subtitle": "Fügen Sie Blöcke über die linke Seitenleiste hinzu",
+        "title": "Noch keine Blöcke"
+      },
+      "error": {
+        "blockNotFound": "Block nicht gefunden"
+      }
+    },
+    "config": {
+      "entityFields": "Entitätsfelder",
+      "seo": "SEO"
+    },
+    "floatingToolbar": {
+      "copy": "Block kopieren",
+      "delete": "Block löschen",
+      "duplicate": "Block duplizieren"
+    },
+    "header": {
+      "actions": {
+        "publish": "Veröffentlichen",
+        "saveDraft": "Entwurf speichern",
+        "update": "Aktualisieren"
+      }
+    },
+    "layout": {
+      "empty": "Noch keine Blöcke hinzugefügt",
+      "pasteBlock": "Block einfügen",
+      "pasteBlocks": "{count} Blöcke einfügen"
+    },
+    "multiSelect": {
+      "clipboardEmpty": "Die Zwischenablage ist leer",
+      "copied": "{count, plural, one {Block kopiert} other {# Blöcke kopiert}}",
+      "copy": "Kopieren",
+      "delete": "Löschen",
+      "deleted": "{count, plural, one {Block gelöscht} other {# Blöcke gelöscht}}",
+      "deselectAll": "Auswahl aufheben",
+      "duplicate": "Duplizieren",
+      "duplicated": "{count, plural, one {Block dupliziert} other {# Blöcke dupliziert}}",
+      "paste": "Einfügen",
+      "pasted": "{count, plural, one {Block eingefügt} other {# Blöcke eingefügt}}",
+      "pastedPartial": "{pasted} von {total} Blöcken eingefügt ({skipped} nicht kompatibel)",
+      "selected": "{count, plural, one {# Block ausgewählt} other {# Blöcke ausgewählt}}",
+      "settingsHint": "Verwenden Sie die Aktionsleiste, um die ausgewählten Blöcke zu verwalten"
+    },
+    "settingsPanel": {
+      "empty": {
+        "hint": "Wählen Sie einen Block auf der Arbeitsfläche aus, um seine Einstellungen zu bearbeiten",
+        "message": "Kein Block ausgewählt"
+      },
+      "error": {
+        "notFound": "Blockkonfiguration nicht gefunden"
+      },
+      "noFields": "Dieser Block hat keine konfigurierbaren Felder",
+      "pattern": {
+        "actions": {
+          "edit": "Muster bearbeiten",
+          "remove": "Muster trennen"
+        },
+        "locked": {
+          "description": "Dies ist eine Musterreferenz. Bearbeiten Sie das Muster direkt, um Änderungen vorzunehmen.",
+          "title": "Gesperrter Block"
+        },
+        "title": "Musterreferenz"
+      },
+      "tabs": {
+        "advanced": "Erweitert",
+        "content": "Inhalt",
+        "design": "Design",
+        "noAdvancedFields": "Keine erweiterten Felder",
+        "noContentFields": "Keine Inhaltsfelder",
+        "noDesignFields": "Keine Designfelder"
+      },
+      "title": "Blockeigenschaften"
+    },
+    "pattern": {
+      "fetchFailed": "Das Muster konnte nicht abgerufen werden: {status}",
+      "blockNotFound": "Block nicht gefunden:"
+    },
+    "tree": {
+      "pattern": "Muster",
+      "unknownBlock": "Unbekannter Block"
+    },
+    "viewport": {
+      "mobile": "Mobile Ansicht (375 px)",
+      "desktop": "Desktop-Ansicht (100 %)"
+    }
+  },
+  "patterns": {
+    "delete": {
+      "cancel": "Abbrechen",
+      "cleanupNote": "Die Verweise werden beim Bearbeiten der jeweiligen Entität automatisch entfernt.",
+      "confirm": "Möchten Sie wirklich löschen",
+      "deleteAction": "Löschen",
+      "deleting": "Wird gelöscht ...",
+      "error": "Fehler beim Prüfen der Musterverwendung.",
+      "inUse": "Dieses Muster wird in {count, plural, one {# Entität} other {# Entitäten}} verwendet:",
+      "loading": "Verwendung wird geprüft ...",
+      "moreItems": "... und {count} weitere",
+      "notInUse": "Dieses Muster wird derzeit nicht verwendet.",
+      "title": "Muster löschen",
+      "trigger": "Löschen"
+    },
+    "placeholder": {
+      "description": "Dieses Muster wurde gelöscht und wird beim Speichern entfernt.",
+      "remove": "Entfernen",
+      "title": "Muster gelöscht"
+    },
+    "usage": {
+      "totalUses": "Verwendungen gesamt",
+      "acrossOne": "Über {count} Entitätstyp",
+      "acrossMany": "Über {count} Entitätstypen",
+      "percentOfTotal": "{percent} % der Gesamtzahl",
+      "emptyMessage": "Keine Verwendungen gefunden",
+      "entity": "Entität",
+      "type": "Typ",
+      "status": "Status",
+      "lastUpdated": "Zuletzt aktualisiert",
+      "actions": "Aktionen",
+      "noUsagesTitle": "Keine Verwendungen gefunden",
+      "viewEntity": "Entität ansehen (öffnet in neuem Tab)",
+      "errorTitle": "Fehler beim Laden der Verwendungen",
+      "loadFailed": "Die Verwendungen des Musters konnten nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "filterByType": "Nach Typ filtern:",
+      "allTypes": "Alle Entitätstypen",
+      "pageOf": "Seite {page} von {totalPages}",
+      "notUsedIn": "Dieses Muster wird in keinem {entityType} verwendet",
+      "notUsedYet": "Dieses Muster wird noch in keiner Entität verwendet",
+      "showing": "{from} bis {to} von {total} Verwendungen werden angezeigt"
+    },
+    "list": {
+      "unknownError": "Unbekannter Fehler",
+      "errorLoading": "Fehler beim Laden der Daten: {message}",
+      "deleted": "Muster erfolgreich gelöscht",
+      "deleteError": "Fehler beim Löschen: {message}",
+      "deletedMany": "{count} Muster erfolgreich gelöscht",
+      "viewUsages": "Verwendungen ansehen",
+      "configError": "Die Konfiguration der Entität „{entity}“ konnte nicht geladen werden."
+    },
+    "reports": {
+      "idRequired": "Die Muster-ID ist erforderlich",
+      "notEnabled": "Die Muster-Entität ist nicht konfiguriert oder nicht aktiviert",
+      "loadFailed": "Das Muster konnte nicht geladen werden",
+      "errorTitle": "Fehler",
+      "back": "Zurück zu den Mustern",
+      "notFoundTitle": "Muster nicht gefunden",
+      "notFoundDescription": "Das gesuchte Muster existiert nicht oder wurde gelöscht.",
+      "subtitle": "Nutzungsberichte und Analysen",
+      "edit": "Muster bearbeiten"
+    },
+    "page": {
+      "notEnabled": "Die Muster-Entität ist nicht konfiguriert oder nicht aktiviert."
     }
   }
 }

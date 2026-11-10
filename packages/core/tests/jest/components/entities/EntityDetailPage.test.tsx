@@ -4,8 +4,12 @@ import type { EntityConfig } from '@/core/lib/entities/types'
 
 let mockLocale = 'en'
 
+const mockT = (key: string, values: Record<string, unknown> = {}) =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  (['entities.detail', key].join('.').split('.').reduce((node: any, part) => node?.[part], require('../../../../src/messages/en/index').default) as string).replace(/\{(\w+)\}/g, (_, name) => String(values[name]))
 jest.mock('next-intl', () => ({
   useLocale: () => mockLocale,
+  useTranslations: () => mockT,
 }))
 
 jest.mock('next/navigation', () => ({

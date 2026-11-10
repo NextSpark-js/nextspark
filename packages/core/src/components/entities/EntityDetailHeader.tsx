@@ -18,7 +18,7 @@
  */
 
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -93,10 +93,10 @@ export interface EntityDetailHeaderProps {
   className?: string
 }
 
-function formatDate(dateString?: string): string | null {
+function formatDate(dateString: string | undefined, locale: string): string | null {
   if (!dateString) return null
   try {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -128,6 +128,7 @@ export function EntityDetailHeader({
   const router = useRouter()
   const tButtons = useTranslations('buttons')
   const tEntities = useTranslations('entities')
+  const locale = useLocale()
 
   const slug = entityConfig.slug
 
@@ -239,7 +240,7 @@ export function EntityDetailHeader({
                       {deleteTitle || tButtons('delete')}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      {deleteDescription || `Are you sure you want to delete "${resolvedTitle}"? This action cannot be undone.`}
+                      {deleteDescription || tEntities('detail.deleteDescription', { title: resolvedTitle })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -277,11 +278,11 @@ export function EntityDetailHeader({
             </div>
             {showDatesSection && (
               <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
-                {entity.createdAt && formatDate(entity.createdAt) && (
-                  <span>Created {formatDate(entity.createdAt)}</span>
+                {entity.createdAt && formatDate(entity.createdAt, locale) && (
+                  <span>{tEntities('detail.createdAt', { date: formatDate(entity.createdAt, locale) ?? '' })}</span>
                 )}
-                {entity.updatedAt && formatDate(entity.updatedAt) && (
-                  <span>Updated {formatDate(entity.updatedAt)}</span>
+                {entity.updatedAt && formatDate(entity.updatedAt, locale) && (
+                  <span>{tEntities('detail.updatedAt', { date: formatDate(entity.updatedAt, locale) ?? '' })}</span>
                 )}
               </div>
             )}

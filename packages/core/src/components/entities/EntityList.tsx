@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '../ui/card'
@@ -115,6 +116,7 @@ export function EntityList({
   className,
   teamId,
 }: EntityListProps) {
+  const ui = useTranslations('entities.ui')
   const actionsText = useCommonText('a11y', 'actions', 'Actions')
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu')
   const selectAllRowsText = useCommonText('a11y', 'selectAllRows', 'Select all rows')
@@ -260,7 +262,7 @@ export function EntityList({
         <div className="space-y-1">
           <h2 className="text-2xl font-bold tracking-tight">{entityConfig.names.plural}</h2>
           <p className="text-muted-foreground">
-            Manage your {entityConfig.names.plural.toLowerCase()}
+            {ui('manage', { entities: entityConfig.names.plural.toLowerCase() })}
           </p>
         </div>
         
@@ -269,7 +271,7 @@ export function EntityList({
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={`Search ${entityConfig.names.plural.toLowerCase()}...`}
+                placeholder={ui('searchEntities', { entities: entityConfig.names.plural.toLowerCase() })}
                 value={localSearchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-8 w-full sm:w-[300px]"
@@ -287,7 +289,7 @@ export function EntityList({
                 data-cy={sel('entities.list.addButton', { slug: entityConfig.slug })}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add {entityConfig.names.singular}
+                {ui('add', { entity: entityConfig.names.singular })}
               </Link>
             </Button>
           )}
@@ -298,7 +300,7 @@ export function EntityList({
       {enableBulkOperations && selectedIds.length > 0 && (
         <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
           <Badge variant="outline">
-            {selectedIds.length} selected
+            {ui('selected', { count: selectedIds.length })}
           </Badge>
           
           {entityConfig.ui.features.bulkOperations && (
@@ -313,7 +315,7 @@ export function EntityList({
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Delete Selected
+              {ui('deleteSelected')}
             </Button>
           )}
         </div>
@@ -335,19 +337,19 @@ export function EntityList({
               className: "h-16 w-16 text-muted-foreground/50 mb-4" 
             })}
             <h3 className="text-lg font-medium mb-2">
-              No {entityConfig.names.plural.toLowerCase()} found
+              {ui('noneFound', { entities: entityConfig.names.plural.toLowerCase() })}
             </h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
               {searchQuery 
-                ? `No ${entityConfig.names.plural.toLowerCase()} match your search criteria.`
-                : `Get started by creating your first ${entityConfig.names.singular.toLowerCase()}.`
+                ? ui('noMatch', { entities: entityConfig.names.plural.toLowerCase() })
+                : ui('getStarted', { entity: entityConfig.names.singular.toLowerCase() })
               }
             </p>
             {!searchQuery && canCreate && (
               <Button className="mt-4" asChild>
                 <Link href={`/dashboard/${entityConfig.slug}/create`}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add {entityConfig.names.singular}
+                  {ui('add', { entity: entityConfig.names.singular })}
                 </Link>
               </Button>
             )}
@@ -467,7 +469,7 @@ export function EntityList({
                               <DropdownMenuItem asChild>
                                 <Link href={`/dashboard/${entityConfig.slug}/${itemId}/edit`}>
                                   <Edit className="mr-2 h-4 w-4" />
-                                  Edit
+                                  {ui('edit')}
                                 </Link>
                               </DropdownMenuItem>
                             )}
@@ -480,7 +482,7 @@ export function EntityList({
                                   rel="noopener noreferrer"
                                 >
                                   <ExternalLink className="mr-2 h-4 w-4" />
-                                  View
+                                  {ui('view')}
                                 </a>
                               </DropdownMenuItem>
                             )}
@@ -496,7 +498,7 @@ export function EntityList({
                                   )}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                                  {ui('delete')}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -516,7 +518,7 @@ export function EntityList({
       {totalPages > 1 && onPageChange && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, data.length)} of {data.length} entries
+            {ui('showingEntries', { from: ((currentPage - 1) * pageSize) + 1, to: Math.min(currentPage * pageSize, data.length), total: data.length })}
           </div>
 
           <div className="flex items-center space-x-2">
@@ -526,7 +528,7 @@ export function EntityList({
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage <= 1}
             >
-              Previous
+              {ui('previous')}
             </Button>
 
             <div className="flex items-center space-x-1">
@@ -549,7 +551,7 @@ export function EntityList({
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= totalPages}
             >
-              Next
+              {ui('next')}
             </Button>
           </div>
         </div>
@@ -559,15 +561,14 @@ export function EntityList({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{ui('areYouSure')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &quot;{itemToDelete?.name}&quot;.
-              This action cannot be undone.
+              {ui('deleteDescription', { name: itemToDelete?.name ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleRowDeleteCancel} disabled={isRowDeleting}>
-              Cancel
+              {ui('cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRowDeleteConfirm}
@@ -577,10 +578,10 @@ export function EntityList({
               {isRowDeleting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
+                  {ui('deleting')}
                 </>
               ) : (
-                'Delete'
+                ui('delete')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

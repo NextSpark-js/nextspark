@@ -4,11 +4,12 @@ import { useSubscription } from '../../hooks/useSubscription'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'
 import { Calendar, CreditCard } from 'lucide-react'
 import { Skeleton } from '../ui/skeleton'
 import { ManageBillingButton } from './ManageBillingButton'
+import { formatLocaleDate } from '../../lib/i18n/format'
 
 interface SubscriptionStatusProps {
   onUpgrade?: () => void
@@ -26,6 +27,7 @@ interface SubscriptionStatusProps {
 export function SubscriptionStatus({ onUpgrade, className }: SubscriptionStatusProps) {
   const { plan, subscription, status, isTrialing, isLoading } = useSubscription()
   const t = useTranslations('billing')
+  const locale = useLocale()
 
   if (isLoading) {
     return (
@@ -73,10 +75,9 @@ export function SubscriptionStatus({ onUpgrade, className }: SubscriptionStatusP
           <div className="flex items-center gap-2 text-sm text-muted-foreground" data-cy="subscription-status-period">
             <Calendar className="h-4 w-4" />
             <span>
-              {isTrialing
-                ? `Trial ends ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                : `Next billing: ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-              }
+              {t(isTrialing ? 'subscription.trialEnds' : 'subscription.nextBilling', {
+                date: formatLocaleDate(subscription.currentPeriodEnd, locale),
+              })}
             </span>
           </div>
         )}

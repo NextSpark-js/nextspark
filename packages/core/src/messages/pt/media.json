@@ -1,0 +1,159 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "select": "Selecionar",
+    "viewDetails": "Ver detalhes",
+    "save": "Salvar"
+  },
+  "dashboard": {
+    "bulkDelete": "Excluir",
+    "bulkDeleteConfirm": "Excluir {count, plural, one {# arquivo} other {# arquivos}}?",
+    "bulkDeleteConfirmDesc": "Esta ação não pode ser desfeita. Os arquivos serão excluídos permanentemente.",
+    "bulkDeleteSuccess": "{count, plural, one {# arquivo excluído} other {# arquivos excluídos}}",
+    "bulkDeleting": "Excluindo {current} de {total}...",
+    "clearSelection": "Limpar",
+    "deselectAll": "Desmarcar tudo",
+    "filterByTag": "Filtrar por tag...",
+    "hideUpload": "Ocultar envio",
+    "nextPage": "Próxima",
+    "noTags": "Sem tags",
+    "pagination": "Exibindo {from}-{to} de {total}",
+    "prevPage": "Anterior",
+    "selected": "{count, plural, one {# selecionado} other {# selecionados}}",
+    "subtitle": "{count, plural, =0 {Nenhum arquivo} one {# arquivo} other {# arquivos}} na sua biblioteca",
+    "tags": "Tags",
+    "allTags": "Todas as tags"
+  },
+  "delete": {
+    "cancel": "Cancelar",
+    "confirm": "Excluir",
+    "error": "Não foi possível excluir a mídia",
+    "message": "Tem certeza de que deseja excluir este arquivo de mídia? Esta ação não pode ser desfeita.",
+    "success": "Mídia excluída com sucesso",
+    "title": "Excluir mídia"
+  },
+  "detail": {
+    "altLabel": "Texto alternativo",
+    "altPlaceholder": "Descreva esta imagem para acessibilidade...",
+    "cancel": "Cancelar",
+    "captionLabel": "Legenda",
+    "captionPlaceholder": "Adicione uma legenda...",
+    "info": {
+      "url": "URL",
+      "filename": "Nome do arquivo",
+      "fileSize": "Tamanho do arquivo",
+      "mimeType": "Tipo",
+      "dimensions": "Dimensões",
+      "uploadedBy": "Enviado por",
+      "uploadedAt": "Enviado"
+    },
+    "save": "Salvar alterações",
+    "saved": "Alterações salvas",
+    "saving": "Salvando...",
+    "title": "Detalhes da mídia",
+    "titleLabel": "Título",
+    "titlePlaceholder": "Dê um título a este arquivo...",
+    "titleDescription": "Nome de exibição opcional para esta mídia",
+    "altDescription": "Texto alternativo para leitores de tela e SEO",
+    "captionDescription": "Descrição opcional exibida abaixo da mídia"
+  },
+  "empty": {
+    "title": "Nenhum arquivo de mídia ainda",
+    "description": "Envie imagens ou vídeos para começar",
+    "uploadBtn": "Enviar arquivos"
+  },
+  "errors": {
+    "loadFailed": "Não foi possível carregar a mídia",
+    "unauthorized": "Você não tem permissão para acessar a mídia",
+    "notFound": "Mídia não encontrada",
+    "uploadFailed": "Falha no envio: {error}"
+  },
+  "footer": {
+    "cancel": "Cancelar",
+    "itemsSelected": "{count} item selecionado",
+    "itemsSelectedPlural": "{count} itens selecionados",
+    "select": "Selecionar"
+  },
+  "grid": {
+    "dimensions": "{width} × {height}",
+    "noResults": "Nenhuma mídia encontrada",
+    "selected": "Selecionado",
+    "loading": "Carregando mídia..."
+  },
+  "list": {
+    "actions": "Ações",
+    "dimensions": "Dimensões",
+    "filename": "Nome do arquivo",
+    "size": "Tamanho",
+    "type": "Tipo",
+    "uploaded": "Enviado"
+  },
+  "selector": {
+    "change": "Alterar",
+    "noSelection": "Nenhuma mídia selecionada",
+    "remove": "Remover",
+    "selectMedia": "Selecionar mídia"
+  },
+  "subtitle": "Gerencie suas imagens e vídeos",
+  "tags": {
+    "add": "Adicionar tag",
+    "createPlaceholder": "Nome da nova tag...",
+    "empty": "Nenhuma tag atribuída",
+    "title": "Tags",
+    "remove": "Remover",
+    "create": "Criar tag",
+    "applied": "Tag adicionada",
+    "removed": "Tag removida"
+  },
+  "title": "Biblioteca de mídia",
+  "toolbar": {
+    "columns": "Colunas",
+    "search": "Pesquisar arquivos...",
+    "sort": {
+      "nameAsc": "Nome A-Z",
+      "nameDesc": "Nome Z-A",
+      "newest": "Mais recentes primeiro",
+      "oldest": "Mais antigos primeiro",
+      "sizeAsc": "Menores primeiro",
+      "sizeDesc": "Maiores primeiro"
+    },
+    "typeFilter": {
+      "all": "Todos os tipos",
+      "images": "Imagens",
+      "videos": "Vídeos"
+    },
+    "upload": "Enviar",
+    "viewGrid": "Visualização em grade",
+    "viewList": "Visualização em lista"
+  },
+  "upload": {
+    "browse": "procurar para enviar",
+    "cancelUpload": "Cancelar envio de {name}",
+    "dragDrop": "Arraste e solte arquivos aqui ou",
+    "duplicateFound": "{count, plural, one {# arquivo já existe} other {# arquivos já existem}} na sua biblioteca",
+    "duplicateSkip": "Ignorar duplicatas",
+    "duplicateUploadAll": "Enviar todos",
+    "duplicateConfirm": "Enviar mesmo assim?",
+    "error": "Não foi possível enviar o arquivo",
+    "maxSelectionsReached": "Máximo de {maxSelections} seleções permitidas",
+    "maxSize": "Tamanho máximo do arquivo: {maxSize} MB",
+    "success": "Arquivo enviado com sucesso",
+    "successMultiple": "{count} arquivos enviados com sucesso",
+    "tooLarge": "O arquivo é muito grande",
+    "uploading": "Enviando...",
+    "uploadingName": "Enviando {name}",
+    "uploadingFile": "Enviando {filename}...",
+    "invalidType": "Tipo de arquivo não permitido",
+    "typeNotAllowed": "O tipo de arquivo {type} não é permitido.",
+    "typeNotAccepted": "Tipo de arquivo não permitido. Tipos aceitos: {types}",
+    "tooLargeNamed": "O arquivo {name} é muito grande. O tamanho máximo é {max} MB.",
+    "tooManyFiles": "No máximo {max} arquivos por envio",
+    "cancelled": "Envio cancelado",
+    "noFileReturned": "O envio não retornou nenhum arquivo",
+    "failed": "Falha no envio",
+    "storageFailed": "Falha no envio para o armazenamento",
+    "storageFailedStatus": "Falha no envio para o armazenamento (status {status})"
+  }
+}

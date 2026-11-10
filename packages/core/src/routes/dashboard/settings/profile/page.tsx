@@ -129,7 +129,7 @@ function ProfilePage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update profile')
+        throw new Error(errorData.error || t('profile.errors.updateFailed'))
       }
 
       return response.json()
@@ -160,7 +160,7 @@ function ProfilePage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete account')
+        throw new Error(errorData.error || t('profile.errors.deleteFailed'))
       }
 
       return response.json()

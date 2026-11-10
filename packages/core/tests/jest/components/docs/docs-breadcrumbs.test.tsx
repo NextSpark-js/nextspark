@@ -14,9 +14,4 @@ describe('DocsBreadcrumbs', () => {
     const { container } = render(<DocsBreadcrumbs items={items} label="Migas de pan" />)
     expect(container.querySelector('nav')?.getAttribute('aria-label')).toBe('Migas de pan')
   })
-
-  test('names it Breadcrumb by default', () => {
-    const { container } = render(<DocsBreadcrumbs items={items} />)
-    expect(container.querySelector('nav')?.getAttribute('aria-label')).toBe('Breadcrumb')
-  })
 })

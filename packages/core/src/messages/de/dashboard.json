@@ -37,5 +37,16 @@
     "basic": "basis",
     "solo": "einzeln",
     "low": "niedrig"
+  },
+  "sidebar": {
+    "navigationHeading": "Navigation"
+  },
+  "mobileNav": {
+    "superAdminPanel": "Superadmin-Bereich"
+  },
+  "meta": {
+    "title": "Dashboard",
+    "listDescription": "Verwalten Sie die Entitäten in Ihrem Dashboard",
+    "detailDescription": "Entitätsdetails ansehen"
   }
 }

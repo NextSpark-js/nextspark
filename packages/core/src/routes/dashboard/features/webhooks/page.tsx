@@ -27,7 +27,7 @@ function WebhooksPage() {
         {/* Contenido real cuando se implemente */}
         <div data-cy="webhooks-content">
           <h1 className="text-2xl font-bold">{t('webhooks.title')}</h1>
-          <p className="text-muted-foreground mt-2">Webhooks configuration coming soon...</p>
+          <p className="text-muted-foreground mt-2">{t('webhooks.comingSoon')}</p>
         </div>
       </FeatureGate>
     </div>

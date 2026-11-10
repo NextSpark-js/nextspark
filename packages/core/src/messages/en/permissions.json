@@ -25,5 +25,13 @@
       "title": "Viewer",
       "description": "Read-only access to team content"
     }
+  },
+  "forbidden": {
+    "defaultReason": "You do not have permission to access this resource",
+    "title": "⚠️ Oops, you do not have permission to do this",
+    "upgradeRequired": "This feature requires an upgrade to your current plan.",
+    "back": "Back",
+    "dashboard": "Dashboard",
+    "viewPlans": "View plans"
   }
 }

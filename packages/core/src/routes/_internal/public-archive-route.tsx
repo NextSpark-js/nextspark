@@ -12,6 +12,7 @@ import { notFound } from 'next/navigation'
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
+import { getPublicTranslations } from '@nextsparkjs/core/lib/i18n/public-translations'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -22,6 +23,12 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
  */
 async function ArchiveGrid({ config, searchParams }: { config: EntityConfig; searchParams: SearchParams }) {
   return <PublicEntityGrid entityType={config.slug} entitySlug={config.slug} searchParams={await searchParams} />
+}
+
+/** The line under the title of an archive page; async, so the route itself keeps its synchronous guards. */
+async function ArchiveIntro({ config }: { config: EntityConfig }) {
+  const t = await getPublicTranslations('public.route')
+  return <p className="text-lg text-muted-foreground">{t('browseAll', { entities: config.names.plural.toLowerCase() })}</p>
 }
 
 /** @param config - the entity's config (`access.public: true` and `ui.public.hasArchivePage` decide whether the archive is served) */
@@ -36,7 +43,7 @@ export function createPublicArchiveRoute(config: EntityConfig) {
       <div className="container mx-auto px-4 py-8" data-cy="public-archive-page">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-4">{config.names.plural}</h1>
-          <p className="text-lg text-muted-foreground">Browse all {config.names.plural.toLowerCase()}</p>
+          <ArchiveIntro config={config} />
         </div>
 
         <Suspense fallback={null}>
@@ -52,9 +59,10 @@ export function createPublicArchiveMetadata(config: EntityConfig) {
   return async function generatePublicArchiveMetadata(): Promise<Metadata> {
     // The archive is served at the entity's basePath, or at /<slug> without one (see the host's entity routes)
     const path = config.access?.basePath ?? config.builder?.public?.basePath ?? `/${config.slug}`
+    const t = await getPublicTranslations('public.route')
     return pageMetadata({
       title: config.names.plural,
-      description: `Browse all ${config.names.plural.toLowerCase()}`,
+      description: t('browseAll', { entities: config.names.plural.toLowerCase() }),
       path,
     })
   }

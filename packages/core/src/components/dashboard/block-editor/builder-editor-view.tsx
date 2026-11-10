@@ -182,7 +182,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
       const response = await fetch(withBasePath(`/api/v1/${entitySlug}/${id}`), {
         headers: buildApiHeaders(),
       })
-      if (!response.ok) throw new Error(`Failed to fetch ${entitySlug}`)
+      if (!response.ok) throw new Error(t('messages.fetchFailed', { entity: entitySlug }))
       const data = await response.json()
       return data
     },
@@ -309,7 +309,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
         const slugIssue = Array.isArray(error.details)
           ? error.details.find((issue: { path?: unknown[] }) => issue.path?.[0] === 'slug')
           : undefined
-        throw Object.assign(new Error(slugIssue?.message || error.error || `Failed to save ${entitySlug}`), { slugIssue: Boolean(slugIssue) })
+        throw Object.assign(new Error(slugIssue?.message || error.error || t('messages.saveFailed', { entity: entitySlug })), { slugIssue: Boolean(slugIssue) })
       }
 
       return response.json()

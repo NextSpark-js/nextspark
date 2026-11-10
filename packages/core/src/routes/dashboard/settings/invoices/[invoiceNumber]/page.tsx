@@ -6,10 +6,33 @@ import { Card, CardContent } from '@nextsparkjs/core/components/ui/card'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Separator } from '@nextsparkjs/core/components/ui/separator'
 import { ArrowLeft, Printer, Loader2 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useInvoice } from '@nextsparkjs/core/hooks/useInvoice'
 import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import { InvoiceStatusBadge } from '@nextsparkjs/core/components/billing/InvoiceStatusBadge'
+
+// The print stylesheet: a page that prints only the invoice (a plain <style>: styled-jsx only takes a template literal written in the tag)
+const PRINT_STYLES = `
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .max-w-3xl,
+          .max-w-3xl * {
+            visibility: visible;
+          }
+          .max-w-3xl {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 20mm;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+`
 
 interface InvoicePageProps {
   params: Promise<{ invoiceNumber: string }>
@@ -18,6 +41,7 @@ interface InvoicePageProps {
 function InvoicePage({ params }: InvoicePageProps) {
   const { invoiceNumber } = use(params)
   const t = useTranslations('settings.billing')
+  const locale = useLocale()
   const { team } = useTeam()
 
   const {
@@ -36,7 +60,7 @@ function InvoicePage({ params }: InvoicePageProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -44,7 +68,7 @@ function InvoicePage({ params }: InvoicePageProps) {
   }
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currency,
     }).format(amount)
@@ -123,13 +147,13 @@ function InvoicePage({ params }: InvoicePageProps) {
             <div className="grid grid-cols-2 gap-8 mb-8">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Bill To
+                  {t('invoices.document.billTo')}
                 </h3>
-                <p className="font-medium text-lg">{team?.name || 'Team'}</p>
+                <p className="font-medium text-lg">{team?.name || t('invoices.document.team')}</p>
               </div>
               <div className="text-right">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  Invoice Date
+                  {t('invoices.document.invoiceDate')}
                 </h3>
                 <p className="font-medium">{formatDate(invoice.date)}</p>
               </div>
@@ -140,20 +164,20 @@ function InvoicePage({ params }: InvoicePageProps) {
             {/* Invoice Details */}
             <div className="mb-8">
               <h3 className="text-sm font-medium text-muted-foreground mb-4">
-                Description
+                {t('invoices.document.description')}
               </h3>
               <div className="rounded-lg border">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="text-left p-4 font-medium">Item</th>
-                      <th className="text-right p-4 font-medium">Amount</th>
+                      <th className="text-left p-4 font-medium">{t('invoices.document.item')}</th>
+                      <th className="text-right p-4 font-medium">{t('invoices.document.amount')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td className="p-4">
-                        {invoice.description || 'Monthly subscription'}
+                        {invoice.description || t('invoices.document.monthlySubscription')}
                       </td>
                       <td className="p-4 text-right font-mono">
                         {formatCurrency(invoice.amount, invoice.currency)}
@@ -168,14 +192,14 @@ function InvoicePage({ params }: InvoicePageProps) {
             <div className="flex justify-end">
               <div className="w-64">
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-muted-foreground">{t('invoices.document.subtotal')}</span>
                   <span className="font-mono">
                     {formatCurrency(invoice.amount, invoice.currency)}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center py-3">
-                  <span className="text-lg font-medium">Total</span>
+                  <span className="text-lg font-medium">{t('invoices.document.total')}</span>
                   <span className="text-xl font-bold font-mono">
                     {formatCurrency(invoice.amount, invoice.currency)}
                   </span>
@@ -186,34 +210,14 @@ function InvoicePage({ params }: InvoicePageProps) {
             {/* Footer - Payment Info */}
             <Separator className="my-8" />
             <div className="text-center text-sm text-muted-foreground">
-              <p>Thank you for your business</p>
+              <p>{t('invoices.document.thanks')}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .max-w-3xl,
-          .max-w-3xl * {
-            visibility: visible;
-          }
-          .max-w-3xl {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 20mm;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
+      <style>{PRINT_STYLES}</style>
     </div>
   )
 }

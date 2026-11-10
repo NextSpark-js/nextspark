@@ -16,6 +16,7 @@ import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { PatternReference } from '@nextsparkjs/core/types/pattern-reference'
 import { fetchPublishedItem, getResolvedBlocks, isPublicEntity, type PublishedItem } from './public-entity-shared'
 import { STATIC_FILE_EXTENSION } from '@nextsparkjs/core/lib/entities/public-item-slug'
+import { getPublicTranslations } from '@nextsparkjs/core/lib/i18n/public-translations'
 
 export { STATIC_FILE_EXTENSION }
 
@@ -115,7 +116,8 @@ function itemRoute(source: PublicItemSource, config: EntityConfig, Template?: Co
 function itemMetadata(source: PublicItemSource, config: EntityConfig) {
   return async function generatePublicItemMetadata({ params }: Pick<ItemRouteProps, 'params'>): Promise<Metadata> {
     const slug = slugOf((await params).slug)
-    if (!isPublicEntity(config) || isFileRequest(slug)) return { title: 'Not Found' }
+    const notFoundTitle = (await getPublicTranslations('public.route'))('notFound')
+    if (!isPublicEntity(config) || isFileRequest(slug)) return { title: notFoundTitle }
     const item = await source.fetchItem(config, slug)
     if (item) {
       return {
@@ -129,7 +131,7 @@ function itemMetadata(source: PublicItemSource, config: EntityConfig) {
         },
       }
     }
-    return { title: 'Not Found' }
+    return { title: notFoundTitle }
   }
 }
 

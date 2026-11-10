@@ -8,7 +8,7 @@
 'use client'
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { useLocale, useMessages } from 'next-intl'
+import { useLocale, useMessages, useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Alert, AlertDescription } from '../ui/alert'
@@ -159,6 +159,7 @@ export function EntityForm({
   hiddenFields = [],
   teamId,
 }: EntityFormProps) {
+  const formText = useTranslations('entities.form')
   // English keeps the form's own texts; any other active locale reads `validation.entity.*` from the merged messages (#358)
   const locale = useLocale()
   const messages = useMessages()
@@ -311,7 +312,7 @@ export function EntityForm({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid grid-cols-2 lg:grid-cols-4">
               <TabsTrigger value="main">
-                Details
+                {formText('details')}
                 {hasErrors && (
                   <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 text-xs">
                     !
@@ -407,7 +408,7 @@ export function EntityForm({
                             <Card key={String(item.id) || index} className="border-dashed">
                               <CardContent className="pt-6">
                                 <div className="flex justify-between items-start mb-4">
-                                  <h4 className="font-medium">Item {index + 1}</h4>
+                                  <h4 className="font-medium">{formText('item', { n: index + 1 })}</h4>
                                   {onChildDelete && (
                                     <Button
                                       type="button"
@@ -452,7 +453,7 @@ export function EntityForm({
                         </div>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
-                          <p>No {childConfig.display.title.toLowerCase()} added yet</p>
+                          <p>{formText('noneAdded', { entities: childConfig.display.title.toLowerCase() })}</p>
                         </div>
                       )}
                       
@@ -464,7 +465,7 @@ export function EntityForm({
                           data-testid={testIds.childAdd(childName)}
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          Add {childConfig.display.title.slice(0, -1)} {/* Remove 's' from plural */}
+                          {formText('add', { entity: childConfig.display.title.slice(0, -1) })} {/* Remove 's' from plural */}
                         </Button>
                       )}
                     </div>
@@ -541,7 +542,7 @@ export function EntityForm({
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            {mode === 'create' ? 'Create' : 'Save Changes'}
+            {mode === 'create' ? formText('create') : formText('save')}
           </Button>
         </div>
       </form>

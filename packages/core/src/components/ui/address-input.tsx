@@ -6,6 +6,7 @@ import { Input } from './input'
 import { Label } from './label'
 import { Card, CardContent } from './card'
 import { cn } from '../../lib/utils'
+import { useSectionText } from '../../lib/i18n/common-text'
 
 export interface Address {
   street: string
@@ -39,6 +40,22 @@ export function AddressInput({
   layout = "stacked",
   showFullAddress = true,
 }: AddressInputProps) {
+  const text = useSectionText('entities.addressInput', {
+    fullAddressShort: 'Full address...',
+    street: 'Street',
+    city: 'City',
+    state: 'State/Province',
+    zipCode: 'Zip Code',
+    country: 'Country',
+    fullAddress: 'Full Address',
+    fullAddressPlaceholder: 'Enter the full address...',
+    streetAndNumber: 'Street and Number',
+    streetExample: 'E.g.: 123 Main St',
+    cityExample: 'E.g.: New York',
+    stateExample: 'E.g.: NY',
+    zipCodeExample: 'E.g.: 10001',
+    countryExample: 'E.g.: United States',
+  })
   const updateField = (field: keyof Address, fieldValue: string) => {
     const newAddress = { ...value, [field]: fieldValue }
     
@@ -82,7 +99,7 @@ export function AddressInput({
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Full address..."
+              placeholder={text.fullAddressShort}
               value={value.fullAddress || ""}
               onChange={(e) => handleFullAddressChange(e.target.value)}
               disabled={disabled}
@@ -93,25 +110,25 @@ export function AddressInput({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <Input
-            placeholder="Street"
+            placeholder={text.street}
             value={value.street}
             onChange={(e) => updateField('street', e.target.value)}
             disabled={disabled}
           />
           <Input
-            placeholder="City"
+            placeholder={text.city}
             value={value.city}
             onChange={(e) => updateField('city', e.target.value)}
             disabled={disabled}
           />
           <Input
-            placeholder="State/Province"
+            placeholder={text.state}
             value={value.state}
             onChange={(e) => updateField('state', e.target.value)}
             disabled={disabled}
           />
           <Input
-            placeholder="Zip Code"
+            placeholder={text.zipCode}
             value={value.zipCode}
             onChange={(e) => updateField('zipCode', e.target.value)}
             disabled={disabled}
@@ -119,7 +136,7 @@ export function AddressInput({
         </div>
 
         <Input
-          placeholder="Country"
+          placeholder={text.country}
           value={value.country}
           onChange={(e) => updateField('country', e.target.value)}
           disabled={disabled}
@@ -133,12 +150,12 @@ export function AddressInput({
       <CardContent className="p-4 space-y-4">
         {showFullAddress && (
           <div className="space-y-2">
-            <Label htmlFor="full-address">Full Address</Label>
+            <Label htmlFor="full-address">{text.fullAddress}</Label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="full-address"
-                placeholder="Enter the full address..."
+                placeholder={text.fullAddressPlaceholder}
                 value={value.fullAddress || ""}
                 onChange={(e) => handleFullAddressChange(e.target.value)}
                 disabled={disabled}
@@ -150,10 +167,10 @@ export function AddressInput({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="street">Street and Number</Label>
+            <Label htmlFor="street">{text.streetAndNumber}</Label>
             <Input
               id="street"
-              placeholder="E.g.: 123 Main St"
+              placeholder={text.streetExample}
               value={value.street}
               onChange={(e) => updateField('street', e.target.value)}
               disabled={disabled}
@@ -161,10 +178,10 @@ export function AddressInput({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
+            <Label htmlFor="city">{text.city}</Label>
             <Input
               id="city"
-              placeholder="E.g.: New York"
+              placeholder={text.cityExample}
               value={value.city}
               onChange={(e) => updateField('city', e.target.value)}
               disabled={disabled}
@@ -172,10 +189,10 @@ export function AddressInput({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="state">State/Province</Label>
+            <Label htmlFor="state">{text.state}</Label>
             <Input
               id="state"
-              placeholder="E.g.: NY"
+              placeholder={text.stateExample}
               value={value.state}
               onChange={(e) => updateField('state', e.target.value)}
               disabled={disabled}
@@ -183,10 +200,10 @@ export function AddressInput({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="zipCode">Zip Code</Label>
+            <Label htmlFor="zipCode">{text.zipCode}</Label>
             <Input
               id="zipCode"
-              placeholder="E.g.: 10001"
+              placeholder={text.zipCodeExample}
               value={value.zipCode}
               onChange={(e) => updateField('zipCode', e.target.value)}
               disabled={disabled}
@@ -194,10 +211,10 @@ export function AddressInput({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
+            <Label htmlFor="country">{text.country}</Label>
             <Input
               id="country"
-              placeholder="E.g.: United States"
+              placeholder={text.countryExample}
               value={value.country}
               onChange={(e) => updateField('country', e.target.value)}
               disabled={disabled}

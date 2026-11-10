@@ -25,5 +25,13 @@
       "title": "Visualizador",
       "description": "Acesso somente leitura ao conteúdo da equipe"
     }
+  },
+  "forbidden": {
+    "defaultReason": "Você não tem permissão para acessar este recurso",
+    "title": "⚠️ Ops, você não tem permissão para fazer isso",
+    "upgradeRequired": "Este recurso exige um upgrade do seu plano atual.",
+    "back": "Voltar",
+    "dashboard": "Painel",
+    "viewPlans": "Ver planos"
   }
 }

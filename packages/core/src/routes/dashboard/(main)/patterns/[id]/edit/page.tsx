@@ -15,8 +15,10 @@ import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
 import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
+import { useTranslations } from 'next-intl'
 
 function PatternEditPage() {
+  const t = useTranslations('admin.patterns.page')
   const params = useParams()!
   const router = useRouter()
   const [entityConfig, setEntityConfig] = useState<ClientEntityConfig | null>(null)
@@ -79,7 +81,7 @@ function PatternEditPage() {
     return (
       <Alert>
         <AlertDescription>
-          Patterns entity is not configured or not enabled.
+          {t('notEnabled')}
         </AlertDescription>
       </Alert>
     )

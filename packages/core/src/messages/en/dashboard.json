@@ -37,5 +37,16 @@
     "basic": "basic",
     "solo": "solo",
     "low": "low"
+  },
+  "sidebar": {
+    "navigationHeading": "Navigation"
+  },
+  "mobileNav": {
+    "superAdminPanel": "Super Admin Panel"
+  },
+  "meta": {
+    "title": "Dashboard",
+    "listDescription": "Manage entities in your dashboard",
+    "detailDescription": "View entity details"
   }
 }

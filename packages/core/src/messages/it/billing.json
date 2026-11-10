@@ -140,9 +140,10 @@
     "past_due": "Pagamento in Sospeso",
     "canceled": "Annullato",
     "expired": "Scaduto",
-    "trialEnds": "La prova termina {date}",
+    "trialEnds": "La prova termina il {date}",
     "renewsOn": "Si rinnova il {date}",
-    "cancelsOn": "Si annulla il {date}"
+    "cancelsOn": "Si annulla il {date}",
+    "nextBilling": "Prossima fatturazione: {date}"
   },
 
   "invoices": {

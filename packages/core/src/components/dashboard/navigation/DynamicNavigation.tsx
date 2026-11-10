@@ -66,17 +66,6 @@ const coreItems: NavigationItem[] = [
   },
 ]
 
-// Static label mappings for LMS navigation (fallback when translations unavailable)
-const labelMappings: Record<string, string> = {
-  'navigation.learn': 'Learn',
-  'navigation.teach': 'Teach',
-  'navigation.myCourses': 'My Courses',
-  'navigation.catalog': 'Catalog',
-  'navigation.courses': 'Courses',
-  'navigation.lessons': 'Lessons',
-  'navigation.analytics': 'Analytics',
-}
-
 // Component to render a single section item with permission check.
 // Extracted into its own component so usePermission hook is called once per item (React rules).
 function NavItemWithPermission({
@@ -110,9 +99,9 @@ function NavItemWithPermission({
   const ItemIcon = resolveIcon(item.icon, Circle)
   const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
 
-  // Get item label using translation with fallback to static mapping
+  // The label comes from the common messages (navigation.learn, navigation.myCourses, ...)
   const normalizedItemKey = normalizeKey(item.labelKey)
-  const itemLabel = t(normalizedItemKey) || labelMappings[item.labelKey] || item.id
+  const itemLabel = t(normalizedItemKey) || item.id
 
   return (
     <Link
@@ -167,9 +156,9 @@ function SectionWithPermission({
   // Helper to strip 'common.' prefix from labelKey since we're using useTranslations('common')
   const normalizeKey = (key: string) => key.startsWith('common.') ? key.slice(7) : key
 
-  // Get section label using translation with fallback to static mapping
+  // The label comes from the common messages
   const normalizedSectionKey = normalizeKey(section.labelKey)
-  const sectionLabel = t(normalizedSectionKey) || labelMappings[section.labelKey] || section.id
+  const sectionLabel = t(normalizedSectionKey) || section.id
 
   return (
     <div className="mb-4" data-cy={sel('dashboard.navigation.section', { id: section.id })}>

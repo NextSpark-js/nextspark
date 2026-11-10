@@ -10,5 +10,44 @@
     "getStarted": "Commencer",
     "learnMore": "En savoir plus",
     "contactUs": "Nous contacter"
+  },
+  "entities": {
+    "itemFallback": "Élément {id}",
+    "notAvailable": "N/D",
+    "yes": "Oui",
+    "no": "Non",
+    "loadFailed": "Impossible de charger les données",
+    "notSpecified": "Non spécifié",
+    "entityFallback": "Entité",
+    "notFound": "{entity} introuvable",
+    "titleFallback": "{entity} {id}",
+    "listFallback": "Liste",
+    "backTo": "Retour à {list}",
+    "details": "Détails",
+    "itemsFallback": "Éléments",
+    "viewMore": "Voir plus de {items}",
+    "searchEntities": "Rechercher des {entities}...",
+    "search": "Rechercher...",
+    "sortBy": "Trier par...",
+    "showing": "Affichage de {shown} sur {total} {entities}",
+    "noneFound": "Aucun résultat dans {entities}",
+    "tryAdjusting": "Essayez de modifier vos termes de recherche",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "pageBuilder": {
+    "blockFailed": "Impossible de charger le bloc :",
+    "blockHint": "Ce bloc est peut-être indisponible ou une erreur s'est produite lors de son affichage.",
+    "emptyPage": "Cette page n'a pas encore de contenu."
+  },
+  "defaultPage": {
+    "title": "Page publique par défaut",
+    "description": "Il s'agit de la page publique par défaut (sans surcharge du thème)",
+    "template": "Modèle par défaut",
+    "path": "Chemin : {path}"
+  },
+  "route": {
+    "notFound": "Introuvable",
+    "browseAll": "Parcourir tous les {entities}"
   }
 }

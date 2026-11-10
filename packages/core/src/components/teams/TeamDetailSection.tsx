@@ -7,6 +7,7 @@
  * with invite functionality. Designed to be used within EntityDetail.
  */
 
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { TeamMembersList } from './TeamMembersList'
 import { TeamPendingInvitations } from './TeamPendingInvitations'
@@ -19,12 +20,13 @@ interface TeamDetailSectionProps {
 }
 
 export function TeamDetailSection({ teamId }: TeamDetailSectionProps) {
+  const t = useTranslations('teams')
   return (
     <Card data-cy="team-members-section">
       <CardHeader>
-        <CardTitle>Team Members</CardTitle>
+        <CardTitle>{t('members.title')}</CardTitle>
         <CardDescription>
-          Manage team members and invitations
+          {t('members.sectionDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent>

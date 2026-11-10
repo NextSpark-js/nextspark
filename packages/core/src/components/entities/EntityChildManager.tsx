@@ -7,6 +7,7 @@
 
 'use client'
 
+import { useTranslations } from 'next-intl'
 import React, { useState, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
@@ -95,6 +96,8 @@ export function EntityChildManager({
   className,
   customFormComponent,
 }: EntityChildManagerProps) {
+  const text = useTranslations('entities.childManager')
+  const tStatus = useTranslations('common.status')
   // Debug logging
   if (process.env.NODE_ENV === 'development') console.log(`[EntityChildManager] childEntityName: ${childEntityName}`)
   if (process.env.NODE_ENV === 'development') console.log(`[EntityChildManager] customFormComponent:`, customFormComponent)
@@ -328,11 +331,11 @@ export function EntityChildManager({
     })),
     permissions: {
       actions: [
-        { action: 'create', label: 'Create', roles: ['owner', 'admin', 'member'] },
-        { action: 'read', label: 'View', roles: ['owner', 'admin', 'member', 'viewer'] },
-        { action: 'list', label: 'List', roles: ['owner', 'admin', 'member', 'viewer'] },
-        { action: 'update', label: 'Edit', roles: ['owner', 'admin', 'member'] },
-        { action: 'delete', label: 'Delete', roles: ['owner', 'admin'], dangerous: true },
+        { action: 'create', label: text('create'), roles: ['owner', 'admin', 'member'] },
+        { action: 'read', label: text('view'), roles: ['owner', 'admin', 'member', 'viewer'] },
+        { action: 'list', label: text('list'), roles: ['owner', 'admin', 'member', 'viewer'] },
+        { action: 'update', label: text('edit'), roles: ['owner', 'admin', 'member'] },
+        { action: 'delete', label: text('delete'), roles: ['owner', 'admin'], dangerous: true },
       ],
     },
     planLimits: {
@@ -368,14 +371,14 @@ export function EntityChildManager({
       enabled: false,
       rateLimit: { requests: 100, windowMs: 60000 },
     },
-  }), [childEntityName, childEntityConfig, parentEntityConfig.icon])
+  }), [childEntityName, childEntityConfig, parentEntityConfig.icon, text])
 
   if (isLoading) {
     return (
       <div className={`space-y-4 ${className || ''}`}>
         <div className="flex items-center justify-center p-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-          <span className="text-muted-foreground">Loading...</span>
+          <span className="text-muted-foreground">{tStatus('loading')}</span>
         </div>
       </div>
     )
@@ -412,7 +415,7 @@ export function EntityChildManager({
               data-cy={sel('entities.childEntity.addButton', { parentSlug: parentEntityConfig.slug, childName: childEntityName })}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add {childEntityConfig.display.title.slice(0, -1)}
+              {text('add', { entity: childEntityConfig.display.title.slice(0, -1) })}
             </Button>
           )}
         </div>
@@ -423,7 +426,7 @@ export function EntityChildManager({
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertDescription>
-            {submissionMode === 'create' ? 'Creating' : 'Updating'} {childEntityConfig.display.title.slice(0, -1).toLowerCase()}...
+            {text(submissionMode === 'create' ? 'creating' : 'updating', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase() })}
           </AlertDescription>
         </Alert>
       )}
@@ -441,7 +444,7 @@ export function EntityChildManager({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Maximum number of {childEntityConfig.display.title.toLowerCase()} reached ({maxItems})
+            {text('maxReached', { entities: childEntityConfig.display.title.toLowerCase(), max: maxItems ?? '' })}
           </AlertDescription>
         </Alert>
       )}
@@ -454,15 +457,15 @@ export function EntityChildManager({
               className: "h-12 w-12 text-muted-foreground/50 mb-4" 
             })}
             <h4 className="font-medium mb-2">
-              No {childEntityConfig.display.title.toLowerCase()}
+              {text('emptyTitle', { entities: childEntityConfig.display.title.toLowerCase() })}
             </h4>
             <p className="text-sm text-muted-foreground text-center mb-4">
-              This {parentEntityConfig.names.singular.toLowerCase()} doesn&apos;t have any {childEntityConfig.display.title.toLowerCase()} yet.
+              {text('emptyDescription', { parent: parentEntityConfig.names.singular.toLowerCase(), entities: childEntityConfig.display.title.toLowerCase() })}
             </p>
             {onChildAdd && !isAtMaxItems && (
               <Button onClick={handleCreate} variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
-                Add First {childEntityConfig.display.title.slice(0, -1)}
+                {text('addFirst', { entity: childEntityConfig.display.title.slice(0, -1) })}
               </Button>
             )}
           </CardContent>
@@ -490,7 +493,7 @@ export function EntityChildManager({
                         </th>
                       ))}
                       <th className="px-4 py-3 text-right text-sm font-medium w-16">
-                        Actions
+                        {text('actions')}
                       </th>
                     </tr>
                   </thead>
@@ -527,14 +530,14 @@ export function EntityChildManager({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuLabel>{text('actions')}</DropdownMenuLabel>
                               
                               {onChildUpdate && (
                                 <DropdownMenuItem
                                   onClick={() => handleEdit(item, index)}
                                 >
                                   <Edit className="mr-2 h-4 w-4" />
-                                  Edit
+                                  {text('edit')}
                                 </DropdownMenuItem>
                               )}
                               
@@ -542,7 +545,7 @@ export function EntityChildManager({
                                 onClick={() => navigator.clipboard.writeText(String(item.id))}
                               >
                                 <Copy className="mr-2 h-4 w-4" />
-                                Copy ID
+                                {text('copyId')}
                               </DropdownMenuItem>
                               
                               {onChildDelete && (
@@ -558,7 +561,7 @@ export function EntityChildManager({
                                     ) : (
                                       <Trash2 className="mr-2 h-4 w-4" />
                                     )}
-                                    Delete
+                                    {text('delete')}
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -590,7 +593,7 @@ export function EntityChildManager({
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <CardTitle className="text-base">
-                          {String(item.title || item.name || `Item ${index + 1}`)}
+                          {String(item.title || item.name || text('item', { n: index + 1 }))}
                         </CardTitle>
                         {typeof item.description === 'string' && item.description && (
                           <CardDescription className="text-xs line-clamp-2">
@@ -611,7 +614,7 @@ export function EntityChildManager({
                               onClick={() => handleEdit(item, index)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
-                              Edit
+                              {text('edit')}
                             </DropdownMenuItem>
                           )}
                           
@@ -626,7 +629,7 @@ export function EntityChildManager({
                               ) : (
                                 <Trash2 className="mr-2 h-4 w-4" />
                               )}
-                              Delete
+                              {text('delete')}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -658,12 +661,12 @@ export function EntityChildManager({
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {formState.mode === 'create' ? 'Add' : 'Edit'} {childEntityConfig.display.title.slice(0, -1)}
+              {text(formState.mode === 'create' ? 'addTitle' : 'editTitle', { entity: childEntityConfig.display.title.slice(0, -1) })}
             </DialogTitle>
             <DialogDescription>
               {formState.mode === 'create' 
-                ? `Add a new ${childEntityConfig.display.title.slice(0, -1).toLowerCase()} to this ${parentEntityConfig.names.singular.toLowerCase()}.`
-                : `Update the details for this ${childEntityConfig.display.title.slice(0, -1).toLowerCase()}.`
+                ? text('addDescription', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase(), parent: parentEntityConfig.names.singular.toLowerCase() })
+                : text('editDescription', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase() })
               }
             </DialogDescription>
           </DialogHeader>
@@ -718,9 +721,9 @@ export function EntityChildManager({
       <Dialog open={deleteConfirmation.isOpen} onOpenChange={(open) => !open && handleCancelDelete()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogTitle>{text('confirmDelete')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this {childEntityConfig.display.title.slice(0, -1).toLowerCase()}? This action cannot be undone.
+              {text('confirmDeleteDescription', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase() })}
             </DialogDescription>
           </DialogHeader>
 
@@ -730,14 +733,14 @@ export function EntityChildManager({
               onClick={handleCancelDelete}
               disabled={false}
             >
-              Cancel
+              {text('cancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirmedDelete}
               disabled={false}
             >
-              Delete
+              {text('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

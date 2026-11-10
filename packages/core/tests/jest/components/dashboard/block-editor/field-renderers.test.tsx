@@ -16,7 +16,8 @@ import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry.client'
 import type { FieldDefinition } from '@/core/types/blocks'
 
 jest.mock('@/core/hooks/useDisplayUrls', () => ({ useDisplayUrls: () => (url: string) => url, useSignedProps: (props: unknown) => props }))
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+const mockT = (key: string) => key
+jest.mock('next-intl', () => ({ useTranslations: () => mockT, useLocale: () => 'en' }))
 jest.mock('@/core/lib/test', () => ({ sel: (path: string) => path }))
 jest.mock('@/core/components/ui/image-upload', () => ({ ImageUpload: () => null }))
 jest.mock('@/core/components/ui/rich-text-editor', () => ({ RichTextEditor: () => null }))

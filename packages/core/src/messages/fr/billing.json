@@ -142,7 +142,8 @@
     "expired": "Expirée",
     "trialEnds": "L'essai se termine le {date}",
     "renewsOn": "Se renouvelle le {date}",
-    "cancelsOn": "S'annule le {date}"
+    "cancelsOn": "S'annule le {date}",
+    "nextBilling": "Prochaine facturation : {date}"
   },
 
   "invoices": {

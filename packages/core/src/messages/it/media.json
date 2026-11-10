@@ -1,0 +1,159 @@
+{
+  "actions": {
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "select": "Seleziona",
+    "viewDetails": "Visualizza dettagli",
+    "save": "Salva"
+  },
+  "dashboard": {
+    "bulkDelete": "Elimina",
+    "bulkDeleteConfirm": "Eliminare {count, plural, one {# file} other {# file}}?",
+    "bulkDeleteConfirmDesc": "Questa azione non può essere annullata. I file verranno eliminati definitivamente.",
+    "bulkDeleteSuccess": "{count, plural, one {# file eliminato} other {# file eliminati}}",
+    "bulkDeleting": "Eliminazione di {current} su {total}...",
+    "clearSelection": "Cancella",
+    "deselectAll": "Deseleziona tutto",
+    "filterByTag": "Filtra per tag...",
+    "hideUpload": "Nascondi caricamento",
+    "nextPage": "Avanti",
+    "noTags": "Nessun tag",
+    "pagination": "Visualizzazione di {from}-{to} su {total}",
+    "prevPage": "Indietro",
+    "selected": "{count, plural, one {# selezionato} other {# selezionati}}",
+    "subtitle": "{count, plural, =0 {Nessun file} one {# file} other {# file}} nella tua libreria",
+    "tags": "Tag",
+    "allTags": "Tutti i tag"
+  },
+  "delete": {
+    "cancel": "Annulla",
+    "confirm": "Elimina",
+    "error": "Impossibile eliminare il file multimediale",
+    "message": "Vuoi davvero eliminare questo file multimediale? Questa azione non può essere annullata.",
+    "success": "File multimediale eliminato con successo",
+    "title": "Elimina file multimediale"
+  },
+  "detail": {
+    "altLabel": "Testo alternativo",
+    "altPlaceholder": "Descrivi questa immagine per l'accessibilità...",
+    "cancel": "Annulla",
+    "captionLabel": "Didascalia",
+    "captionPlaceholder": "Aggiungi una didascalia...",
+    "info": {
+      "url": "URL",
+      "filename": "Nome file",
+      "fileSize": "Dimensione del file",
+      "mimeType": "Tipo",
+      "dimensions": "Dimensioni",
+      "uploadedBy": "Caricato da",
+      "uploadedAt": "Caricato"
+    },
+    "save": "Salva modifiche",
+    "saved": "Modifiche salvate",
+    "saving": "Salvataggio...",
+    "title": "Dettagli del file multimediale",
+    "titleLabel": "Titolo",
+    "titlePlaceholder": "Dai un titolo a questo file...",
+    "titleDescription": "Nome visualizzato facoltativo per questo file multimediale",
+    "altDescription": "Testo alternativo per screen reader e SEO",
+    "captionDescription": "Descrizione facoltativa mostrata sotto il file multimediale"
+  },
+  "empty": {
+    "title": "Ancora nessun file multimediale",
+    "description": "Carica immagini o video per iniziare",
+    "uploadBtn": "Carica file"
+  },
+  "errors": {
+    "loadFailed": "Impossibile caricare i file multimediali",
+    "unauthorized": "Non hai il permesso di accedere ai file multimediali",
+    "notFound": "File multimediale non trovato",
+    "uploadFailed": "Caricamento non riuscito: {error}"
+  },
+  "footer": {
+    "cancel": "Annulla",
+    "itemsSelected": "{count} elemento selezionato",
+    "itemsSelectedPlural": "{count} elementi selezionati",
+    "select": "Seleziona"
+  },
+  "grid": {
+    "dimensions": "{width} × {height}",
+    "noResults": "Nessun file multimediale trovato",
+    "selected": "Selezionato",
+    "loading": "Caricamento dei file multimediali..."
+  },
+  "list": {
+    "actions": "Azioni",
+    "dimensions": "Dimensioni",
+    "filename": "Nome file",
+    "size": "Dimensione",
+    "type": "Tipo",
+    "uploaded": "Caricato"
+  },
+  "selector": {
+    "change": "Cambia",
+    "noSelection": "Nessun file multimediale selezionato",
+    "remove": "Rimuovi",
+    "selectMedia": "Seleziona file multimediale"
+  },
+  "subtitle": "Gestisci le tue immagini e i tuoi video",
+  "tags": {
+    "add": "Aggiungi tag",
+    "createPlaceholder": "Nome del nuovo tag...",
+    "empty": "Nessun tag assegnato",
+    "title": "Tag",
+    "remove": "Rimuovi",
+    "create": "Crea tag",
+    "applied": "Tag aggiunto",
+    "removed": "Tag rimosso"
+  },
+  "title": "Libreria multimediale",
+  "toolbar": {
+    "columns": "Colonne",
+    "search": "Cerca file...",
+    "sort": {
+      "nameAsc": "Nome A-Z",
+      "nameDesc": "Nome Z-A",
+      "newest": "Più recenti prima",
+      "oldest": "Più vecchi prima",
+      "sizeAsc": "Più piccoli prima",
+      "sizeDesc": "Più grandi prima"
+    },
+    "typeFilter": {
+      "all": "Tutti i tipi",
+      "images": "Immagini",
+      "videos": "Video"
+    },
+    "upload": "Carica",
+    "viewGrid": "Vista a griglia",
+    "viewList": "Vista a elenco"
+  },
+  "upload": {
+    "browse": "sfoglia per caricare",
+    "cancelUpload": "Annulla il caricamento di {name}",
+    "dragDrop": "Trascina e rilascia i file qui oppure",
+    "duplicateFound": "{count, plural, one {# file esiste già} other {# file esistono già}} nella tua libreria",
+    "duplicateSkip": "Salta i duplicati",
+    "duplicateUploadAll": "Carica tutti",
+    "duplicateConfirm": "Caricare comunque?",
+    "error": "Impossibile caricare il file",
+    "maxSelectionsReached": "Massimo {maxSelections} selezioni consentite",
+    "maxSize": "Dimensione massima del file: {maxSize} MB",
+    "success": "File caricato con successo",
+    "successMultiple": "{count} file caricati con successo",
+    "tooLarge": "Il file è troppo grande",
+    "uploading": "Caricamento...",
+    "uploadingName": "Caricamento di {name}",
+    "uploadingFile": "Caricamento di {filename}...",
+    "invalidType": "Tipo di file non consentito",
+    "typeNotAllowed": "Il tipo di file {type} non è consentito.",
+    "typeNotAccepted": "Tipo di file non consentito. Tipi accettati: {types}",
+    "tooLargeNamed": "Il file {name} è troppo grande. La dimensione massima è {max} MB.",
+    "tooManyFiles": "Al massimo {max} file per caricamento",
+    "cancelled": "Caricamento annullato",
+    "noFileReturned": "Il caricamento non ha restituito alcun file",
+    "failed": "Caricamento non riuscito",
+    "storageFailed": "Caricamento nello storage non riuscito",
+    "storageFailedStatus": "Caricamento nello storage non riuscito (stato {status})"
+  }
+}

@@ -20,8 +20,10 @@ import { BuilderEditorView } from '../../dashboard/block-editor/builder-editor-v
 import { Alert, AlertDescription } from '../../ui/alert'
 import { useTeam } from '../../../hooks/useTeam'
 import { getEntityData } from '../../../lib/api/entities'
+import { useTranslations } from 'next-intl'
 
 export default function PatternEditPage() {
+  const t = useTranslations('admin.patterns.page')
   const params = useParams()
   const router = useRouter()
   const [initialData, setInitialData] = useState<Record<string, unknown> | null>(null)
@@ -85,7 +87,7 @@ export default function PatternEditPage() {
     return (
       <Alert>
         <AlertDescription>
-          Patterns entity is not configured or not enabled.
+          {t('notEnabled')}
         </AlertDescription>
       </Alert>
     )

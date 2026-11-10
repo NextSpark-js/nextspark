@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from './popover'
 import { cn } from '../../lib/utils'
+import { useMessageText, useSectionText } from '../../lib/i18n/common-text'
 
 export interface ComboboxOption {
   value: string | number
@@ -47,15 +48,25 @@ export function Combobox({
   options,
   value,
   onChange,
-  placeholder = "Select option...",
-  searchPlaceholder = "Search...",
-  emptyMessage = "No options found.",
+  placeholder: placeholderProp,
+  searchPlaceholder: searchPlaceholderProp,
+  emptyMessage: emptyMessageProp,
   disabled = false,
   clearable = false,
   className,
   id,
-  clearLabel = "Clear selection",
+  clearLabel: clearLabelProp,
 }: ComboboxProps) {
+  const text = useSectionText('entities.combobox', {
+    placeholder: 'Select option...',
+    searchPlaceholder: 'Search...',
+    clearLabel: 'Clear selection',
+  })
+  const placeholder = placeholderProp ?? text.placeholder
+  const searchPlaceholder = searchPlaceholderProp ?? text.searchPlaceholder
+  const noOptionsText = useMessageText('entities.noOptions', 'No options found.')
+  const emptyMessage = emptyMessageProp ?? noOptionsText
+  const clearLabel = clearLabelProp ?? text.clearLabel
   const [open, setOpen] = React.useState(false)
 
   const selectedOption = options.find((option) => option.value === value)

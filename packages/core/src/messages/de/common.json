@@ -179,7 +179,7 @@
       "uploaded": "Hochgeladene Datei"
     },
     "taskCard": "Aufgabenkarte: {title}. Status: {status}",
-    "toggleTask": "Aufgabe '{title}' als {action} markieren",
+    "toggleTask": "Aufgabe „{title}“ als {action} markieren",
     "createdDate": "Erstellt am {date}",
     "deleteTask": "Aufgabe löschen: {title}",
     "completedTaskCard": "Erledigte Aufgabe: {title}",

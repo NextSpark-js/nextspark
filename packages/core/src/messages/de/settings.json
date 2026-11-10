@@ -102,6 +102,10 @@
     },
     "actions": {
       "cancel": "Abbrechen"
+    },
+    "errors": {
+      "updateFailed": "Das Profil konnte nicht aktualisiert werden",
+      "deleteFailed": "Das Konto konnte nicht gelöscht werden"
     }
   },
   "password": {
@@ -366,6 +370,18 @@
         "showing": "Zeige {start} bis {end} von {total} Rechnungen",
         "previous": "Zurück",
         "next": "Weiter"
+      },
+      "document": {
+        "billTo": "Rechnung an",
+        "team": "Team",
+        "invoiceDate": "Rechnungsdatum",
+        "description": "Beschreibung",
+        "item": "Position",
+        "amount": "Betrag",
+        "monthlySubscription": "Monatliches Abonnement",
+        "subtotal": "Zwischensumme",
+        "total": "Gesamt",
+        "thanks": "Vielen Dank für Ihr Vertrauen"
       }
     },
     "features": {
@@ -389,10 +405,171 @@
   },
   "plans": {
     "title": "Preistarife",
-    "description": "Wählen Sie den Tarif, der am besten zu Ihren Bedürfnissen passt"
+    "description": "Wählen Sie den Tarif, der am besten zu Ihren Bedürfnissen passt",
+    "changed": "Tarif erfolgreich geändert",
+    "changeFailed": "Der Tarifwechsel konnte nicht verarbeitet werden",
+    "checkoutFailed": "Der Bezahlvorgang konnte nicht gestartet werden"
   },
   "pages": {
     "plans": "Tarife",
     "plansDescription": "Vergleichen Sie Tarife und führen Sie ein Upgrade Ihres Abonnements durch"
+  },
+  "apiKeys": {
+    "title": "API-Schlüssel",
+    "description": "API-Schlüssel für externe Integrationen verwalten",
+    "createButton": "API-Schlüssel erstellen",
+    "createFirst": "Ersten API-Schlüssel erstellen",
+    "emptyTitle": "Keine API-Schlüssel",
+    "emptyDescription": "Sie haben noch keine API-Schlüssel. Erstellen Sie einen, um die externe API zu nutzen.",
+    "restrictedTitle": "Eingeschränkter Zugriff",
+    "restrictedDescription": "Nur Administratoren können API-Schlüssel verwalten. Wenden Sie sich an einen Administrator, wenn Sie Zugriff auf diese Funktion benötigen.",
+    "loadError": "Fehler beim Laden der API-Schlüssel: {message}",
+    "fetchError": "API-Schlüssel konnten nicht abgerufen werden",
+    "revokeError": "API-Schlüssel konnte nicht widerrufen werden",
+    "updateError": "API-Schlüssel konnte nicht aktualisiert werden",
+    "revoked": "Der API-Schlüssel „{name}“ wurde widerrufen",
+    "revokeFailed": "API-Schlüssel konnte nicht widerrufen werden: {message}",
+    "activated": "Der API-Schlüssel „{name}“ wurde aktiviert",
+    "deactivated": "Der API-Schlüssel „{name}“ wurde deaktiviert",
+    "updateFailed": "API-Schlüssel konnte nicht aktualisiert werden: {message}",
+    "copied": "In die Zwischenablage kopiert",
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "expired": "Abgelaufen"
+    },
+    "menu": {
+      "viewDetails": "Details anzeigen",
+      "deactivate": "Deaktivieren",
+      "activate": "Aktivieren",
+      "revoke": "Widerrufen"
+    },
+    "permissions": "Berechtigungen:",
+    "stats": {
+      "totalRequests": "Anfragen gesamt",
+      "last24h": "Letzte 24 Std.",
+      "avgTime": "Ø Zeit"
+    },
+    "notAvailable": "k. A.",
+    "created": "Erstellt: {date}",
+    "lastUsed": "Zuletzt verwendet: {date}",
+    "expires": "Läuft ab: {date}",
+    "details": {
+      "fetchError": "Die Details des API-Schlüssels konnten nicht abgerufen werden",
+      "title": "API-Schlüssel-Details",
+      "description": "Nutzungsstatistiken und Konfiguration",
+      "basicInfo": "Grundlegende Informationen",
+      "name": "Name:",
+      "status": "Status:",
+      "usageStats": "Nutzungsstatistiken",
+      "totalRequests": "Anfragen gesamt:",
+      "last24h": "Letzte 24 Stunden:",
+      "last7d": "Letzte 7 Tage:",
+      "last30d": "Letzte 30 Tage:",
+      "avgResponse": "Durchschnittliche Antwortzeit:",
+      "successRate": "Erfolgsquote:"
+    },
+    "display": {
+      "copiedToast": "API-Schlüssel in die Zwischenablage kopiert",
+      "copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen",
+      "created": "API-Schlüssel erfolgreich erstellt",
+      "important": "Wichtig!",
+      "yourKey": "Ihr neuer API-Schlüssel:",
+      "copied": "Kopiert!",
+      "copy": "Kopieren",
+      "howToUse": "So verwenden Sie Ihren API-Schlüssel:",
+      "stepHeader": "1. Fügen Sie den API-Schlüssel in den Authorization-Header ein:",
+      "stepCurl": "2. Beispiel mit curl:",
+      "stepJavaScript": "3. Beispiel mit JavaScript:",
+      "securityTips": "Sicherheitshinweise:",
+      "tipShare": "Geben Sie Ihren API-Schlüssel niemals öffentlich weiter",
+      "tipStore": "Speichern Sie ihn als Umgebungsvariable in Ihrer Anwendung",
+      "tipRevoke": "Widerrufen Sie den Schlüssel sofort, wenn Sie vermuten, dass er kompromittiert wurde",
+      "tipHttps": "Verwenden Sie bei Anfragen an die API immer HTTPS",
+      "limits": "API-Limits:",
+      "limitRate": "1.000 Anfragen pro Minute",
+      "limitHeaders": "Antworten enthalten Rate-Limit-Header",
+      "limitDocs": "Die vollständige Dokumentation finden Sie unter /docs",
+      "keyCopied": "API-Schlüssel kopiert!",
+      "copyKey": "API-Schlüssel kopieren",
+      "gotIt": "Verstanden"
+    },
+    "create": {
+      "createFailed": "API-Schlüssel konnte nicht erstellt werden",
+      "created": "API-Schlüssel erfolgreich erstellt",
+      "createFailedWithMessage": "API-Schlüssel konnte nicht erstellt werden: {message}",
+      "nameRequired": "Bitte geben Sie einen Namen für den API-Schlüssel ein",
+      "scopeRequired": "Bitte wählen Sie mindestens eine Berechtigung aus",
+      "title": "Neuen API-Schlüssel erstellen",
+      "description": "Erstellen Sie einen API-Schlüssel, um sicher auf die externen Endpunkte zuzugreifen.",
+      "nameLabel": "Name des API-Schlüssels",
+      "namePlaceholder": "z. B. Meine mobile App",
+      "nameHelp": "Ein aussagekräftiger Name zur Identifizierung dieses API-Schlüssels",
+      "expiration": "Ablauf",
+      "expiry": {
+        "never": "Läuft nie ab",
+        "days30": "30 Tage",
+        "days90": "90 Tage",
+        "year1": "1 Jahr",
+        "custom": "Benutzerdefiniertes Datum"
+      },
+      "permissions": "Berechtigungen (Scopes)",
+      "permissionsHelp": "Wählen Sie die Berechtigungen für diesen API-Schlüssel",
+      "permissionsNotice": "Sie können nur Berechtigungen vergeben, die Ihre aktuelle Rolle erlaubt. Berechtigungen lassen sich nach dem Erstellen des API-Schlüssels nicht mehr ändern.",
+      "selectedPermissions": "Ausgewählte Berechtigungen ({count})",
+      "important": "Wichtig:",
+      "importantNotice": "Der API-Schlüssel wird nach dem Erstellen nur einmal angezeigt. Bewahren Sie ihn sicher auf, denn Sie können ihn nicht erneut einsehen.",
+      "cancel": "Abbrechen",
+      "creating": "Wird erstellt ...",
+      "submit": "API-Schlüssel erstellen",
+      "appScopeName": "Anwendung",
+      "appScopeDescription": "Berechtigungen, die diese Anwendung für ihre eigenen Routen definiert"
+    },
+    "scopeLabels": {
+      "users:read": "Benutzerinformationen lesen",
+      "users:write": "Benutzer erstellen und aktualisieren",
+      "users:delete": "Benutzer löschen",
+      "tasks:read": "Aufgaben lesen",
+      "tasks:write": "Aufgaben erstellen und aktualisieren",
+      "tasks:delete": "Aufgaben löschen",
+      "media:read": "Datei- und Medieninformationen lesen",
+      "media:write": "Dateien hochladen und aktualisieren",
+      "media:delete": "Dateien löschen",
+      "teams:read": "Teams, Mitglieder und Einladungen lesen",
+      "teams:write": "Teams, Mitglieder und Einladungen erstellen und aktualisieren",
+      "teams:delete": "Teams löschen",
+      "billing:read": "Abonnements, Rechnungen und Nutzung lesen",
+      "billing:write": "Abonnements, Bezahlvorgänge, Tarifwechsel und Nutzung verwalten",
+      "admin:api-keys": "API-Schlüssel verwalten",
+      "admin:users": "Vollständige Benutzerverwaltung",
+      "admin:devtools": "Zugriff auf die DevTools-APIs (Registries, Tests, geplante Aktionen)",
+      "*": "Vollzugriff (nur Superadmin oder Entwickler)"
+    },
+    "scopeCategories": {
+      "users": {
+        "name": "Benutzer",
+        "description": "Verwaltung der Systembenutzer"
+      },
+      "tasks": {
+        "name": "Aufgaben",
+        "description": "Verwaltung von Aufgaben und To-dos"
+      },
+      "teams": {
+        "name": "Teams",
+        "description": "Teams, Mitglieder und Einladungen"
+      },
+      "billing": {
+        "name": "Abrechnung",
+        "description": "Abonnements, Rechnungen, Nutzung und Tarife"
+      },
+      "admin": {
+        "name": "Administration",
+        "description": "Administrative Funktionen"
+      },
+      "system": {
+        "name": "System",
+        "description": "Vollzugriff auf das System"
+      }
+    }
   }
 }
