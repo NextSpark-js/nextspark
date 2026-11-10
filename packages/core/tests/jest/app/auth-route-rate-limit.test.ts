@@ -89,6 +89,22 @@ describe('auth route rate limit (#364)', () => {
     expect((await post('/api/auth/email-otp/send-verification-otp', { email: 'ana@example.com', type: 'sign-in' })).status).toBe(200)
   })
 
+  test('demo mode: one shared account signs in a sixth time, and the address budget still holds', async () => {
+    process.env.NEXTSPARK_DEMO_MODE = 'true'
+    try {
+      for (let i = 0; i < 6; i++) expect((await post('/api/auth/sign-in/email', { email: 'sample@example.com', password: 'x' }, `198.51.100.${i}`)).status).toBe(200)
+      for (let i = 0; i < 60; i++) await post('/api/auth/sign-in/email', { email: 'sample@example.com', password: 'x' }, '203.0.113.99')
+      expect((await post('/api/auth/sign-in/email', { email: 'sample@example.com', password: 'x' }, '203.0.113.99')).status).toBe(429)
+    } finally {
+      delete process.env.NEXTSPARK_DEMO_MODE
+    }
+  })
+
+  test('without demo mode the sixth sign-in of one email is refused, from any address', async () => {
+    for (let i = 0; i < 5; i++) expect((await post('/api/auth/sign-in/email', { email: 'sample@example.com', password: 'x' }, `198.51.100.${i}`)).status).toBe(200)
+    expect((await post('/api/auth/sign-in/email', { email: 'sample@example.com', password: 'x' }, '198.51.100.9')).status).toBe(429)
+  })
+
   test('password sign-in is limited per email, and the address budget is shared by all emails', async () => {
     for (let i = 0; i < 5; i++) await post('/api/auth/sign-in/email', { email: 'ana@example.com', password: 'x' })
     expect((await post('/api/auth/sign-in/email', { email: 'ana@example.com', password: 'x' })).status).toBe(429)

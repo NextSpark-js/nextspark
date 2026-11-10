@@ -17,6 +17,7 @@ import { withBasePathRequest } from "@nextsparkjs/core/lib/base-path";
 import { getAuthReadinessResponse } from "@nextsparkjs/core/lib/auth/runtime-readiness";
 import { withCodeSendOutcome } from "@nextsparkjs/core/lib/auth/code-send";
 import { authChargeFor, authIdentifierKey, readRequestEmail } from "@nextsparkjs/core/lib/auth/auth-rate-limit";
+import { isDemoMode } from "@nextsparkjs/core/lib/demo/mode";
 
 const handlers = toNextJsHandler(auth);
 
@@ -88,7 +89,8 @@ export async function POST(req: NextRequest) {
   const charge = authChargeFor(req.nextUrl.pathname)
   if (charge) {
     const checks = [await checkDistributedRateLimit(`auth:ip:${getClientIp(req.headers)}`, 'auth')]
-    if (charge.by && checks[0].allowed) {
+    // A demo's accounts are shared by every visitor: a per-email budget would let a handful of them lock the rest out
+    if (charge.by && checks[0].allowed && !isDemoMode()) {
       const email = await readRequestEmail(req)
       if (email !== undefined) checks.push(await checkDistributedRateLimit(authIdentifierKey(charge.by, email), 'authIdentifier'))
     }
