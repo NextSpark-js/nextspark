@@ -10,7 +10,14 @@ const { format, loadNamespace } = jest.requireActual('./next-intl-server.js')
  * `useTranslations` as the English core catalog answers it (a page or a layout that reads its texts renders in a test
  * with no provider), with the `has` and `rich` of the real one: `rich` leaves the tags of the text in place.
  */
+// one translator per namespace, as the real hook memoizes its own (hooks that memoize on it would loop otherwise)
+const translators = new Map()
 function useTranslations(namespace) {
+  if (!translators.has(namespace)) translators.set(namespace, createTranslator(namespace))
+  return translators.get(namespace)
+}
+
+function createTranslator(namespace) {
   // without a namespace (the catalog root) a key starts with its file, and a file core lacks (an entity's) has no keys
   const ns = namespace ? loadNamespace('en', namespace) : null
   const fromRoot = key => {

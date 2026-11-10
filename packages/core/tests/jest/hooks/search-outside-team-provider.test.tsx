@@ -1,7 +1,9 @@
 /** useSearch and useEntitySearch are public hooks: outside a TeamProvider they do not throw and hide billing. */
 import { renderHook, act } from '@testing-library/react'
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+// a translator that stays the same across renders, as next-intl's does
+const mockT = (key: string) => key
+jest.mock('next-intl', () => ({ useTranslations: () => mockT, useLocale: () => 'en' }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }) }))
 jest.mock('@/core/lib/permissions/init', () => ({ permissionRegistry: { hasPermission: () => true } }))
 const mockUser = { id: 'u1', role: 'member', email: 'a@x.com' }

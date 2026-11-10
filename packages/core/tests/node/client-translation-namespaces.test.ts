@@ -61,7 +61,8 @@ function renderedGroups(file: string): TranslationGroup[] {
       relative.includes('/components/patterns/') || relative.includes('/components/permissions/') ||
       relative.includes('/components/settings/') || relative.includes('/components/api/keys/') || relative.includes('/components/teams/') || relative.includes('/components/ui/simple-relation-select') ||
       relative.includes('/components/ui/upload-status') || relative.includes('/components/ui/image-upload') || relative.includes('/components/ui/file-upload') || relative.includes('/components/ui/audio-upload') || relative.includes('/components/ui/video-upload') || relative.includes('/hooks/useFieldUpload') || relative.includes('/hooks/useMediaUpload') ||
-      relative.includes('/utils/dev/TranslationDebugger') || relative.includes('/hooks/useContentTranslation')) return ['dashboard']
+      relative.includes('/utils/dev/TranslationDebugger') || relative.includes('/hooks/useContentTranslation') ||
+      relative.includes('/hooks/useEntitySearch') || relative.includes('/hooks/useSearch.')) return ['dashboard']
   if (relative.includes('/hooks/useValidationSchemas')) return ['auth', 'dashboard']
   if (relative.startsWith('plugins/langchain/components/observability/')) return ['superadmin']
   return []
