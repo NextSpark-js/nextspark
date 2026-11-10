@@ -7,7 +7,8 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { entityNameInText } from '../../lib/entities/entity-text'
 import React, { useState, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
@@ -98,6 +99,7 @@ export function EntityChildManager({
 }: EntityChildManagerProps) {
   const text = useTranslations('entities.childManager')
   const tStatus = useTranslations('common.status')
+  const locale = useLocale()
   // Debug logging
   if (process.env.NODE_ENV === 'development') console.log(`[EntityChildManager] childEntityName: ${childEntityName}`)
   if (process.env.NODE_ENV === 'development') console.log(`[EntityChildManager] customFormComponent:`, customFormComponent)
@@ -426,7 +428,7 @@ export function EntityChildManager({
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertDescription>
-            {text(submissionMode === 'create' ? 'creating' : 'updating', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase() })}
+            {text(submissionMode === 'create' ? 'creating' : 'updating', { entity: entityNameInText(childEntityConfig.display.title.slice(0, -1), locale) })}
           </AlertDescription>
         </Alert>
       )}
@@ -444,7 +446,7 @@ export function EntityChildManager({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {text('maxReached', { entities: childEntityConfig.display.title.toLowerCase(), max: maxItems ?? '' })}
+            {text('maxReached', { entities: entityNameInText(childEntityConfig.display.title, locale), max: maxItems ?? '' })}
           </AlertDescription>
         </Alert>
       )}
@@ -457,10 +459,10 @@ export function EntityChildManager({
               className: "h-12 w-12 text-muted-foreground/50 mb-4" 
             })}
             <h4 className="font-medium mb-2">
-              {text('emptyTitle', { entities: childEntityConfig.display.title.toLowerCase() })}
+              {text('emptyTitle', { entities: entityNameInText(childEntityConfig.display.title, locale) })}
             </h4>
             <p className="text-sm text-muted-foreground text-center mb-4">
-              {text('emptyDescription', { parent: parentEntityConfig.names.singular.toLowerCase(), entities: childEntityConfig.display.title.toLowerCase() })}
+              {text('emptyDescription', { parent: entityNameInText(parentEntityConfig.names.singular, locale), entities: entityNameInText(childEntityConfig.display.title, locale) })}
             </p>
             {onChildAdd && !isAtMaxItems && (
               <Button onClick={handleCreate} variant="outline">
@@ -665,8 +667,8 @@ export function EntityChildManager({
             </DialogTitle>
             <DialogDescription>
               {formState.mode === 'create' 
-                ? text('addDescription', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase(), parent: parentEntityConfig.names.singular.toLowerCase() })
-                : text('editDescription', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase() })
+                ? text('addDescription', { entity: entityNameInText(childEntityConfig.display.title.slice(0, -1), locale), parent: entityNameInText(parentEntityConfig.names.singular, locale) })
+                : text('editDescription', { entity: entityNameInText(childEntityConfig.display.title.slice(0, -1), locale) })
               }
             </DialogDescription>
           </DialogHeader>
@@ -723,7 +725,7 @@ export function EntityChildManager({
           <DialogHeader>
             <DialogTitle>{text('confirmDelete')}</DialogTitle>
             <DialogDescription>
-              {text('confirmDeleteDescription', { entity: childEntityConfig.display.title.slice(0, -1).toLowerCase() })}
+              {text('confirmDeleteDescription', { entity: entityNameInText(childEntityConfig.display.title.slice(0, -1), locale) })}
             </DialogDescription>
           </DialogHeader>
 
