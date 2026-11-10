@@ -1,0 +1,36 @@
+{
+  "entity": {
+    "singular": "Seite",
+    "plural": "Seiten"
+  },
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Seitentitel eingeben...",
+      "description": "Seitentitel, der im Browser und in der Navigation angezeigt wird"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "seiten-slug",
+      "description": "URL-freundliche Kennung (z. B. 'ueber-uns' für /ueber-uns)"
+    },
+    "status": {
+      "label": "Status",
+      "description": "Veröffentlichungsstatus",
+      "options": {
+        "draft": "Entwurf",
+        "published": "Veröffentlicht",
+        "scheduled": "Geplant",
+        "archived": "Archiviert"
+      }
+    },
+    "locale": {
+      "label": "Sprache",
+      "description": "Sprache der Seite",
+      "options": {
+        "en": "English",
+        "es": "Español"
+      }
+    }
+  }
+}

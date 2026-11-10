@@ -1,0 +1,95 @@
+{
+  "entity": {
+    "singular": "contact",
+    "plural": "Contacts"
+  },
+  "fields": {
+    "firstName": {
+      "label": "Prénom",
+      "placeholder": "Saisissez le prénom...",
+      "description": "Prénom du contact"
+    },
+    "lastName": {
+      "label": "Nom",
+      "placeholder": "Saisissez le nom...",
+      "description": "Nom du contact"
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "Saisissez l'adresse e-mail...",
+      "description": "Adresse e-mail du contact"
+    },
+    "phone": {
+      "label": "Téléphone",
+      "placeholder": "Saisissez le numéro de téléphone...",
+      "description": "Numéro de téléphone du bureau"
+    },
+    "mobile": {
+      "label": "Portable",
+      "placeholder": "Saisissez le numéro de portable...",
+      "description": "Numéro de téléphone portable"
+    },
+    "companyId": {
+      "label": "Entreprise",
+      "placeholder": "Sélectionnez l'entreprise...",
+      "description": "Entreprise associée"
+    },
+    "position": {
+      "label": "Poste",
+      "placeholder": "Saisissez le poste...",
+      "description": "Poste ou fonction"
+    },
+    "department": {
+      "label": "Service",
+      "placeholder": "Saisissez le service...",
+      "description": "Service au sein de l'entreprise"
+    },
+    "isPrimary": {
+      "label": "Contact principal",
+      "description": "Est le contact principal de l'entreprise"
+    },
+    "birthDate": {
+      "label": "Date de naissance",
+      "placeholder": "Sélectionnez la date...",
+      "description": "Date de naissance du contact"
+    },
+    "linkedin": {
+      "label": "LinkedIn",
+      "description": "URL du profil LinkedIn"
+    },
+    "twitter": {
+      "label": "Twitter",
+      "placeholder": "@utilisateur",
+      "description": "Identifiant Twitter/X"
+    },
+    "preferredChannel": {
+      "label": "Canal préféré",
+      "placeholder": "Sélectionnez le canal...",
+      "description": "Canal de communication préféré",
+      "options": {
+        "email": "E-mail",
+        "phone": "Téléphone",
+        "whatsapp": "WhatsApp",
+        "linkedin": "LinkedIn",
+        "slack": "Slack",
+        "other": "Autre"
+      }
+    },
+    "timezone": {
+      "label": "Fuseau horaire",
+      "description": "Fuseau horaire du contact"
+    },
+    "lastContactedAt": {
+      "label": "Dernier contact",
+      "description": "Dernière fois que ce contact a été joint"
+    },
+    "createdAt": {
+      "label": "Créé le",
+      "description": "Quand le contact a été créé"
+    },
+    "updatedAt": {
+      "label": "Mis à jour le",
+      "description": "Quand le contact a été mis à jour pour la dernière fois"
+    }
+  }
+}

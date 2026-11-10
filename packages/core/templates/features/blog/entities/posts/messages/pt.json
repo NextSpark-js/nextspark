@@ -1,0 +1,37 @@
+{
+  "entity": {
+    "singular": "publicação",
+    "plural": "Publicações"
+  },
+  "fields": {
+    "title": {
+      "label": "Título",
+      "placeholder": "Digite o título...",
+      "description": "Título da publicação"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "slug-da-publicacao",
+      "description": "Identificador amigável para URL"
+    },
+    "status": {
+      "label": "Status",
+      "description": "Status de publicação",
+      "options": {
+        "draft": "Rascunho",
+        "published": "Publicado",
+        "scheduled": "Agendado",
+        "archived": "Arquivado"
+      }
+    },
+    "excerpt": {
+      "label": "Resumo",
+      "placeholder": "Breve descrição...",
+      "description": "Resumo curto exibido nas listagens"
+    },
+    "featuredImage": {
+      "label": "Imagem destacada",
+      "description": "Imagem principal da publicação"
+    }
+  }
+}

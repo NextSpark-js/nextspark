@@ -1,0 +1,54 @@
+{
+  "entity": {
+    "singular": "pipeline",
+    "plural": "Pipelines"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome do pipeline",
+      "placeholder": "Digite o nome do pipeline...",
+      "description": "Nome do pipeline"
+    },
+    "description": {
+      "label": "Descrição",
+      "placeholder": "Digite a descrição...",
+      "description": "Descrição do pipeline"
+    },
+    "type": {
+      "label": "Tipo de pipeline",
+      "placeholder": "Selecione o tipo...",
+      "description": "Tipo de pipeline",
+      "options": {
+        "sales": "Vendas",
+        "support": "Suporte",
+        "project": "Projeto",
+        "custom": "Personalizado"
+      }
+    },
+    "isDefault": {
+      "label": "Pipeline padrão",
+      "description": "Se este é o pipeline padrão"
+    },
+    "isActive": {
+      "label": "Ativo",
+      "description": "Se o pipeline está ativo no momento"
+    },
+    "stages": {
+      "label": "Etapas do pipeline",
+      "placeholder": "Configurar etapas...",
+      "description": "Configuração das etapas como array JSON"
+    },
+    "dealRottenDays": {
+      "label": "Dias até o negócio estagnar",
+      "description": "Dias até que um negócio seja considerado estagnado"
+    },
+    "createdAt": {
+      "label": "Criado em",
+      "description": "Quando o pipeline foi criado"
+    },
+    "updatedAt": {
+      "label": "Atualizado em",
+      "description": "Quando o pipeline foi atualizado pela última vez"
+    }
+  }
+}

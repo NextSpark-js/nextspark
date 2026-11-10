@@ -1,7 +1,7 @@
 {
   "entity": {
-    "name": "Aufgabe",
-    "namePlural": "Aufgaben",
+    "singular": "Aufgabe",
+    "plural": "Aufgaben",
     "description": "Verwalten Sie Ihre Aufgaben und To-Do-Elemente"
   },
   "title": "Meine Aufgaben",
@@ -21,12 +21,25 @@
     "status": {
       "label": "Status",
       "placeholder": "Status auswählen...",
-      "description": "Aktueller Status der Aufgabe"
+      "description": "Aktueller Status der Aufgabe",
+      "options": {
+        "todo": "Zu erledigen",
+        "in-progress": "In Bearbeitung",
+        "review": "In Überprüfung",
+        "done": "Erledigt",
+        "blocked": "Blockiert"
+      }
     },
     "priority": {
       "label": "Priorität",
       "placeholder": "Priorität auswählen...",
-      "description": "Prioritätsstufe der Aufgabe"
+      "description": "Prioritätsstufe der Aufgabe",
+      "options": {
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "urgent": "Dringend"
+      }
     },
     "dueDate": {
       "label": "Fälligkeitsdatum",
@@ -42,6 +55,10 @@
       "label": "Tags",
       "placeholder": "Tags hinzufügen...",
       "description": "Tags zur Kategorisierung"
+    },
+    "completed": {
+      "label": "Erledigt",
+      "description": "Als erledigt markieren (Altfeld, stattdessen den Status verwenden)"
     }
   },
   "status": {

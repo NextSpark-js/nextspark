@@ -1,0 +1,125 @@
+{
+  "entity": {
+    "singular": "Unternehmen",
+    "plural": "Unternehmen"
+  },
+  "fields": {
+    "name": {
+      "label": "Unternehmensname",
+      "placeholder": "Unternehmensnamen eingeben...",
+      "description": "Anzeigename des Unternehmens"
+    },
+    "legalName": {
+      "label": "Rechtlicher Name",
+      "placeholder": "Rechtlichen Namen eingeben...",
+      "description": "Eingetragener Firmenname"
+    },
+    "taxId": {
+      "label": "Steuernummer",
+      "placeholder": "Steuernummer eingeben...",
+      "description": "Steuerliche Identifikationsnummer"
+    },
+    "website": {
+      "label": "Website",
+      "placeholder": "https://beispiel.de",
+      "description": "URL der Unternehmenswebsite"
+    },
+    "email": {
+      "label": "E-Mail",
+      "placeholder": "info@unternehmen.de",
+      "description": "Allgemeine E-Mail-Adresse des Unternehmens"
+    },
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "Telefonnummer eingeben...",
+      "description": "Haupttelefonnummer des Unternehmens"
+    },
+    "industry": {
+      "label": "Branche",
+      "placeholder": "Branche eingeben...",
+      "description": "Wirtschaftszweig"
+    },
+    "type": {
+      "label": "Unternehmenstyp",
+      "placeholder": "Typ auswählen...",
+      "description": "Art der Geschäftsbeziehung",
+      "options": {
+        "prospect": "Interessent",
+        "customer": "Kunde",
+        "partner": "Partner",
+        "competitor": "Wettbewerber",
+        "vendor": "Lieferant",
+        "other": "Sonstiges"
+      }
+    },
+    "size": {
+      "label": "Unternehmensgröße",
+      "placeholder": "Größe auswählen...",
+      "description": "Unternehmensgröße nach Mitarbeitenden",
+      "options": {
+        "1-10": "1–10 Mitarbeitende",
+        "11-50": "11–50 Mitarbeitende",
+        "51-200": "51–200 Mitarbeitende",
+        "201-500": "201–500 Mitarbeitende",
+        "500+": "Über 500 Mitarbeitende"
+      }
+    },
+    "annualRevenue": {
+      "label": "Jahresumsatz",
+      "description": "Jahresumsatz in der Währung"
+    },
+    "address": {
+      "label": "Adresse",
+      "placeholder": "Adresse eingeben...",
+      "description": "Straße und Hausnummer"
+    },
+    "city": {
+      "label": "Stadt",
+      "placeholder": "Stadt eingeben...",
+      "description": "Stadt"
+    },
+    "state": {
+      "label": "Bundesland",
+      "placeholder": "Bundesland eingeben...",
+      "description": "Bundesland oder Region"
+    },
+    "country": {
+      "label": "Land",
+      "placeholder": "DE",
+      "description": "Land"
+    },
+    "postalCode": {
+      "label": "Postleitzahl",
+      "placeholder": "Postleitzahl eingeben...",
+      "description": "Postleitzahl"
+    },
+    "logo": {
+      "label": "Logo",
+      "placeholder": "https://beispiel.de/logo.png",
+      "description": "URL des Firmenlogos"
+    },
+    "rating": {
+      "label": "Bewertung",
+      "placeholder": "Bewertung auswählen...",
+      "description": "Vertriebsbewertung",
+      "options": {
+        "hot": "Heiß",
+        "warm": "Warm",
+        "cold": "Kalt"
+      }
+    },
+    "assignedTo": {
+      "label": "Zugewiesen an",
+      "placeholder": "Benutzer auswählen...",
+      "description": "Zuständige/r Kundenbetreuer/in"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann das Unternehmen angelegt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann das Unternehmen zuletzt aktualisiert wurde"
+    }
+  }
+}

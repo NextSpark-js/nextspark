@@ -1,7 +1,7 @@
 {
   "entity": {
-    "name": "Tarefa",
-    "namePlural": "Tarefas",
+    "singular": "tarefa",
+    "plural": "Tarefas",
     "description": "Gerencie suas tarefas e itens a fazer"
   },
   "title": "Minhas Tarefas",
@@ -21,12 +21,25 @@
     "status": {
       "label": "Status",
       "placeholder": "Selecione o status...",
-      "description": "Status atual da tarefa"
+      "description": "Status atual da tarefa",
+      "options": {
+        "todo": "A fazer",
+        "in-progress": "Em andamento",
+        "review": "Em revisão",
+        "done": "Concluída",
+        "blocked": "Bloqueada"
+      }
     },
     "priority": {
       "label": "Prioridade",
       "placeholder": "Selecione a prioridade...",
-      "description": "Nível de prioridade da tarefa"
+      "description": "Nível de prioridade da tarefa",
+      "options": {
+        "low": "Baixa",
+        "medium": "Média",
+        "high": "Alta",
+        "urgent": "Urgente"
+      }
     },
     "dueDate": {
       "label": "Data de vencimento",
@@ -42,6 +55,10 @@
       "label": "Tags",
       "placeholder": "Adicionar tags...",
       "description": "Tags para categorização"
+    },
+    "completed": {
+      "label": "Concluída",
+      "description": "Marcar como concluída (campo legado, use o status)"
     }
   },
   "status": {

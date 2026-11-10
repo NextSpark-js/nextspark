@@ -1,0 +1,114 @@
+{
+  "entity": {
+    "singular": "produto",
+    "plural": "Produtos"
+  },
+  "fields": {
+    "code": {
+      "label": "Código do produto",
+      "placeholder": "Digite o código do produto...",
+      "description": "Código ou SKU do produto"
+    },
+    "name": {
+      "label": "Nome do produto",
+      "placeholder": "Digite o nome do produto...",
+      "description": "Nome do produto ou serviço"
+    },
+    "category": {
+      "label": "Categoria",
+      "placeholder": "Digite a categoria...",
+      "description": "Categoria do produto"
+    },
+    "type": {
+      "label": "Tipo de produto",
+      "placeholder": "Selecione o tipo...",
+      "description": "Tipo de produto",
+      "options": {
+        "product": "Produto",
+        "service": "Serviço",
+        "subscription": "Assinatura",
+        "bundle": "Pacote",
+        "addon": "Complemento"
+      }
+    },
+    "description": {
+      "label": "Descrição",
+      "placeholder": "Digite a descrição...",
+      "description": "Descrição do produto"
+    },
+    "price": {
+      "label": "Preço",
+      "description": "Preço de venda padrão"
+    },
+    "cost": {
+      "label": "Custo",
+      "description": "Custo do produto"
+    },
+    "currency": {
+      "label": "Moeda",
+      "placeholder": "Selecione a moeda...",
+      "description": "Código da moeda",
+      "options": {
+        "USD": "Dólar americano",
+        "EUR": "Euro",
+        "GBP": "Libra esterlina",
+        "MXN": "Peso mexicano",
+        "CAD": "Dólar canadense",
+        "AUD": "Dólar australiano",
+        "JPY": "Iene japonês",
+        "CNY": "Yuan chinês",
+        "INR": "Rupia indiana",
+        "BRL": "Real brasileiro"
+      }
+    },
+    "unit": {
+      "label": "Unidade de medida",
+      "placeholder": "Selecione a unidade...",
+      "description": "Unidade de medida",
+      "options": {
+        "piece": "Peça",
+        "hour": "Hora",
+        "day": "Dia",
+        "week": "Semana",
+        "month": "Mês",
+        "year": "Ano",
+        "kg": "Quilograma",
+        "lb": "Libra",
+        "meter": "Metro",
+        "foot": "Pé",
+        "license": "Licença",
+        "user": "Usuário"
+      }
+    },
+    "isActive": {
+      "label": "Ativo",
+      "description": "Se o produto está ativo no momento"
+    },
+    "minimumQuantity": {
+      "label": "Quantidade mínima",
+      "description": "Quantidade mínima por pedido"
+    },
+    "image": {
+      "label": "Imagem",
+      "placeholder": "https://exemplo.com/imagem.png",
+      "description": "URL da imagem do produto"
+    },
+    "brochureUrl": {
+      "label": "URL do folheto",
+      "placeholder": "https://exemplo.com/folheto.pdf",
+      "description": "URL do folheto do produto"
+    },
+    "commissionRate": {
+      "label": "Comissão (%)",
+      "description": "Percentual de comissão de vendas"
+    },
+    "createdAt": {
+      "label": "Criado em",
+      "description": "Quando o produto foi criado"
+    },
+    "updatedAt": {
+      "label": "Atualizado em",
+      "description": "Quando o produto foi atualizado pela última vez"
+    }
+  }
+}

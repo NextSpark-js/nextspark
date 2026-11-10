@@ -3,7 +3,6 @@
   "singular": "List",
   "plural": "Lists",
   "description": "Columns within boards to organize cards",
-
   "fields": {
     "name": {
       "label": "Name",
@@ -28,7 +27,6 @@
       "description": "When the list was last modified"
     }
   },
-
   "actions": {
     "create": "Add List",
     "edit": "Edit List",
@@ -36,7 +34,6 @@
     "moveLeft": "Move Left",
     "moveRight": "Move Right"
   },
-
   "messages": {
     "created": "List created successfully",
     "updated": "List updated successfully",
@@ -44,17 +41,18 @@
     "moved": "List moved",
     "confirmDelete": "Are you sure you want to delete this list? All cards within it will be permanently removed."
   },
-
   "empty": {
     "title": "No lists yet",
     "description": "Add a list to start organizing your cards.",
     "action": "Add a list"
   },
-
   "defaults": {
     "todo": "To Do",
     "inProgress": "In Progress",
     "done": "Done"
+  },
+  "entity": {
+    "singular": "list",
+    "plural": "Lists"
   }
 }
-

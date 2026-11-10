@@ -1,6 +1,6 @@
 {
   "entity": {
-    "singular": "Post",
+    "singular": "post",
     "plural": "Posts"
   },
   "fields": {
@@ -27,7 +27,7 @@
     "excerpt": {
       "label": "Excerpt",
       "placeholder": "Brief description...",
-      "description": "Short summary shown in listings"
+      "description": "Short summary of the post"
     },
     "featuredImage": {
       "label": "Featured Image",

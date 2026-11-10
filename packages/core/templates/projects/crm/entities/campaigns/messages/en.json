@@ -1,33 +1,58 @@
 {
   "entity": {
-    "name": "Campaign",
+    "singular": "campaign",
     "plural": "Campaigns",
     "description": "Manage marketing campaigns and outreach"
   },
   "fields": {
     "name": {
       "label": "Campaign Name",
-      "description": "Campaign name or title",
+      "description": "Campaign name",
       "placeholder": "Enter campaign name..."
     },
     "type": {
       "label": "Campaign Type",
-      "description": "Type of marketing campaign",
-      "placeholder": "Select type..."
+      "description": "Type of campaign",
+      "placeholder": "Select type...",
+      "options": {
+        "email": "Email",
+        "social": "Social Media",
+        "event": "Event",
+        "webinar": "Webinar",
+        "advertising": "Advertising",
+        "content": "Content Marketing",
+        "other": "Other"
+      }
     },
     "status": {
       "label": "Status",
       "description": "Current campaign status",
-      "placeholder": "Select status..."
+      "placeholder": "Select status...",
+      "options": {
+        "planned": "Planned",
+        "active": "Active",
+        "paused": "Paused",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
     },
     "channel": {
-      "label": "Channel",
-      "description": "Marketing channel used",
-      "placeholder": "Select channel..."
+      "label": "Main Channel",
+      "description": "Main campaign channel",
+      "placeholder": "Select channel...",
+      "options": {
+        "email": "Email",
+        "social_media": "Social Media",
+        "web": "Web",
+        "print": "Print",
+        "tv": "TV",
+        "radio": "Radio",
+        "other": "Other"
+      }
     },
     "budget": {
       "label": "Budget",
-      "description": "Campaign budget amount",
+      "description": "Campaign budget",
       "placeholder": "0.00"
     },
     "spend": {
@@ -38,7 +63,7 @@
     "targetAudience": {
       "label": "Target Audience",
       "description": "Target audience description",
-      "placeholder": "Enter target audience..."
+      "placeholder": "Describe target audience..."
     },
     "startDate": {
       "label": "Start Date",
@@ -82,43 +107,51 @@
     },
     "assignedTo": {
       "label": "Campaign Manager",
-      "description": "User managing this campaign",
+      "description": "Campaign manager assigned",
       "placeholder": "Select user..."
-    }
-  },
-  "options": {
-    "type": {
-      "email": "Email Marketing",
-      "social": "Social Media",
-      "ppc": "Pay-Per-Click",
-      "content": "Content Marketing",
-      "webinar": "Webinar",
-      "event": "Event",
-      "referral": "Referral",
-      "affiliate": "Affiliate",
-      "retargeting": "Retargeting"
     },
-    "status": {
-      "draft": "Draft",
-      "scheduled": "Scheduled",
-      "active": "Active",
-      "paused": "Paused",
-      "completed": "Completed",
-      "cancelled": "Cancelled"
+    "objective": {
+      "label": "Objective",
+      "placeholder": "Enter objective...",
+      "description": "Campaign objective"
     },
-    "channel": {
-      "email": "Email",
-      "facebook": "Facebook",
-      "instagram": "Instagram",
-      "linkedin": "LinkedIn",
-      "twitter": "Twitter",
-      "google_ads": "Google Ads",
-      "youtube": "YouTube",
-      "tiktok": "TikTok",
-      "website": "Website",
-      "blog": "Blog",
-      "seo": "SEO",
-      "other": "Other"
+    "description": {
+      "label": "Description",
+      "placeholder": "Enter description...",
+      "description": "Detailed campaign description"
+    },
+    "actualCost": {
+      "label": "Actual Cost",
+      "placeholder": "0.00",
+      "description": "Actual cost spent"
+    },
+    "targetLeads": {
+      "label": "Target Leads",
+      "placeholder": "0",
+      "description": "Target number of leads"
+    },
+    "actualLeads": {
+      "label": "Actual Leads",
+      "placeholder": "0",
+      "description": "Actual leads generated"
+    },
+    "targetRevenue": {
+      "label": "Target Revenue",
+      "placeholder": "0.00",
+      "description": "Target revenue to generate"
+    },
+    "actualRevenue": {
+      "label": "Actual Revenue",
+      "placeholder": "0.00",
+      "description": "Actual revenue generated"
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the campaign was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the campaign was last updated"
     }
   },
   "actions": {

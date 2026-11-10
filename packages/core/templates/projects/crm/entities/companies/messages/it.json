@@ -1,0 +1,125 @@
+{
+  "entity": {
+    "singular": "azienda",
+    "plural": "Aziende"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome dell'azienda",
+      "placeholder": "Inserisci il nome dell'azienda...",
+      "description": "Nome commerciale dell'azienda"
+    },
+    "legalName": {
+      "label": "Ragione sociale",
+      "placeholder": "Inserisci la ragione sociale...",
+      "description": "Nome legale registrato dell'azienda"
+    },
+    "taxId": {
+      "label": "Partita IVA",
+      "placeholder": "Inserisci la partita IVA...",
+      "description": "Numero di identificazione fiscale"
+    },
+    "website": {
+      "label": "Sito web",
+      "placeholder": "https://esempio.it",
+      "description": "URL del sito web dell'azienda"
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "info@azienda.it",
+      "description": "Email generale dell'azienda"
+    },
+    "phone": {
+      "label": "Telefono",
+      "placeholder": "Inserisci il numero di telefono...",
+      "description": "Numero di telefono principale"
+    },
+    "industry": {
+      "label": "Settore",
+      "placeholder": "Inserisci il settore...",
+      "description": "Settore di attività"
+    },
+    "type": {
+      "label": "Tipo di azienda",
+      "placeholder": "Seleziona il tipo...",
+      "description": "Tipo di relazione commerciale",
+      "options": {
+        "prospect": "Potenziale cliente",
+        "customer": "Cliente",
+        "partner": "Partner",
+        "competitor": "Concorrente",
+        "vendor": "Fornitore",
+        "other": "Altro"
+      }
+    },
+    "size": {
+      "label": "Dimensione dell'azienda",
+      "placeholder": "Seleziona la dimensione...",
+      "description": "Dimensione dell'azienda per numero di dipendenti",
+      "options": {
+        "1-10": "1-10 dipendenti",
+        "11-50": "11-50 dipendenti",
+        "51-200": "51-200 dipendenti",
+        "201-500": "201-500 dipendenti",
+        "500+": "Oltre 500 dipendenti"
+      }
+    },
+    "annualRevenue": {
+      "label": "Fatturato annuo",
+      "description": "Fatturato annuo nella valuta"
+    },
+    "address": {
+      "label": "Indirizzo",
+      "placeholder": "Inserisci l'indirizzo...",
+      "description": "Indirizzo (via e numero)"
+    },
+    "city": {
+      "label": "Città",
+      "placeholder": "Inserisci la città...",
+      "description": "Città"
+    },
+    "state": {
+      "label": "Provincia",
+      "placeholder": "Inserisci la provincia...",
+      "description": "Provincia o regione"
+    },
+    "country": {
+      "label": "Paese",
+      "placeholder": "IT",
+      "description": "Paese"
+    },
+    "postalCode": {
+      "label": "CAP",
+      "placeholder": "Inserisci il CAP...",
+      "description": "Codice di avviamento postale"
+    },
+    "logo": {
+      "label": "Logo",
+      "placeholder": "https://esempio.it/logo.png",
+      "description": "URL del logo dell'azienda"
+    },
+    "rating": {
+      "label": "Valutazione",
+      "placeholder": "Seleziona la valutazione...",
+      "description": "Valutazione commerciale",
+      "options": {
+        "hot": "Caldo",
+        "warm": "Tiepido",
+        "cold": "Freddo"
+      }
+    },
+    "assignedTo": {
+      "label": "Assegnato a",
+      "placeholder": "Seleziona l'utente...",
+      "description": "Account manager assegnato"
+    },
+    "createdAt": {
+      "label": "Creata il",
+      "description": "Quando è stata creata l'azienda"
+    },
+    "updatedAt": {
+      "label": "Aggiornata il",
+      "description": "Quando è stata aggiornata l'ultima volta"
+    }
+  }
+}

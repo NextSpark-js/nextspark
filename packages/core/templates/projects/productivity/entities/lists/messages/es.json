@@ -3,7 +3,6 @@
   "singular": "Lista",
   "plural": "Listas",
   "description": "Columnas dentro de los tableros para organizar tarjetas",
-
   "fields": {
     "name": {
       "label": "Nombre",
@@ -28,7 +27,6 @@
       "description": "Cuándo se modificó por última vez"
     }
   },
-
   "actions": {
     "create": "Agregar Lista",
     "edit": "Editar Lista",
@@ -36,7 +34,6 @@
     "moveLeft": "Mover a la Izquierda",
     "moveRight": "Mover a la Derecha"
   },
-
   "messages": {
     "created": "Lista creada exitosamente",
     "updated": "Lista actualizada exitosamente",
@@ -44,17 +41,18 @@
     "moved": "Lista movida",
     "confirmDelete": "¿Estás seguro de que quieres eliminar esta lista? Todas las tarjetas dentro de ella serán eliminadas permanentemente."
   },
-
   "empty": {
     "title": "Aún no hay listas",
     "description": "Agrega una lista para comenzar a organizar tus tarjetas.",
     "action": "Agregar una lista"
   },
-
   "defaults": {
     "todo": "Por Hacer",
     "inProgress": "En Progreso",
     "done": "Hecho"
+  },
+  "entity": {
+    "singular": "lista",
+    "plural": "Listas"
   }
 }
-

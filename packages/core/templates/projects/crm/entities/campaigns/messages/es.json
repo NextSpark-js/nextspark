@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Campaña",
+    "singular": "campaña",
     "plural": "Campañas",
     "description": "Gestiona campañas de marketing y promoción"
   },
@@ -13,17 +13,42 @@
     "type": {
       "label": "Tipo",
       "description": "Tipo de campaña de marketing",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "email": "Email Marketing",
+        "social": "Redes Sociales",
+        "event": "Evento",
+        "webinar": "Webinar",
+        "advertising": "Publicidad",
+        "content": "Marketing de Contenido",
+        "other": "Otro"
+      }
     },
     "status": {
       "label": "Estado",
       "description": "Estado actual de la campaña",
-      "placeholder": "Seleccionar estado..."
+      "placeholder": "Seleccionar estado...",
+      "options": {
+        "planned": "Planificada",
+        "active": "Activa",
+        "paused": "Pausada",
+        "completed": "Completada",
+        "cancelled": "Cancelada"
+      }
     },
     "channel": {
       "label": "Canal",
       "description": "Canal de marketing utilizado",
-      "placeholder": "Seleccionar canal..."
+      "placeholder": "Seleccionar canal...",
+      "options": {
+        "email": "Email",
+        "social_media": "Redes sociales",
+        "web": "Web",
+        "print": "Impresos",
+        "tv": "TV",
+        "radio": "Radio",
+        "other": "Otro"
+      }
     },
     "budget": {
       "label": "Presupuesto",
@@ -84,41 +109,44 @@
       "label": "Responsable",
       "description": "Usuario responsable",
       "placeholder": "Seleccionar usuario..."
-    }
-  },
-  "options": {
-    "type": {
-      "email": "Email Marketing",
-      "social": "Redes Sociales",
-      "ppc": "Pago por Clic",
-      "content": "Marketing de Contenido",
-      "webinar": "Webinar",
-      "event": "Evento",
-      "referral": "Referidos",
-      "affiliate": "Afiliados",
-      "retargeting": "Retargeting"
     },
-    "status": {
-      "draft": "Borrador",
-      "scheduled": "Programada",
-      "active": "Activa",
-      "paused": "Pausada",
-      "completed": "Completada",
-      "cancelled": "Cancelada"
+    "objective": {
+      "label": "Objetivo",
+      "placeholder": "Ingrese objetivo...",
+      "description": "Objetivo de la campaña"
     },
-    "channel": {
-      "email": "Email",
-      "facebook": "Facebook",
-      "instagram": "Instagram",
-      "linkedin": "LinkedIn",
-      "twitter": "Twitter",
-      "google_ads": "Google Ads",
-      "youtube": "YouTube",
-      "tiktok": "TikTok",
-      "website": "Sitio Web",
-      "blog": "Blog",
-      "seo": "SEO",
-      "other": "Otro"
+    "description": {
+      "label": "Descripción",
+      "placeholder": "Ingrese descripción...",
+      "description": "Descripción detallada de la campaña"
+    },
+    "actualCost": {
+      "label": "Costo real",
+      "description": "Costo real invertido"
+    },
+    "targetLeads": {
+      "label": "Leads objetivo",
+      "description": "Cantidad de leads objetivo"
+    },
+    "actualLeads": {
+      "label": "Leads reales",
+      "description": "Leads generados realmente"
+    },
+    "targetRevenue": {
+      "label": "Ingresos objetivo",
+      "description": "Ingresos que se busca generar"
+    },
+    "actualRevenue": {
+      "label": "Ingresos reales",
+      "description": "Ingresos generados realmente"
+    },
+    "createdAt": {
+      "label": "Creada el",
+      "description": "Cuándo se creó la campaña"
+    },
+    "updatedAt": {
+      "label": "Actualizada el",
+      "description": "Cuándo se actualizó por última vez"
     }
   },
   "actions": {

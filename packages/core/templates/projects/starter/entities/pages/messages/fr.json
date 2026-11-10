@@ -1,0 +1,36 @@
+{
+  "entity": {
+    "singular": "page",
+    "plural": "Pages"
+  },
+  "fields": {
+    "title": {
+      "label": "Titre",
+      "placeholder": "Saisissez le titre de la page...",
+      "description": "Titre de la page affiché dans le navigateur et la navigation"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "slug-de-la-page",
+      "description": "Identifiant adapté aux URL (ex. : 'a-propos' pour /a-propos)"
+    },
+    "status": {
+      "label": "Statut",
+      "description": "Statut de publication",
+      "options": {
+        "draft": "Brouillon",
+        "published": "Publié",
+        "scheduled": "Planifié",
+        "archived": "Archivé"
+      }
+    },
+    "locale": {
+      "label": "Langue",
+      "description": "Langue de la page",
+      "options": {
+        "en": "English",
+        "es": "Español"
+      }
+    }
+  }
+}

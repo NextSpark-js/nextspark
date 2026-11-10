@@ -1,0 +1,106 @@
+{
+  "entity": {
+    "singular": "Lead",
+    "plural": "Leads"
+  },
+  "fields": {
+    "companyName": {
+      "label": "Unternehmensname",
+      "placeholder": "Unternehmensnamen eingeben...",
+      "description": "Name des interessierten Unternehmens"
+    },
+    "contactName": {
+      "label": "Name des Kontakts",
+      "placeholder": "Namen des Kontakts eingeben...",
+      "description": "Name der Kontaktperson"
+    },
+    "email": {
+      "label": "E-Mail",
+      "placeholder": "E-Mail-Adresse eingeben...",
+      "description": "E-Mail-Adresse"
+    },
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "Telefonnummer eingeben...",
+      "description": "Telefonnummer"
+    },
+    "website": {
+      "label": "Website",
+      "placeholder": "https://beispiel.de",
+      "description": "Website des Unternehmens"
+    },
+    "source": {
+      "label": "Lead-Quelle",
+      "placeholder": "Quelle auswählen...",
+      "description": "Wie dieser Lead gewonnen wurde",
+      "options": {
+        "web": "Website",
+        "referral": "Empfehlung",
+        "cold_call": "Kaltakquise",
+        "trade_show": "Messe",
+        "social_media": "Soziale Medien",
+        "email": "E-Mail",
+        "advertising": "Werbung",
+        "partner": "Partner",
+        "other": "Sonstiges"
+      }
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Status auswählen...",
+      "description": "Aktueller Status des Leads",
+      "options": {
+        "new": "Neu",
+        "contacted": "Kontaktiert",
+        "qualified": "Qualifiziert",
+        "proposal": "Angebot",
+        "negotiation": "Verhandlung",
+        "converted": "Konvertiert",
+        "lost": "Verloren"
+      }
+    },
+    "score": {
+      "label": "Lead-Score",
+      "description": "Lead-Score von 0 bis 100"
+    },
+    "industry": {
+      "label": "Branche",
+      "placeholder": "Branche eingeben...",
+      "description": "Wirtschaftszweig"
+    },
+    "companySize": {
+      "label": "Unternehmensgröße",
+      "placeholder": "Unternehmensgröße auswählen...",
+      "description": "Anzahl der Mitarbeitenden",
+      "options": {
+        "1-10": "1–10 Mitarbeitende",
+        "11-50": "11–50 Mitarbeitende",
+        "51-200": "51–200 Mitarbeitende",
+        "201-500": "201–500 Mitarbeitende",
+        "500+": "Über 500 Mitarbeitende"
+      }
+    },
+    "budget": {
+      "label": "Geschätztes Budget",
+      "description": "Geschätzter Budgetbetrag"
+    },
+    "assignedTo": {
+      "label": "Zugewiesen an",
+      "placeholder": "Benutzer auswählen...",
+      "description": "Vertriebsmitarbeiter/in für diesen Lead"
+    },
+    "notes": {
+      "label": "Notizen",
+      "placeholder": "Notizen eingeben...",
+      "description": "Interne Notizen zum Lead"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann der Lead angelegt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann der Lead zuletzt aktualisiert wurde"
+    }
+  }
+}

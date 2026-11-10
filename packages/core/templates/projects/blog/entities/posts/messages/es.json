@@ -3,7 +3,6 @@
   "singular": "Post",
   "plural": "Posts",
   "description": "Gestiona tus posts del blog",
-
   "fields": {
     "title": {
       "label": "Título",
@@ -62,9 +61,12 @@
     "updatedAt": {
       "label": "Actualizado",
       "description": "Cuándo se modificó por última vez"
+    },
+    "featured": {
+      "label": "Destacado",
+      "description": "Muestra este post en la sección de destacados de la página de inicio"
     }
   },
-
   "actions": {
     "create": "Nuevo Post",
     "edit": "Editar Post",
@@ -74,7 +76,6 @@
     "saveDraft": "Guardar Borrador",
     "preview": "Vista Previa"
   },
-
   "messages": {
     "created": "Post creado exitosamente",
     "updated": "Post actualizado exitosamente",
@@ -83,18 +84,19 @@
     "unpublished": "Post despublicado",
     "confirmDelete": "¿Estás seguro de que quieres eliminar este post? Esta acción no se puede deshacer."
   },
-
   "empty": {
     "title": "Aún no hay posts",
     "description": "Comienza escribiendo tu primer post del blog.",
     "action": "Escribe tu primer post"
   },
-
   "filters": {
     "all": "Todos los Posts",
     "published": "Publicados",
     "draft": "Borradores",
     "scheduled": "Programados"
+  },
+  "entity": {
+    "singular": "post",
+    "plural": "Posts"
   }
 }
-

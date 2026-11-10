@@ -1,0 +1,106 @@
+{
+  "entity": {
+    "singular": "lead",
+    "plural": "Leads"
+  },
+  "fields": {
+    "companyName": {
+      "label": "Nom de l'entreprise",
+      "placeholder": "Saisissez le nom de l'entreprise...",
+      "description": "Nom de l'entreprise prospectée"
+    },
+    "contactName": {
+      "label": "Nom du contact",
+      "placeholder": "Saisissez le nom du contact...",
+      "description": "Nom de la personne à contacter"
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "Saisissez l'adresse e-mail...",
+      "description": "Adresse e-mail"
+    },
+    "phone": {
+      "label": "Téléphone",
+      "placeholder": "Saisissez le numéro de téléphone...",
+      "description": "Numéro de téléphone"
+    },
+    "website": {
+      "label": "Site web",
+      "placeholder": "https://exemple.fr",
+      "description": "Site web de l'entreprise"
+    },
+    "source": {
+      "label": "Source du lead",
+      "placeholder": "Sélectionnez la source...",
+      "description": "Comment ce lead a été obtenu",
+      "options": {
+        "web": "Site web",
+        "referral": "Recommandation",
+        "cold_call": "Appel à froid",
+        "trade_show": "Salon professionnel",
+        "social_media": "Réseaux sociaux",
+        "email": "E-mail",
+        "advertising": "Publicité",
+        "partner": "Partenaire",
+        "other": "Autre"
+      }
+    },
+    "status": {
+      "label": "Statut",
+      "placeholder": "Sélectionnez le statut...",
+      "description": "Statut actuel du lead",
+      "options": {
+        "new": "Nouveau",
+        "contacted": "Contacté",
+        "qualified": "Qualifié",
+        "proposal": "Proposition",
+        "negotiation": "Négociation",
+        "converted": "Converti",
+        "lost": "Perdu"
+      }
+    },
+    "score": {
+      "label": "Score du lead",
+      "description": "Score du lead de 0 à 100"
+    },
+    "industry": {
+      "label": "Secteur",
+      "placeholder": "Saisissez le secteur...",
+      "description": "Secteur d'activité"
+    },
+    "companySize": {
+      "label": "Taille de l'entreprise",
+      "placeholder": "Sélectionnez la taille...",
+      "description": "Nombre d'employés",
+      "options": {
+        "1-10": "1 à 10 employés",
+        "11-50": "11 à 50 employés",
+        "51-200": "51 à 200 employés",
+        "201-500": "201 à 500 employés",
+        "500+": "Plus de 500 employés"
+      }
+    },
+    "budget": {
+      "label": "Budget estimé",
+      "description": "Montant du budget estimé"
+    },
+    "assignedTo": {
+      "label": "Assigné à",
+      "placeholder": "Sélectionnez l'utilisateur...",
+      "description": "Commercial assigné à ce lead"
+    },
+    "notes": {
+      "label": "Notes",
+      "placeholder": "Saisissez des notes...",
+      "description": "Notes internes sur le lead"
+    },
+    "createdAt": {
+      "label": "Créé le",
+      "description": "Quand le lead a été créé"
+    },
+    "updatedAt": {
+      "label": "Mis à jour le",
+      "description": "Quand le lead a été mis à jour pour la dernière fois"
+    }
+  }
+}

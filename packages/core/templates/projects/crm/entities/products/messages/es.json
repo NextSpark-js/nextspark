@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Producto",
+    "singular": "producto",
     "plural": "Productos",
     "description": "Gestiona productos y servicios"
   },
@@ -28,7 +28,14 @@
     "type": {
       "label": "Tipo",
       "description": "Tipo de producto o servicio",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "product": "Producto",
+        "service": "Servicio",
+        "subscription": "Suscripción",
+        "bundle": "Paquete",
+        "addon": "Complemento"
+      }
     },
     "status": {
       "label": "Estado",
@@ -48,7 +55,19 @@
     "currency": {
       "label": "Moneda",
       "description": "Código de moneda",
-      "placeholder": "Seleccionar moneda..."
+      "placeholder": "Seleccionar moneda...",
+      "options": {
+        "USD": "Dólar estadounidense",
+        "EUR": "Euro",
+        "GBP": "Libra esterlina",
+        "MXN": "Peso mexicano",
+        "CAD": "Dólar canadiense",
+        "AUD": "Dólar australiano",
+        "JPY": "Yen japonés",
+        "CNY": "Yuan chino",
+        "INR": "Rupia india",
+        "BRL": "Real brasileño"
+      }
     },
     "stockQuantity": {
       "label": "Cantidad en Stock",
@@ -90,23 +109,56 @@
       "label": "Proveedor",
       "description": "Proveedor del producto",
       "placeholder": "Ingrese proveedor..."
-    }
-  },
-  "options": {
-    "type": {
-      "physical": "Producto Físico",
-      "digital": "Producto Digital",
-      "service": "Servicio",
-      "subscription": "Suscripción",
-      "bundle": "Paquete",
-      "variant": "Variante"
     },
-    "status": {
-      "active": "Activo",
-      "inactive": "Inactivo",
-      "discontinued": "Descontinuado",
-      "out_of_stock": "Sin Stock",
-      "coming_soon": "Próximamente"
+    "code": {
+      "label": "Código de producto",
+      "placeholder": "Ingrese código...",
+      "description": "Código o SKU del producto"
+    },
+    "unit": {
+      "label": "Unidad de medida",
+      "placeholder": "Seleccionar unidad...",
+      "description": "Unidad de medida",
+      "options": {
+        "piece": "Pieza",
+        "hour": "Hora",
+        "day": "Día",
+        "week": "Semana",
+        "month": "Mes",
+        "year": "Año",
+        "kg": "Kilogramo",
+        "lb": "Libra",
+        "meter": "Metro",
+        "foot": "Pie",
+        "license": "Licencia",
+        "user": "Usuario"
+      }
+    },
+    "minimumQuantity": {
+      "label": "Cantidad mínima",
+      "description": "Cantidad mínima por pedido"
+    },
+    "image": {
+      "label": "Imagen",
+      "placeholder": "https://ejemplo.com/imagen.png",
+      "description": "URL de la imagen del producto"
+    },
+    "brochureUrl": {
+      "label": "URL del folleto",
+      "placeholder": "https://ejemplo.com/folleto.pdf",
+      "description": "URL del folleto del producto"
+    },
+    "commissionRate": {
+      "label": "Comisión (%)",
+      "description": "Porcentaje de comisión por venta"
+    },
+    "createdAt": {
+      "label": "Creado el",
+      "description": "Cuándo se creó el producto"
+    },
+    "updatedAt": {
+      "label": "Actualizado el",
+      "description": "Cuándo se actualizó por última vez"
     }
   },
   "actions": {

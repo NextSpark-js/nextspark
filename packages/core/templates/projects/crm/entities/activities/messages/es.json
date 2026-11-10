@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Actividad",
+    "singular": "actividad",
     "plural": "Actividades",
     "description": "Rastrea interacciones y comunicaciones"
   },
@@ -18,7 +18,16 @@
     "type": {
       "label": "Tipo",
       "description": "Tipo de actividad",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "call": "Llamada",
+        "email": "Email",
+        "meeting": "Reunión",
+        "task": "Tarea",
+        "note": "Nota",
+        "demo": "Demo",
+        "presentation": "Presentación"
+      }
     },
     "subject": {
       "label": "Asunto",
@@ -33,12 +42,25 @@
     "status": {
       "label": "Estado",
       "description": "Estado actual",
-      "placeholder": "Seleccionar estado..."
+      "placeholder": "Seleccionar estado...",
+      "options": {
+        "scheduled": "Programada",
+        "in_progress": "En Progreso",
+        "completed": "Completada",
+        "cancelled": "Cancelada",
+        "overdue": "Vencida"
+      }
     },
     "priority": {
       "label": "Prioridad",
       "description": "Nivel de prioridad",
-      "placeholder": "Seleccionar prioridad..."
+      "placeholder": "Seleccionar prioridad...",
+      "options": {
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta",
+        "urgent": "Urgente"
+      }
     },
     "dueDate": {
       "label": "Fecha Límite",
@@ -63,44 +85,34 @@
       "label": "Asignado a",
       "description": "Usuario asignado",
       "placeholder": "Seleccionar usuario..."
-    }
-  },
-  "options": {
-    "entityType": {
-      "lead": "Lead",
-      "contact": "Contacto",
-      "company": "Empresa",
-      "opportunity": "Oportunidad"
     },
-    "type": {
-      "call": "Llamada",
-      "email": "Email",
-      "meeting": "Reunión",
-      "task": "Tarea",
-      "note": "Nota",
-      "demo": "Demo",
-      "proposal": "Propuesta",
-      "follow_up": "Seguimiento"
+    "location": {
+      "label": "Ubicación",
+      "placeholder": "Ingrese ubicación...",
+      "description": "Lugar de las reuniones"
     },
-    "status": {
-      "pending": "Pendiente",
-      "in_progress": "En Progreso",
-      "completed": "Completada",
-      "cancelled": "Cancelada",
-      "deferred": "Diferida"
+    "contactId": {
+      "label": "Contacto",
+      "placeholder": "Seleccionar contacto...",
+      "description": "Contacto relacionado"
     },
-    "priority": {
-      "low": "Baja",
-      "medium": "Media",
-      "high": "Alta",
-      "urgent": "Urgente"
+    "companyId": {
+      "label": "Empresa",
+      "placeholder": "Seleccionar empresa...",
+      "description": "Empresa relacionada"
     },
-    "outcome": {
-      "successful": "Exitosa",
-      "partially_successful": "Parcialmente Exitosa",
-      "unsuccessful": "No Exitosa",
-      "no_response": "Sin Respuesta",
-      "reschedule": "Reprogramar"
+    "opportunityId": {
+      "label": "Oportunidad",
+      "placeholder": "Seleccionar oportunidad...",
+      "description": "Oportunidad relacionada"
+    },
+    "createdAt": {
+      "label": "Creada el",
+      "description": "Cuándo se creó la actividad"
+    },
+    "updatedAt": {
+      "label": "Actualizada el",
+      "description": "Cuándo se actualizó por última vez"
     }
   },
   "actions": {

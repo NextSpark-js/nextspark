@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Activity",
+    "singular": "activity",
     "plural": "Activities",
     "description": "Track interactions and communications"
   },
@@ -18,7 +18,16 @@
     "type": {
       "label": "Activity Type",
       "description": "Type of activity",
-      "placeholder": "Select type..."
+      "placeholder": "Select type...",
+      "options": {
+        "call": "Call",
+        "email": "Email",
+        "meeting": "Meeting",
+        "task": "Task",
+        "note": "Note",
+        "demo": "Demo",
+        "presentation": "Presentation"
+      }
     },
     "subject": {
       "label": "Subject",
@@ -27,80 +36,83 @@
     },
     "description": {
       "label": "Description",
-      "description": "Detailed activity description",
+      "description": "Detailed description",
       "placeholder": "Enter description..."
     },
     "status": {
       "label": "Status",
       "description": "Current activity status",
-      "placeholder": "Select status..."
+      "placeholder": "Select status...",
+      "options": {
+        "scheduled": "Scheduled",
+        "in_progress": "In Progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "overdue": "Overdue"
+      }
     },
     "priority": {
       "label": "Priority",
       "description": "Activity priority level",
-      "placeholder": "Select priority..."
+      "placeholder": "Select priority...",
+      "options": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      }
     },
     "dueDate": {
       "label": "Due Date",
-      "description": "When the activity is due",
-      "placeholder": "Select date..."
+      "description": "When activity is due",
+      "placeholder": "Select date and time..."
     },
     "completedAt": {
       "label": "Completed At",
-      "description": "When the activity was completed"
+      "description": "When activity was completed"
     },
     "duration": {
       "label": "Duration (minutes)",
-      "description": "Activity duration in minutes",
-      "placeholder": "0"
+      "description": "Duration in minutes",
+      "placeholder": "60"
     },
     "outcome": {
       "label": "Outcome",
       "description": "Activity outcome or result",
-      "placeholder": "Select outcome..."
+      "placeholder": "Enter outcome..."
     },
     "assignedTo": {
       "label": "Assigned To",
       "description": "User assigned to this activity",
       "placeholder": "Select user..."
-    }
-  },
-  "options": {
-    "entityType": {
-      "lead": "Lead",
-      "contact": "Contact",
-      "company": "Company",
-      "opportunity": "Opportunity"
     },
-    "type": {
-      "call": "Phone Call",
-      "email": "Email",
-      "meeting": "Meeting",
-      "task": "Task",
-      "note": "Note",
-      "demo": "Demo",
-      "proposal": "Proposal",
-      "follow_up": "Follow Up"
+    "location": {
+      "label": "Location",
+      "placeholder": "Enter location...",
+      "description": "Location for meetings"
     },
-    "status": {
-      "pending": "Pending",
-      "in_progress": "In Progress",
-      "completed": "Completed",
-      "cancelled": "Cancelled",
-      "deferred": "Deferred"
+    "contactId": {
+      "label": "Contact",
+      "placeholder": "Select contact...",
+      "description": "Related contact"
     },
-    "priority": {
-      "low": "Low",
-      "medium": "Medium",
-      "high": "High",
-      "urgent": "Urgent"
+    "companyId": {
+      "label": "Company",
+      "placeholder": "Select company...",
+      "description": "Related company"
     },
-    "outcome": {
-      "successful": "Successful",
-      "partially_successful": "Partially Successful",
-      "unsuccessful": "Unsuccessful",
-      "no_response": "No Response",
-      "reschedule": "Reschedule Required"
+    "opportunityId": {
+      "label": "Opportunity",
+      "placeholder": "Select opportunity...",
+      "description": "Related opportunity"
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the activity was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the activity was last updated"
     }
   },
   "actions": {

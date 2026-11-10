@@ -1,0 +1,129 @@
+{
+  "entity": {
+    "singular": "opportunité",
+    "plural": "Opportunités"
+  },
+  "fields": {
+    "name": {
+      "label": "Nom de l'opportunité",
+      "placeholder": "Saisissez le nom...",
+      "description": "Nom ou titre de l'opportunité"
+    },
+    "companyId": {
+      "label": "Entreprise",
+      "placeholder": "Sélectionnez l'entreprise...",
+      "description": "Entreprise à laquelle appartient cette opportunité"
+    },
+    "contactId": {
+      "label": "Contact principal",
+      "placeholder": "Sélectionnez le contact...",
+      "description": "Contact principal de cette opportunité"
+    },
+    "pipelineId": {
+      "label": "Pipeline",
+      "placeholder": "Sélectionnez le pipeline...",
+      "description": "Pipeline dans lequel se trouve cette opportunité"
+    },
+    "stageId": {
+      "label": "Étape",
+      "placeholder": "ID de l'étape du pipeline",
+      "description": "Étape actuelle dans le pipeline"
+    },
+    "amount": {
+      "label": "Montant de l'affaire",
+      "description": "Valeur de l'affaire"
+    },
+    "currency": {
+      "label": "Devise",
+      "placeholder": "Sélectionnez la devise...",
+      "description": "Code de devise du montant",
+      "options": {
+        "USD": "Dollar américain",
+        "EUR": "Euro",
+        "GBP": "Livre sterling",
+        "MXN": "Peso mexicain",
+        "CAD": "Dollar canadien",
+        "AUD": "Dollar australien",
+        "JPY": "Yen japonais",
+        "CNY": "Yuan chinois",
+        "INR": "Roupie indienne",
+        "BRL": "Réal brésilien"
+      }
+    },
+    "probability": {
+      "label": "Probabilité de gain (%)",
+      "description": "Pourcentage de probabilité de gain"
+    },
+    "expectedRevenue": {
+      "label": "Chiffre d'affaires attendu",
+      "description": "Chiffre d'affaires attendu calculé"
+    },
+    "closeDate": {
+      "label": "Date de clôture prévue",
+      "placeholder": "Sélectionnez la date...",
+      "description": "Date de clôture prévue ou réelle"
+    },
+    "type": {
+      "label": "Type d'opportunité",
+      "placeholder": "Sélectionnez le type...",
+      "description": "Type d'opportunité",
+      "options": {
+        "new_business": "Nouvelle affaire",
+        "existing_business": "Affaire existante",
+        "renewal": "Renouvellement",
+        "upgrade": "Montée en gamme",
+        "downgrade": "Rétrogradation"
+      }
+    },
+    "source": {
+      "label": "Source",
+      "placeholder": "Sélectionnez la source...",
+      "description": "Source de l'opportunité",
+      "options": {
+        "web": "Site web",
+        "referral": "Recommandation",
+        "cold_call": "Appel à froid",
+        "trade_show": "Salon professionnel",
+        "social_media": "Réseaux sociaux",
+        "email": "E-mail",
+        "advertising": "Publicité",
+        "partner": "Partenaire",
+        "other": "Autre"
+      }
+    },
+    "competitor": {
+      "label": "Principal concurrent",
+      "placeholder": "Saisissez le concurrent...",
+      "description": "Principal concurrent sur cette affaire"
+    },
+    "status": {
+      "label": "Statut",
+      "placeholder": "Sélectionnez le statut...",
+      "description": "Statut actuel de l'opportunité",
+      "options": {
+        "open": "Ouverte",
+        "won": "Gagnée",
+        "lost": "Perdue",
+        "abandoned": "Abandonnée"
+      }
+    },
+    "lostReason": {
+      "label": "Motif de la perte",
+      "placeholder": "Saisissez le motif...",
+      "description": "Motif si l'opportunité a été perdue"
+    },
+    "assignedTo": {
+      "label": "Assigné à",
+      "placeholder": "Sélectionnez l'utilisateur...",
+      "description": "Commercial assigné"
+    },
+    "createdAt": {
+      "label": "Créée le",
+      "description": "Quand l'opportunité a été créée"
+    },
+    "updatedAt": {
+      "label": "Mise à jour le",
+      "description": "Quand l'opportunité a été mise à jour pour la dernière fois"
+    }
+  }
+}

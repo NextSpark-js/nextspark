@@ -1,13 +1,13 @@
 {
   "entity": {
-    "name": "Product",
+    "singular": "product",
     "plural": "Products",
     "description": "Manage products and services"
   },
   "fields": {
     "name": {
       "label": "Product Name",
-      "description": "Product or service name",
+      "description": "Product name",
       "placeholder": "Enter product name..."
     },
     "sku": {
@@ -27,8 +27,15 @@
     },
     "type": {
       "label": "Product Type",
-      "description": "Type of product or service",
-      "placeholder": "Select type..."
+      "description": "Type of product",
+      "placeholder": "Select type...",
+      "options": {
+        "product": "Product",
+        "service": "Service",
+        "subscription": "Subscription",
+        "bundle": "Bundle",
+        "addon": "Add-on"
+      }
     },
     "status": {
       "label": "Status",
@@ -36,19 +43,31 @@
       "placeholder": "Select status..."
     },
     "price": {
-      "label": "Unit Price",
-      "description": "Price per unit",
+      "label": "Price",
+      "description": "Standard selling price",
       "placeholder": "0.00"
     },
     "cost": {
-      "label": "Unit Cost",
-      "description": "Cost per unit",
+      "label": "Cost",
+      "description": "Product cost",
       "placeholder": "0.00"
     },
     "currency": {
       "label": "Currency",
       "description": "Currency code",
-      "placeholder": "Select currency..."
+      "placeholder": "Select currency...",
+      "options": {
+        "USD": "US Dollar",
+        "EUR": "Euro",
+        "GBP": "British Pound",
+        "MXN": "Mexican Peso",
+        "CAD": "Canadian Dollar",
+        "AUD": "Australian Dollar",
+        "JPY": "Japanese Yen",
+        "CNY": "Chinese Yuan",
+        "INR": "Indian Rupee",
+        "BRL": "Brazilian Real"
+      }
     },
     "stockQuantity": {
       "label": "Stock Quantity",
@@ -74,7 +93,7 @@
     },
     "isActive": {
       "label": "Active",
-      "description": "Whether product is active"
+      "description": "Is product currently active"
     },
     "weight": {
       "label": "Weight",
@@ -90,23 +109,58 @@
       "label": "Vendor",
       "description": "Product vendor or supplier",
       "placeholder": "Enter vendor..."
-    }
-  },
-  "options": {
-    "type": {
-      "physical": "Physical Product",
-      "digital": "Digital Product",
-      "service": "Service",
-      "subscription": "Subscription",
-      "bundle": "Product Bundle",
-      "variant": "Product Variant"
     },
-    "status": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "discontinued": "Discontinued",
-      "out_of_stock": "Out of Stock",
-      "coming_soon": "Coming Soon"
+    "code": {
+      "label": "Product Code",
+      "placeholder": "Enter product code...",
+      "description": "Product code or SKU"
+    },
+    "unit": {
+      "label": "Unit of Measure",
+      "placeholder": "Select unit...",
+      "description": "Unit of measure",
+      "options": {
+        "piece": "Piece",
+        "hour": "Hour",
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "year": "Year",
+        "kg": "Kilogram",
+        "lb": "Pound",
+        "meter": "Meter",
+        "foot": "Foot",
+        "license": "License",
+        "user": "User"
+      }
+    },
+    "minimumQuantity": {
+      "label": "Minimum Quantity",
+      "placeholder": "1",
+      "description": "Minimum order quantity"
+    },
+    "image": {
+      "label": "Image",
+      "placeholder": "https://example.com/image.png",
+      "description": "Product image URL"
+    },
+    "brochureUrl": {
+      "label": "Brochure URL",
+      "placeholder": "https://example.com/brochure.pdf",
+      "description": "Product brochure URL"
+    },
+    "commissionRate": {
+      "label": "Commission Rate (%)",
+      "placeholder": "0.00",
+      "description": "Sales commission percentage"
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the product was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the product was last updated"
     }
   },
   "actions": {

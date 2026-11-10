@@ -1,0 +1,54 @@
+{
+  "entity": {
+    "singular": "pipeline",
+    "plural": "Pipelines"
+  },
+  "fields": {
+    "name": {
+      "label": "Nom du pipeline",
+      "placeholder": "Saisissez le nom du pipeline...",
+      "description": "Nom du pipeline"
+    },
+    "description": {
+      "label": "Description",
+      "placeholder": "Saisissez la description...",
+      "description": "Description du pipeline"
+    },
+    "type": {
+      "label": "Type de pipeline",
+      "placeholder": "Sélectionnez le type...",
+      "description": "Type de pipeline",
+      "options": {
+        "sales": "Ventes",
+        "support": "Support",
+        "project": "Projet",
+        "custom": "Personnalisé"
+      }
+    },
+    "isDefault": {
+      "label": "Pipeline par défaut",
+      "description": "S'il s'agit du pipeline par défaut"
+    },
+    "isActive": {
+      "label": "Actif",
+      "description": "Si le pipeline est actuellement actif"
+    },
+    "stages": {
+      "label": "Étapes du pipeline",
+      "placeholder": "Configurer les étapes...",
+      "description": "Configuration des étapes sous forme de tableau JSON"
+    },
+    "dealRottenDays": {
+      "label": "Jours avant stagnation",
+      "description": "Nombre de jours avant qu'une affaire soit considérée comme stagnante"
+    },
+    "createdAt": {
+      "label": "Créé le",
+      "description": "Quand le pipeline a été créé"
+    },
+    "updatedAt": {
+      "label": "Mis à jour le",
+      "description": "Quand le pipeline a été mis à jour pour la dernière fois"
+    }
+  }
+}

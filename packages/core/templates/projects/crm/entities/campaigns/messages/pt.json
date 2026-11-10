@@ -1,0 +1,119 @@
+{
+  "entity": {
+    "singular": "campanha",
+    "plural": "Campanhas"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome da campanha",
+      "placeholder": "Digite o nome da campanha...",
+      "description": "Nome da campanha"
+    },
+    "type": {
+      "label": "Tipo de campanha",
+      "placeholder": "Selecione o tipo...",
+      "description": "Tipo de campanha",
+      "options": {
+        "email": "E-mail",
+        "social": "Redes sociais",
+        "event": "Evento",
+        "webinar": "Webinar",
+        "advertising": "Publicidade",
+        "content": "Marketing de conteúdo",
+        "other": "Outro"
+      }
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Selecione o status...",
+      "description": "Status atual da campanha",
+      "options": {
+        "planned": "Planejada",
+        "active": "Ativa",
+        "paused": "Pausada",
+        "completed": "Concluída",
+        "cancelled": "Cancelada"
+      }
+    },
+    "objective": {
+      "label": "Objetivo",
+      "placeholder": "Digite o objetivo...",
+      "description": "Objetivo da campanha"
+    },
+    "description": {
+      "label": "Descrição",
+      "placeholder": "Digite a descrição...",
+      "description": "Descrição detalhada da campanha"
+    },
+    "startDate": {
+      "label": "Data de início",
+      "placeholder": "Selecione a data...",
+      "description": "Data de início da campanha"
+    },
+    "endDate": {
+      "label": "Data de término",
+      "placeholder": "Selecione a data...",
+      "description": "Data de término da campanha"
+    },
+    "budget": {
+      "label": "Orçamento",
+      "description": "Orçamento da campanha"
+    },
+    "actualCost": {
+      "label": "Custo real",
+      "description": "Custo real gasto"
+    },
+    "targetAudience": {
+      "label": "Público-alvo",
+      "placeholder": "Descreva o público-alvo...",
+      "description": "Descrição do público-alvo"
+    },
+    "targetLeads": {
+      "label": "Leads esperados",
+      "description": "Número de leads esperado"
+    },
+    "actualLeads": {
+      "label": "Leads reais",
+      "description": "Leads gerados de fato"
+    },
+    "targetRevenue": {
+      "label": "Receita esperada",
+      "description": "Receita que se espera gerar"
+    },
+    "actualRevenue": {
+      "label": "Receita real",
+      "description": "Receita gerada de fato"
+    },
+    "roi": {
+      "label": "ROI (%)",
+      "description": "Percentual de retorno sobre o investimento"
+    },
+    "channel": {
+      "label": "Canal principal",
+      "placeholder": "Selecione o canal...",
+      "description": "Canal principal da campanha",
+      "options": {
+        "email": "E-mail",
+        "social_media": "Redes sociais",
+        "web": "Web",
+        "print": "Impresso",
+        "tv": "TV",
+        "radio": "Rádio",
+        "other": "Outro"
+      }
+    },
+    "assignedTo": {
+      "label": "Responsável pela campanha",
+      "placeholder": "Selecione o usuário...",
+      "description": "Responsável atribuído à campanha"
+    },
+    "createdAt": {
+      "label": "Criada em",
+      "description": "Quando a campanha foi criada"
+    },
+    "updatedAt": {
+      "label": "Atualizada em",
+      "description": "Quando a campanha foi atualizada pela última vez"
+    }
+  }
+}

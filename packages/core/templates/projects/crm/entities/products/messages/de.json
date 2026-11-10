@@ -1,0 +1,114 @@
+{
+  "entity": {
+    "singular": "Produkt",
+    "plural": "Produkte"
+  },
+  "fields": {
+    "code": {
+      "label": "Produktcode",
+      "placeholder": "Produktcode eingeben...",
+      "description": "Produktcode oder SKU"
+    },
+    "name": {
+      "label": "Produktname",
+      "placeholder": "Produktnamen eingeben...",
+      "description": "Name des Produkts oder der Dienstleistung"
+    },
+    "category": {
+      "label": "Kategorie",
+      "placeholder": "Kategorie eingeben...",
+      "description": "Produktkategorie"
+    },
+    "type": {
+      "label": "Produkttyp",
+      "placeholder": "Typ auswählen...",
+      "description": "Art des Produkts",
+      "options": {
+        "product": "Produkt",
+        "service": "Dienstleistung",
+        "subscription": "Abonnement",
+        "bundle": "Paket",
+        "addon": "Zusatzoption"
+      }
+    },
+    "description": {
+      "label": "Beschreibung",
+      "placeholder": "Beschreibung eingeben...",
+      "description": "Beschreibung des Produkts"
+    },
+    "price": {
+      "label": "Preis",
+      "description": "Standardverkaufspreis"
+    },
+    "cost": {
+      "label": "Kosten",
+      "description": "Kosten des Produkts"
+    },
+    "currency": {
+      "label": "Währung",
+      "placeholder": "Währung auswählen...",
+      "description": "Währungscode",
+      "options": {
+        "USD": "US-Dollar",
+        "EUR": "Euro",
+        "GBP": "Britisches Pfund",
+        "MXN": "Mexikanischer Peso",
+        "CAD": "Kanadischer Dollar",
+        "AUD": "Australischer Dollar",
+        "JPY": "Japanischer Yen",
+        "CNY": "Chinesischer Yuan",
+        "INR": "Indische Rupie",
+        "BRL": "Brasilianischer Real"
+      }
+    },
+    "unit": {
+      "label": "Maßeinheit",
+      "placeholder": "Einheit auswählen...",
+      "description": "Maßeinheit",
+      "options": {
+        "piece": "Stück",
+        "hour": "Stunde",
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat",
+        "year": "Jahr",
+        "kg": "Kilogramm",
+        "lb": "Pfund",
+        "meter": "Meter",
+        "foot": "Fuß",
+        "license": "Lizenz",
+        "user": "Benutzer"
+      }
+    },
+    "isActive": {
+      "label": "Aktiv",
+      "description": "Ob das Produkt derzeit aktiv ist"
+    },
+    "minimumQuantity": {
+      "label": "Mindestmenge",
+      "description": "Mindestbestellmenge"
+    },
+    "image": {
+      "label": "Bild",
+      "placeholder": "https://beispiel.de/bild.png",
+      "description": "URL des Produktbilds"
+    },
+    "brochureUrl": {
+      "label": "URL der Broschüre",
+      "placeholder": "https://beispiel.de/broschuere.pdf",
+      "description": "URL der Produktbroschüre"
+    },
+    "commissionRate": {
+      "label": "Provisionssatz (%)",
+      "description": "Verkaufsprovision in Prozent"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann das Produkt angelegt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann das Produkt zuletzt aktualisiert wurde"
+    }
+  }
+}

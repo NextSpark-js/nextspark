@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Opportunity",
+    "singular": "opportunity",
     "plural": "Opportunities",
     "description": "Manage sales opportunities"
   },
@@ -38,7 +38,19 @@
     "currency": {
       "label": "Currency",
       "description": "Currency code for amount",
-      "placeholder": "Select currency..."
+      "placeholder": "Select currency...",
+      "options": {
+        "USD": "US Dollar",
+        "EUR": "Euro",
+        "GBP": "British Pound",
+        "MXN": "Mexican Peso",
+        "CAD": "Canadian Dollar",
+        "AUD": "Australian Dollar",
+        "JPY": "Japanese Yen",
+        "CNY": "Chinese Yuan",
+        "INR": "Indian Rupee",
+        "BRL": "Brazilian Real"
+      }
     },
     "probability": {
       "label": "Win Probability (%)",
@@ -57,37 +69,64 @@
     "type": {
       "label": "Opportunity Type",
       "description": "Type of opportunity",
-      "placeholder": "Select type..."
+      "placeholder": "Select type...",
+      "options": {
+        "new_business": "New Business",
+        "existing_business": "Existing Business",
+        "renewal": "Renewal",
+        "upgrade": "Upgrade",
+        "downgrade": "Downgrade"
+      }
     },
     "source": {
       "label": "Source",
       "description": "Source of the opportunity",
-      "placeholder": "Select source..."
+      "placeholder": "Select source...",
+      "options": {
+        "web": "Website",
+        "referral": "Referral",
+        "cold_call": "Cold Call",
+        "trade_show": "Trade Show",
+        "social_media": "Social Media",
+        "email": "Email",
+        "advertising": "Advertising",
+        "partner": "Partner",
+        "other": "Other"
+      }
     },
     "status": {
       "label": "Status",
       "description": "Current opportunity status",
-      "placeholder": "Select status..."
+      "placeholder": "Select status...",
+      "options": {
+        "open": "Open",
+        "won": "Won",
+        "lost": "Lost",
+        "abandoned": "Abandoned"
+      }
     },
     "assignedTo": {
       "label": "Assigned To",
       "description": "Sales rep assigned to opportunity",
       "placeholder": "Select user..."
-    }
-  },
-  "options": {
-    "type": {
-      "new_business": "New Business",
-      "existing_business": "Existing Business",
-      "renewal": "Renewal",
-      "upgrade": "Upgrade",
-      "downgrade": "Downgrade"
     },
-    "status": {
-      "open": "Open",
-      "won": "Won",
-      "lost": "Lost",
-      "abandoned": "Abandoned"
+    "competitor": {
+      "label": "Main Competitor",
+      "placeholder": "Enter competitor...",
+      "description": "Main competitor for this deal"
+    },
+    "lostReason": {
+      "label": "Lost Reason",
+      "placeholder": "Enter reason...",
+      "description": "Reason if opportunity was lost"
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the opportunity was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the opportunity was last updated"
     }
   },
   "actions": {

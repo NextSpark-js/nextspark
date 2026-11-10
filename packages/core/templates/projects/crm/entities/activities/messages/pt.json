@@ -1,0 +1,106 @@
+{
+  "entity": {
+    "singular": "atividade",
+    "plural": "Atividades"
+  },
+  "fields": {
+    "type": {
+      "label": "Tipo de atividade",
+      "placeholder": "Selecione o tipo...",
+      "description": "Tipo de atividade",
+      "options": {
+        "call": "Ligação",
+        "email": "E-mail",
+        "meeting": "Reunião",
+        "task": "Tarefa",
+        "note": "Nota",
+        "demo": "Demonstração",
+        "presentation": "Apresentação"
+      }
+    },
+    "subject": {
+      "label": "Assunto",
+      "placeholder": "Digite o assunto...",
+      "description": "Assunto ou título da atividade"
+    },
+    "description": {
+      "label": "Descrição",
+      "placeholder": "Digite a descrição...",
+      "description": "Descrição detalhada"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Selecione o status...",
+      "description": "Status atual da atividade",
+      "options": {
+        "scheduled": "Agendada",
+        "in_progress": "Em andamento",
+        "completed": "Concluída",
+        "cancelled": "Cancelada",
+        "overdue": "Atrasada"
+      }
+    },
+    "priority": {
+      "label": "Prioridade",
+      "placeholder": "Selecione a prioridade...",
+      "description": "Nível de prioridade da atividade",
+      "options": {
+        "low": "Baixa",
+        "medium": "Média",
+        "high": "Alta",
+        "urgent": "Urgente"
+      }
+    },
+    "dueDate": {
+      "label": "Data de vencimento",
+      "placeholder": "Selecione data e hora...",
+      "description": "Quando a atividade vence"
+    },
+    "completedAt": {
+      "label": "Concluída em",
+      "description": "Quando a atividade foi concluída"
+    },
+    "duration": {
+      "label": "Duração (minutos)",
+      "description": "Duração em minutos"
+    },
+    "outcome": {
+      "label": "Resultado",
+      "placeholder": "Digite o resultado...",
+      "description": "Resultado da atividade"
+    },
+    "location": {
+      "label": "Local",
+      "placeholder": "Digite o local...",
+      "description": "Local das reuniões"
+    },
+    "contactId": {
+      "label": "Contato",
+      "placeholder": "Selecione o contato...",
+      "description": "Contato relacionado"
+    },
+    "companyId": {
+      "label": "Empresa",
+      "placeholder": "Selecione a empresa...",
+      "description": "Empresa relacionada"
+    },
+    "opportunityId": {
+      "label": "Oportunidade",
+      "placeholder": "Selecione a oportunidade...",
+      "description": "Oportunidade relacionada"
+    },
+    "assignedTo": {
+      "label": "Atribuído a",
+      "placeholder": "Selecione o usuário...",
+      "description": "Usuário atribuído a esta atividade"
+    },
+    "createdAt": {
+      "label": "Criada em",
+      "description": "Quando a atividade foi criada"
+    },
+    "updatedAt": {
+      "label": "Atualizada em",
+      "description": "Quando a atividade foi atualizada pela última vez"
+    }
+  }
+}

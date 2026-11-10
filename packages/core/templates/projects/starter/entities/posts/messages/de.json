@@ -1,0 +1,37 @@
+{
+  "entity": {
+    "singular": "Beitrag",
+    "plural": "Beiträge"
+  },
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Titel eingeben...",
+      "description": "Titel des Beitrags"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "beitrag-slug",
+      "description": "URL-freundliche Kennung"
+    },
+    "status": {
+      "label": "Status",
+      "description": "Veröffentlichungsstatus",
+      "options": {
+        "draft": "Entwurf",
+        "published": "Veröffentlicht",
+        "scheduled": "Geplant",
+        "archived": "Archiviert"
+      }
+    },
+    "excerpt": {
+      "label": "Auszug",
+      "placeholder": "Kurzbeschreibung...",
+      "description": "Kurze Zusammenfassung, die in Listen angezeigt wird"
+    },
+    "featuredImage": {
+      "label": "Beitragsbild",
+      "description": "Hauptbild des Beitrags"
+    }
+  }
+}

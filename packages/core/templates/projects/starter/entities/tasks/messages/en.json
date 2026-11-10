@@ -1,7 +1,7 @@
 {
   "entity": {
-    "name": "Task",
-    "namePlural": "Tasks",
+    "singular": "task",
+    "plural": "Tasks",
     "description": "Manage your tasks and to-do items"
   },
   "title": "My Tasks",
@@ -11,37 +11,54 @@
     "title": {
       "label": "Title",
       "placeholder": "Enter task title...",
-      "description": "The title of the task"
+      "description": "Task title or name"
     },
     "description": {
       "label": "Description",
-      "placeholder": "Add details about this task...",
-      "description": "Detailed description of the task"
+      "placeholder": "Enter task description...",
+      "description": "Detailed task description"
     },
     "status": {
       "label": "Status",
       "placeholder": "Select status...",
-      "description": "Current status of the task"
+      "description": "Current task status",
+      "options": {
+        "todo": "To Do",
+        "in-progress": "In Progress",
+        "review": "In Review",
+        "done": "Done",
+        "blocked": "Blocked"
+      }
     },
     "priority": {
       "label": "Priority",
       "placeholder": "Select priority...",
-      "description": "Task priority level"
+      "description": "Task priority level",
+      "options": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      }
     },
     "dueDate": {
       "label": "Due Date",
-      "placeholder": "Select date...",
-      "description": "When the task is due"
+      "placeholder": "Select due date...",
+      "description": "Task deadline"
     },
     "estimatedHours": {
       "label": "Estimated Hours",
       "placeholder": "0",
-      "description": "Estimated time to complete in hours"
+      "description": "Estimated time to complete (in hours)"
     },
     "tags": {
       "label": "Tags",
       "placeholder": "Add tags...",
-      "description": "Tags for categorization"
+      "description": "Task tags for categorization"
+    },
+    "completed": {
+      "label": "Completed",
+      "description": "Mark as completed (legacy field, use status instead)"
     }
   },
   "status": {

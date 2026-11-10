@@ -1,0 +1,129 @@
+{
+  "entity": {
+    "singular": "Verkaufschance",
+    "plural": "Verkaufschancen"
+  },
+  "fields": {
+    "name": {
+      "label": "Name der Verkaufschance",
+      "placeholder": "Namen eingeben...",
+      "description": "Name oder Titel der Verkaufschance"
+    },
+    "companyId": {
+      "label": "Unternehmen",
+      "placeholder": "Unternehmen auswählen...",
+      "description": "Unternehmen, zu dem diese Verkaufschance gehört"
+    },
+    "contactId": {
+      "label": "Hauptkontakt",
+      "placeholder": "Kontakt auswählen...",
+      "description": "Hauptkontakt für diese Verkaufschance"
+    },
+    "pipelineId": {
+      "label": "Pipeline",
+      "placeholder": "Pipeline auswählen...",
+      "description": "Pipeline, in der sich diese Verkaufschance befindet"
+    },
+    "stageId": {
+      "label": "Phase",
+      "placeholder": "Phasen-ID aus der Pipeline",
+      "description": "Aktuelle Phase in der Pipeline"
+    },
+    "amount": {
+      "label": "Auftragswert",
+      "description": "Wert des Geschäfts"
+    },
+    "currency": {
+      "label": "Währung",
+      "placeholder": "Währung auswählen...",
+      "description": "Währungscode des Betrags",
+      "options": {
+        "USD": "US-Dollar",
+        "EUR": "Euro",
+        "GBP": "Britisches Pfund",
+        "MXN": "Mexikanischer Peso",
+        "CAD": "Kanadischer Dollar",
+        "AUD": "Australischer Dollar",
+        "JPY": "Japanischer Yen",
+        "CNY": "Chinesischer Yuan",
+        "INR": "Indische Rupie",
+        "BRL": "Brasilianischer Real"
+      }
+    },
+    "probability": {
+      "label": "Gewinnwahrscheinlichkeit (%)",
+      "description": "Gewinnwahrscheinlichkeit in Prozent"
+    },
+    "expectedRevenue": {
+      "label": "Erwarteter Umsatz",
+      "description": "Berechneter erwarteter Umsatz"
+    },
+    "closeDate": {
+      "label": "Voraussichtliches Abschlussdatum",
+      "placeholder": "Datum auswählen...",
+      "description": "Voraussichtliches oder tatsächliches Abschlussdatum"
+    },
+    "type": {
+      "label": "Art der Verkaufschance",
+      "placeholder": "Art auswählen...",
+      "description": "Art der Verkaufschance",
+      "options": {
+        "new_business": "Neugeschäft",
+        "existing_business": "Bestandsgeschäft",
+        "renewal": "Verlängerung",
+        "upgrade": "Upgrade",
+        "downgrade": "Downgrade"
+      }
+    },
+    "source": {
+      "label": "Quelle",
+      "placeholder": "Quelle auswählen...",
+      "description": "Herkunft der Verkaufschance",
+      "options": {
+        "web": "Website",
+        "referral": "Empfehlung",
+        "cold_call": "Kaltakquise",
+        "trade_show": "Messe",
+        "social_media": "Soziale Medien",
+        "email": "E-Mail",
+        "advertising": "Werbung",
+        "partner": "Partner",
+        "other": "Sonstiges"
+      }
+    },
+    "competitor": {
+      "label": "Hauptwettbewerber",
+      "placeholder": "Wettbewerber eingeben...",
+      "description": "Hauptwettbewerber bei diesem Geschäft"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Status auswählen...",
+      "description": "Aktueller Status der Verkaufschance",
+      "options": {
+        "open": "Offen",
+        "won": "Gewonnen",
+        "lost": "Verloren",
+        "abandoned": "Aufgegeben"
+      }
+    },
+    "lostReason": {
+      "label": "Verlustgrund",
+      "placeholder": "Grund eingeben...",
+      "description": "Grund, falls die Verkaufschance verloren wurde"
+    },
+    "assignedTo": {
+      "label": "Zugewiesen an",
+      "placeholder": "Benutzer auswählen...",
+      "description": "Zuständige/r Vertriebsmitarbeiter/in"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann die Verkaufschance angelegt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann die Verkaufschance zuletzt aktualisiert wurde"
+    }
+  }
+}

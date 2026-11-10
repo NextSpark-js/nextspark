@@ -1,7 +1,7 @@
 {
   "entity": {
-    "name": "Tâche",
-    "namePlural": "Tâches",
+    "singular": "tâche",
+    "plural": "Tâches",
     "description": "Gérez vos tâches et éléments à faire"
   },
   "title": "Mes tâches",
@@ -21,12 +21,25 @@
     "status": {
       "label": "Statut",
       "placeholder": "Sélectionnez le statut...",
-      "description": "Statut actuel de la tâche"
+      "description": "Statut actuel de la tâche",
+      "options": {
+        "todo": "À faire",
+        "in-progress": "En cours",
+        "review": "En révision",
+        "done": "Terminée",
+        "blocked": "Bloquée"
+      }
     },
     "priority": {
       "label": "Priorité",
       "placeholder": "Sélectionnez la priorité...",
-      "description": "Niveau de priorité de la tâche"
+      "description": "Niveau de priorité de la tâche",
+      "options": {
+        "low": "Basse",
+        "medium": "Moyenne",
+        "high": "Haute",
+        "urgent": "Urgente"
+      }
     },
     "dueDate": {
       "label": "Date d'échéance",
@@ -42,6 +55,10 @@
       "label": "Étiquettes",
       "placeholder": "Ajouter des étiquettes...",
       "description": "Étiquettes pour la catégorisation"
+    },
+    "completed": {
+      "label": "Terminée",
+      "description": "Marquer comme terminée (champ hérité, utilisez le statut)"
     }
   },
   "status": {

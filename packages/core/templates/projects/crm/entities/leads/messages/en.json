@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Lead",
+    "singular": "lead",
     "plural": "Leads",
     "description": "Manage potential prospects and business opportunities"
   },
@@ -33,12 +33,32 @@
     "source": {
       "label": "Lead Source",
       "description": "How this lead was acquired",
-      "placeholder": "Select source..."
+      "placeholder": "Select source...",
+      "options": {
+        "web": "Website",
+        "referral": "Referral",
+        "cold_call": "Cold Call",
+        "trade_show": "Trade Show",
+        "social_media": "Social Media",
+        "email": "Email",
+        "advertising": "Advertising",
+        "partner": "Partner",
+        "other": "Other"
+      }
     },
     "status": {
       "label": "Status",
       "description": "Current lead status",
-      "placeholder": "Select status..."
+      "placeholder": "Select status...",
+      "options": {
+        "new": "New",
+        "contacted": "Contacted",
+        "qualified": "Qualified",
+        "proposal": "Proposal",
+        "negotiation": "Negotiation",
+        "converted": "Converted",
+        "lost": "Lost"
+      }
     },
     "score": {
       "label": "Lead Score",
@@ -53,7 +73,14 @@
     "companySize": {
       "label": "Company Size",
       "description": "Number of employees",
-      "placeholder": "Select company size..."
+      "placeholder": "Select company size...",
+      "options": {
+        "1-10": "1-10 employees",
+        "11-50": "11-50 employees",
+        "51-200": "51-200 employees",
+        "201-500": "201-500 employees",
+        "500+": "500+ employees"
+      }
     },
     "budget": {
       "label": "Estimated Budget",
@@ -77,35 +104,6 @@
     "updatedAt": {
       "label": "Updated At",
       "description": "When the lead was last updated"
-    }
-  },
-  "options": {
-    "source": {
-      "web": "Website",
-      "referral": "Referral",
-      "cold_call": "Cold Call",
-      "trade_show": "Trade Show",
-      "social_media": "Social Media",
-      "email": "Email",
-      "advertising": "Advertising",
-      "partner": "Partner",
-      "other": "Other"
-    },
-    "status": {
-      "new": "New",
-      "contacted": "Contacted",
-      "qualified": "Qualified",
-      "proposal": "Proposal",
-      "negotiation": "Negotiation",
-      "converted": "Converted",
-      "lost": "Lost"
-    },
-    "companySize": {
-      "1-10": "1-10 employees",
-      "11-50": "11-50 employees",
-      "51-200": "51-200 employees",
-      "201-500": "201-500 employees",
-      "500+": "500+ employees"
     }
   },
   "actions": {

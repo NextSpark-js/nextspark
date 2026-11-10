@@ -1,15 +1,33 @@
 {
   "entity": {
-    "name": "Category",
-    "namePlural": "Categories",
+    "singular": "category",
+    "plural": "Categories",
     "description": "Organize your blog posts by category"
   },
   "fields": {
-    "name": "Name",
-    "slug": "Slug",
-    "description": "Description",
-    "createdAt": "Created At",
-    "updatedAt": "Updated At"
+    "name": {
+      "label": "Name",
+      "placeholder": "Enter category name...",
+      "description": "The name of the category"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "category-slug",
+      "description": "URL-friendly version of the name (auto-generated)"
+    },
+    "description": {
+      "label": "Description",
+      "placeholder": "Describe what this category is about...",
+      "description": "A brief description of this category"
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the category was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the category was last modified"
+    }
   },
   "actions": {
     "create": "Create Category",

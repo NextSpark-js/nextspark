@@ -1,0 +1,36 @@
+{
+  "entity": {
+    "singular": "pagina",
+    "plural": "Pagine"
+  },
+  "fields": {
+    "title": {
+      "label": "Titolo",
+      "placeholder": "Inserisci il titolo della pagina...",
+      "description": "Titolo della pagina mostrato nel browser e nella navigazione"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "slug-pagina",
+      "description": "Identificatore adatto agli URL (es.: 'chi-siamo' per /chi-siamo)"
+    },
+    "status": {
+      "label": "Stato",
+      "description": "Stato di pubblicazione",
+      "options": {
+        "draft": "Bozza",
+        "published": "Pubblicato",
+        "scheduled": "Programmato",
+        "archived": "Archiviato"
+      }
+    },
+    "locale": {
+      "label": "Lingua",
+      "description": "Lingua della pagina",
+      "options": {
+        "en": "English",
+        "es": "Español"
+      }
+    }
+  }
+}

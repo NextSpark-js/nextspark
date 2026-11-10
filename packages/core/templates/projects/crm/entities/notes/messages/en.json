@@ -1,23 +1,30 @@
 {
   "entity": {
-    "name": "Note",
+    "singular": "note",
     "plural": "Notes",
     "description": "Manage notes and documentation"
   },
   "fields": {
     "entityType": {
       "label": "Related Entity Type",
-      "description": "Type of entity this note is related to",
-      "placeholder": "Select entity type..."
+      "description": "Type of related entity",
+      "placeholder": "Select entity type...",
+      "options": {
+        "lead": "Lead",
+        "contact": "Contact",
+        "company": "Company",
+        "opportunity": "Opportunity",
+        "campaign": "Campaign"
+      }
     },
     "entityId": {
-      "label": "Related Entity",
-      "description": "Entity this note is related to",
-      "placeholder": "Select entity..."
+      "label": "Related Entity ID",
+      "description": "ID of related entity",
+      "placeholder": "Entity ID..."
     },
     "title": {
       "label": "Title",
-      "description": "Note title or subject",
+      "description": "Note title (optional)",
       "placeholder": "Enter title..."
     },
     "content": {
@@ -27,16 +34,25 @@
     },
     "type": {
       "label": "Note Type",
-      "description": "Type or category of note",
-      "placeholder": "Select type..."
+      "description": "Type of note",
+      "placeholder": "Select type...",
+      "options": {
+        "general": "General",
+        "call": "Call Note",
+        "meeting": "Meeting Note",
+        "email": "Email Note",
+        "followup": "Follow-up",
+        "feedback": "Feedback",
+        "reminder": "Reminder"
+      }
     },
     "isPrivate": {
-      "label": "Private Note",
-      "description": "Whether this note is private"
+      "label": "Private",
+      "description": "Is note private to creator"
     },
     "isPinned": {
       "label": "Pinned",
-      "description": "Whether this note is pinned"
+      "description": "Is note pinned/important"
     },
     "tags": {
       "label": "Tags",
@@ -45,7 +61,8 @@
     },
     "attachments": {
       "label": "Attachments",
-      "description": "File attachments"
+      "description": "Array of attachment objects",
+      "placeholder": "Add attachments..."
     },
     "reminderDate": {
       "label": "Reminder Date",
@@ -64,29 +81,21 @@
     "updatedAt": {
       "label": "Updated At",
       "description": "When the note was last updated"
-    }
-  },
-  "options": {
-    "entityType": {
-      "lead": "Lead",
-      "contact": "Contact",
-      "company": "Company",
-      "opportunity": "Opportunity",
-      "activity": "Activity",
-      "campaign": "Campaign",
-      "product": "Product"
     },
-    "type": {
-      "general": "General",
-      "meeting": "Meeting Notes",
-      "call": "Call Notes",
-      "email": "Email Notes",
-      "research": "Research",
-      "todo": "To-Do",
-      "idea": "Idea",
-      "feedback": "Feedback",
-      "issue": "Issue",
-      "solution": "Solution"
+    "contactId": {
+      "label": "Contact",
+      "placeholder": "Select contact...",
+      "description": "Related contact"
+    },
+    "companyId": {
+      "label": "Company",
+      "placeholder": "Select company...",
+      "description": "Related company"
+    },
+    "opportunityId": {
+      "label": "Opportunity",
+      "placeholder": "Select opportunity...",
+      "description": "Related opportunity"
     }
   },
   "actions": {

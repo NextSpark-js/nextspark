@@ -1,13 +1,13 @@
 {
   "entity": {
-    "singular": "Pagina",
-    "plural": "Paginas"
+    "singular": "página",
+    "plural": "Páginas"
   },
   "fields": {
     "title": {
-      "label": "Titulo",
-      "placeholder": "Ingresa el titulo de la pagina...",
-      "description": "Titulo de la pagina mostrado en el navegador y navegacion"
+      "label": "Título",
+      "placeholder": "Ingresa el título de la página...",
+      "description": "Título de la página mostrado en el navegador y navegación"
     },
     "slug": {
       "label": "Slug",
@@ -16,26 +16,34 @@
     },
     "status": {
       "label": "Estado",
-      "description": "Estado de publicacion",
+      "description": "Estado de publicación",
       "options": {
         "draft": "Borrador",
         "published": "Publicado",
         "scheduled": "Programado",
         "archived": "Archivado"
       }
+    },
+    "locale": {
+      "label": "Idioma",
+      "description": "Idioma de la página",
+      "options": {
+        "en": "English",
+        "es": "Español"
+      }
     }
   },
   "actions": {
-    "create": "Crear Pagina",
-    "edit": "Editar Pagina",
-    "delete": "Eliminar Pagina",
+    "create": "Crear Página",
+    "edit": "Editar Página",
+    "delete": "Eliminar Página",
     "publish": "Publicar",
     "unpublish": "Despublicar"
   },
   "messages": {
-    "created": "Pagina creada exitosamente",
-    "updated": "Pagina actualizada exitosamente",
-    "deleted": "Pagina eliminada exitosamente",
-    "published": "Pagina publicada exitosamente"
+    "created": "Página creada exitosamente",
+    "updated": "Página actualizada exitosamente",
+    "deleted": "Página eliminada exitosamente",
+    "published": "Página publicada exitosamente"
   }
 }

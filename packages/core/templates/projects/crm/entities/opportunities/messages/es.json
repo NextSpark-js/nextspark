@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Oportunidad",
+    "singular": "oportunidad",
     "plural": "Oportunidades",
     "description": "Gestiona oportunidades de venta"
   },
@@ -38,7 +38,19 @@
     "currency": {
       "label": "Moneda",
       "description": "Código de moneda",
-      "placeholder": "Seleccionar moneda..."
+      "placeholder": "Seleccionar moneda...",
+      "options": {
+        "USD": "Dólar estadounidense",
+        "EUR": "Euro",
+        "GBP": "Libra esterlina",
+        "MXN": "Peso mexicano",
+        "CAD": "Dólar canadiense",
+        "AUD": "Dólar australiano",
+        "JPY": "Yen japonés",
+        "CNY": "Yuan chino",
+        "INR": "Rupia india",
+        "BRL": "Real brasileño"
+      }
     },
     "probability": {
       "label": "Probabilidad (%)",
@@ -57,37 +69,64 @@
     "type": {
       "label": "Tipo",
       "description": "Tipo de oportunidad",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "new_business": "Nuevo Negocio",
+        "existing_business": "Negocio Existente",
+        "renewal": "Renovación",
+        "upgrade": "Actualización",
+        "downgrade": "Reducción"
+      }
     },
     "source": {
       "label": "Fuente",
       "description": "Fuente de la oportunidad",
-      "placeholder": "Seleccionar fuente..."
+      "placeholder": "Seleccionar fuente...",
+      "options": {
+        "web": "Sitio web",
+        "referral": "Referido",
+        "cold_call": "Llamada en frío",
+        "trade_show": "Feria comercial",
+        "social_media": "Redes sociales",
+        "email": "Email",
+        "advertising": "Publicidad",
+        "partner": "Socio",
+        "other": "Otro"
+      }
     },
     "status": {
       "label": "Estado",
       "description": "Estado actual",
-      "placeholder": "Seleccionar estado..."
+      "placeholder": "Seleccionar estado...",
+      "options": {
+        "open": "Abierta",
+        "won": "Ganada",
+        "lost": "Perdida",
+        "abandoned": "Abandonada"
+      }
     },
     "assignedTo": {
       "label": "Asignado a",
       "description": "Representante de ventas",
       "placeholder": "Seleccionar usuario..."
-    }
-  },
-  "options": {
-    "type": {
-      "new_business": "Nuevo Negocio",
-      "existing_business": "Negocio Existente",
-      "renewal": "Renovación",
-      "upgrade": "Actualización",
-      "downgrade": "Reducción"
     },
-    "status": {
-      "open": "Abierta",
-      "won": "Ganada",
-      "lost": "Perdida",
-      "abandoned": "Abandonada"
+    "competitor": {
+      "label": "Competidor principal",
+      "placeholder": "Ingrese competidor...",
+      "description": "Competidor principal en este trato"
+    },
+    "lostReason": {
+      "label": "Motivo de pérdida",
+      "placeholder": "Ingrese motivo...",
+      "description": "Motivo si la oportunidad se perdió"
+    },
+    "createdAt": {
+      "label": "Creada el",
+      "description": "Cuándo se creó la oportunidad"
+    },
+    "updatedAt": {
+      "label": "Actualizada el",
+      "description": "Cuándo se actualizó por última vez"
     }
   },
   "actions": {

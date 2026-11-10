@@ -1,0 +1,125 @@
+{
+  "entity": {
+    "singular": "empresa",
+    "plural": "Empresas"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome da empresa",
+      "placeholder": "Digite o nome da empresa...",
+      "description": "Nome comercial da empresa"
+    },
+    "legalName": {
+      "label": "Razão social",
+      "placeholder": "Digite a razão social...",
+      "description": "Nome legal registrado da empresa"
+    },
+    "taxId": {
+      "label": "CNPJ",
+      "placeholder": "Digite o CNPJ...",
+      "description": "Número de identificação fiscal"
+    },
+    "website": {
+      "label": "Site",
+      "placeholder": "https://exemplo.com",
+      "description": "URL do site da empresa"
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "contato@empresa.com",
+      "description": "E-mail geral da empresa"
+    },
+    "phone": {
+      "label": "Telefone",
+      "placeholder": "Digite o telefone...",
+      "description": "Telefone principal da empresa"
+    },
+    "industry": {
+      "label": "Setor",
+      "placeholder": "Digite o setor...",
+      "description": "Setor de atuação"
+    },
+    "type": {
+      "label": "Tipo de empresa",
+      "placeholder": "Selecione o tipo...",
+      "description": "Tipo de relação comercial",
+      "options": {
+        "prospect": "Prospect",
+        "customer": "Cliente",
+        "partner": "Parceiro",
+        "competitor": "Concorrente",
+        "vendor": "Fornecedor",
+        "other": "Outro"
+      }
+    },
+    "size": {
+      "label": "Porte da empresa",
+      "placeholder": "Selecione o porte...",
+      "description": "Porte da empresa por número de funcionários",
+      "options": {
+        "1-10": "1-10 funcionários",
+        "11-50": "11-50 funcionários",
+        "51-200": "51-200 funcionários",
+        "201-500": "201-500 funcionários",
+        "500+": "Mais de 500 funcionários"
+      }
+    },
+    "annualRevenue": {
+      "label": "Receita anual",
+      "description": "Receita anual na moeda"
+    },
+    "address": {
+      "label": "Endereço",
+      "placeholder": "Digite o endereço...",
+      "description": "Endereço (rua e número)"
+    },
+    "city": {
+      "label": "Cidade",
+      "placeholder": "Digite a cidade...",
+      "description": "Cidade"
+    },
+    "state": {
+      "label": "Estado",
+      "placeholder": "Digite o estado...",
+      "description": "Estado ou província"
+    },
+    "country": {
+      "label": "País",
+      "placeholder": "BR",
+      "description": "País"
+    },
+    "postalCode": {
+      "label": "CEP",
+      "placeholder": "Digite o CEP...",
+      "description": "Código postal (CEP)"
+    },
+    "logo": {
+      "label": "Logotipo",
+      "placeholder": "https://exemplo.com/logo.png",
+      "description": "URL do logotipo da empresa"
+    },
+    "rating": {
+      "label": "Classificação",
+      "placeholder": "Selecione a classificação...",
+      "description": "Classificação de vendas",
+      "options": {
+        "hot": "Quente",
+        "warm": "Morno",
+        "cold": "Frio"
+      }
+    },
+    "assignedTo": {
+      "label": "Atribuído a",
+      "placeholder": "Selecione o usuário...",
+      "description": "Gerente de conta atribuído"
+    },
+    "createdAt": {
+      "label": "Criada em",
+      "description": "Quando a empresa foi criada"
+    },
+    "updatedAt": {
+      "label": "Atualizada em",
+      "description": "Quando a empresa foi atualizada pela última vez"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Lead",
+    "singular": "lead",
     "plural": "Leads",
     "description": "Gestiona prospectos potenciales y oportunidades de negocio"
   },
@@ -33,12 +33,32 @@
     "source": {
       "label": "Fuente del Lead",
       "description": "Cómo se adquirió este lead",
-      "placeholder": "Seleccionar fuente..."
+      "placeholder": "Seleccionar fuente...",
+      "options": {
+        "web": "Sitio Web",
+        "referral": "Referido",
+        "cold_call": "Llamada en Frío",
+        "trade_show": "Feria Comercial",
+        "social_media": "Redes Sociales",
+        "email": "Email",
+        "advertising": "Publicidad",
+        "partner": "Socio",
+        "other": "Otro"
+      }
     },
     "status": {
       "label": "Estado",
       "description": "Estado actual del lead",
-      "placeholder": "Seleccionar estado..."
+      "placeholder": "Seleccionar estado...",
+      "options": {
+        "new": "Nuevo",
+        "contacted": "Contactado",
+        "qualified": "Calificado",
+        "proposal": "Propuesta",
+        "negotiation": "Negociación",
+        "converted": "Convertido",
+        "lost": "Perdido"
+      }
     },
     "score": {
       "label": "Puntuación del Lead",
@@ -53,7 +73,14 @@
     "companySize": {
       "label": "Tamaño de Empresa",
       "description": "Número de empleados",
-      "placeholder": "Seleccionar tamaño..."
+      "placeholder": "Seleccionar tamaño...",
+      "options": {
+        "1-10": "1-10 empleados",
+        "11-50": "11-50 empleados",
+        "51-200": "51-200 empleados",
+        "201-500": "201-500 empleados",
+        "500+": "500+ empleados"
+      }
     },
     "budget": {
       "label": "Presupuesto Estimado",
@@ -77,35 +104,6 @@
     "updatedAt": {
       "label": "Actualizado el",
       "description": "Cuándo se actualizó por última vez"
-    }
-  },
-  "options": {
-    "source": {
-      "web": "Sitio Web",
-      "referral": "Referido",
-      "cold_call": "Llamada en Frío",
-      "trade_show": "Feria Comercial",
-      "social_media": "Redes Sociales",
-      "email": "Email",
-      "advertising": "Publicidad",
-      "partner": "Socio",
-      "other": "Otro"
-    },
-    "status": {
-      "new": "Nuevo",
-      "contacted": "Contactado",
-      "qualified": "Calificado",
-      "proposal": "Propuesta",
-      "negotiation": "Negociación",
-      "converted": "Convertido",
-      "lost": "Perdido"
-    },
-    "companySize": {
-      "1-10": "1-10 empleados",
-      "11-50": "11-50 empleados",
-      "51-200": "51-200 empleados",
-      "201-500": "201-500 empleados",
-      "500+": "500+ empleados"
     }
   },
   "actions": {

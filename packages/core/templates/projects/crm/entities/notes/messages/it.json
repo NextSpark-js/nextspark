@@ -1,0 +1,85 @@
+{
+  "entity": {
+    "singular": "nota",
+    "plural": "Note"
+  },
+  "fields": {
+    "title": {
+      "label": "Titolo",
+      "placeholder": "Inserisci il titolo...",
+      "description": "Titolo della nota (facoltativo)"
+    },
+    "content": {
+      "label": "Contenuto",
+      "placeholder": "Inserisci il contenuto della nota...",
+      "description": "Contenuto della nota"
+    },
+    "type": {
+      "label": "Tipo di nota",
+      "placeholder": "Seleziona il tipo...",
+      "description": "Tipo di nota",
+      "options": {
+        "general": "Generale",
+        "call": "Nota di chiamata",
+        "meeting": "Nota di riunione",
+        "email": "Nota email",
+        "followup": "Follow-up",
+        "feedback": "Feedback",
+        "reminder": "Promemoria"
+      }
+    },
+    "isPinned": {
+      "label": "Fissata",
+      "description": "Se la nota è fissata o importante"
+    },
+    "isPrivate": {
+      "label": "Privata",
+      "description": "Se la nota è visibile solo a chi l'ha creata"
+    },
+    "entityType": {
+      "label": "Tipo di record correlato",
+      "placeholder": "Seleziona il tipo...",
+      "description": "Tipo del record correlato",
+      "options": {
+        "lead": "Lead",
+        "contact": "Contatto",
+        "company": "Azienda",
+        "opportunity": "Opportunità",
+        "campaign": "Campagna"
+      }
+    },
+    "entityId": {
+      "label": "ID del record correlato",
+      "placeholder": "ID del record...",
+      "description": "ID del record correlato"
+    },
+    "contactId": {
+      "label": "Contatto",
+      "placeholder": "Seleziona il contatto...",
+      "description": "Contatto correlato"
+    },
+    "companyId": {
+      "label": "Azienda",
+      "placeholder": "Seleziona l'azienda...",
+      "description": "Azienda correlata"
+    },
+    "opportunityId": {
+      "label": "Opportunità",
+      "placeholder": "Seleziona l'opportunità...",
+      "description": "Opportunità correlata"
+    },
+    "attachments": {
+      "label": "Allegati",
+      "placeholder": "Aggiungi allegati...",
+      "description": "File allegati"
+    },
+    "createdAt": {
+      "label": "Creata il",
+      "description": "Quando è stata creata la nota"
+    },
+    "updatedAt": {
+      "label": "Aggiornata il",
+      "description": "Quando è stata aggiornata l'ultima volta"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Nota",
+    "singular": "nota",
     "plural": "Notas",
     "description": "Gestiona notas y documentación"
   },
@@ -8,7 +8,14 @@
     "entityType": {
       "label": "Tipo de Entidad",
       "description": "Tipo de entidad relacionada",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "lead": "Lead",
+        "contact": "Contacto",
+        "company": "Empresa",
+        "opportunity": "Oportunidad",
+        "campaign": "Campaña"
+      }
     },
     "entityId": {
       "label": "Entidad Relacionada",
@@ -28,7 +35,16 @@
     "type": {
       "label": "Tipo",
       "description": "Tipo o categoría de nota",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "general": "General",
+        "call": "Notas de Llamada",
+        "meeting": "Notas de Reunión",
+        "email": "Notas de Email",
+        "followup": "Seguimiento",
+        "feedback": "Comentarios",
+        "reminder": "Recordatorio"
+      }
     },
     "isPrivate": {
       "label": "Nota Privada",
@@ -45,7 +61,8 @@
     },
     "attachments": {
       "label": "Adjuntos",
-      "description": "Archivos adjuntos"
+      "description": "Archivos adjuntos",
+      "placeholder": "Agregar adjuntos..."
     },
     "reminderDate": {
       "label": "Fecha de Recordatorio",
@@ -64,29 +81,21 @@
     "updatedAt": {
       "label": "Actualizado el",
       "description": "Cuándo se actualizó por última vez"
-    }
-  },
-  "options": {
-    "entityType": {
-      "lead": "Lead",
-      "contact": "Contacto",
-      "company": "Empresa",
-      "opportunity": "Oportunidad",
-      "activity": "Actividad",
-      "campaign": "Campaña",
-      "product": "Producto"
     },
-    "type": {
-      "general": "General",
-      "meeting": "Notas de Reunión",
-      "call": "Notas de Llamada",
-      "email": "Notas de Email",
-      "research": "Investigación",
-      "todo": "Por Hacer",
-      "idea": "Idea",
-      "feedback": "Comentarios",
-      "issue": "Problema",
-      "solution": "Solución"
+    "contactId": {
+      "label": "Contacto",
+      "placeholder": "Seleccionar contacto...",
+      "description": "Contacto relacionado"
+    },
+    "companyId": {
+      "label": "Empresa",
+      "placeholder": "Seleccionar empresa...",
+      "description": "Empresa relacionada"
+    },
+    "opportunityId": {
+      "label": "Oportunidad",
+      "placeholder": "Seleccionar oportunidad...",
+      "description": "Oportunidad relacionada"
     }
   },
   "actions": {

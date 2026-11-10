@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Contact",
+    "singular": "contact",
     "plural": "Contacts",
     "description": "Manage contact persons in companies"
   },
@@ -67,7 +67,15 @@
     "preferredChannel": {
       "label": "Preferred Channel",
       "description": "Preferred communication channel",
-      "placeholder": "Select channel..."
+      "placeholder": "Select channel...",
+      "options": {
+        "email": "Email",
+        "phone": "Phone",
+        "whatsapp": "WhatsApp",
+        "linkedin": "LinkedIn",
+        "slack": "Slack",
+        "other": "Other"
+      }
     },
     "timezone": {
       "label": "Timezone",
@@ -85,16 +93,6 @@
     "updatedAt": {
       "label": "Updated At",
       "description": "When the contact was last updated"
-    }
-  },
-  "options": {
-    "preferredChannel": {
-      "email": "Email",
-      "phone": "Phone",
-      "whatsapp": "WhatsApp",
-      "linkedin": "LinkedIn",
-      "slack": "Slack",
-      "other": "Other"
     }
   },
   "actions": {

@@ -1,0 +1,106 @@
+{
+  "entity": {
+    "singular": "Aktivität",
+    "plural": "Aktivitäten"
+  },
+  "fields": {
+    "type": {
+      "label": "Aktivitätstyp",
+      "placeholder": "Typ auswählen...",
+      "description": "Art der Aktivität",
+      "options": {
+        "call": "Anruf",
+        "email": "E-Mail",
+        "meeting": "Meeting",
+        "task": "Aufgabe",
+        "note": "Notiz",
+        "demo": "Demo",
+        "presentation": "Präsentation"
+      }
+    },
+    "subject": {
+      "label": "Betreff",
+      "placeholder": "Betreff eingeben...",
+      "description": "Betreff oder Titel der Aktivität"
+    },
+    "description": {
+      "label": "Beschreibung",
+      "placeholder": "Beschreibung eingeben...",
+      "description": "Ausführliche Beschreibung"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Status auswählen...",
+      "description": "Aktueller Status der Aktivität",
+      "options": {
+        "scheduled": "Geplant",
+        "in_progress": "In Bearbeitung",
+        "completed": "Abgeschlossen",
+        "cancelled": "Abgesagt",
+        "overdue": "Überfällig"
+      }
+    },
+    "priority": {
+      "label": "Priorität",
+      "placeholder": "Priorität auswählen...",
+      "description": "Prioritätsstufe der Aktivität",
+      "options": {
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "urgent": "Dringend"
+      }
+    },
+    "dueDate": {
+      "label": "Fälligkeitsdatum",
+      "placeholder": "Datum und Uhrzeit auswählen...",
+      "description": "Wann die Aktivität fällig ist"
+    },
+    "completedAt": {
+      "label": "Abgeschlossen am",
+      "description": "Wann die Aktivität abgeschlossen wurde"
+    },
+    "duration": {
+      "label": "Dauer (Minuten)",
+      "description": "Dauer in Minuten"
+    },
+    "outcome": {
+      "label": "Ergebnis",
+      "placeholder": "Ergebnis eingeben...",
+      "description": "Ergebnis der Aktivität"
+    },
+    "location": {
+      "label": "Ort",
+      "placeholder": "Ort eingeben...",
+      "description": "Ort für Meetings"
+    },
+    "contactId": {
+      "label": "Kontakt",
+      "placeholder": "Kontakt auswählen...",
+      "description": "Zugehöriger Kontakt"
+    },
+    "companyId": {
+      "label": "Unternehmen",
+      "placeholder": "Unternehmen auswählen...",
+      "description": "Zugehöriges Unternehmen"
+    },
+    "opportunityId": {
+      "label": "Verkaufschance",
+      "placeholder": "Verkaufschance auswählen...",
+      "description": "Zugehörige Verkaufschance"
+    },
+    "assignedTo": {
+      "label": "Zugewiesen an",
+      "placeholder": "Benutzer auswählen...",
+      "description": "Benutzer, dem diese Aktivität zugewiesen ist"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann die Aktivität erstellt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann die Aktivität zuletzt aktualisiert wurde"
+    }
+  }
+}

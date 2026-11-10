@@ -1,0 +1,119 @@
+{
+  "entity": {
+    "singular": "campagna",
+    "plural": "Campagne"
+  },
+  "fields": {
+    "name": {
+      "label": "Nome della campagna",
+      "placeholder": "Inserisci il nome della campagna...",
+      "description": "Nome della campagna"
+    },
+    "type": {
+      "label": "Tipo di campagna",
+      "placeholder": "Seleziona il tipo...",
+      "description": "Tipo di campagna",
+      "options": {
+        "email": "Email",
+        "social": "Social media",
+        "event": "Evento",
+        "webinar": "Webinar",
+        "advertising": "Pubblicità",
+        "content": "Content marketing",
+        "other": "Altro"
+      }
+    },
+    "status": {
+      "label": "Stato",
+      "placeholder": "Seleziona lo stato...",
+      "description": "Stato attuale della campagna",
+      "options": {
+        "planned": "Pianificata",
+        "active": "Attiva",
+        "paused": "In pausa",
+        "completed": "Completata",
+        "cancelled": "Annullata"
+      }
+    },
+    "objective": {
+      "label": "Obiettivo",
+      "placeholder": "Inserisci l'obiettivo...",
+      "description": "Obiettivo della campagna"
+    },
+    "description": {
+      "label": "Descrizione",
+      "placeholder": "Inserisci la descrizione...",
+      "description": "Descrizione dettagliata della campagna"
+    },
+    "startDate": {
+      "label": "Data di inizio",
+      "placeholder": "Seleziona la data...",
+      "description": "Data di inizio della campagna"
+    },
+    "endDate": {
+      "label": "Data di fine",
+      "placeholder": "Seleziona la data...",
+      "description": "Data di fine della campagna"
+    },
+    "budget": {
+      "label": "Budget",
+      "description": "Budget della campagna"
+    },
+    "actualCost": {
+      "label": "Costo effettivo",
+      "description": "Costo effettivamente sostenuto"
+    },
+    "targetAudience": {
+      "label": "Pubblico di riferimento",
+      "placeholder": "Descrivi il pubblico di riferimento...",
+      "description": "Descrizione del pubblico di riferimento"
+    },
+    "targetLeads": {
+      "label": "Lead obiettivo",
+      "description": "Numero di lead obiettivo"
+    },
+    "actualLeads": {
+      "label": "Lead effettivi",
+      "description": "Lead effettivamente generati"
+    },
+    "targetRevenue": {
+      "label": "Ricavi obiettivo",
+      "description": "Ricavi da generare"
+    },
+    "actualRevenue": {
+      "label": "Ricavi effettivi",
+      "description": "Ricavi effettivamente generati"
+    },
+    "roi": {
+      "label": "ROI (%)",
+      "description": "Percentuale di ritorno sull'investimento"
+    },
+    "channel": {
+      "label": "Canale principale",
+      "placeholder": "Seleziona il canale...",
+      "description": "Canale principale della campagna",
+      "options": {
+        "email": "Email",
+        "social_media": "Social media",
+        "web": "Web",
+        "print": "Stampa",
+        "tv": "TV",
+        "radio": "Radio",
+        "other": "Altro"
+      }
+    },
+    "assignedTo": {
+      "label": "Responsabile della campagna",
+      "placeholder": "Seleziona l'utente...",
+      "description": "Responsabile assegnato alla campagna"
+    },
+    "createdAt": {
+      "label": "Creata il",
+      "description": "Quando è stata creata la campagna"
+    },
+    "updatedAt": {
+      "label": "Aggiornata il",
+      "description": "Quando è stata aggiornata l'ultima volta"
+    }
+  }
+}

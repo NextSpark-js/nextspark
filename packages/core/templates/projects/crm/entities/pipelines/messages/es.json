@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Pipeline",
+    "singular": "pipeline",
     "plural": "Pipelines",
     "description": "Gestiona pipelines de ventas y etapas"
   },
@@ -18,7 +18,13 @@
     "type": {
       "label": "Tipo",
       "description": "Tipo de pipeline",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "sales": "Pipeline de Ventas",
+        "support": "Pipeline de Soporte",
+        "project": "Pipeline de Proyectos",
+        "custom": "Pipeline Personalizado"
+      }
     },
     "isDefault": {
       "label": "Pipeline por Defecto",
@@ -30,7 +36,8 @@
     },
     "stages": {
       "label": "Etapas",
-      "description": "Configuración de etapas"
+      "description": "Configuración de etapas",
+      "placeholder": "Configurar etapas..."
     },
     "conversion": {
       "label": "Tasa de Conversión (%)",
@@ -77,16 +84,10 @@
     "updatedAt": {
       "label": "Actualizado el",
       "description": "Cuándo se actualizó por última vez"
-    }
-  },
-  "options": {
-    "type": {
-      "sales": "Pipeline de Ventas",
-      "marketing": "Pipeline de Marketing",
-      "support": "Pipeline de Soporte",
-      "project": "Pipeline de Proyectos",
-      "recruitment": "Pipeline de Reclutamiento",
-      "custom": "Pipeline Personalizado"
+    },
+    "dealRottenDays": {
+      "label": "Días para trato estancado",
+      "description": "Días hasta que un trato se considera estancado"
     }
   },
   "actions": {

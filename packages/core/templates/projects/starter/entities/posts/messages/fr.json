@@ -1,0 +1,37 @@
+{
+  "entity": {
+    "singular": "article",
+    "plural": "Articles"
+  },
+  "fields": {
+    "title": {
+      "label": "Titre",
+      "placeholder": "Saisissez le titre...",
+      "description": "Titre de l'article"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "slug-de-l-article",
+      "description": "Identifiant adapté aux URL"
+    },
+    "status": {
+      "label": "Statut",
+      "description": "Statut de publication",
+      "options": {
+        "draft": "Brouillon",
+        "published": "Publié",
+        "scheduled": "Planifié",
+        "archived": "Archivé"
+      }
+    },
+    "excerpt": {
+      "label": "Extrait",
+      "placeholder": "Brève description...",
+      "description": "Court résumé affiché dans les listes"
+    },
+    "featuredImage": {
+      "label": "Image à la une",
+      "description": "Image principale de l'article"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Company",
+    "singular": "company",
     "plural": "Companies",
     "description": "Manage client companies and prospects"
   },
@@ -43,12 +43,27 @@
     "type": {
       "label": "Company Type",
       "description": "Type of company relationship",
-      "placeholder": "Select type..."
+      "placeholder": "Select type...",
+      "options": {
+        "prospect": "Prospect",
+        "customer": "Customer",
+        "partner": "Partner",
+        "competitor": "Competitor",
+        "vendor": "Vendor",
+        "other": "Other"
+      }
     },
     "size": {
       "label": "Company Size",
       "description": "Company size by employees",
-      "placeholder": "Select size..."
+      "placeholder": "Select size...",
+      "options": {
+        "1-10": "1-10 employees",
+        "11-50": "11-50 employees",
+        "51-200": "51-200 employees",
+        "201-500": "201-500 employees",
+        "500+": "500+ employees"
+      }
     },
     "annualRevenue": {
       "label": "Annual Revenue",
@@ -88,7 +103,12 @@
     "rating": {
       "label": "Rating",
       "description": "Sales rating",
-      "placeholder": "Select rating..."
+      "placeholder": "Select rating...",
+      "options": {
+        "hot": "Hot",
+        "warm": "Warm",
+        "cold": "Cold"
+      }
     },
     "assignedTo": {
       "label": "Assigned To",
@@ -102,28 +122,6 @@
     "updatedAt": {
       "label": "Updated At",
       "description": "When the company was last updated"
-    }
-  },
-  "options": {
-    "type": {
-      "prospect": "Prospect",
-      "customer": "Customer",
-      "partner": "Partner",
-      "competitor": "Competitor",
-      "vendor": "Vendor",
-      "other": "Other"
-    },
-    "size": {
-      "1-10": "1-10 employees",
-      "11-50": "11-50 employees",
-      "51-200": "51-200 employees",
-      "201-500": "201-500 employees",
-      "500+": "500+ employees"
-    },
-    "rating": {
-      "hot": "Hot",
-      "warm": "Warm",
-      "cold": "Cold"
     }
   },
   "actions": {

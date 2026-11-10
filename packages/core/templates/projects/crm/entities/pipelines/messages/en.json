@@ -1,13 +1,13 @@
 {
   "entity": {
-    "name": "Pipeline",
+    "singular": "pipeline",
     "plural": "Pipelines",
     "description": "Manage sales pipelines and stages"
   },
   "fields": {
     "name": {
       "label": "Pipeline Name",
-      "description": "Pipeline name or title",
+      "description": "Pipeline name",
       "placeholder": "Enter pipeline name..."
     },
     "description": {
@@ -18,19 +18,26 @@
     "type": {
       "label": "Pipeline Type",
       "description": "Type of pipeline",
-      "placeholder": "Select type..."
+      "placeholder": "Select type...",
+      "options": {
+        "sales": "Sales",
+        "support": "Support",
+        "project": "Project",
+        "custom": "Custom"
+      }
     },
     "isDefault": {
       "label": "Default Pipeline",
-      "description": "Whether this is the default pipeline"
+      "description": "Is this the default pipeline"
     },
     "isActive": {
       "label": "Active",
-      "description": "Whether pipeline is active"
+      "description": "Is pipeline currently active"
     },
     "stages": {
-      "label": "Stages",
-      "description": "Pipeline stages configuration"
+      "label": "Pipeline Stages",
+      "description": "Pipeline stages configuration as JSON array",
+      "placeholder": "Configure stages..."
     },
     "conversion": {
       "label": "Conversion Rate (%)",
@@ -77,16 +84,11 @@
     "updatedAt": {
       "label": "Updated At",
       "description": "When the pipeline was last updated"
-    }
-  },
-  "options": {
-    "type": {
-      "sales": "Sales Pipeline",
-      "marketing": "Marketing Pipeline",
-      "support": "Support Pipeline",
-      "project": "Project Pipeline",
-      "recruitment": "Recruitment Pipeline",
-      "custom": "Custom Pipeline"
+    },
+    "dealRottenDays": {
+      "label": "Deal Rotten Days",
+      "placeholder": "30",
+      "description": "Days until deal is considered stale"
     }
   },
   "actions": {

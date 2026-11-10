@@ -3,11 +3,9 @@
   "singular": "Tarjeta",
   "plural": "Tarjetas",
   "description": "Tarjetas de tareas para seguir tu trabajo",
-
   "myCards": "Mis Tarjetas",
   "allCards": "Todas las Tarjetas",
   "assignedToMe": "Asignadas a Mí",
-
   "fields": {
     "title": {
       "label": "Título",
@@ -63,9 +61,19 @@
     "updatedAt": {
       "label": "Actualizado",
       "description": "Cuándo se modificó por última vez"
+    },
+    "priority": {
+      "label": "Prioridad",
+      "placeholder": "Selecciona la prioridad...",
+      "description": "Nivel de prioridad de la tarjeta",
+      "options": {
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta",
+        "urgent": "Urgente"
+      }
     }
   },
-
   "actions": {
     "create": "Agregar Tarjeta",
     "edit": "Editar Tarjeta",
@@ -78,7 +86,6 @@
     "setDueDate": "Establecer Fecha Límite",
     "removeDueDate": "Quitar Fecha Límite"
   },
-
   "messages": {
     "created": "Tarjeta creada exitosamente",
     "updated": "Tarjeta actualizada exitosamente",
@@ -88,13 +95,11 @@
     "unassigned": "Tarjeta desasignada",
     "confirmDelete": "¿Estás seguro de que quieres eliminar esta tarjeta?"
   },
-
   "empty": {
     "title": "No hay tarjetas en esta lista",
     "description": "Agrega una tarjeta para comenzar.",
     "action": "Agregar una tarjeta"
   },
-
   "filters": {
     "all": "Todas las Tarjetas",
     "assignedToMe": "Asignadas a Mí",
@@ -103,12 +108,14 @@
     "dueThisWeek": "Vencen Esta Semana",
     "noDueDate": "Sin Fecha Límite"
   },
-
   "dueStatus": {
     "overdue": "Vencida",
     "dueToday": "Vence Hoy",
     "dueTomorrow": "Vence Mañana",
     "dueThisWeek": "Vence Esta Semana"
+  },
+  "entity": {
+    "singular": "tarjeta",
+    "plural": "Tarjetas"
   }
 }
-

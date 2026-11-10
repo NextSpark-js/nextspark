@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Contacto",
+    "singular": "contacto",
     "plural": "Contactos",
     "description": "Gestiona personas de contacto en las empresas"
   },
@@ -67,7 +67,15 @@
     "preferredChannel": {
       "label": "Canal Preferido",
       "description": "Canal de comunicación preferido",
-      "placeholder": "Seleccionar canal..."
+      "placeholder": "Seleccionar canal...",
+      "options": {
+        "email": "Email",
+        "phone": "Teléfono",
+        "whatsapp": "WhatsApp",
+        "linkedin": "LinkedIn",
+        "slack": "Slack",
+        "other": "Otro"
+      }
     },
     "timezone": {
       "label": "Zona Horaria",
@@ -85,16 +93,6 @@
     "updatedAt": {
       "label": "Actualizado el",
       "description": "Cuándo se actualizó por última vez"
-    }
-  },
-  "options": {
-    "preferredChannel": {
-      "email": "Email",
-      "phone": "Teléfono",
-      "whatsapp": "WhatsApp",
-      "linkedin": "LinkedIn",
-      "slack": "Slack",
-      "other": "Otro"
     }
   },
   "actions": {

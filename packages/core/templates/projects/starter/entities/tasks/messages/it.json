@@ -1,7 +1,7 @@
 {
   "entity": {
-    "name": "Attività",
-    "namePlural": "Attività",
+    "singular": "attività",
+    "plural": "Attività",
     "description": "Gestisci le tue attività e cose da fare"
   },
   "title": "Le mie attività",
@@ -21,12 +21,25 @@
     "status": {
       "label": "Stato",
       "placeholder": "Seleziona lo stato...",
-      "description": "Stato attuale dell'attività"
+      "description": "Stato attuale dell'attività",
+      "options": {
+        "todo": "Da fare",
+        "in-progress": "In corso",
+        "review": "In revisione",
+        "done": "Completata",
+        "blocked": "Bloccata"
+      }
     },
     "priority": {
       "label": "Priorità",
       "placeholder": "Seleziona la priorità...",
-      "description": "Livello di priorità dell'attività"
+      "description": "Livello di priorità dell'attività",
+      "options": {
+        "low": "Bassa",
+        "medium": "Media",
+        "high": "Alta",
+        "urgent": "Urgente"
+      }
     },
     "dueDate": {
       "label": "Data di scadenza",
@@ -42,6 +55,10 @@
       "label": "Tag",
       "placeholder": "Aggiungi tag...",
       "description": "Tag per la categorizzazione"
+    },
+    "completed": {
+      "label": "Completata",
+      "description": "Segna come completata (campo legacy, usa lo stato)"
     }
   },
   "status": {

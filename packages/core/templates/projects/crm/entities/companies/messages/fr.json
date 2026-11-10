@@ -1,0 +1,125 @@
+{
+  "entity": {
+    "singular": "entreprise",
+    "plural": "Entreprises"
+  },
+  "fields": {
+    "name": {
+      "label": "Nom de l'entreprise",
+      "placeholder": "Saisissez le nom de l'entreprise...",
+      "description": "Nom commercial de l'entreprise"
+    },
+    "legalName": {
+      "label": "Raison sociale",
+      "placeholder": "Saisissez la raison sociale...",
+      "description": "Nom légal enregistré de l'entreprise"
+    },
+    "taxId": {
+      "label": "Numéro fiscal",
+      "placeholder": "Saisissez le numéro fiscal...",
+      "description": "Numéro d'identification fiscale"
+    },
+    "website": {
+      "label": "Site web",
+      "placeholder": "https://exemple.fr",
+      "description": "URL du site web de l'entreprise"
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "contact@entreprise.fr",
+      "description": "E-mail général de l'entreprise"
+    },
+    "phone": {
+      "label": "Téléphone",
+      "placeholder": "Saisissez le numéro de téléphone...",
+      "description": "Numéro de téléphone principal"
+    },
+    "industry": {
+      "label": "Secteur",
+      "placeholder": "Saisissez le secteur...",
+      "description": "Secteur d'activité"
+    },
+    "type": {
+      "label": "Type d'entreprise",
+      "placeholder": "Sélectionnez le type...",
+      "description": "Type de relation commerciale",
+      "options": {
+        "prospect": "Prospect",
+        "customer": "Client",
+        "partner": "Partenaire",
+        "competitor": "Concurrent",
+        "vendor": "Fournisseur",
+        "other": "Autre"
+      }
+    },
+    "size": {
+      "label": "Taille de l'entreprise",
+      "placeholder": "Sélectionnez la taille...",
+      "description": "Taille de l'entreprise par effectif",
+      "options": {
+        "1-10": "1 à 10 employés",
+        "11-50": "11 à 50 employés",
+        "51-200": "51 à 200 employés",
+        "201-500": "201 à 500 employés",
+        "500+": "Plus de 500 employés"
+      }
+    },
+    "annualRevenue": {
+      "label": "Chiffre d'affaires annuel",
+      "description": "Chiffre d'affaires annuel dans la devise"
+    },
+    "address": {
+      "label": "Adresse",
+      "placeholder": "Saisissez l'adresse...",
+      "description": "Adresse postale"
+    },
+    "city": {
+      "label": "Ville",
+      "placeholder": "Saisissez la ville...",
+      "description": "Ville"
+    },
+    "state": {
+      "label": "Région",
+      "placeholder": "Saisissez la région...",
+      "description": "Région ou province"
+    },
+    "country": {
+      "label": "Pays",
+      "placeholder": "FR",
+      "description": "Pays"
+    },
+    "postalCode": {
+      "label": "Code postal",
+      "placeholder": "Saisissez le code postal...",
+      "description": "Code postal"
+    },
+    "logo": {
+      "label": "Logo",
+      "placeholder": "https://exemple.fr/logo.png",
+      "description": "URL du logo de l'entreprise"
+    },
+    "rating": {
+      "label": "Évaluation",
+      "placeholder": "Sélectionnez l'évaluation...",
+      "description": "Évaluation commerciale",
+      "options": {
+        "hot": "Chaud",
+        "warm": "Tiède",
+        "cold": "Froid"
+      }
+    },
+    "assignedTo": {
+      "label": "Assigné à",
+      "placeholder": "Sélectionnez l'utilisateur...",
+      "description": "Gestionnaire de compte assigné"
+    },
+    "createdAt": {
+      "label": "Créée le",
+      "description": "Quand l'entreprise a été créée"
+    },
+    "updatedAt": {
+      "label": "Mise à jour le",
+      "description": "Quand l'entreprise a été mise à jour pour la dernière fois"
+    }
+  }
+}

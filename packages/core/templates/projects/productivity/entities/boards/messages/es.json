@@ -3,7 +3,6 @@
   "singular": "Tablero",
   "plural": "Tableros",
   "description": "Organiza tu trabajo en tableros",
-
   "fields": {
     "name": {
       "label": "Nombre",
@@ -46,7 +45,6 @@
       "description": "Cuándo se modificó por última vez"
     }
   },
-
   "actions": {
     "create": "Nuevo Tablero",
     "edit": "Editar Tablero",
@@ -55,7 +53,6 @@
     "unarchive": "Desarchivar Tablero",
     "duplicate": "Duplicar Tablero"
   },
-
   "messages": {
     "created": "Tablero creado exitosamente",
     "updated": "Tablero actualizado exitosamente",
@@ -64,17 +61,18 @@
     "unarchived": "Tablero desarchivado",
     "confirmDelete": "¿Estás seguro de que quieres eliminar este tablero? Todas las listas y tarjetas serán eliminadas permanentemente."
   },
-
   "empty": {
     "title": "Aún no hay tableros",
     "description": "Crea tu primer tablero para comenzar a organizar tu trabajo.",
     "action": "Crear tu primer tablero"
   },
-
   "filters": {
     "all": "Todos los Tableros",
     "active": "Activos",
     "archived": "Archivados"
+  },
+  "entity": {
+    "singular": "tablero",
+    "plural": "Tableros"
   }
 }
-

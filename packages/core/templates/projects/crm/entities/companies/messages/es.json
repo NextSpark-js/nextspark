@@ -1,6 +1,6 @@
 {
   "entity": {
-    "name": "Empresa",
+    "singular": "empresa",
     "plural": "Empresas",
     "description": "Gestiona empresas clientes y prospectos"
   },
@@ -43,12 +43,27 @@
     "type": {
       "label": "Tipo de Empresa",
       "description": "Tipo de relación empresarial",
-      "placeholder": "Seleccionar tipo..."
+      "placeholder": "Seleccionar tipo...",
+      "options": {
+        "prospect": "Prospecto",
+        "customer": "Cliente",
+        "partner": "Socio",
+        "competitor": "Competidor",
+        "vendor": "Proveedor",
+        "other": "Otro"
+      }
     },
     "size": {
       "label": "Tamaño",
       "description": "Tamaño por empleados",
-      "placeholder": "Seleccionar tamaño..."
+      "placeholder": "Seleccionar tamaño...",
+      "options": {
+        "1-10": "1-10 empleados",
+        "11-50": "11-50 empleados",
+        "51-200": "51-200 empleados",
+        "201-500": "201-500 empleados",
+        "500+": "500+ empleados"
+      }
     },
     "annualRevenue": {
       "label": "Ingresos Anuales",
@@ -88,7 +103,12 @@
     "rating": {
       "label": "Calificación",
       "description": "Calificación de ventas",
-      "placeholder": "Seleccionar calificación..."
+      "placeholder": "Seleccionar calificación...",
+      "options": {
+        "hot": "Caliente",
+        "warm": "Tibio",
+        "cold": "Frío"
+      }
     },
     "assignedTo": {
       "label": "Asignado a",
@@ -102,28 +122,6 @@
     "updatedAt": {
       "label": "Actualizado el",
       "description": "Cuándo se actualizó por última vez"
-    }
-  },
-  "options": {
-    "type": {
-      "prospect": "Prospecto",
-      "customer": "Cliente",
-      "partner": "Socio",
-      "competitor": "Competidor",
-      "vendor": "Proveedor",
-      "other": "Otro"
-    },
-    "size": {
-      "1-10": "1-10 empleados",
-      "11-50": "11-50 empleados",
-      "51-200": "51-200 empleados",
-      "201-500": "201-500 empleados",
-      "500+": "500+ empleados"
-    },
-    "rating": {
-      "hot": "Caliente",
-      "warm": "Tibio",
-      "cold": "Frío"
     }
   },
   "actions": {

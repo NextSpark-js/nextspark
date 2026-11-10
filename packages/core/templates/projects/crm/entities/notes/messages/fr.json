@@ -1,0 +1,85 @@
+{
+  "entity": {
+    "singular": "note",
+    "plural": "Notes"
+  },
+  "fields": {
+    "title": {
+      "label": "Titre",
+      "placeholder": "Saisissez le titre...",
+      "description": "Titre de la note (facultatif)"
+    },
+    "content": {
+      "label": "Contenu",
+      "placeholder": "Saisissez le contenu de la note...",
+      "description": "Contenu de la note"
+    },
+    "type": {
+      "label": "Type de note",
+      "placeholder": "Sélectionnez le type...",
+      "description": "Type de note",
+      "options": {
+        "general": "Générale",
+        "call": "Note d'appel",
+        "meeting": "Note de réunion",
+        "email": "Note d'e-mail",
+        "followup": "Suivi",
+        "feedback": "Retour",
+        "reminder": "Rappel"
+      }
+    },
+    "isPinned": {
+      "label": "Épinglée",
+      "description": "Si la note est épinglée ou importante"
+    },
+    "isPrivate": {
+      "label": "Privée",
+      "description": "Si la note n'est visible que par son auteur"
+    },
+    "entityType": {
+      "label": "Type d'enregistrement associé",
+      "placeholder": "Sélectionnez le type...",
+      "description": "Type de l'enregistrement associé",
+      "options": {
+        "lead": "Lead",
+        "contact": "Contact",
+        "company": "Entreprise",
+        "opportunity": "Opportunité",
+        "campaign": "Campagne"
+      }
+    },
+    "entityId": {
+      "label": "ID de l'enregistrement associé",
+      "placeholder": "ID de l'enregistrement...",
+      "description": "ID de l'enregistrement associé"
+    },
+    "contactId": {
+      "label": "Contact",
+      "placeholder": "Sélectionnez le contact...",
+      "description": "Contact associé"
+    },
+    "companyId": {
+      "label": "Entreprise",
+      "placeholder": "Sélectionnez l'entreprise...",
+      "description": "Entreprise associée"
+    },
+    "opportunityId": {
+      "label": "Opportunité",
+      "placeholder": "Sélectionnez l'opportunité...",
+      "description": "Opportunité associée"
+    },
+    "attachments": {
+      "label": "Pièces jointes",
+      "placeholder": "Ajouter des pièces jointes...",
+      "description": "Fichiers joints"
+    },
+    "createdAt": {
+      "label": "Créée le",
+      "description": "Quand la note a été créée"
+    },
+    "updatedAt": {
+      "label": "Mise à jour le",
+      "description": "Quand la note a été mise à jour pour la dernière fois"
+    }
+  }
+}

@@ -1,18 +1,18 @@
 {
   "entity": {
-    "singular": "Page",
+    "singular": "page",
     "plural": "Pages"
   },
   "fields": {
     "title": {
       "label": "Title",
       "placeholder": "Enter page title...",
-      "description": "Page title displayed in browser and navigation"
+      "description": "Page title"
     },
     "slug": {
       "label": "Slug",
       "placeholder": "page-slug",
-      "description": "URL-friendly identifier (e.g., 'about' for /about)"
+      "description": "URL-friendly identifier"
     },
     "status": {
       "label": "Status",
@@ -22,6 +22,14 @@
         "published": "Published",
         "scheduled": "Scheduled",
         "archived": "Archived"
+      }
+    },
+    "locale": {
+      "label": "Locale",
+      "description": "Page language",
+      "options": {
+        "en": "English",
+        "es": "Español"
       }
     }
   },

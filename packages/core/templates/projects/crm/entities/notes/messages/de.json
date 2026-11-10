@@ -1,0 +1,85 @@
+{
+  "entity": {
+    "singular": "Notiz",
+    "plural": "Notizen"
+  },
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Titel eingeben...",
+      "description": "Titel der Notiz (optional)"
+    },
+    "content": {
+      "label": "Inhalt",
+      "placeholder": "Inhalt der Notiz eingeben...",
+      "description": "Inhalt der Notiz"
+    },
+    "type": {
+      "label": "Notiztyp",
+      "placeholder": "Typ auswählen...",
+      "description": "Art der Notiz",
+      "options": {
+        "general": "Allgemein",
+        "call": "Anrufnotiz",
+        "meeting": "Meetingnotiz",
+        "email": "E-Mail-Notiz",
+        "followup": "Nachverfolgung",
+        "feedback": "Feedback",
+        "reminder": "Erinnerung"
+      }
+    },
+    "isPinned": {
+      "label": "Angeheftet",
+      "description": "Ob die Notiz angeheftet bzw. wichtig ist"
+    },
+    "isPrivate": {
+      "label": "Privat",
+      "description": "Ob die Notiz nur für die erstellende Person sichtbar ist"
+    },
+    "entityType": {
+      "label": "Typ des zugehörigen Datensatzes",
+      "placeholder": "Typ auswählen...",
+      "description": "Art des zugehörigen Datensatzes",
+      "options": {
+        "lead": "Lead",
+        "contact": "Kontakt",
+        "company": "Unternehmen",
+        "opportunity": "Verkaufschance",
+        "campaign": "Kampagne"
+      }
+    },
+    "entityId": {
+      "label": "ID des zugehörigen Datensatzes",
+      "placeholder": "Datensatz-ID...",
+      "description": "ID des zugehörigen Datensatzes"
+    },
+    "contactId": {
+      "label": "Kontakt",
+      "placeholder": "Kontakt auswählen...",
+      "description": "Zugehöriger Kontakt"
+    },
+    "companyId": {
+      "label": "Unternehmen",
+      "placeholder": "Unternehmen auswählen...",
+      "description": "Zugehöriges Unternehmen"
+    },
+    "opportunityId": {
+      "label": "Verkaufschance",
+      "placeholder": "Verkaufschance auswählen...",
+      "description": "Zugehörige Verkaufschance"
+    },
+    "attachments": {
+      "label": "Anhänge",
+      "placeholder": "Anhänge hinzufügen...",
+      "description": "Angehängte Dateien"
+    },
+    "createdAt": {
+      "label": "Erstellt am",
+      "description": "Wann die Notiz erstellt wurde"
+    },
+    "updatedAt": {
+      "label": "Aktualisiert am",
+      "description": "Wann die Notiz zuletzt aktualisiert wurde"
+    }
+  }
+}
