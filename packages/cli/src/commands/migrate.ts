@@ -3219,7 +3219,9 @@ function rewriteThemeVariable(content: string, destination: string, hostRoot: st
   const left: number[] = [];
   const text = content.split('\n').map((line, index) => {
     if (!line.includes(THEME_VARIABLE)) return line;
-    const next = code && !COMMENT_LINE.test(line) ? line.replace(THEME_READ, () => replacement) : line;
+    // only in the line's code: a string or a trailing comment on it keeps its text (sourceView masks both)
+    const lineCode = code && !COMMENT_LINE.test(line) ? sourceView(line).code : null;
+    const next = lineCode === null ? line : line.replace(THEME_READ, (match: string, ...rest: unknown[]) => lineCode.startsWith('process', rest[rest.length - 2] as number) ? replacement : match);
     if (next !== line) replaced.push(index + 1);
     if (next.includes(THEME_VARIABLE) && !destructured.includes(index + 1)) left.push(index + 1);
     return next;

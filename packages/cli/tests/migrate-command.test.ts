@@ -1410,6 +1410,22 @@ test('migrate replaces a cy-run-prod.cjs core published with the installed templ
   }
 })
 
+test('migrate replaces a read of NEXT_PUBLIC_ACTIVE_THEME in the code of a line, not in a string or a comment after it', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/lib/mixed.ts', "export const a = process.env.NEXT_PUBLIC_ACTIVE_THEME // was process.env.NEXT_PUBLIC_ACTIVE_THEME\nexport const s = 'process.env.NEXT_PUBLIC_ACTIVE_THEME' + process.env['NEXT_PUBLIC_ACTIVE_THEME']\n")
+    await commitFixture(root)
+    const dry = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(dry.themeVariable.replaced, [{ path: 'lib/mixed.ts', line: 1 }, { path: 'lib/mixed.ts', line: 2 }])
+    assert.deepEqual(dry.themeVariable.left, [{ path: 'lib/mixed.ts', line: 1 }, { path: 'lib/mixed.ts', line: 2 }])
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'lib/mixed.ts'), 'utf8'), "export const a = undefined // was process.env.NEXT_PUBLIC_ACTIVE_THEME\nexport const s = 'process.env.NEXT_PUBLIC_ACTIVE_THEME' + undefined\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('migrate leaves a write or a delete of NEXT_PUBLIC_ACTIVE_THEME as written and lists it, also under tests/', async () => {
   const { root } = await moveFixture()
   try {
