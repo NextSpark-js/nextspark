@@ -205,20 +205,20 @@ export function useSearch() {
   // Efecto para búsqueda en tiempo real
   useEffect(() => {
     if (!user) {
-      setResults([])
+      setResults(prev => (prev.length ? [] : prev)) // the same array when already empty: no render, so no loop
       return
     }
 
     const trimmedQuery = query.trim()
     
     if (trimmedQuery.length === 0) {
-      setResults([])
+      setResults(prev => (prev.length ? [] : prev))
       setIsSearching(false)
       return
     }
 
     if (trimmedQuery.length < 2) {
-      setResults([])
+      setResults(prev => (prev.length ? [] : prev))
       setIsSearching(false)
       return
     }
