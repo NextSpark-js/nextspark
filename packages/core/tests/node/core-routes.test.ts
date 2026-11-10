@@ -291,7 +291,7 @@ test('i18n.requestLocale picks the auth and public wrappers from a literal the r
   assert.match(groups, /export const withDashboardMessages = requestMessagesWrapper\('dashboard'\)/)
   // dashboard and superadmin keep their plugin and entity namespaces; only auth and public pass none
   assert.match(groups, /extraNamespaces=\{extra\}/)
-  assert.match(groups, /const extra = group === 'dashboard' \|\| group === 'superadmin' \? configured\[group\] : \[\]/)
+  assert.match(groups, /const extra = toRequest \? \[\] : group === 'dashboard' \|\| group === 'superadmin' \? configured\[group\] : \[\]/)
   assert.match(groups, /const toRequest = group === 'auth' \|\| group === 'public'/)
 })
 

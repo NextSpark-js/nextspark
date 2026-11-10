@@ -84,7 +84,7 @@ function requestMessagesWrapper(group: 'auth' | 'public' | 'devtools' | 'dashboa
       const configured = getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
       const toRequest = group === 'auth' || group === 'public'
       // `devtools` has no plugin or entity namespaces: core and project messages only, as in the ISR module
-      const extra = group === 'dashboard' || group === 'superadmin' ? configured[group] : []
+      const extra = toRequest ? [] : group === 'dashboard' || group === 'superadmin' ? configured[group] : []
       return (
         <Suspense fallback={null}>
           <Suspense>

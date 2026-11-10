@@ -11,7 +11,8 @@ const getMessages = jest.fn(async () => ({}))
 jest.mock('next/server', () => ({ connection: async () => undefined }))
 jest.mock('next-intl/server', () => ({ getMessages: () => getMessages(), getLocale: async () => 'fr' }))
 jest.mock('next-intl', () => ({ NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children }))
-jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: () => ({}), getConfiguredClientNamespaces: () => ({ superadmin: [], dashboard: [] }) }))
+const selectMessages = jest.fn(() => ({}))
+jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: (...args: unknown[]) => (selectMessages as (...a: unknown[]) => unknown)(...args), getConfiguredClientNamespaces: () => ({ superadmin: ['plugin-s'], dashboard: ['entity-d'] }) }))
 jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({ get APP_CONFIG_MERGED() { return { i18n } } }))
 jest.mock('@nextsparkjs/core/providers/static-intl-provider', () => ({ StaticIntlProvider: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/registries/request-locale', () => ({
@@ -24,7 +25,7 @@ const MULTI = { supportedLocales: ['en', 'es', 'fr'], defaultLocale: 'en' }
 type Wrapper = (layout: React.ComponentType<{ children: React.ReactNode }>) => (props: { children: React.ReactNode }) => unknown
 
 function load() {
-  let module: { withAuthMessages: Wrapper; withPublicMessages: Wrapper; withDevtoolsMessages: Wrapper } | undefined
+  let module: { withAuthMessages: Wrapper; withPublicMessages: Wrapper; withDevtoolsMessages: Wrapper; withDashboardMessages: Wrapper; withSuperadminMessages: Wrapper } | undefined
   jest.isolateModules(() => {
     module = require('../../../src/routes/_internal/group-layouts.cc')
   })
@@ -58,6 +59,24 @@ beforeEach(() => {
   i18n = { ...MULTI }
 })
 afterEach(() => warn.mockRestore())
+
+describe('extra namespaces of the request wrappers (#414)', () => {
+  it('gives dashboard and superadmin their configured namespaces, and auth, public and devtools none', async () => {
+    flags = { auth: true, public: true }
+    i18n = { ...MULTI, requestLocale: { auth: true, public: true } }
+    const layouts = load()
+    const extraOf = async (wrapper: Wrapper) => {
+      selectMessages.mockClear()
+      await render(wrapper)
+      return (selectMessages.mock.calls[0] as unknown[])[2]
+    }
+    expect(await extraOf(layouts.withDashboardMessages)).toEqual(['entity-d'])
+    expect(await extraOf(layouts.withSuperadminMessages)).toEqual(['plugin-s'])
+    expect(await extraOf(layouts.withAuthMessages)).toEqual([])
+    expect(await extraOf(layouts.withPublicMessages)).toEqual([])
+    expect(await extraOf(layouts.withDevtoolsMessages)).toEqual([])
+  })
+})
 
 describe('devtools wrapper (#414)', () => {
   it('reads the request messages whatever the setting, so its client components follow the user language', async () => {
