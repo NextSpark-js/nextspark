@@ -47,7 +47,7 @@
     "tailwindcss": "^3"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.0",
+    "@babel/core": "^7.29.6",
     "@babel/runtime": "^7.25.0",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
