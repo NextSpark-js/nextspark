@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Dates and numbers of the entity fields, the dashboard, the media library and the security page show in the language of the interface.** The date, date-time and number fields of an entity, the creation date of the dashboard, the entity search, the sign-in history, the media list and detail panel, and the dates and amounts of the `crm` and `blog` templates were formatted with no locale, so they followed the browser (`12/24/2026` in German, `9/26/2026, 9:39:02 AM` in Spanish). They use the active locale now. The scan for texts written in the source also reports a `toLocaleString()`, `toLocaleDateString()` or `Intl.*Format()` with no locale. (#413)
 - **The sample data no longer lists media files that do not exist.** `090_sample_data.sql` inserted twelve rows pointing at `/uploads/temp/sample-N.jpg`, which no project ships, so `/dashboard/media` logged ten 404 errors. It inserts no media rows.
-- **The entity messages of the starter, `blog`, `crm` and `productivity` templates come in the six languages of the main catalogs.** The `pages` and `posts` entities of the starter had no German, French, Italian or Portuguese file, and the entities and project messages of the other templates had only English and Spanish; the starter's Italian and Portuguese `public` catalogs were missing too.
+- **The project messages of the `blog`, `crm` and `productivity` templates, and the `public` catalogs of the starter's Italian and Portuguese, come in the six languages of the main catalogs.** They had only English and Spanish, or no file at all.
 - **The internationalization guide names the locale cookie `locale`**, as the code does, not `NEXT_LOCALE`.
 
 ### Added
