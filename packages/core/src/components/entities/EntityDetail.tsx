@@ -17,8 +17,10 @@ import { getEntity, getEntityRegistry, getEntityMetadata } from '../../lib/entit
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { EntityChildManager } from './EntityChildManager'
 import { EntityDetailHeader } from './EntityDetailHeader'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { sel } from '../../lib/test'
+import { useEntityLocalizer } from '../../hooks/useEntityText'
+import { entityNameInText } from '../../lib/entities/entity-text'
 import { useTeam } from '../../hooks/useTeam'
 import { usePermissions } from '../../lib/permissions/hooks'
 
@@ -95,6 +97,8 @@ export function EntityDetail({
   customSections = [],
 }: EntityDetailProps) {
   const tDetail = useTranslations('entities.detail')
+  const locale = useLocale()
+  const localize = useEntityLocalizer()
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Get current team ID for team-scoped operations like user display
@@ -257,7 +261,8 @@ export function EntityDetail({
         {/* Child Entities Sections */}
         {childEntities.map((childName) => {
           // Get child entity configuration from registry
-          const childEntityConfig = getEntity(childName)
+          const registeredChild = getEntity(childName)
+          const childEntityConfig = registeredChild && 'slug' in registeredChild ? localize(registeredChild) : registeredChild
           const childRegistryEntry = getEntityMetadata(childName)
 
           if (!childEntityConfig || !childRegistryEntry) {
@@ -270,7 +275,7 @@ export function EntityDetail({
             fields: childEntityConfig.fields,
             display: {
               title: (childEntityConfig as any).names?.plural || (childEntityConfig as any).display?.title || childName,
-              description: tDetail('manageChild', { entities: ((childEntityConfig as any).names?.plural || (childEntityConfig as any).display?.title || childName).toLowerCase(), entity: entityConfig.names.singular.toLowerCase() }),
+              description: tDetail('manageChild', { entities: entityNameInText((childEntityConfig as any).names?.plural || (childEntityConfig as any).display?.title || childName, locale), entity: entityNameInText(entityConfig.names.singular, locale) }),
               mode: 'table' as const
             }
           }

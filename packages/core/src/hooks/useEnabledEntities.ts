@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { getEnabledEntities } from '../lib/entities/registry.client'
 import type { EntityConfig } from '../lib/entities/types'
+import { useLocalizedEntityConfigs } from './useEntityText'
 
 /**
  * Hook to get all enabled entities for dynamic navigation
@@ -55,7 +56,8 @@ export function useEnabledEntities() {
   }
 
   return {
-    entities,
+    // In the active locale (#421)
+    entities: useLocalizedEntityConfigs(entities),
     isLoading,
     error,
     refetch

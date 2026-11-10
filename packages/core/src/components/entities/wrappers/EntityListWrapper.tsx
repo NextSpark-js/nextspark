@@ -17,7 +17,8 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { entityNameInText } from '../../../lib/entities/entity-text'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -52,6 +53,7 @@ export function EntityListWrapper({
 }: EntityListWrapperProps) {
   const text = useTranslations('entities.wrapper')
   const ui = useTranslations('entities.ui')
+  const locale = useLocale()
   // Nothing is requested while there is no user: during a sign-out the session store empties before the page is left,
   // and a load started then is answered with a 401.
   const { user } = useAuth()
@@ -336,7 +338,7 @@ export function EntityListWrapper({
             {entityConfig.names.plural}
           </h1>
           <p className="text-muted-foreground">
-            {ui('manage', { entities: entityConfig.names.plural.toLowerCase() })}
+            {ui('manage', { entities: entityNameInText(entityConfig.names.plural, locale) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -357,7 +359,7 @@ export function EntityListWrapper({
         <div className="flex flex-col sm:flex-row gap-3 items-center flex-wrap">
           {enableSearch && (
             <SearchInput
-              placeholder={ui('searchEntities', { entities: entityConfig.names.plural.toLowerCase() })}
+              placeholder={ui('searchEntities', { entities: entityNameInText(entityConfig.names.plural, locale) })}
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
               containerClassName="flex-1 max-w-md"

@@ -23,6 +23,7 @@ import {
 import type { EntityConfig } from '../../lib/entities/types'
 import { deleteEntityData } from '../../lib/api/entities'
 import { useLocale, useTranslations } from 'next-intl'
+import { entityNameInText } from '../../lib/entities/entity-text'
 import { EntityPageHeader } from './EntityPageHeader'
 
 export interface EntityDetailPageProps {
@@ -49,7 +50,7 @@ export function EntityDetailPage({
     new Date(value).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
 
   const handleDelete = async () => {
-    if (!confirm(text('confirmDelete', { entity: entityConfig.names.singular.toLowerCase() }))) {
+    if (!confirm(text('confirmDelete', { entity: entityNameInText(entityConfig.names.singular, locale) }))) {
       return
     }
 
@@ -134,7 +135,7 @@ export function EntityDetailPage({
             <CardHeader>
               <CardTitle>{text('details')}</CardTitle>
               <CardDescription>
-                {text('mainInfo', { entity: entityConfig.names.singular.toLowerCase() })}
+                {text('mainInfo', { entity: entityNameInText(entityConfig.names.singular, locale) })}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

@@ -9,6 +9,7 @@ import { sel } from '../../../lib/test'
 import { Home, Camera, FileText, LucideIcon, ChevronDown, Box, Circle, Folder } from 'lucide-react'
 import { resolveIcon } from '../../../lib/icons'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
+import { useLocalizedEntityConfigs } from '../../../hooks/useEntityText'
 import { APP_CONFIG_MERGED } from '../../../lib/config/config-client'
 import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
@@ -206,10 +207,11 @@ export function DynamicNavigation({
   // Check if theme has custom sidebar sections
   const hasCustomSections = customSidebarSections.length > 0
 
-  // Fallback: Use entities if no custom sections defined
+  // Fallback: Use entities if no custom sections defined (named in the active locale, #421)
+  const localizedEntities = useLocalizedEntityConfigs(entities)
   const enabledEntities = useMemo(() =>
-    entities.filter(entity => entity?.enabled && entity?.ui?.dashboard?.showInMenu),
-    [entities]
+    localizedEntities.filter(entity => entity?.enabled && entity?.ui?.dashboard?.showInMenu),
+    [localizedEntities]
   )
 
   const entityItems: NavigationItem[] = useMemo(() =>

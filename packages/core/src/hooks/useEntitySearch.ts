@@ -7,6 +7,7 @@ import type { Permission } from '../lib/permissions/types'
 import { extractUserPlanData } from '../lib/user-data-utils'
 import { getEnabledEntities } from '../lib/entities/registry.client'
 import type { EntityConfig } from '../lib/entities/types'
+import { useLocalizedEntityConfigs } from './useEntityText'
 
 export interface EntitySearchResult {
   id: string
@@ -54,7 +55,9 @@ export function useEntitySearch(): EntitySearchHookResult {
   }, [user])
 
   // Get entities available to the user based on permissions and plan
-  const [availableEntities, setAvailableEntities] = useState<EntityConfig[]>([])
+  const [registryEntities, setAvailableEntities] = useState<EntityConfig[]>([])
+  // In the active locale (#421)
+  const availableEntities = useLocalizedEntityConfigs(registryEntities)
 
   useEffect(() => {
     if (!user || !user.role) {

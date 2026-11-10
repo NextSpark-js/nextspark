@@ -7,7 +7,8 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { entityNameInText } from '../../../../lib/entities/entity-text'
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -41,6 +42,7 @@ interface PatternItem {
 function PatternsListPage() {
   const text = useTranslations('admin.patterns.list')
   const ui = useTranslations('entities.ui')
+  const locale = useLocale()
   const entityType = 'patterns'
   const router = useRouter()
 
@@ -332,7 +334,7 @@ function PatternsListPage() {
               {entityConfig.names.plural}
             </h1>
             <p className="text-muted-foreground">
-              {ui('manage', { entities: entityConfig.names.plural.toLowerCase() })}
+              {ui('manage', { entities: entityNameInText(entityConfig.names.plural, locale) })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -352,7 +354,7 @@ function PatternsListPage() {
           <div className="flex flex-col sm:flex-row gap-3 items-center flex-wrap">
             {enableSearch && (
               <SearchInput
-                placeholder={ui('searchEntities', { entities: entityConfig.names.plural.toLowerCase() })}
+                placeholder={ui('searchEntities', { entities: entityNameInText(entityConfig.names.plural, locale) })}
                 value={searchValue}
                 onChange={(e) => handleSearch(e.target.value)}
                 containerClassName="flex-1 max-w-md"

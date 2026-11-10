@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getAllEntityConfigs } from '../lib/entities/registry.client'
 import { EntityConfig } from '../lib/entities/types'
+import { useLocalizedEntityConfig } from './useEntityText'
 
 interface EntityConfigState {
   config: EntityConfig | null
@@ -148,7 +149,9 @@ export function useEntityConfig(
     loadEntityConfig()
   }, [loadEntityConfig])
 
-  return state
+  // Names, labels, placeholders and options in the active locale, from the entity's catalog (#421)
+  const config = useLocalizedEntityConfig(state.config)
+  return config === state.config ? state : { ...state, config }
 }
 
 /**

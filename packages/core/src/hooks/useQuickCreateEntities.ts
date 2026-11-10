@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { getAllEntityConfigs } from '../lib/entities/registry.client'
 import { useAllPermissions } from '../lib/permissions/hooks'
 import type { EntityConfig } from '../lib/entities/types'
+import { useLocalizedEntityConfigs } from './useEntityText'
 
 export function useQuickCreateEntities() {
   const [allEntities, setAllEntities] = useState<EntityConfig[]>([])
@@ -53,10 +54,13 @@ export function useQuickCreateEntities() {
     })
   }, [allEntities, userPermissions])
 
+  // In the active locale (#421)
+  const entities = useLocalizedEntityConfigs(filteredEntities)
+
   return {
-    entities: filteredEntities,
+    entities,
     isLoading,
     error,
-    hasEntities: filteredEntities.length > 0
+    hasEntities: entities.length > 0
   }
 }

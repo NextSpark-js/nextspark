@@ -11,8 +11,16 @@ const { format, loadNamespace } = jest.requireActual('./next-intl-server.js')
  * with no provider), with the `has` and `rich` of the real one: `rich` leaves the tags of the text in place.
  */
 function useTranslations(namespace) {
-  const ns = loadNamespace('en', namespace)
-  const read = key => ns[key] ?? key.split('.').reduce((node, part) => (node && typeof node === 'object' ? node[part] : undefined), ns)
+  // without a namespace (the catalog root) a key starts with its file, and a file core lacks (an entity's) has no keys
+  const ns = namespace ? loadNamespace('en', namespace) : null
+  const fromRoot = key => {
+    try {
+      return loadNamespace('en', key)
+    } catch {
+      return undefined
+    }
+  }
+  const read = key => (ns ? ns[key] ?? key.split('.').reduce((node, part) => (node && typeof node === 'object' ? node[part] : undefined), ns) : fromRoot(key))
   const t = (key, params) => {
     const value = read(key)
     if (typeof value !== 'string') throw new Error(`next-intl mock: missing key "${key}" in namespace "${namespace}"`)

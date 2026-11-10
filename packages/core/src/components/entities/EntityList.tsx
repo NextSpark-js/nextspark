@@ -7,7 +7,8 @@
 
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { entityNameInText } from '../../lib/entities/entity-text'
 import React, { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '../ui/card'
@@ -117,6 +118,7 @@ export function EntityList({
   teamId,
 }: EntityListProps) {
   const ui = useTranslations('entities.ui')
+  const locale = useLocale()
   const actionsText = useCommonText('a11y', 'actions', 'Actions')
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu')
   const selectAllRowsText = useCommonText('a11y', 'selectAllRows', 'Select all rows')
@@ -262,7 +264,7 @@ export function EntityList({
         <div className="space-y-1">
           <h2 className="text-2xl font-bold tracking-tight">{entityConfig.names.plural}</h2>
           <p className="text-muted-foreground">
-            {ui('manage', { entities: entityConfig.names.plural.toLowerCase() })}
+            {ui('manage', { entities: entityNameInText(entityConfig.names.plural, locale) })}
           </p>
         </div>
         
@@ -271,7 +273,7 @@ export function EntityList({
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={ui('searchEntities', { entities: entityConfig.names.plural.toLowerCase() })}
+                placeholder={ui('searchEntities', { entities: entityNameInText(entityConfig.names.plural, locale) })}
                 value={localSearchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-8 w-full sm:w-[300px]"
@@ -337,12 +339,12 @@ export function EntityList({
               className: "h-16 w-16 text-muted-foreground/50 mb-4" 
             })}
             <h3 className="text-lg font-medium mb-2">
-              {ui('noneFound', { entities: entityConfig.names.plural.toLowerCase() })}
+              {ui('noneFound', { entities: entityNameInText(entityConfig.names.plural, locale) })}
             </h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
               {searchQuery 
-                ? ui('noMatch', { entities: entityConfig.names.plural.toLowerCase() })
-                : ui('getStarted', { entity: entityConfig.names.singular.toLowerCase() })
+                ? ui('noMatch', { entities: entityNameInText(entityConfig.names.plural, locale) })
+                : ui('getStarted', { entity: entityNameInText(entityConfig.names.singular, locale) })
               }
             </p>
             {!searchQuery && canCreate && (

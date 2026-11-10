@@ -11,7 +11,8 @@ import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import { useQuickCreateEntities } from '../../../hooks/useQuickCreateEntities'
 import { sel } from '../../../lib/test'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { entityNameInText } from '../../../lib/entities/entity-text'
 
 interface QuickCreateSheetProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ interface QuickCreateSheetProps {
 
 export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps) {
   const t = useTranslations('common')
+  const locale = useLocale()
   const { entities: availableEntities, isLoading, hasEntities } = useQuickCreateEntities()
 
   const handleLinkClick = () => {
@@ -70,7 +72,7 @@ export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{entity.names?.singular || entity.slug}</span>
                   <span className="text-xs text-muted-foreground">
-                    {t('mobileNav.createNew')} {(entity.names?.singular || entity.slug).toLowerCase()}
+                    {t('mobileNav.createNew')} {entityNameInText(entity.names?.singular || entity.slug, locale)}
                   </span>
                 </div>
               </Link>
