@@ -12,7 +12,7 @@
     "slug": {
       "label": "Slug",
       "placeholder": "seiten-slug",
-      "description": "URL-freundliche Kennung (z. B. 'ueber-uns' für /ueber-uns)"
+      "description": "URL-freundliche Kennung (z. B. 'kontakt' für /kontakt)"
     },
     "status": {
       "label": "Status",
