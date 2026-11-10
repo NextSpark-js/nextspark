@@ -119,6 +119,164 @@
       }
     },
 
+    "topBar": {
+      "search": "Buscar leads, contatos, negócios...",
+      "searchShort": "Buscar...",
+      "new": "Novo",
+      "newEntity": "Novo: {entity}",
+      "user": "Usuário",
+      "profile": "Perfil",
+      "settings": "Configurações",
+      "billing": "Faturamento",
+      "signOut": "Sair",
+      "signIn": "Entrar",
+      "signUp": "Cadastrar-se"
+    },
+
+    "forms": {
+      "opportunity": {
+        "loading": "Carregando oportunidade...",
+        "title": {
+          "create": "Criar oportunidade",
+          "edit": "Editar oportunidade"
+        },
+        "subtitle": {
+          "create": "Adicione uma nova oportunidade de venda ao seu pipeline",
+          "edit": "Atualize os detalhes da oportunidade"
+        },
+        "sections": {
+          "basic": "Informações básicas",
+          "pipelineStage": "Pipeline e etapa",
+          "dealValue": "Valor do negócio",
+          "additional": "Informações adicionais"
+        },
+        "fields": {
+          "name": "Nome da oportunidade",
+          "namePlaceholder": "ex.: Licença empresarial",
+          "company": "Empresa",
+          "companyPlaceholder": "Selecione uma empresa...",
+          "contact": "Contato principal",
+          "contactPlaceholder": "Selecione um contato...",
+          "assignedTo": "Atribuído a",
+          "userPlaceholder": "Selecione um usuário...",
+          "pipeline": "Pipeline",
+          "pipelinePlaceholder": "Selecione um pipeline...",
+          "stage": "Etapa",
+          "stagePlaceholder": "Selecione uma etapa...",
+          "status": "Status",
+          "statusPlaceholder": "Selecione um status",
+          "lostReason": "Motivo da perda",
+          "lostReasonPlaceholder": "Por que esta oportunidade foi perdida?",
+          "amount": "Valor do negócio",
+          "currency": "Moeda",
+          "currencyPlaceholder": "Selecione uma moeda",
+          "probability": "Probabilidade de fechamento (%)",
+          "probabilityHint": "Definida pela etapa, pode ser ajustada",
+          "closeDate": "Data de fechamento prevista",
+          "type": "Tipo de oportunidade",
+          "typePlaceholder": "Selecione um tipo",
+          "source": "Origem",
+          "sourcePlaceholder": "Selecione uma origem",
+          "competitor": "Principal concorrente",
+          "competitorPlaceholder": "Digite o nome do concorrente"
+        },
+        "currencies": {
+          "USD": "Dólar americano",
+          "EUR": "Euro",
+          "GBP": "Libra esterlina",
+          "MXN": "Peso mexicano",
+          "CAD": "Dólar canadense"
+        },
+        "types": {
+          "new_business": "Novo negócio",
+          "existing_business": "Negócio existente",
+          "renewal": "Renovação",
+          "upgrade": "Upgrade",
+          "downgrade": "Downgrade"
+        },
+        "sources": {
+          "web": "Site",
+          "referral": "Indicação",
+          "cold_call": "Ligação fria",
+          "trade_show": "Feira comercial",
+          "social_media": "Redes sociais",
+          "email": "E-mail",
+          "advertising": "Publicidade",
+          "partner": "Parceiro",
+          "other": "Outro"
+        },
+        "statuses": {
+          "open": "Aberta",
+          "won": "Ganha",
+          "lost": "Perdida",
+          "abandoned": "Abandonada"
+        },
+        "actions": {
+          "cancel": "Cancelar",
+          "saving": "Salvando...",
+          "create": "Criar oportunidade",
+          "save": "Salvar alterações"
+        },
+        "errors": {
+          "loadFailed": "Não foi possível carregar os dados da oportunidade",
+          "nameRequired": "O nome da oportunidade é obrigatório",
+          "companyRequired": "A empresa é obrigatória",
+          "pipelineRequired": "O pipeline é obrigatório",
+          "stageRequired": "A etapa é obrigatória",
+          "closeDateRequired": "A data de fechamento prevista é obrigatória",
+          "saveFailed": "Não foi possível salvar a oportunidade"
+        }
+      },
+      "pipeline": {
+        "loading": "Carregando pipeline...",
+        "title": {
+          "create": "Criar pipeline",
+          "edit": "Editar pipeline"
+        },
+        "subtitle": {
+          "create": "Configure um novo pipeline de vendas com etapas personalizadas",
+          "edit": "Modifique as configurações e as etapas do pipeline"
+        },
+        "sections": {
+          "basic": "Informações básicas",
+          "stages": "Etapas do pipeline"
+        },
+        "fields": {
+          "name": "Nome do pipeline",
+          "namePlaceholder": "ex.: Vendas corporativas",
+          "type": "Tipo de pipeline",
+          "typePlaceholder": "Selecione um tipo",
+          "description": "Descrição",
+          "descriptionPlaceholder": "Descreva a finalidade deste pipeline...",
+          "rottenDays": "Dias para considerar um negócio parado",
+          "rottenDaysHint": "Dias sem atividade antes de um negócio ser marcado como parado",
+          "active": "Ativo",
+          "activeHint": "Ative este pipeline para uso",
+          "default": "Pipeline padrão",
+          "defaultHint": "Usar como padrão para novos negócios"
+        },
+        "types": {
+          "sales": "Vendas",
+          "support": "Suporte",
+          "project": "Projeto",
+          "custom": "Personalizado"
+        },
+        "actions": {
+          "cancel": "Cancelar",
+          "saving": "Salvando...",
+          "create": "Criar pipeline",
+          "save": "Salvar alterações"
+        },
+        "errors": {
+          "loadFailed": "Não foi possível carregar os dados do pipeline",
+          "nameRequired": "O nome do pipeline é obrigatório",
+          "stagesRequired": "É necessária pelo menos uma etapa",
+          "stageNameRequired": "Todas as etapas devem ter nome",
+          "saveFailed": "Não foi possível salvar o pipeline"
+        }
+      }
+    },
+
     "list": {
       "common": {
         "export": "Exportar",

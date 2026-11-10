@@ -119,6 +119,164 @@
       }
     },
 
+    "topBar": {
+      "search": "Leads, Kontakte, Deals suchen ...",
+      "searchShort": "Suchen ...",
+      "new": "Neu",
+      "newEntity": "Neu: {entity}",
+      "user": "Benutzer",
+      "profile": "Profil",
+      "settings": "Einstellungen",
+      "billing": "Abrechnung",
+      "signOut": "Abmelden",
+      "signIn": "Anmelden",
+      "signUp": "Registrieren"
+    },
+
+    "forms": {
+      "opportunity": {
+        "loading": "Opportunity wird geladen ...",
+        "title": {
+          "create": "Opportunity erstellen",
+          "edit": "Opportunity bearbeiten"
+        },
+        "subtitle": {
+          "create": "Fügen Sie Ihrer Pipeline eine neue Verkaufschance hinzu",
+          "edit": "Details der Opportunity aktualisieren"
+        },
+        "sections": {
+          "basic": "Grundinformationen",
+          "pipelineStage": "Pipeline und Phase",
+          "dealValue": "Dealwert",
+          "additional": "Weitere Informationen"
+        },
+        "fields": {
+          "name": "Name der Opportunity",
+          "namePlaceholder": "z. B. Enterprise-Lizenz",
+          "company": "Unternehmen",
+          "companyPlaceholder": "Unternehmen auswählen ...",
+          "contact": "Hauptkontakt",
+          "contactPlaceholder": "Kontakt auswählen ...",
+          "assignedTo": "Zugewiesen an",
+          "userPlaceholder": "Benutzer auswählen ...",
+          "pipeline": "Pipeline",
+          "pipelinePlaceholder": "Pipeline auswählen ...",
+          "stage": "Phase",
+          "stagePlaceholder": "Phase auswählen ...",
+          "status": "Status",
+          "statusPlaceholder": "Status auswählen",
+          "lostReason": "Verlustgrund",
+          "lostReasonPlaceholder": "Warum ging diese Opportunity verloren?",
+          "amount": "Dealbetrag",
+          "currency": "Währung",
+          "currencyPlaceholder": "Währung auswählen",
+          "probability": "Abschlusswahrscheinlichkeit (%)",
+          "probabilityHint": "Wird aus der Phase übernommen, anpassbar",
+          "closeDate": "Voraussichtliches Abschlussdatum",
+          "type": "Art der Opportunity",
+          "typePlaceholder": "Art auswählen",
+          "source": "Quelle",
+          "sourcePlaceholder": "Quelle auswählen",
+          "competitor": "Hauptwettbewerber",
+          "competitorPlaceholder": "Name des Wettbewerbers eingeben"
+        },
+        "currencies": {
+          "USD": "US-Dollar",
+          "EUR": "Euro",
+          "GBP": "Britisches Pfund",
+          "MXN": "Mexikanischer Peso",
+          "CAD": "Kanadischer Dollar"
+        },
+        "types": {
+          "new_business": "Neugeschäft",
+          "existing_business": "Bestandsgeschäft",
+          "renewal": "Verlängerung",
+          "upgrade": "Upgrade",
+          "downgrade": "Downgrade"
+        },
+        "sources": {
+          "web": "Website",
+          "referral": "Empfehlung",
+          "cold_call": "Kaltakquise",
+          "trade_show": "Messe",
+          "social_media": "Soziale Medien",
+          "email": "E-Mail",
+          "advertising": "Werbung",
+          "partner": "Partner",
+          "other": "Sonstiges"
+        },
+        "statuses": {
+          "open": "Offen",
+          "won": "Gewonnen",
+          "lost": "Verloren",
+          "abandoned": "Aufgegeben"
+        },
+        "actions": {
+          "cancel": "Abbrechen",
+          "saving": "Wird gespeichert ...",
+          "create": "Opportunity erstellen",
+          "save": "Änderungen speichern"
+        },
+        "errors": {
+          "loadFailed": "Die Daten der Opportunity konnten nicht geladen werden",
+          "nameRequired": "Der Name der Opportunity ist erforderlich",
+          "companyRequired": "Das Unternehmen ist erforderlich",
+          "pipelineRequired": "Die Pipeline ist erforderlich",
+          "stageRequired": "Die Phase ist erforderlich",
+          "closeDateRequired": "Das voraussichtliche Abschlussdatum ist erforderlich",
+          "saveFailed": "Die Opportunity konnte nicht gespeichert werden"
+        }
+      },
+      "pipeline": {
+        "loading": "Pipeline wird geladen ...",
+        "title": {
+          "create": "Pipeline erstellen",
+          "edit": "Pipeline bearbeiten"
+        },
+        "subtitle": {
+          "create": "Richten Sie eine neue Vertriebspipeline mit eigenen Phasen ein",
+          "edit": "Einstellungen und Phasen der Pipeline ändern"
+        },
+        "sections": {
+          "basic": "Grundinformationen",
+          "stages": "Pipeline-Phasen"
+        },
+        "fields": {
+          "name": "Name der Pipeline",
+          "namePlaceholder": "z. B. Enterprise-Vertrieb",
+          "type": "Art der Pipeline",
+          "typePlaceholder": "Art auswählen",
+          "description": "Beschreibung",
+          "descriptionPlaceholder": "Beschreiben Sie den Zweck dieser Pipeline ...",
+          "rottenDays": "Tage bis ein Deal als veraltet gilt",
+          "rottenDaysHint": "Tage ohne Aktivität, bevor ein Deal als veraltet markiert wird",
+          "active": "Aktiv",
+          "activeHint": "Diese Pipeline zur Nutzung aktivieren",
+          "default": "Standard-Pipeline",
+          "defaultHint": "Als Standard für neue Deals verwenden"
+        },
+        "types": {
+          "sales": "Vertrieb",
+          "support": "Support",
+          "project": "Projekt",
+          "custom": "Benutzerdefiniert"
+        },
+        "actions": {
+          "cancel": "Abbrechen",
+          "saving": "Wird gespeichert ...",
+          "create": "Pipeline erstellen",
+          "save": "Änderungen speichern"
+        },
+        "errors": {
+          "loadFailed": "Die Daten der Pipeline konnten nicht geladen werden",
+          "nameRequired": "Der Name der Pipeline ist erforderlich",
+          "stagesRequired": "Mindestens eine Phase ist erforderlich",
+          "stageNameRequired": "Alle Phasen müssen einen Namen haben",
+          "saveFailed": "Die Pipeline konnte nicht gespeichert werden"
+        }
+      }
+    },
+
     "list": {
       "common": {
         "export": "Exportieren",

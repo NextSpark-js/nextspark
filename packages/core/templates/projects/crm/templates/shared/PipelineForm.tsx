@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Input } from '@nextsparkjs/core/components/ui/input'
 import { Label } from '@nextsparkjs/core/components/ui/label'
@@ -42,14 +43,11 @@ interface PipelineFormProps {
     onCancel?: () => void
 }
 
-const PIPELINE_TYPES = [
-    { value: 'sales', label: 'Sales' },
-    { value: 'support', label: 'Support' },
-    { value: 'project', label: 'Project' },
-    { value: 'custom', label: 'Custom' },
-]
+// the labels are read from the catalog (`crm.forms.pipeline.types.<value>`)
+const PIPELINE_TYPES = ['sales', 'support', 'project', 'custom']
 
 export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: PipelineFormProps) {
+    const t = useTranslations('crm.forms.pipeline')
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
 
@@ -93,7 +91,7 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
             })
         } catch (err) {
             console.error('Error loading pipeline:', err)
-            setError('Failed to load pipeline data')
+            setError(t('errors.loadFailed'))
         } finally {
             setIsLoading(false)
         }
@@ -105,18 +103,18 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
 
         // Validation
         if (!formData.name.trim()) {
-            setError('Pipeline name is required')
+            setError(t('errors.nameRequired'))
             return
         }
 
         if (formData.stages.length === 0) {
-            setError('At least one stage is required')
+            setError(t('errors.stagesRequired'))
             return
         }
 
         const emptyStages = formData.stages.filter(s => !s.name.trim())
         if (emptyStages.length > 0) {
-            setError('All stages must have a name')
+            setError(t('errors.stageNameRequired'))
             return
         }
 
@@ -149,7 +147,7 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
             }
         } catch (err) {
             console.error('Error saving pipeline:', err)
-            setError(err instanceof Error ? err.message : 'Failed to save pipeline')
+            setError(err instanceof Error ? err.message : t('errors.saveFailed'))
         } finally {
             setIsSaving(false)
         }
@@ -168,7 +166,7 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
             <div className="flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
                     <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">Loading pipeline...</p>
+                    <p className="text-sm text-muted-foreground">{t('loading')}</p>
                 </div>
             </div>
         )
@@ -193,12 +191,10 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
                     </div>
                     <div>
                         <h1 className="text-xl font-semibold">
-                            {mode === 'create' ? 'Create Pipeline' : 'Edit Pipeline'}
+                            {t(`title.${mode}`)}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {mode === 'create'
-                                ? 'Set up a new sales pipeline with custom stages'
-                                : 'Modify pipeline settings and stages'}
+                            {t(`subtitle.${mode}`)}
                         </p>
                     </div>
                 </div>
@@ -213,19 +209,19 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
 
             {/* Basic Info Section */}
             <div className="bg-card border rounded-xl p-6 space-y-5">
-                <h2 className="font-semibold text-base border-b pb-3 mb-4">Basic Information</h2>
+                <h2 className="font-semibold text-base border-b pb-3 mb-4">{t('sections.basic')}</h2>
 
                 <div className="grid grid-cols-2 gap-5">
                     {/* Name */}
                     <div className="col-span-2 sm:col-span-1">
                         <Label htmlFor="name" className="text-sm font-medium">
-                            Pipeline Name <span className="text-destructive">*</span>
+                            {t('fields.name')} <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="name"
                             value={formData.name}
                             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="e.g., Enterprise Sales"
+                            placeholder={t('fields.namePlaceholder')}
                             className="mt-1.5"
                             required
                             data-cy="pipeline-form-name"
@@ -235,19 +231,19 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
                     {/* Type */}
                     <div className="col-span-2 sm:col-span-1">
                         <Label htmlFor="type" className="text-sm font-medium">
-                            Pipeline Type
+                            {t('fields.type')}
                         </Label>
                         <Select
                             value={formData.type}
                             onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
                         >
                             <SelectTrigger className="mt-1.5">
-                                <SelectValue placeholder="Select type" />
+                                <SelectValue placeholder={t('fields.typePlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {PIPELINE_TYPES.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                        {type.label}
+                                    <SelectItem key={type} value={type}>
+                                        {t(`types.${type}`)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -257,13 +253,13 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
                     {/* Description */}
                     <div className="col-span-2">
                         <Label htmlFor="description" className="text-sm font-medium">
-                            Description
+                            {t('fields.description')}
                         </Label>
                         <Textarea
                             id="description"
                             value={formData.description}
                             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                            placeholder="Describe the purpose of this pipeline..."
+                            placeholder={t('fields.descriptionPlaceholder')}
                             className="mt-1.5 min-h-[80px]"
                             data-cy="pipeline-form-description"
                         />
@@ -272,10 +268,10 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
                     {/* Deal Rotten Days */}
                     <div className="col-span-2 sm:col-span-1">
                         <Label htmlFor="dealRottenDays" className="text-sm font-medium">
-                            Deal Rotten Days
+                            {t('fields.rottenDays')}
                         </Label>
                         <p className="text-xs text-muted-foreground mb-1.5">
-                            Days without activity before a deal is marked as stale
+                            {t('fields.rottenDaysHint')}
                         </p>
                         <Input
                             id="dealRottenDays"
@@ -293,10 +289,10 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
                         <div className="flex items-center justify-between">
                             <div>
                                 <Label htmlFor="isActive" className="text-sm font-medium">
-                                    Active
+                                    {t('fields.active')}
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Enable this pipeline for use
+                                    {t('fields.activeHint')}
                                 </p>
                             </div>
                             <Switch
@@ -309,10 +305,10 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
                         <div className="flex items-center justify-between">
                             <div>
                                 <Label htmlFor="isDefault" className="text-sm font-medium">
-                                    Default Pipeline
+                                    {t('fields.default')}
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Use as default for new deals
+                                    {t('fields.defaultHint')}
                                 </p>
                             </div>
                             <Switch
@@ -327,7 +323,7 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
 
             {/* Stages Section */}
             <div className="bg-card border rounded-xl p-6">
-                <h2 className="font-semibold text-base border-b pb-3 mb-4">Pipeline Stages</h2>
+                <h2 className="font-semibold text-base border-b pb-3 mb-4">{t('sections.stages')}</h2>
                 <StagesRepeater
                     value={formData.stages}
                     onChange={(stages) => setFormData(prev => ({ ...prev, stages }))}
@@ -344,18 +340,18 @@ export function PipelineForm({ mode, pipelineId, onSuccess, onCancel }: Pipeline
                     disabled={isSaving}
                     data-cy="pipeline-form-cancel"
                 >
-                    Cancel
+                    {t('actions.cancel')}
                 </Button>
                 <Button type="submit" disabled={isSaving} className="gap-2" data-cy="pipeline-form-submit">
                     {isSaving ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Saving...
+                            {t('actions.saving')}
                         </>
                     ) : (
                         <>
                             <Save className="w-4 h-4" />
-                            {mode === 'create' ? 'Create Pipeline' : 'Save Changes'}
+                            {mode === 'create' ? t('actions.create') : t('actions.save')}
                         </>
                     )}
                 </Button>

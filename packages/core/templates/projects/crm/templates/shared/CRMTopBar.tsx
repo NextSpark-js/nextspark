@@ -9,6 +9,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
@@ -43,6 +44,7 @@ import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 import { useQuickCreateEntities } from '@nextsparkjs/core/hooks/useQuickCreateEntities'
 
 export function CRMTopBar() {
+    const t = useTranslations('crm.topBar')
     const { user, signOut, isLoading } = useAuth()
     const canAccessBilling = usePermission('settings.billing' as Permission)
     const { theme, setTheme } = useTheme()
@@ -55,11 +57,11 @@ export function CRMTopBar() {
     // Transform entities to quick actions format
     const quickActions = useMemo(() => {
         return quickCreateEntities.map(entity => ({
-            label: `New ${entity.names?.singular || entity.slug}`,
+            label: t('newEntity', { entity: entity.names?.singular || entity.slug }),
             href: `/dashboard/${entity.slug}/create`,
             icon: entity.icon
         }))
-    }, [quickCreateEntities])
+    }, [quickCreateEntities, t])
 
     // Generate user initials
     const getUserInitials = (user: { firstName?: string; lastName?: string; email: string }) => {
@@ -95,7 +97,7 @@ export function CRMTopBar() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Search leads, contacts, deals..."
+                            placeholder={t('search')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
@@ -126,14 +128,14 @@ export function CRMTopBar() {
                     {isLoadingEntities ? (
                         <Button size="sm" className="gap-2 h-9" disabled>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            <span className="hidden sm:inline">New</span>
+                            <span className="hidden sm:inline">{t('new')}</span>
                         </Button>
                     ) : hasEntities ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button size="sm" className="gap-2 h-9" data-cy="crm-topbar-quick-create-btn">
                                     <Plus className="h-4 w-4" />
-                                    <span className="hidden sm:inline">New</span>
+                                    <span className="hidden sm:inline">{t('new')}</span>
                                     <ChevronDown className="h-3 w-3 opacity-50" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -199,7 +201,7 @@ export function CRMTopBar() {
                             <DropdownMenuContent align="end" className="w-56" data-cy="crm-topbar-user-menu-content">
                                 <DropdownMenuLabel>
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium">{user.firstName || 'User'}</p>
+                                        <p className="text-sm font-medium">{user.firstName || t('user')}</p>
                                         <p className="text-xs text-muted-foreground">{user.email}</p>
                                     </div>
                                 </DropdownMenuLabel>
@@ -207,20 +209,20 @@ export function CRMTopBar() {
                                 <DropdownMenuItem asChild data-cy="crm-topbar-menu-profile">
                                     <Link href="/dashboard/settings/profile" className="flex items-center">
                                         <User className="mr-2 h-4 w-4" />
-                                        Profile
+                                        {t('profile')}
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild data-cy="crm-topbar-menu-settings">
                                     <Link href="/dashboard/settings" className="flex items-center">
                                         <Settings className="mr-2 h-4 w-4" />
-                                        Settings
+                                        {t('settings')}
                                     </Link>
                                 </DropdownMenuItem>
                                 {canAccessBilling && (
                                     <DropdownMenuItem asChild data-cy="crm-topbar-menu-billing">
                                         <Link href="/dashboard/settings/billing" className="flex items-center">
                                             <CreditCard className="mr-2 h-4 w-4" />
-                                            Billing
+                                            {t('billing')}
                                         </Link>
                                     </DropdownMenuItem>
                                 )}
@@ -231,17 +233,17 @@ export function CRMTopBar() {
                                     data-cy="crm-topbar-menu-signout"
                                 >
                                     <LogOut className="mr-2 h-4 w-4" />
-                                    Sign out
+                                    {t('signOut')}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm" asChild>
-                                <Link href="/login">Sign in</Link>
+                                <Link href="/login">{t('signIn')}</Link>
                             </Button>
                             <Button size="sm" asChild>
-                                <Link href="/signup">Sign up</Link>
+                                <Link href="/signup">{t('signUp')}</Link>
                             </Button>
                         </div>
                     )}
@@ -255,7 +257,7 @@ export function CRMTopBar() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Search..."
+                            placeholder={t('searchShort')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"

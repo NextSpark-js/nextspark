@@ -119,6 +119,164 @@
       }
     },
 
+    "topBar": {
+      "search": "Rechercher leads, contacts, affaires...",
+      "searchShort": "Rechercher...",
+      "new": "Nouveau",
+      "newEntity": "Nouveau : {entity}",
+      "user": "Utilisateur",
+      "profile": "Profil",
+      "settings": "Paramètres",
+      "billing": "Facturation",
+      "signOut": "Se déconnecter",
+      "signIn": "Se connecter",
+      "signUp": "S'inscrire"
+    },
+
+    "forms": {
+      "opportunity": {
+        "loading": "Chargement de l'opportunité...",
+        "title": {
+          "create": "Créer une opportunité",
+          "edit": "Modifier l'opportunité"
+        },
+        "subtitle": {
+          "create": "Ajoutez une nouvelle opportunité de vente à votre pipeline",
+          "edit": "Mettez à jour les détails de l'opportunité"
+        },
+        "sections": {
+          "basic": "Informations de base",
+          "pipelineStage": "Pipeline et étape",
+          "dealValue": "Valeur de l'affaire",
+          "additional": "Informations complémentaires"
+        },
+        "fields": {
+          "name": "Nom de l'opportunité",
+          "namePlaceholder": "p. ex. Licence entreprise",
+          "company": "Entreprise",
+          "companyPlaceholder": "Sélectionnez une entreprise...",
+          "contact": "Contact principal",
+          "contactPlaceholder": "Sélectionnez un contact...",
+          "assignedTo": "Assigné à",
+          "userPlaceholder": "Sélectionnez un utilisateur...",
+          "pipeline": "Pipeline",
+          "pipelinePlaceholder": "Sélectionnez un pipeline...",
+          "stage": "Étape",
+          "stagePlaceholder": "Sélectionnez une étape...",
+          "status": "Statut",
+          "statusPlaceholder": "Sélectionnez un statut",
+          "lostReason": "Motif de la perte",
+          "lostReasonPlaceholder": "Pourquoi cette opportunité a-t-elle été perdue ?",
+          "amount": "Montant de l'affaire",
+          "currency": "Devise",
+          "currencyPlaceholder": "Sélectionnez une devise",
+          "probability": "Probabilité de gain (%)",
+          "probabilityHint": "Définie d'après l'étape, modifiable",
+          "closeDate": "Date de clôture prévue",
+          "type": "Type d'opportunité",
+          "typePlaceholder": "Sélectionnez un type",
+          "source": "Source",
+          "sourcePlaceholder": "Sélectionnez une source",
+          "competitor": "Principal concurrent",
+          "competitorPlaceholder": "Saisissez le nom du concurrent"
+        },
+        "currencies": {
+          "USD": "Dollar américain",
+          "EUR": "Euro",
+          "GBP": "Livre sterling",
+          "MXN": "Peso mexicain",
+          "CAD": "Dollar canadien"
+        },
+        "types": {
+          "new_business": "Nouvelle affaire",
+          "existing_business": "Affaire existante",
+          "renewal": "Renouvellement",
+          "upgrade": "Montée en gamme",
+          "downgrade": "Rétrogradation"
+        },
+        "sources": {
+          "web": "Site web",
+          "referral": "Recommandation",
+          "cold_call": "Appel à froid",
+          "trade_show": "Salon professionnel",
+          "social_media": "Réseaux sociaux",
+          "email": "E-mail",
+          "advertising": "Publicité",
+          "partner": "Partenaire",
+          "other": "Autre"
+        },
+        "statuses": {
+          "open": "Ouverte",
+          "won": "Gagnée",
+          "lost": "Perdue",
+          "abandoned": "Abandonnée"
+        },
+        "actions": {
+          "cancel": "Annuler",
+          "saving": "Enregistrement...",
+          "create": "Créer une opportunité",
+          "save": "Enregistrer les modifications"
+        },
+        "errors": {
+          "loadFailed": "Impossible de charger les données de l'opportunité",
+          "nameRequired": "Le nom de l'opportunité est obligatoire",
+          "companyRequired": "L'entreprise est obligatoire",
+          "pipelineRequired": "Le pipeline est obligatoire",
+          "stageRequired": "L'étape est obligatoire",
+          "closeDateRequired": "La date de clôture prévue est obligatoire",
+          "saveFailed": "Impossible d'enregistrer l'opportunité"
+        }
+      },
+      "pipeline": {
+        "loading": "Chargement du pipeline...",
+        "title": {
+          "create": "Créer un pipeline",
+          "edit": "Modifier le pipeline"
+        },
+        "subtitle": {
+          "create": "Configurez un nouveau pipeline de vente avec des étapes personnalisées",
+          "edit": "Modifiez les paramètres et les étapes du pipeline"
+        },
+        "sections": {
+          "basic": "Informations de base",
+          "stages": "Étapes du pipeline"
+        },
+        "fields": {
+          "name": "Nom du pipeline",
+          "namePlaceholder": "p. ex. Ventes grands comptes",
+          "type": "Type de pipeline",
+          "typePlaceholder": "Sélectionnez un type",
+          "description": "Description",
+          "descriptionPlaceholder": "Décrivez l'objectif de ce pipeline...",
+          "rottenDays": "Jours avant qu'une affaire soit dormante",
+          "rottenDaysHint": "Jours sans activité avant qu'une affaire soit marquée comme dormante",
+          "active": "Actif",
+          "activeHint": "Activez ce pipeline pour pouvoir l’utiliser",
+          "default": "Pipeline par défaut",
+          "defaultHint": "Utiliser par défaut pour les nouvelles affaires"
+        },
+        "types": {
+          "sales": "Ventes",
+          "support": "Support",
+          "project": "Projet",
+          "custom": "Personnalisé"
+        },
+        "actions": {
+          "cancel": "Annuler",
+          "saving": "Enregistrement...",
+          "create": "Créer un pipeline",
+          "save": "Enregistrer les modifications"
+        },
+        "errors": {
+          "loadFailed": "Impossible de charger les données du pipeline",
+          "nameRequired": "Le nom du pipeline est obligatoire",
+          "stagesRequired": "Au moins une étape est obligatoire",
+          "stageNameRequired": "Toutes les étapes doivent avoir un nom",
+          "saveFailed": "Impossible d'enregistrer le pipeline"
+        }
+      }
+    },
+
     "list": {
       "common": {
         "export": "Exporter",

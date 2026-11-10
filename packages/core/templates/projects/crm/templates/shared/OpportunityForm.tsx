@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Input } from '@nextsparkjs/core/components/ui/input'
 import { Label } from '@nextsparkjs/core/components/ui/label'
@@ -51,42 +52,14 @@ interface OpportunityFormProps {
     onCancel?: () => void
 }
 
-const CURRENCIES = [
-    { value: 'USD', label: 'US Dollar' },
-    { value: 'EUR', label: 'Euro' },
-    { value: 'GBP', label: 'British Pound' },
-    { value: 'MXN', label: 'Mexican Peso' },
-    { value: 'CAD', label: 'Canadian Dollar' },
-]
-
-const OPPORTUNITY_TYPES = [
-    { value: 'new_business', label: 'New Business' },
-    { value: 'existing_business', label: 'Existing Business' },
-    { value: 'renewal', label: 'Renewal' },
-    { value: 'upgrade', label: 'Upgrade' },
-    { value: 'downgrade', label: 'Downgrade' },
-]
-
-const SOURCES = [
-    { value: 'web', label: 'Website' },
-    { value: 'referral', label: 'Referral' },
-    { value: 'cold_call', label: 'Cold Call' },
-    { value: 'trade_show', label: 'Trade Show' },
-    { value: 'social_media', label: 'Social Media' },
-    { value: 'email', label: 'Email' },
-    { value: 'advertising', label: 'Advertising' },
-    { value: 'partner', label: 'Partner' },
-    { value: 'other', label: 'Other' },
-]
-
-const STATUSES = [
-    { value: 'open', label: 'Open' },
-    { value: 'won', label: 'Won' },
-    { value: 'lost', label: 'Lost' },
-    { value: 'abandoned', label: 'Abandoned' },
-]
+// the labels of the options are read from the catalog (`crm.forms.opportunity.<group>.<value>`)
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'MXN', 'CAD']
+const OPPORTUNITY_TYPES = ['new_business', 'existing_business', 'renewal', 'upgrade', 'downgrade']
+const SOURCES = ['web', 'referral', 'cold_call', 'trade_show', 'social_media', 'email', 'advertising', 'partner', 'other']
+const STATUSES = ['open', 'won', 'lost', 'abandoned']
 
 export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: OpportunityFormProps) {
+    const t = useTranslations('crm.forms.opportunity')
     const router = useRouter()
     const searchParams = useSearchParams()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
@@ -150,7 +123,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
             })
         } catch (err) {
             console.error('Error loading opportunity:', err)
-            setError('Failed to load opportunity data')
+            setError(t('errors.loadFailed'))
         } finally {
             setIsLoading(false)
         }
@@ -162,27 +135,27 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
         // Validation
         if (!formData.name.trim()) {
-            setError('Opportunity name is required')
+            setError(t('errors.nameRequired'))
             return
         }
 
         if (!formData.companyId) {
-            setError('Company is required')
+            setError(t('errors.companyRequired'))
             return
         }
 
         if (!formData.pipelineId) {
-            setError('Pipeline is required')
+            setError(t('errors.pipelineRequired'))
             return
         }
 
         if (!formData.stageId) {
-            setError('Stage is required')
+            setError(t('errors.stageRequired'))
             return
         }
 
         if (!formData.closeDate) {
-            setError('Expected close date is required')
+            setError(t('errors.closeDateRequired'))
             return
         }
 
@@ -236,7 +209,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
             }
         } catch (err) {
             console.error('Error saving opportunity:', err)
-            setError(err instanceof Error ? err.message : 'Failed to save opportunity')
+            setError(err instanceof Error ? err.message : t('errors.saveFailed'))
         } finally {
             setIsSaving(false)
         }
@@ -275,7 +248,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
             <div className="flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
                     <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">Loading opportunity...</p>
+                    <p className="text-sm text-muted-foreground">{t('loading')}</p>
                 </div>
             </div>
         )
@@ -300,12 +273,10 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                     </div>
                     <div>
                         <h1 className="text-xl font-semibold">
-                            {mode === 'create' ? 'Create Opportunity' : 'Edit Opportunity'}
+                            {t(`title.${mode}`)}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {mode === 'create'
-                                ? 'Add a new sales opportunity to your pipeline'
-                                : 'Update opportunity details'}
+                            {t(`subtitle.${mode}`)}
                         </p>
                     </div>
                 </div>
@@ -320,19 +291,19 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
             {/* Basic Info Section */}
             <div className="bg-card border rounded-xl p-6 space-y-5">
-                <h2 className="font-semibold text-base border-b pb-3 mb-4">Basic Information</h2>
+                <h2 className="font-semibold text-base border-b pb-3 mb-4">{t('sections.basic')}</h2>
 
                 <div className="grid grid-cols-12 gap-5">
                     {/* Name */}
                     <div className="col-span-12 sm:col-span-6" data-cy="opportunities-field-name">
                         <Label htmlFor="name">
-                            Opportunity Name <span className="text-destructive">*</span>
+                            {t('fields.name')} <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="name"
                             value={formData.name}
                             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="e.g., Enterprise License Deal"
+                            placeholder={t('fields.namePlaceholder')}
                             className="mt-1.5"
                             required
                         />
@@ -341,7 +312,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                     {/* Company */}
                     <div className="col-span-12 sm:col-span-6">
                         <Label>
-                            Company <span className="text-destructive">*</span>
+                            {t('fields.company')} <span className="text-destructive">*</span>
                         </Label>
                         <div className="mt-1.5">
                             <SimpleRelationSelect
@@ -352,7 +323,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                                 }))}
                                 entityType="companies"
                                 titleField="name"
-                                placeholder="Select company..."
+                                placeholder={t('fields.companyPlaceholder')}
                                 disabled={isSaving}
                                 teamId={currentTeam?.id}
                             />
@@ -361,7 +332,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
                     {/* Contact */}
                     <div className="col-span-12 sm:col-span-6">
-                        <Label>Primary Contact</Label>
+                        <Label>{t('fields.contact')}</Label>
                         <div className="mt-1.5">
                             <SimpleRelationSelect
                                 value={formData.contactId}
@@ -371,7 +342,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                                 }))}
                                 entityType="contacts"
                                 titleField="firstName"
-                                placeholder="Select contact..."
+                                placeholder={t('fields.contactPlaceholder')}
                                 disabled={isSaving}
                                 teamId={currentTeam?.id}
                             />
@@ -380,7 +351,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
                     {/* Assigned To */}
                     <div className="col-span-12 sm:col-span-6">
-                        <Label>Assigned To</Label>
+                        <Label>{t('fields.assignedTo')}</Label>
                         <div className="mt-1.5">
                             <UserSelect
                                 value={formData.assignedTo ? [{ id: formData.assignedTo, firstName: '', email: '' }] : []}
@@ -392,7 +363,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                                 }}
                                 disabled={isSaving}
                                 multiple={false}
-                                placeholder="Select user..."
+                                placeholder={t('fields.userPlaceholder')}
                                 teamId={currentTeam?.id}
                             />
                         </div>
@@ -402,13 +373,13 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
             {/* Pipeline & Stage Section */}
             <div className="bg-card border rounded-xl p-6 space-y-5">
-                <h2 className="font-semibold text-base border-b pb-3 mb-4">Pipeline & Stage</h2>
+                <h2 className="font-semibold text-base border-b pb-3 mb-4">{t('sections.pipelineStage')}</h2>
 
                 <div className="grid grid-cols-12 gap-5">
                     {/* Pipeline */}
                     <div className="col-span-12 sm:col-span-6">
                         <Label>
-                            Pipeline <span className="text-destructive">*</span>
+                            {t('fields.pipeline')} <span className="text-destructive">*</span>
                         </Label>
                         <div className="mt-1.5">
                             <SimpleRelationSelect
@@ -416,7 +387,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                                 onChange={handlePipelineChange}
                                 entityType="pipelines"
                                 titleField="name"
-                                placeholder="Select pipeline..."
+                                placeholder={t('fields.pipelinePlaceholder')}
                                 disabled={isSaving}
                                 teamId={currentTeam?.id}
                             />
@@ -426,32 +397,32 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                     {/* Stage */}
                     <div className="col-span-12 sm:col-span-6">
                         <StageSelect
-                            label="Stage"
+                            label={t('fields.stage')}
                             required
                             value={formData.stageId}
                             onChange={handleStageChange}
                             pipelineId={formData.pipelineId}
                             disabled={isSaving}
-                            placeholder="Select stage..."
+                            placeholder={t('fields.stagePlaceholder')}
                             dataCy="opportunities-field-stage"
                         />
                     </div>
 
                     {/* Status */}
                     <div className="col-span-12 sm:col-span-4">
-                        <Label>Status</Label>
+                        <Label>{t('fields.status')}</Label>
                         <Select
                             value={formData.status}
                             onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                             disabled={isSaving}
                         >
                             <SelectTrigger className="mt-1.5">
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder={t('fields.statusPlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {STATUSES.map((status) => (
-                                    <SelectItem key={status.value} value={status.value}>
-                                        {status.label}
+                                    <SelectItem key={status} value={status}>
+                                        {t(`statuses.${status}`)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -461,11 +432,11 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                     {/* Lost Reason (shown only if status is lost) */}
                     {formData.status === 'lost' && (
                         <div className="col-span-12 sm:col-span-8">
-                            <Label>Lost Reason</Label>
+                            <Label>{t('fields.lostReason')}</Label>
                             <Input
                                 value={formData.lostReason}
                                 onChange={(e) => setFormData(prev => ({ ...prev, lostReason: e.target.value }))}
-                                placeholder="Why was this opportunity lost?"
+                                placeholder={t('fields.lostReasonPlaceholder')}
                                 className="mt-1.5"
                             />
                         </div>
@@ -475,13 +446,13 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
             {/* Deal Value Section */}
             <div className="bg-card border rounded-xl p-6 space-y-5">
-                <h2 className="font-semibold text-base border-b pb-3 mb-4">Deal Value</h2>
+                <h2 className="font-semibold text-base border-b pb-3 mb-4">{t('sections.dealValue')}</h2>
 
                 <div className="grid grid-cols-12 gap-5">
                     {/* Amount */}
                     <div className="col-span-12 sm:col-span-4" data-cy="opportunities-field-value">
                         <Label htmlFor="amount">
-                            Deal Amount <span className="text-destructive">*</span>
+                            {t('fields.amount')} <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="amount"
@@ -498,19 +469,19 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
                     {/* Currency */}
                     <div className="col-span-12 sm:col-span-4">
-                        <Label>Currency</Label>
+                        <Label>{t('fields.currency')}</Label>
                         <Select
                             value={formData.currency}
                             onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}
                             disabled={isSaving}
                         >
                             <SelectTrigger className="mt-1.5">
-                                <SelectValue placeholder="Select currency" />
+                                <SelectValue placeholder={t('fields.currencyPlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {CURRENCIES.map((currency) => (
-                                    <SelectItem key={currency.value} value={currency.value}>
-                                        {currency.label}
+                                    <SelectItem key={currency} value={currency}>
+                                        {t(`currencies.${currency}`)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -519,7 +490,7 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
                     {/* Probability */}
                     <div className="col-span-12 sm:col-span-4" data-cy="opportunities-field-probability">
-                        <Label htmlFor="probability">Win Probability (%)</Label>
+                        <Label htmlFor="probability">{t('fields.probability')}</Label>
                         <div className="relative mt-1.5">
                             <Input
                                 id="probability"
@@ -535,14 +506,14 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                             </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            Auto-set from stage, can be adjusted
+                            {t('fields.probabilityHint')}
                         </p>
                     </div>
 
                     {/* Close Date */}
                     <div className="col-span-12 sm:col-span-4">
                         <Label htmlFor="closeDate">
-                            Expected Close Date <span className="text-destructive">*</span>
+                            {t('fields.closeDate')} <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="closeDate"
@@ -558,24 +529,24 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
             {/* Additional Info Section */}
             <div className="bg-card border rounded-xl p-6 space-y-5">
-                <h2 className="font-semibold text-base border-b pb-3 mb-4">Additional Information</h2>
+                <h2 className="font-semibold text-base border-b pb-3 mb-4">{t('sections.additional')}</h2>
 
                 <div className="grid grid-cols-12 gap-5">
                     {/* Type */}
                     <div className="col-span-12 sm:col-span-4">
-                        <Label>Opportunity Type</Label>
+                        <Label>{t('fields.type')}</Label>
                         <Select
                             value={formData.type}
                             onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
                             disabled={isSaving}
                         >
                             <SelectTrigger className="mt-1.5">
-                                <SelectValue placeholder="Select type" />
+                                <SelectValue placeholder={t('fields.typePlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {OPPORTUNITY_TYPES.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                        {type.label}
+                                    <SelectItem key={type} value={type}>
+                                        {t(`types.${type}`)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -584,19 +555,19 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
                     {/* Source */}
                     <div className="col-span-12 sm:col-span-4">
-                        <Label>Source</Label>
+                        <Label>{t('fields.source')}</Label>
                         <Select
                             value={formData.source}
                             onValueChange={(value) => setFormData(prev => ({ ...prev, source: value }))}
                             disabled={isSaving}
                         >
                             <SelectTrigger className="mt-1.5">
-                                <SelectValue placeholder="Select source" />
+                                <SelectValue placeholder={t('fields.sourcePlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {SOURCES.map((source) => (
-                                    <SelectItem key={source.value} value={source.value}>
-                                        {source.label}
+                                    <SelectItem key={source} value={source}>
+                                        {t(`sources.${source}`)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -605,12 +576,12 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
 
                     {/* Competitor */}
                     <div className="col-span-12 sm:col-span-4">
-                        <Label htmlFor="competitor">Main Competitor</Label>
+                        <Label htmlFor="competitor">{t('fields.competitor')}</Label>
                         <Input
                             id="competitor"
                             value={formData.competitor}
                             onChange={(e) => setFormData(prev => ({ ...prev, competitor: e.target.value }))}
-                            placeholder="Enter competitor name"
+                            placeholder={t('fields.competitorPlaceholder')}
                             className="mt-1.5"
                         />
                     </div>
@@ -626,18 +597,18 @@ export function OpportunityForm({ mode, opportunityId, onSuccess, onCancel }: Op
                     disabled={isSaving}
                     data-cy="opportunities-form-cancel"
                 >
-                    Cancel
+                    {t('actions.cancel')}
                 </Button>
                 <Button type="submit" disabled={isSaving} className="gap-2" data-cy="opportunities-form-submit">
                     {isSaving ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Saving...
+                            {t('actions.saving')}
                         </>
                     ) : (
                         <>
                             <Save className="w-4 h-4" />
-                            {mode === 'create' ? 'Create Opportunity' : 'Save Changes'}
+                            {mode === 'create' ? t('actions.create') : t('actions.save')}
                         </>
                     )}
                 </Button>

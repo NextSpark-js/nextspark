@@ -128,6 +128,164 @@
       }
     },
 
+    "topBar": {
+      "search": "Search leads, contacts, deals...",
+      "searchShort": "Search...",
+      "new": "New",
+      "newEntity": "New {entity}",
+      "user": "User",
+      "profile": "Profile",
+      "settings": "Settings",
+      "billing": "Billing",
+      "signOut": "Sign out",
+      "signIn": "Sign in",
+      "signUp": "Sign up"
+    },
+
+    "forms": {
+      "opportunity": {
+        "loading": "Loading opportunity...",
+        "title": {
+          "create": "Create Opportunity",
+          "edit": "Edit Opportunity"
+        },
+        "subtitle": {
+          "create": "Add a new sales opportunity to your pipeline",
+          "edit": "Update opportunity details"
+        },
+        "sections": {
+          "basic": "Basic Information",
+          "pipelineStage": "Pipeline & Stage",
+          "dealValue": "Deal Value",
+          "additional": "Additional Information"
+        },
+        "fields": {
+          "name": "Opportunity Name",
+          "namePlaceholder": "e.g., Enterprise License Deal",
+          "company": "Company",
+          "companyPlaceholder": "Select company...",
+          "contact": "Primary Contact",
+          "contactPlaceholder": "Select contact...",
+          "assignedTo": "Assigned To",
+          "userPlaceholder": "Select user...",
+          "pipeline": "Pipeline",
+          "pipelinePlaceholder": "Select pipeline...",
+          "stage": "Stage",
+          "stagePlaceholder": "Select stage...",
+          "status": "Status",
+          "statusPlaceholder": "Select status",
+          "lostReason": "Lost Reason",
+          "lostReasonPlaceholder": "Why was this opportunity lost?",
+          "amount": "Deal Amount",
+          "currency": "Currency",
+          "currencyPlaceholder": "Select currency",
+          "probability": "Win Probability (%)",
+          "probabilityHint": "Auto-set from stage, can be adjusted",
+          "closeDate": "Expected Close Date",
+          "type": "Opportunity Type",
+          "typePlaceholder": "Select type",
+          "source": "Source",
+          "sourcePlaceholder": "Select source",
+          "competitor": "Main Competitor",
+          "competitorPlaceholder": "Enter competitor name"
+        },
+        "currencies": {
+          "USD": "US Dollar",
+          "EUR": "Euro",
+          "GBP": "British Pound",
+          "MXN": "Mexican Peso",
+          "CAD": "Canadian Dollar"
+        },
+        "types": {
+          "new_business": "New Business",
+          "existing_business": "Existing Business",
+          "renewal": "Renewal",
+          "upgrade": "Upgrade",
+          "downgrade": "Downgrade"
+        },
+        "sources": {
+          "web": "Website",
+          "referral": "Referral",
+          "cold_call": "Cold Call",
+          "trade_show": "Trade Show",
+          "social_media": "Social Media",
+          "email": "Email",
+          "advertising": "Advertising",
+          "partner": "Partner",
+          "other": "Other"
+        },
+        "statuses": {
+          "open": "Open",
+          "won": "Won",
+          "lost": "Lost",
+          "abandoned": "Abandoned"
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "saving": "Saving...",
+          "create": "Create Opportunity",
+          "save": "Save Changes"
+        },
+        "errors": {
+          "loadFailed": "Failed to load opportunity data",
+          "nameRequired": "Opportunity name is required",
+          "companyRequired": "Company is required",
+          "pipelineRequired": "Pipeline is required",
+          "stageRequired": "Stage is required",
+          "closeDateRequired": "Expected close date is required",
+          "saveFailed": "Failed to save opportunity"
+        }
+      },
+      "pipeline": {
+        "loading": "Loading pipeline...",
+        "title": {
+          "create": "Create Pipeline",
+          "edit": "Edit Pipeline"
+        },
+        "subtitle": {
+          "create": "Set up a new sales pipeline with custom stages",
+          "edit": "Modify pipeline settings and stages"
+        },
+        "sections": {
+          "basic": "Basic Information",
+          "stages": "Pipeline Stages"
+        },
+        "fields": {
+          "name": "Pipeline Name",
+          "namePlaceholder": "e.g., Enterprise Sales",
+          "type": "Pipeline Type",
+          "typePlaceholder": "Select type",
+          "description": "Description",
+          "descriptionPlaceholder": "Describe the purpose of this pipeline...",
+          "rottenDays": "Deal Rotten Days",
+          "rottenDaysHint": "Days without activity before a deal is marked as stale",
+          "active": "Active",
+          "activeHint": "Enable this pipeline for use",
+          "default": "Default Pipeline",
+          "defaultHint": "Use as default for new deals"
+        },
+        "types": {
+          "sales": "Sales",
+          "support": "Support",
+          "project": "Project",
+          "custom": "Custom"
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "saving": "Saving...",
+          "create": "Create Pipeline",
+          "save": "Save Changes"
+        },
+        "errors": {
+          "loadFailed": "Failed to load pipeline data",
+          "nameRequired": "Pipeline name is required",
+          "stagesRequired": "At least one stage is required",
+          "stageNameRequired": "All stages must have a name",
+          "saveFailed": "Failed to save pipeline"
+        }
+      }
+    },
+
     "list": {
       "common": {
         "export": "Export",

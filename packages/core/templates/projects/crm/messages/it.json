@@ -119,6 +119,164 @@
       }
     },
 
+    "topBar": {
+      "search": "Cerca lead, contatti, trattative...",
+      "searchShort": "Cerca...",
+      "new": "Nuovo",
+      "newEntity": "Nuovo: {entity}",
+      "user": "Utente",
+      "profile": "Profilo",
+      "settings": "Impostazioni",
+      "billing": "Fatturazione",
+      "signOut": "Esci",
+      "signIn": "Accedi",
+      "signUp": "Registrati"
+    },
+
+    "forms": {
+      "opportunity": {
+        "loading": "Caricamento dell'opportunità...",
+        "title": {
+          "create": "Crea opportunità",
+          "edit": "Modifica opportunità"
+        },
+        "subtitle": {
+          "create": "Aggiungi una nuova opportunità di vendita alla tua pipeline",
+          "edit": "Aggiorna i dettagli dell'opportunità"
+        },
+        "sections": {
+          "basic": "Informazioni di base",
+          "pipelineStage": "Pipeline e fase",
+          "dealValue": "Valore della trattativa",
+          "additional": "Informazioni aggiuntive"
+        },
+        "fields": {
+          "name": "Nome dell'opportunità",
+          "namePlaceholder": "es. Licenza enterprise",
+          "company": "Azienda",
+          "companyPlaceholder": "Seleziona un'azienda...",
+          "contact": "Contatto principale",
+          "contactPlaceholder": "Seleziona un contatto...",
+          "assignedTo": "Assegnato a",
+          "userPlaceholder": "Seleziona un utente...",
+          "pipeline": "Pipeline",
+          "pipelinePlaceholder": "Seleziona una pipeline...",
+          "stage": "Fase",
+          "stagePlaceholder": "Seleziona una fase...",
+          "status": "Stato",
+          "statusPlaceholder": "Seleziona uno stato",
+          "lostReason": "Motivo della perdita",
+          "lostReasonPlaceholder": "Perché questa opportunità è andata persa?",
+          "amount": "Importo della trattativa",
+          "currency": "Valuta",
+          "currencyPlaceholder": "Seleziona una valuta",
+          "probability": "Probabilità di chiusura (%)",
+          "probabilityHint": "Impostata dalla fase, modificabile",
+          "closeDate": "Data di chiusura prevista",
+          "type": "Tipo di opportunità",
+          "typePlaceholder": "Seleziona un tipo",
+          "source": "Origine",
+          "sourcePlaceholder": "Seleziona un'origine",
+          "competitor": "Concorrente principale",
+          "competitorPlaceholder": "Inserisci il nome del concorrente"
+        },
+        "currencies": {
+          "USD": "Dollaro statunitense",
+          "EUR": "Euro",
+          "GBP": "Sterlina britannica",
+          "MXN": "Peso messicano",
+          "CAD": "Dollaro canadese"
+        },
+        "types": {
+          "new_business": "Nuovo business",
+          "existing_business": "Business esistente",
+          "renewal": "Rinnovo",
+          "upgrade": "Upgrade",
+          "downgrade": "Downgrade"
+        },
+        "sources": {
+          "web": "Sito web",
+          "referral": "Segnalazione",
+          "cold_call": "Chiamata a freddo",
+          "trade_show": "Fiera",
+          "social_media": "Social media",
+          "email": "Email",
+          "advertising": "Pubblicità",
+          "partner": "Partner",
+          "other": "Altro"
+        },
+        "statuses": {
+          "open": "Aperta",
+          "won": "Vinta",
+          "lost": "Persa",
+          "abandoned": "Abbandonata"
+        },
+        "actions": {
+          "cancel": "Annulla",
+          "saving": "Salvataggio...",
+          "create": "Crea opportunità",
+          "save": "Salva modifiche"
+        },
+        "errors": {
+          "loadFailed": "Impossibile caricare i dati dell'opportunità",
+          "nameRequired": "Il nome dell'opportunità è obbligatorio",
+          "companyRequired": "L'azienda è obbligatoria",
+          "pipelineRequired": "La pipeline è obbligatoria",
+          "stageRequired": "La fase è obbligatoria",
+          "closeDateRequired": "La data di chiusura prevista è obbligatoria",
+          "saveFailed": "Impossibile salvare l'opportunità"
+        }
+      },
+      "pipeline": {
+        "loading": "Caricamento della pipeline...",
+        "title": {
+          "create": "Crea pipeline",
+          "edit": "Modifica pipeline"
+        },
+        "subtitle": {
+          "create": "Configura una nuova pipeline di vendita con fasi personalizzate",
+          "edit": "Modifica le impostazioni e le fasi della pipeline"
+        },
+        "sections": {
+          "basic": "Informazioni di base",
+          "stages": "Fasi della pipeline"
+        },
+        "fields": {
+          "name": "Nome della pipeline",
+          "namePlaceholder": "es. Vendite enterprise",
+          "type": "Tipo di pipeline",
+          "typePlaceholder": "Seleziona un tipo",
+          "description": "Descrizione",
+          "descriptionPlaceholder": "Descrivi lo scopo di questa pipeline...",
+          "rottenDays": "Giorni prima che una trattativa sia ferma",
+          "rottenDaysHint": "Giorni senza attività prima che una trattativa sia segnata come ferma",
+          "active": "Attivo",
+          "activeHint": "Abilita questa pipeline per l’uso",
+          "default": "Pipeline predefinita",
+          "defaultHint": "Usa come predefinita per le nuove trattative"
+        },
+        "types": {
+          "sales": "Vendite",
+          "support": "Supporto",
+          "project": "Progetto",
+          "custom": "Personalizzato"
+        },
+        "actions": {
+          "cancel": "Annulla",
+          "saving": "Salvataggio...",
+          "create": "Crea pipeline",
+          "save": "Salva modifiche"
+        },
+        "errors": {
+          "loadFailed": "Impossibile caricare i dati della pipeline",
+          "nameRequired": "Il nome della pipeline è obbligatorio",
+          "stagesRequired": "È necessaria almeno una fase",
+          "stageNameRequired": "Tutte le fasi devono avere un nome",
+          "saveFailed": "Impossibile salvare la pipeline"
+        }
+      }
+    },
+
     "list": {
       "common": {
         "export": "Esporta",
