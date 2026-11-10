@@ -59,7 +59,7 @@ async function loadPgBoss(): Promise<new (options: Record<string, unknown>) => B
     return mod.PgBoss as unknown as new (options: Record<string, unknown>) => Boss
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code === 'ERR_MODULE_NOT_FOUND' || (error as NodeJS.ErrnoException)?.code === 'MODULE_NOT_FOUND') {
-      throw new Error('[Jobs] pg-boss is not installed. The worker needs it: add it to your project with `pnpm add pg-boss` (with `-w` in a pnpm workspace, as a generated project is).')
+      throw new Error('[Jobs] pg-boss is not installed. The worker needs it: add it to your project with `pnpm add pg-boss` (with `-w` at the root of a pnpm workspace, as a generated project is).')
     }
     throw error
   }

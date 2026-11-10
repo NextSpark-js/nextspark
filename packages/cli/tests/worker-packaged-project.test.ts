@@ -4,7 +4,7 @@
  * `.nextspark/registries`. Needs that project, so it runs only when NEXTSPARK_PACKED_PROJECT names one:
  *
  *   ./scripts/packages/pack.sh --all --output <dir>/.packages, then create-nextspark-app with those tarballs,
- *   `pnpm add pg-boss` in the project, in config/app.config.ts
+ *   `pnpm add -w pg-boss` in the project, in config/app.config.ts
  *   jobs: { enabled: true, shutdownTimeout: 10, queues: { ping: { handler: 'worker-check:ping' } } }
  *   and a lib/scheduled-actions/index.ts that imports core, the documented form, and registers the handler:
  *   registerScheduledAction('worker-check:ping', async () => { console.log('[worker-check] ping handled') })

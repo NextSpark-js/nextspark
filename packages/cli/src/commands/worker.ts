@@ -33,7 +33,7 @@ export function workerBlocker(projectRoot: string): string | null {
   try {
     createRequire(join(projectRoot, 'package.json')).resolve('pg-boss');
   } catch {
-    return 'pg-boss is not installed in this project. The worker needs it: run `pnpm add pg-boss` (with `-w` in a pnpm workspace, as a generated project is).';
+    return 'pg-boss is not installed in this project. The worker needs it: run `pnpm add pg-boss` (with `-w` at the root of a pnpm workspace, as a generated project is).';
   }
   if (!existsSync(join(projectRoot, '.nextspark', 'registries'))) {
     return 'The registries are not generated yet. Run `nextspark prepare` first.';
