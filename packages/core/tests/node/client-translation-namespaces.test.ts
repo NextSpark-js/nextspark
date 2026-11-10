@@ -158,6 +158,11 @@ const DYNAMIC_TRANSLATION_ALLOWLIST: Record<string, { groups: TranslationGroup[]
     namespaces: 'top-level APP_CONFIG_MERGED.mobileNav.items label keys',
     reason: 'mobile navigation label keys resolve from APP_CONFIG_MERGED.mobileNav.items.',
   },
+  'packages/core/src/hooks/useEntityText.ts:13': {
+    groups: ['dashboard'],
+    namespaces: 'each entity slug (getConfiguredClientNamespaces adds every registry entity to dashboard)',
+    reason: 'entity names and field texts resolve from <slug>.entity.* and <slug>.fields.*; a group without them falls back to the config.',
+  },
   'packages/core/src/components/dashboard/mobile/MobileMoreSheet.tsx:82': {
     groups: ['dashboard'],
     namespaces: 'top-level APP_CONFIG_MERGED.mobileNav.moreSheetItems label keys',
