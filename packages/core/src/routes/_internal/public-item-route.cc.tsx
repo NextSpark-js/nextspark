@@ -23,8 +23,11 @@ import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
 import type { Pattern, PatternReference } from '@nextsparkjs/core/types/pattern-reference'
 import { buildPublicSelectClause, getResolvedBlocks, isPublicEntity, type PublishedItem } from './public-entity-shared'
 import { ITEM_SLUG, MAX_ITEM_SLUG_LENGTH } from '@nextsparkjs/core/lib/entities/public-item-slug'
-import { bindPublicItemRoutes, type PublicItemSource } from './public-item-route'
+import type { ComponentType } from 'react'
+import { bindPublicItemRoutes, type PublicItemSource, type PublicItemTemplateProps } from './public-item-route'
 import { behindSuspense } from './suspended-route'
+// What Next.js renders for notFound() in an app without a not-found file
+import BuiltinNotFound from 'next/dist/client/components/builtin/not-found'
 
 /**
  * A Next.js build registers a `'use cache'` function as a server reference, so whoever reaches it can call it with any
@@ -89,13 +92,21 @@ const cachedSource: PublicItemSource = {
   resolveBlocks: (blocks: (BlockInstance | PatternReference)[], teamId: string | undefined) => getResolvedBlocks(blocks, teamId, readPatterns),
 }
 
-const cachedRoutes = bindPublicItemRoutes(cachedSource)
-// The page awaits `params` (and may answer notFound()): behind a boundary of its own, see suspended-route.tsx.
+/**
+ * A missing item renders the not-found page in place instead of throwing notFound() (#423): behind the boundary the
+ * status is already 200, and a thrown notFound() reached the HTML as an empty body that only the browser filled in.
+ * The facade passes the project's `not-found` (the one Next.js would show for this route); without one, Next.js's own.
+ */
+const cachedRoutes = bindPublicItemRoutes(cachedSource, BuiltinNotFound)
+// The page awaits `params`: behind a boundary of its own, see suspended-route.tsx.
 // The facade calls these when its module loads, so the entity is known before any request (or any direct call of a cached read).
 export const createPublicItemRoute = (...args: Parameters<typeof cachedRoutes.createPublicItemRoute>) => {
   registerEntity(args[0])
   return behindSuspense(cachedRoutes.createPublicItemRoute(...args))
 }
+/** `createPublicItemRoute` with the project's not-found for a missing item: what the facade calls when the project has one. */
+export const createPublicItemRouteWithNotFound = (config: EntityConfig, NotFound: ComponentType, Template?: ComponentType<PublicItemTemplateProps>) =>
+  createPublicItemRoute(config, Template, NotFound)
 export const createPublicItemMetadata = (...args: Parameters<typeof cachedRoutes.createPublicItemMetadata>) => {
   registerEntity(args[0])
   return cachedRoutes.createPublicItemMetadata(...args)

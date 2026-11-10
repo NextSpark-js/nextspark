@@ -100,24 +100,27 @@ async function renderDefaultPublicItem(source: PublicItemSource, entity: EntityC
  * @param Template - the project's item page for this entity, when it has one: it renders the item and
  *   does its own data fetching
  */
-function itemRoute(source: PublicItemSource, config: EntityConfig, Template?: ComponentType<PublicItemTemplateProps>) {
+function itemRoute(source: PublicItemSource, config: EntityConfig, Template?: ComponentType<PublicItemTemplateProps>, NotFoundView?: ComponentType) {
+  // With a view, a missing item renders it in place (the Cache Components module, whose notFound() cannot change the
+  // status and left an empty body, #423); without one it throws notFound(), which keeps the 404 of the ISR host.
+  const missing = NotFoundView ? () => <NotFoundView /> : () => notFound()
   return async function PublicItemRoute({ params, searchParams }: ItemRouteProps) {
     const slug = slugOf((await params).slug)
-    if (!isPublicEntity(config) || isFileRequest(slug)) notFound()
+    if (!isPublicEntity(config) || isFileRequest(slug)) return missing()
     if (Template) return <Template params={Promise.resolve({ slug })} searchParams={searchParams} />
 
     const item = await renderDefaultPublicItem(source, config, slug)
-    if (!item) notFound()
-    return item
+    return item ?? missing()
   }
 }
 
 /** `generateMetadata` of a builder entity's item page. */
-function itemMetadata(source: PublicItemSource, config: EntityConfig) {
+function itemMetadata(source: PublicItemSource, config: EntityConfig, noindexMissing: boolean) {
   return async function generatePublicItemMetadata({ params }: Pick<ItemRouteProps, 'params'>): Promise<Metadata> {
     const slug = slugOf((await params).slug)
-    const notFoundTitle = (await getPublicTranslations('public.route'))('notFound')
-    if (!isPublicEntity(config) || isFileRequest(slug)) return { title: notFoundTitle }
+    // A missing item rendered in place throws no notFound(), so the noindex Next.js adds for one is set here
+    const missingMetadata: Metadata = { title: (await getPublicTranslations('public.route'))('notFound'), ...(noindexMissing ? { robots: { index: false } } : {}) }
+    if (!isPublicEntity(config) || isFileRequest(slug)) return missingMetadata
     const item = await source.fetchItem(config, slug)
     if (item) {
       return {
@@ -131,15 +134,20 @@ function itemMetadata(source: PublicItemSource, config: EntityConfig) {
         },
       }
     }
-    return { title: notFoundTitle }
+    return missingMetadata
   }
 }
 
-/** The route and metadata factories of the item pages, over an item source. */
-export function bindPublicItemRoutes(source: PublicItemSource) {
+/**
+ * The route and metadata factories of the item pages, over an item source. `NotFoundView`: what a missing item renders
+ * instead of throwing notFound() (the route's third argument, the project's not-found, takes its place), and its
+ * metadata then says noindex. The ISR host passes none and ignores a third argument.
+ */
+export function bindPublicItemRoutes(source: PublicItemSource, NotFoundView?: ComponentType) {
   return {
-    createPublicItemRoute: (config: EntityConfig, Template?: ComponentType<PublicItemTemplateProps>) => itemRoute(source, config, Template),
-    createPublicItemMetadata: (config: EntityConfig) => itemMetadata(source, config),
+    createPublicItemRoute: (config: EntityConfig, Template?: ComponentType<PublicItemTemplateProps>, ProjectNotFound?: ComponentType) =>
+      itemRoute(source, config, Template, NotFoundView && (ProjectNotFound ?? NotFoundView)),
+    createPublicItemMetadata: (config: EntityConfig) => itemMetadata(source, config, Boolean(NotFoundView)),
   }
 }
 

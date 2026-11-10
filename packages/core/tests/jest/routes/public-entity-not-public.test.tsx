@@ -1,6 +1,6 @@
 /**
  * The public item and archive routes serve an entity only when its config has `access.public: true`: the route
- * answers notFound() for any other entity, renders
+ * answers not found for any other entity (notFound() in ISR, the not-found page in place with Cache Components), renders
  * nothing (no template either) and its metadata has nothing from a row. Both item sources (ISR and Cache
  * Components) read no row for such an entity.
  */
@@ -16,6 +16,7 @@ jest.mock('@nextsparkjs/core/components/public/entities/PublicEntityGrid', () =>
 jest.mock('@nextsparkjs/core/lib/blocks/patterns-resolver.service', () => ({ PatternsResolverService: { getByIds: jest.fn(async () => []) } }))
 
 import { Suspense } from 'react'
+import BuiltinNotFound from 'next/dist/client/components/builtin/not-found'
 import * as isr from '../../../src/routes/_internal/public-item-route'
 import * as cc from '../../../src/routes/_internal/public-item-route.cc'
 import { createPublicArchiveRoute } from '../../../src/routes/_internal/public-archive-route'
@@ -50,17 +51,23 @@ describe.each([
   ['ISR', isr],
   ['Cache Components', cc],
 ])('%s item route of an entity without access.public: true', (_mode, routes) => {
-  it.each(Object.entries(PRIVATE))('%s: answers notFound(), reads no row and renders no template', async (_label, config) => {
+  it.each(Object.entries(PRIVATE))('%s: answers not found, reads no row and renders no template', async (_label, config) => {
     const Template = jest.fn(() => null)
-    await expect(run(routes.createPublicItemRoute(config) as Route, 'roadmap')).rejects.toThrow('NEXT_NOT_FOUND')
-    await expect(run(routes.createPublicItemRoute(config, Template) as Route, 'roadmap')).rejects.toThrow('NEXT_NOT_FOUND')
+    if (routes === isr) {
+      await expect(run(routes.createPublicItemRoute(config) as Route, 'roadmap')).rejects.toThrow('NEXT_NOT_FOUND')
+      await expect(run(routes.createPublicItemRoute(config, Template) as Route, 'roadmap')).rejects.toThrow('NEXT_NOT_FOUND')
+    } else {
+      // Cache Components renders the not-found page in place (#423)
+      expect((await run(routes.createPublicItemRoute(config) as Route, 'roadmap')) as { type: unknown }).toMatchObject({ type: BuiltinNotFound })
+      expect((await run(routes.createPublicItemRoute(config, Template) as Route, 'roadmap')) as { type: unknown }).toMatchObject({ type: BuiltinNotFound })
+    }
     expect(Template).not.toHaveBeenCalled()
     expect(query).not.toHaveBeenCalled()
   })
 
   it.each(Object.entries(PRIVATE))('%s: metadata has nothing from the row', async (_label, config) => {
     const metadata = await routes.createPublicItemMetadata(config)({ params: Promise.resolve({ slug: 'roadmap' }) })
-    expect(metadata).toEqual({ title: 'Not Found' })
+    expect(metadata).toEqual(routes === isr ? { title: 'Not Found' } : { title: 'Not Found', robots: { index: false } })
     expect(JSON.stringify(metadata)).not.toMatch(/Row /)
     expect(query).not.toHaveBeenCalled()
   })
