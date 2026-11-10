@@ -1373,6 +1373,42 @@ test('migrate replaces the reads of NEXT_PUBLIC_ACTIVE_THEME in code, leaves eve
   }
 })
 
+test('migrate replaces a cy-run-prod.cjs core published with the installed template, and leaves a changed one exactly as it is', async () => {
+  // what core 0.1.0-beta.184 published as templates/scripts/cy-run-prod.cjs: it chooses a theme from contents/themes
+  const published = await readFile(join(PKG_ROOT, 'tests/fixtures/cy-run-prod-0.1.0-beta.184.cjs'), 'utf8')
+  const template = await readFile(join(CORE_SOURCE, 'templates/scripts/cy-run-prod.cjs'), 'utf8')
+  const cases: [string, string, boolean][] = [
+    ['published, with CRLF line ends and other indentation', published.replace(/\n {2}/g, '\r\n    '), true],
+    ['changed by the project', published.replace('const PORT = 3000', 'const PORT = 4000'), false],
+  ]
+  for (const [name, content, replaced] of cases) {
+    const { root } = await moveFixture()
+    try {
+      await write(root, 'node_modules/@nextsparkjs/core/templates/scripts/cy-run-prod.cjs', template)
+      await write(root, 'scripts/cy-run-prod.cjs', content)
+      await commitFixture(root)
+      const dry = run(root, ['--dry-run', '--json'])
+      assert.equal(dry.status, 0, `${name}: ${dry.stdout}\n${dry.stderr}`)
+      const report = JSON.parse(dry.stdout)
+      assert.deepEqual(report.scaffolds, replaced ? { replaced: ['scripts/cy-run-prod.cjs'], kept: [] } : { replaced: [], kept: ['scripts/cy-run-prod.cjs'] }, name)
+      // neither is listed as a theme read: one is replaced whole, the other left whole
+      assert.equal([...report.themeVariable.replaced, ...report.themeVariable.left].some((use: { path: string }) => use.path === 'scripts/cy-run-prod.cjs'), false, name)
+      const result = run(root, ['--yes'])
+      assert.equal(result.status, 0, `${name}: ${result.stdout}\n${result.stderr}`)
+      const after = await readFile(join(root, 'scripts/cy-run-prod.cjs'), 'utf8')
+      if (replaced) {
+        assert.equal(after, template, name)
+        assert.match(result.stdout, /scripts\/cy-run-prod\.cjs: a version core published; replaced with the installed core's template/)
+      } else {
+        assert.equal(after, content, name)
+        assert.match(result.stdout, /scripts\/cy-run-prod\.cjs is not a version of the file core's wizard wrote, so migrate leaves it exactly as it is\. If it came from core, compare it with node_modules\/@nextsparkjs\/core\/templates\/scripts\/cy-run-prod\.cjs/)
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+})
+
 test('migrate stops before writing on a destructuring read of NEXT_PUBLIC_ACTIVE_THEME', async () => {
   const { root } = await moveFixture()
   try {
