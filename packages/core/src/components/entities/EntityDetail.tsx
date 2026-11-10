@@ -7,7 +7,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Card, CardContent } from '../ui/card'
 import { Alert, AlertDescription } from '../ui/alert'
 import { AlertCircle, Loader2 } from 'lucide-react'
@@ -126,8 +126,13 @@ export function EntityDetail({
   if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] customFormComponents keys:', Object.keys(customFormComponents || {}))
   // Always show child entity sections if childEntityNames are provided
   // This allows for creation even when no child data exists
-  const childEntities = childEntityNames || []
+  const childEntities = useMemo(() => childEntityNames || [], [childEntityNames])
   if (process.env.NODE_ENV === 'development') console.log('[EntityDetail] childEntities (always show if names provided):', childEntities)
+  // Each child's config in the active locale (#421), once per child list and locale
+  const childConfigs = useMemo(() => new Map(childEntities.map(name => {
+    const registered = getEntity(name)
+    return [name, registered && 'slug' in registered ? localize(registered) : registered] as const
+  })), [childEntities, localize])
 
   // Handle delete with loading state
   const handleDelete = async () => {
@@ -261,8 +266,7 @@ export function EntityDetail({
         {/* Child Entities Sections */}
         {childEntities.map((childName) => {
           // Get child entity configuration from registry
-          const registeredChild = getEntity(childName)
-          const childEntityConfig = registeredChild && 'slug' in registeredChild ? localize(registeredChild) : registeredChild
+          const childEntityConfig = childConfigs.get(childName)
           const childRegistryEntry = getEntityMetadata(childName)
 
           if (!childEntityConfig || !childRegistryEntry) {
