@@ -16,6 +16,8 @@ import type { Permission } from '../../../lib/permissions/types'
 
 interface NavigationItem {
   name: string
+  /** The entity's slug: what the data-cy is built from, since `name` is the translated plural (#421) */
+  slug?: string
   href: string
   icon: LucideIcon
   descriptionKey?: string
@@ -219,6 +221,7 @@ export function DynamicNavigation({
       const icon = resolveIcon(entity.iconName, Box)
       return {
         name: entity.names?.plural || entity.slug,
+        slug: entity.slug,
         href: `/dashboard/${entity.slug}`,
         icon,
       }
@@ -317,8 +320,8 @@ function NavigationLink({
     ? t(item.descriptionKey, { defaultValue: item.name })
     : item.name
 
-  // Generate data-cy id based on the item name (slug-ified)
-  const cySlug = item.name.toLowerCase().replace(/\s+/g, '-')
+  // Generate data-cy id from the slug (the name of an entity is translated), or the name of a core item
+  const cySlug = item.slug ?? item.name.toLowerCase().replace(/\s+/g, '-')
   // Dashboard link uses a different selector than entity links
   const dataCyId = cySlug === 'dashboard'
     ? sel('dashboard.navigation.dashboardLink')
