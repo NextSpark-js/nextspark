@@ -126,24 +126,26 @@ function nextThemesImports(root, manifest) {
 const MAIN_LAYOUT = path.join('templates', 'dashboard', '(main)', 'layout.tsx')
 const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'templates', 'projects')
 /**
- * The dashboard layouts the crm and productivity templates published before #417 (hash of the text without
- * whitespace), and the client component each one's new layout renders. Any other text is the project's own code.
+ * The dashboard layouts the crm and productivity templates published before #417 (hash of the normalized
+ * text), and the client component each one's new layout renders. Any other text is the project's own code.
  */
 const PUBLISHED_LAYOUTS = {
-  ce09dfd4631ee57c: { template: 'crm', shared: 'CRMDashboardLayout.tsx' },
-  '2b08862caaaee5e3': { template: 'crm', shared: 'CRMDashboardLayout.tsx' },
-  c4fdd46abd9f858b: { template: 'productivity', shared: 'ProductivityDashboardLayout.tsx' },
+  '8dfc49de9e2838e2': { template: 'crm', shared: 'CRMDashboardLayout.tsx' },
+  '97d49400e11cf60d': { template: 'crm', shared: 'CRMDashboardLayout.tsx' },
+  b30d6deaa1b42900: { template: 'productivity', shared: 'ProductivityDashboardLayout.tsx' },
 }
 
-const digest = (text) => crypto.createHash('sha256').update(text.replace(/\s+/g, '')).digest('hex').slice(0, 16)
-const CLIENT_COMPONENT = /^\s*(?:(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)\s*)*['"]use client['"]/
+/** Line endings, a BOM, indentation, runs of spaces between words and empty lines do not tell two texts apart; what is inside a line does */
+const normalize = (text) => text.replace(/^﻿/, '').replace(/\r/g, '').split('\n').map((line) => line.trim().replace(/\s+/g, ' ')).filter(Boolean).join('\n')
+const digest = (text) => crypto.createHash('sha256').update(normalize(text)).digest('hex').slice(0, 16)
+const withoutComments = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 
 /**
- * What the dashboard layout of a project is for the entity registry: 'ok' (it hydrates it, or it is a server
- * component), 'published' (a text an old template published: says which) or 'own' (a client component of the project)
+ * What the dashboard layout of a project is for the entity registry: 'ok' (its code uses EntityRegistryHydrator or
+ * DashboardShell, which fills it), 'published' (a text an old template published: says which) or 'own' (any other)
  */
 export function classifyMainLayout(text) {
-  if (text.includes('EntityRegistryHydrator') || !CLIENT_COMPONENT.test(text)) return { kind: 'ok' }
+  if (/\b(?:EntityRegistryHydrator|DashboardShell)\b/.test(withoutComments(text))) return { kind: 'ok' }
   const published = PUBLISHED_LAYOUTS[digest(text)]
   return published ? { kind: 'published', ...published } : { kind: 'own' }
 }
@@ -159,20 +161,23 @@ function entityRegistryLayout(root) {
   const found = classifyMainLayout(text)
   if (found.kind === 'ok') return { changed: [], notes: [] }
   const how = `Make it a server component that renders its content inside <EntityRegistryHydrator entities={...}> (from @nextsparkjs/core/components/dashboard/layouts/EntityRegistryHydrator), moving its current body to a client component: node_modules/@nextsparkjs/core/templates/projects/crm/templates/dashboard/(main)/layout.tsx shows how to build the entities list.`
-  const own = `${MAIN_LAYOUT} is a client component that does not fill the client entity registry, so /dashboard/<entity>/<id> answers "Entity not found in the registry". It was left as it is: it is not a layout a template published. ${how}`
+  const own = `${MAIN_LAYOUT} does not fill the client entity registry (it uses neither EntityRegistryHydrator nor DashboardShell), so /dashboard/<entity>/<id> answers "Entity not found in the registry". It was left as it is: it is not a layout a template published. ${how}`
   if (found.kind === 'own') return { changed: [], notes: [own] }
   const source = path.join(TEMPLATES, found.template, 'templates')
   const layout = readText(path.join(source, 'dashboard', '(main)', 'layout.tsx'))
   const client = readText(path.join(source, 'shared', found.shared))
   const clientFile = path.join('templates', 'shared', found.shared)
   if (layout === null || client === null) return { changed: [], notes: [own] }
-  if (fs.existsSync(path.join(root, clientFile))) {
-    return { changed: [], notes: [`${MAIN_LAYOUT} is the old ${found.template} template layout, but ${clientFile} already exists, so nothing was written. ${how}`] }
+  const existing = readText(path.join(root, clientFile))
+  if (existing !== null && normalize(existing) !== normalize(client)) {
+    return { changed: [], notes: [`${MAIN_LAYOUT} is the old ${found.template} template layout, but ${clientFile} already exists and differs from the template's, so nothing was written. ${how}`] }
   }
-  fs.mkdirSync(path.dirname(path.join(root, clientFile)), { recursive: true })
-  fs.writeFileSync(path.join(root, clientFile), client)
+  if (existing === null) {
+    fs.mkdirSync(path.dirname(path.join(root, clientFile)), { recursive: true })
+    fs.writeFileSync(path.join(root, clientFile), client)
+  }
   fs.writeFileSync(file, layout)
-  return { changed: [clientFile, MAIN_LAYOUT], notes: [] }
+  return { changed: existing === null ? [clientFile, MAIN_LAYOUT] : [MAIN_LAYOUT], notes: [] }
 }
 
 export const CODE_MIGRATIONS = [

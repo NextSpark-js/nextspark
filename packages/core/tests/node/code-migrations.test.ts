@@ -173,8 +173,17 @@ function project(t: { after: (fn: () => void) => void }, files: Record<string, s
 test('classifyMainLayout: only a client layout without the hydrator needs anything, and only the published texts are replaced', () => {
   assert.equal(classifyMainLayout(templateFile('crm', 'dashboard/(main)/layout.tsx')).kind, 'ok')
   assert.equal(classifyMainLayout(templateFile('productivity', 'dashboard/(main)/layout.tsx')).kind, 'ok')
-  assert.equal(classifyMainLayout('export default function L({ children }) { return children }\n').kind, 'ok')
+  // A client layout that already uses the hydrator, or the shell that has it, needs nothing
+  assert.equal(classifyMainLayout("'use client'\nimport { EntityRegistryHydrator } from 'x'\nexport default function L({ children }) { return <EntityRegistryHydrator entities={[]}>{children}</EntityRegistryHydrator> }\n").kind, 'ok')
+  assert.equal(classifyMainLayout("import { DashboardShell } from 'x'\nexport default function L({ children }) { return <DashboardShell entities={[]}>{children}</DashboardShell> }\n").kind, 'ok')
+  // A server layout without either, and a client one that only names the hydrator in a comment, do not fill the registry
+  assert.equal(classifyMainLayout('export default function L({ children }) { return children }\n').kind, 'own')
+  assert.equal(classifyMainLayout("'use client'\n// TODO: EntityRegistryHydrator\n/* DashboardShell */\nexport default function L() { return null }\n").kind, 'own')
   assert.equal(classifyMainLayout("'use client'\nexport default function L() { return null }\n").kind, 'own')
+  // One changed space inside a line is the project's own text; line endings, a BOM, indentation and empty lines are not
+  const published = oldLayout('crm-1')
+  assert.equal(classifyMainLayout(`﻿${published.replace(/\n/g, '\r\n\r\n').replace(/^/gm, '    ')}`).kind, 'published')
+  assert.equal(classifyMainLayout(published.replace("'react'", "' react'")).kind, 'own')
   assert.equal(classifyMainLayout('/** header */\n\n"use client"\nexport default function L() { return null }\n').kind, 'own')
   assert.deepEqual(classifyMainLayout(oldLayout('crm-1')), { kind: 'published', template: 'crm', shared: 'CRMDashboardLayout.tsx' })
   assert.deepEqual(classifyMainLayout(oldLayout('crm-2')), { kind: 'published', template: 'crm', shared: 'CRMDashboardLayout.tsx' })
@@ -205,7 +214,7 @@ test('the 0.1.0-beta.202 migration leaves a layout the project changed as it is,
   assert.deepEqual(result.changed, [])
   assert.equal(fs.readFileSync(path.join(root, MAIN_LAYOUT), 'utf8'), own)
   assert.equal(fs.existsSync(path.join(root, 'templates/shared/CRMDashboardLayout.tsx')), false)
-  assert.match(result.notes.join('\n'), /templates\/dashboard\/\(main\)\/layout\.tsx is a client component.*left as it is.*EntityRegistryHydrator/)
+  assert.match(result.notes.join('\n'), /templates\/dashboard\/\(main\)\/layout\.tsx does not fill the client entity registry.*left as it is.*EntityRegistryHydrator/)
 })
 
 test('the 0.1.0-beta.202 migration does nothing to a project without that layout (the starter)', (t) => {
@@ -214,11 +223,27 @@ test('the 0.1.0-beta.202 migration does nothing to a project without that layout
   assert.deepEqual(fs.readdirSync(root), ['app'])
 })
 
+test('the 0.1.0-beta.202 migration goes on with the layout when the client file is already the template one', (t) => {
+  const client = templateFile('crm', 'shared/CRMDashboardLayout.tsx')
+  const root = project(t, { [MAIN_LAYOUT]: oldLayout('crm-1'), 'templates/shared/CRMDashboardLayout.tsx': client })
+  const result = entityRegistryMigration().run(root, {})
+  assert.deepEqual(result, { changed: [MAIN_LAYOUT], notes: [] })
+  assert.equal(fs.readFileSync(path.join(root, MAIN_LAYOUT), 'utf8'), templateFile('crm', 'dashboard/(main)/layout.tsx'))
+  assert.equal(fs.readFileSync(path.join(root, 'templates/shared/CRMDashboardLayout.tsx'), 'utf8'), client)
+})
+
+test('the 0.1.0-beta.202 migration leaves a client layout that uses the hydrator alone', (t) => {
+  const mine = "'use client'\nimport { EntityRegistryHydrator } from 'x'\nexport default function L({ children }) { return <EntityRegistryHydrator entities={[]}>{children}</EntityRegistryHydrator> }\n"
+  const root = project(t, { [MAIN_LAYOUT]: mine })
+  assert.deepEqual(entityRegistryMigration().run(root, {}), { changed: [], notes: [] })
+  assert.equal(fs.readFileSync(path.join(root, MAIN_LAYOUT), 'utf8'), mine)
+})
+
 test('the 0.1.0-beta.202 migration does not write over a client file the project already has', (t) => {
   const root = project(t, { [MAIN_LAYOUT]: oldLayout('crm-1'), 'templates/shared/CRMDashboardLayout.tsx': '// mine\n' })
   const result = entityRegistryMigration().run(root, {})
   assert.deepEqual(result.changed, [])
   assert.equal(fs.readFileSync(path.join(root, MAIN_LAYOUT), 'utf8'), oldLayout('crm-1'))
   assert.equal(fs.readFileSync(path.join(root, 'templates/shared/CRMDashboardLayout.tsx'), 'utf8'), '// mine\n')
-  assert.match(result.notes.join('\n'), /already exists, so nothing was written/)
+  assert.match(result.notes.join('\n'), /already exists and differs from the template's, so nothing was written/)
 })
