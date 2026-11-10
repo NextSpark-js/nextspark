@@ -5,8 +5,9 @@
  * root-first records them as ('project', <name>) and ('project-settings', …).
  * A project migration recorded under the theme the project came from is not run
  * again; it is recorded for the project. The theme is the only one the table
- * names, or NEXT_PUBLIC_ACTIVE_THEME when it names several; otherwise nothing
- * runs. An entity whose directory went from campaign_members to
+ * names, or the one `--legacy-theme` names when it names several; otherwise
+ * nothing runs. NEXT_PUBLIC_ACTIVE_THEME, which a root-first project never sets,
+ * is not read from the environment or the project .env. An entity whose directory went from campaign_members to
  * campaign-members (slugs are lowercase identifiers with hyphens) keeps its
  * entity migrations too, and so does a root-first entity that `nextspark migrate
  * --rename-entity-slugs` renamed (its .renamed-from file); an entity that keeps its
@@ -66,12 +67,12 @@ function project(t: TestContext, files: Record<string, string>) {
   return root
 }
 
-function migrate(root: string, url: string, extra: Record<string, string> = {}) {
+function migrate(root: string, url: string, extra: Record<string, string> = {}, args: string[] = ['--no-env-file']) {
   const env: NodeJS.ProcessEnv = { ...process.env, DATABASE_URL: url, ...extra }
   delete env.MIGRATE_DATABASE_URL
   delete env.MIGRATION_TIMEOUT_SECONDS
   if (!('NEXT_PUBLIC_ACTIVE_THEME' in extra)) delete env.NEXT_PUBLIC_ACTIVE_THEME
-  const result = spawnSync(process.execPath, [RUNNER, '--no-env-file'], { cwd: root, env, encoding: 'utf8', timeout: 60000 })
+  const result = spawnSync(process.execPath, [RUNNER, ...args], { cwd: root, env, encoding: 'utf8', timeout: 60000 })
   const output = `${result.stdout}${result.stderr}`
   if (process.env.S138_LOG_DIR) fs.appendFileSync(path.join(process.env.S138_LOG_DIR, 'runner-output.log'), `\n===== ${extra.LABEL ?? ''}\n${output}`)
   return { status: result.status, output }
@@ -142,28 +143,30 @@ test('(a) a migration the theme already ran is not run again, and is recorded fo
   assert.equal(await value(client, 'SELECT count(*)::int FROM seeded'), 1)
 })
 
-test('(b) two themes and no NEXT_PUBLIC_ACTIVE_THEME: the run stops before anything, naming them', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+test('(b) two themes and no --legacy-theme: the run stops before anything, naming them and the flag, whatever NEXT_PUBLIC_ACTIVE_THEME says', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
   const { url, client } = await throwawayDatabase(t, 'b')
   await legacyDatabase(client, [['theme', 'acme', '010_seed.sql'], ['theme', 'beta', '010_seed.sql']])
   await client.query(`${SEEDED_BEFORE} DROP TABLE core_marker; DELETE FROM "_migrations";`)
-  const root = project(t, SEED)
+  // a root-first project never reads the variable, from the environment or from its .env
+  const root = project(t, { ...SEED, '.env': 'NEXT_PUBLIC_ACTIVE_THEME=beta\n' })
 
-  const result = migrate(root, url, { LABEL: '(b) two themes, no env' })
+  const result = migrate(root, url, { LABEL: '(b) two themes, variable set, no flag', NEXT_PUBLIC_ACTIVE_THEME: 'beta' }, [])
   assert.equal(result.status, 1, result.output)
-  assert.match(result.output, /recorded under more than one theme: acme, beta\. Set NEXT_PUBLIC_ACTIVE_THEME to the theme this project was migrated from/)
+  assert.match(result.output, /recorded under more than one theme: acme, beta\. Run db:migrate again with --legacy-theme <theme>, naming the theme this project was migrated from/)
+  assert.doesNotMatch(result.output, /NEXT_PUBLIC_ACTIVE_THEME/)
   // nothing ran: not the core migration, not the project's
   assert.equal(await value(client, `SELECT to_regclass('core_marker')::text`), null)
   assert.equal(await value(client, 'SELECT count(*)::int FROM "_migrations"'), 0)
   assert.deepEqual(await projectRows(client), [])
 })
 
-test('(c) two themes with NEXT_PUBLIC_ACTIVE_THEME: that theme is the one the project came from', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+test('(c) two themes with --legacy-theme: that theme is the one the project came from', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
   const { url, client } = await throwawayDatabase(t, 'c')
   await legacyDatabase(client, [['theme', 'acme', '010_seed.sql'], ['theme', 'acme', '011_other.sql'], ['theme', 'beta', '010_seed.sql']])
   await client.query(SEEDED_BEFORE)
   const root = project(t, { ...SEED, 'migrations/011_other.sql': 'CREATE TABLE other_table (id int);' })
 
-  const result = migrate(root, url, { LABEL: '(c) two themes, env beta', NEXT_PUBLIC_ACTIVE_THEME: 'beta' })
+  const result = migrate(root, url, { LABEL: '(c) two themes, --legacy-theme beta' }, ['--no-env-file', '--legacy-theme', 'beta'])
   assert.equal(result.status, 0, result.output)
   assert.match(result.output, /010_seed\.sql: already applied as theme beta; recorded for the project/)
   // acme ran 011, beta did not: it runs
@@ -172,11 +175,32 @@ test('(c) two themes with NEXT_PUBLIC_ACTIVE_THEME: that theme is the one the pr
   assert.deepEqual((await projectRows(client)).map(row => row[2]), ['010_seed.sql', '011_other.sql'])
 })
 
+test('(c2) a --legacy-theme that names no theme the rows are recorded under stops the run before anything, with one theme or several', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+  const { url, client } = await throwawayDatabase(t, 'c2')
+  await legacyDatabase(client, [['theme', 'acme', '010_seed.sql']])
+  await client.query(`${SEEDED_BEFORE} DROP TABLE core_marker; DELETE FROM "_migrations";`)
+  const root = project(t, SEED)
+
+  const one = migrate(root, url, { LABEL: '(c2) one theme, --legacy-theme=zeta' }, ['--no-env-file', '--legacy-theme=zeta'])
+  assert.equal(one.status, 1, one.output)
+  assert.match(one.output, /--legacy-theme zeta: the migrations this project takes over are recorded under acme, not under zeta\. Pass the theme this project was migrated from, or leave the flag out\. Nothing was run\./)
+  await client.query(`INSERT INTO "_content_migrations" (source_type, source_name, filename) VALUES ('theme', 'beta', '010_seed.sql')`)
+  const several = migrate(root, url, { LABEL: '(c2) two themes, --legacy-theme zeta' }, ['--no-env-file', '--legacy-theme', 'zeta'])
+  assert.equal(several.status, 1, several.output)
+  assert.match(several.output, /recorded under acme, beta, not under zeta\. Pass the theme this project was migrated from\. Nothing was run\./)
+  const empty = migrate(root, url, { LABEL: '(c2) --legacy-theme with no name' }, ['--no-env-file', '--legacy-theme'])
+  assert.equal(empty.status, 1, empty.output)
+  assert.match(empty.output, /--legacy-theme needs the name of the theme/)
+  assert.equal(await value(client, `SELECT to_regclass('core_marker')::text`), null)
+  assert.deepEqual(await projectRows(client), [])
+})
+
 test('(d) a database with no legacy rows runs the project migrations as before', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
   const { url, client } = await throwawayDatabase(t, 'd')
   const root = project(t, { ...SEED, ...SETTINGS, 'entities/campaign-members/migrations/001_campaign_members.sql': 'CREATE TABLE campaign_members (id int);' })
 
-  const result = migrate(root, url, { LABEL: '(d) fresh database', NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+  // a flag left in a build script is harmless once there is nothing to take over
+  const result = migrate(root, url, { LABEL: '(d) fresh database' }, ['--no-env-file', '--legacy-theme', 'acme'])
   assert.equal(result.status, 0, result.output)
   assert.doesNotMatch(result.output, /already applied as/)
   assert.equal(await value(client, 'SELECT count(*)::int FROM seeded'), 1)
@@ -245,7 +269,7 @@ test('(h) an unrelated entity row of another theme does not make a content takeo
   assert.equal(await value(client, 'SELECT count(*)::int FROM seeded'), 1)
 })
 
-test('(i) a content takeover under one theme and an entity takeover under another, with no NEXT_PUBLIC_ACTIVE_THEME: the run stops before anything', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
+test('(i) a content takeover under one theme and an entity takeover under another, with no --legacy-theme: the run stops before anything', { skip: !HAS_POSTGRES, timeout: 120000 }, async t => {
   const { url, client } = await throwawayDatabase(t, 'i')
   await legacyDatabase(client, [['theme', 'acme', '010_seed.sql']])
   // campaign_members was recorded under beta; both kinds have something to take over
@@ -258,7 +282,7 @@ test('(i) a content takeover under one theme and an entity takeover under anothe
 
   const result = migrate(root, url, { LABEL: '(i) content acme, entity beta, no env' })
   assert.equal(result.status, 1, result.output)
-  assert.match(result.output, /recorded under more than one theme: acme, beta\. Set NEXT_PUBLIC_ACTIVE_THEME/)
+  assert.match(result.output, /recorded under more than one theme: acme, beta\. Run db:migrate again with --legacy-theme <theme>/)
   assert.doesNotMatch(result.output, /already applied as|🔄/)
   // nothing ran or was recorded: not the core migration, not the project's, not the entity's
   assert.equal(await value(client, `SELECT to_regclass('core_marker')::text`), null)

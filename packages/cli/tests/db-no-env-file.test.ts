@@ -45,6 +45,12 @@ for (const command of [['db:migrate'], ['db:seed'], ['db', 'migrate'], ['db', 's
     assert.doesNotMatch(output, /from_env_file/)
   })
 
+  test(`${command.join(' ')} --legacy-theme reaches the runner (#424)`, async () => {
+    // a name the runner refuses proves the flag got there
+    const output = await run([...command, '--no-env-file', '--legacy-theme=-bad'], { DATABASE_URL: EXPORTED_URL })
+    assert.match(output, /--legacy-theme needs the name of the theme the project was migrated from/)
+  })
+
   test(`${command.join(' ')} --no-env-file: the exported database is used`, async () => {
     const output = await run([...command, '--no-env-file'], { DATABASE_URL: EXPORTED_URL })
     assert.match(output, /from_exported/)

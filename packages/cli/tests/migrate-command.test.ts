@@ -1355,6 +1355,7 @@ test('migrate replaces the reads of NEXT_PUBLIC_ACTIVE_THEME in code, leaves eve
     assert.match(result.stdout, /NEXT_PUBLIC_ACTIVE_THEME \(a root-first project never sets it\)\n(?: {2}.*\n)* {2}lib\/theme\.ts:2: read replaced with undefined/)
     assert.match(result.stdout, / {2}docs\/theme\.md:1: left as written/)
     assert.match(result.stdout, /NEXT_PUBLIC_ACTIVE_THEME: 5 read\(s\) replaced, 4 mention\(s\) left/)
+    assert.match(result.stdout, /database: the next db:migrate records for the project the migrations it ran as theme acme; if it says they are recorded under more than one theme, run it once with --legacy-theme acme/)
     assert.equal(await readFile(join(root, 'lib/theme.ts'), 'utf8'), [
       '// NEXT_PUBLIC_ACTIVE_THEME chooses the theme: process.env.NEXT_PUBLIC_ACTIVE_THEME',
       'export const a = undefined',

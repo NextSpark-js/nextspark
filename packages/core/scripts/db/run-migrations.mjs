@@ -28,8 +28,16 @@ let DATABASE_URL = process.env.DATABASE_URL || null;
 // Falls back to DATABASE_URL when unset (pre-cutover: same owner connection).
 let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL || null;
 let MIGRATION_TIMEOUT_SECONDS = process.env.MIGRATION_TIMEOUT_SECONDS;
-// Only read to tell which theme a 0.x project came from (see legacyTheme below)
-let ACTIVE_THEME = process.env.NEXT_PUBLIC_ACTIVE_THEME || null;
+// `--legacy-theme <theme>`: the theme a 0.x project was migrated from, needed only when its database recorded the
+// migrations to take over under several themes (see legacyTheme below). A root-first project reads no variable for it.
+const legacyThemeArgument = process.argv.findIndex(arg => arg === '--legacy-theme' || arg.startsWith('--legacy-theme='));
+const LEGACY_THEME_FLAG = legacyThemeArgument < 0 ? null
+  : process.argv[legacyThemeArgument].startsWith('--legacy-theme=') ? process.argv[legacyThemeArgument].slice('--legacy-theme='.length)
+    : process.argv[legacyThemeArgument + 1] ?? '';
+if (LEGACY_THEME_FLAG !== null && (LEGACY_THEME_FLAG === '' || LEGACY_THEME_FLAG.startsWith('-'))) {
+  console.error('❌ --legacy-theme needs the name of the theme the project was migrated from: --legacy-theme <theme>');
+  process.exit(1);
+}
 // What the .env says about NODE_ENV and the sample-data switch (see sample-data.mjs)
 const fileEnv = {};
 
@@ -50,9 +58,6 @@ if (readEnvFile && fs.existsSync(envPath)) {
       }
       if (key?.trim() === 'MIGRATION_TIMEOUT_SECONDS' && valueParts.length > 0) {
         MIGRATION_TIMEOUT_SECONDS ||= value;
-      }
-      if (key?.trim() === 'NEXT_PUBLIC_ACTIVE_THEME' && valueParts.length > 0) {
-        ACTIVE_THEME ||= value || null;
       }
       // `export NODE_ENV=...` counts too; sample-data.mjs reads the value itself (case, trailing comment)
       const name = key?.trim().replace(/^export\s+/, '');
@@ -358,7 +363,8 @@ function legacyEntityName({ entityName, renamedFrom }) {
 // The theme a 0.x project was migrated from, when a project migration (or a renamed
 // project entity's migration) that has no record of its own is recorded under a theme;
 // null otherwise (and on a fresh database).
-// Several themes are told apart only by NEXT_PUBLIC_ACTIVE_THEME, never guessed.
+// Several themes are told apart only by --legacy-theme, never guessed; a flag that names
+// none of them stops the run too.
 async function legacyTheme(client) {
   const tables = await client.query(
     `SELECT to_regclass('public."_content_migrations"')::text AS content, to_regclass('public."_entity_migrations"')::text AS entity`
@@ -395,12 +401,18 @@ async function legacyTheme(client) {
   }
   if (!pending.content && !pending.entity) return null;
   const names = [...new Set([...(pending.content ? contentThemes : []), ...(pending.entity ? entityThemes : [])])].sort();
-  if (names.length === 1) return names[0];
-  if (names.includes(ACTIVE_THEME)) return ACTIVE_THEME;
+  if (LEGACY_THEME_FLAG === null && names.length === 1) return names[0];
+  if (names.includes(LEGACY_THEME_FLAG)) return LEGACY_THEME_FLAG;
+  if (LEGACY_THEME_FLAG !== null) {
+    throw new Error(
+      `--legacy-theme ${LEGACY_THEME_FLAG}: the migrations this project takes over are recorded under ${names.join(', ')}, not under ${LEGACY_THEME_FLAG}. ` +
+      `Pass the theme this project was migrated from${names.length === 1 ? ', or leave the flag out' : ''}. Nothing was run.`
+    );
+  }
   throw new Error(
     `Migrations are recorded under more than one theme: ${names.join(', ')}. ` +
-    `Set NEXT_PUBLIC_ACTIVE_THEME to the theme this project was migrated from (in the environment or the project .env) ` +
-    `and run db:migrate again; its migrations that are already applied are then recorded for the project instead of run again. Nothing was run.`
+    `Run db:migrate again with --legacy-theme <theme>, naming the theme this project was migrated from (the directory under contents/themes that nextspark migrate moved); ` +
+    `its migrations that are already applied are then recorded for the project instead of run again. Nothing was run.`
   );
 }
 

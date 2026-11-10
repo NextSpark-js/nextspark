@@ -53,7 +53,7 @@ export function resolveDbEnv(
 /**
  * Run database migrations
  */
-export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?: boolean } = {}): Promise<void> {
+export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?: boolean; legacyTheme?: string } = {}): Promise<void> {
   const spinner = ora('Preparing to run migrations...').start();
 
   try {
@@ -87,6 +87,7 @@ export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?
       migrationsScript,
       ...(options.sampleData ? ['--sample-data'] : []),
       ...(options.envFile === false ? ['--no-env-file'] : []),
+      ...(options.legacyTheme ? ['--legacy-theme', options.legacyTheme] : []),
     ], {
       cwd: projectRoot,
       stdio: 'inherit',
@@ -124,11 +125,11 @@ export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?
  * Run the migrations and apply the sample data (development only).
  * The migration script refuses the sample data when NODE_ENV is production.
  */
-export async function dbSeedCommand(options: { envFile?: boolean } = {}): Promise<void> {
+export async function dbSeedCommand(options: { envFile?: boolean; legacyTheme?: string } = {}): Promise<void> {
   console.log(chalk.cyan('ℹ️  Running the migrations with the sample data (development only; never applied when NODE_ENV is production)...'));
   console.log(chalk.yellow('   Never use a database seeded this way in production: its sample accounts share a documented password.\n'));
 
-  await dbMigrateCommand({ sampleData: true, envFile: options.envFile });
+  await dbMigrateCommand({ sampleData: true, envFile: options.envFile, legacyTheme: options.legacyTheme });
 }
 
 /**

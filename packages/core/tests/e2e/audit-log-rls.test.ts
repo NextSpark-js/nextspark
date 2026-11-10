@@ -68,7 +68,6 @@ async function main(): Promise<void> {
       ...process.env,
       DATABASE_URL: ownerUrl,
       MIGRATE_DATABASE_URL: ownerUrl,
-      NEXT_PUBLIC_ACTIVE_THEME: '__audit_log_e2e__',
       NODE_ENV: 'test',
     }
     run('node', ['packages/core/scripts/db/run-migrations.mjs', '--no-env-file'], migrationEnv)

@@ -214,26 +214,30 @@ db
   .command('migrate')
   .description('Run database migrations')
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .action((opts: { envFile: boolean }) => dbMigrateCommand({ envFile: opts.envFile }));
+  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
+  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbMigrateCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
 
 db
   .command('seed')
   .description('Run migrations with the sample data (development only)')
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .action((opts: { envFile: boolean }) => dbSeedCommand({ envFile: opts.envFile }));
+  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
+  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbSeedCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
 
 // Shorthand aliases for database commands
 program
   .command('db:migrate')
   .description('Run database migrations (alias)')
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .action((opts: { envFile: boolean }) => dbMigrateCommand({ envFile: opts.envFile }));
+  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
+  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbMigrateCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
 
 program
   .command('db:seed')
   .description('Run migrations with the sample data, development only (alias)')
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .action((opts: { envFile: boolean }) => dbSeedCommand({ envFile: opts.envFile }));
+  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
+  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbSeedCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
 
 program
   .command('db:demo-reset')

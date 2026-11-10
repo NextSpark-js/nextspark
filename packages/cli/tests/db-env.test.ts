@@ -17,11 +17,11 @@ function withEnvFile(content: string, run: (root: string) => void) {
 }
 
 test('an exported variable beats the project .env', () => {
-  withEnvFile('DATABASE_URL=env-url\nMIGRATE_DATABASE_URL=env-owner\nNEXT_PUBLIC_ACTIVE_THEME=env-theme\n', root => {
-    const env = resolveDbEnv(root, { DATABASE_URL: 'exported-url', MIGRATE_DATABASE_URL: 'exported-owner', NEXT_PUBLIC_ACTIVE_THEME: 'exported-theme' })
+  withEnvFile('DATABASE_URL=env-url\nMIGRATE_DATABASE_URL=env-owner\nMIGRATION_TIMEOUT_SECONDS=10\n', root => {
+    const env = resolveDbEnv(root, { DATABASE_URL: 'exported-url', MIGRATE_DATABASE_URL: 'exported-owner', MIGRATION_TIMEOUT_SECONDS: '60' })
     assert.equal(env.DATABASE_URL, 'exported-url')
     assert.equal(env.MIGRATE_DATABASE_URL, 'exported-owner')
-    assert.equal(env.NEXT_PUBLIC_ACTIVE_THEME, 'exported-theme')
+    assert.equal(env.MIGRATION_TIMEOUT_SECONDS, '60')
   })
 })
 

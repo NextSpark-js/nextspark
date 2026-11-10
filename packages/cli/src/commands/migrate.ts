@@ -3945,6 +3945,7 @@ function printMoveSummary(plan: MovePlan, result: { moved: number; deduplicated:
   console.log('  post-migration route-root guard: passed (no root app/ or pages/ beside src/app)');
   console.log(`  reserved source left in place: ${paths(plan.reserved.map(item => item.path))}`);
   console.log(`  other themes left untouched: ${report.activeTheme.themes.filter(item => item.name !== report.activeTheme.name).map(item => item.name).join(', ') || 'none'}`);
+  console.log(`  database: the next db:migrate records for the project the migrations it ran as theme ${report.activeTheme.name}; if it says they are recorded under more than one theme, run it once with --legacy-theme ${report.activeTheme.name}`);
   console.log('  Rollback commands were printed in the move plan above.');
 }
 
