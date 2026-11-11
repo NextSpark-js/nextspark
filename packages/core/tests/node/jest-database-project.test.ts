@@ -30,7 +30,7 @@ const clusters = () => fs.readdirSync(os.tmpdir()).filter(name => name.startsWit
 type Cleanup = { after: (fn: () => void) => void }
 
 /** A project with a Jest config of a `unit` and a `db` project, and a test in each that reports where it runs. */
-function project(t: Cleanup) {
+function project(t: Cleanup, extra: Record<string, string> = {}) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'jest-db-project-')))
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
   const write = (relative: string, content: string) => {
@@ -41,6 +41,7 @@ function project(t: Cleanup) {
   write('nextspark.config.ts', 'export default { plugins: [] }\n')
   write('config/theme.config.ts', "export const themeConfig = { name: 'fixture' }\n")
   write('migrations/001_widgets.sql', 'CREATE TABLE widgets (id int PRIMARY KEY);')
+  for (const [relative, content] of Object.entries(extra)) write(relative, content)
   // `pnpm exec jest` finds it here, and the suites find pg
   write('node_modules/.bin/jest', `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(JEST)} "$@"\n`)
   fs.chmodSync(path.join(root, 'node_modules/.bin/jest'), 0o755)
@@ -183,6 +184,32 @@ test('the cluster is removed when the runner is told to stop', { skip, timeout: 
     }))
   } finally {
     // jest and its workers may outlive the runner for a moment: the group goes
+    try { process.kill(-child.pid!, 'SIGKILL') } catch { /* already gone */ }
+  }
+})
+
+test('an interrupt while the migrations run leaves no cluster behind', { skip, timeout: 300000 }, async t => {
+  const root = project(t, { 'migrations/002_slow.sql': 'SELECT pg_sleep(120);' })
+  const before = clusters()
+  const child = spawn(process.execPath, [RUNNER, '--selectProjects', 'db', '--ci'], {
+    cwd: root, detached: true, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, FORCE_COLOR: '0', CI: 'true', DATABASE_URL: '', NEXTSPARK_TEST_DATABASE_URL: '' } as NodeJS.ProcessEnv,
+  })
+  let output = ''
+  child.stdout.on('data', chunk => { output += chunk })
+  child.stderr.on('data', chunk => { output += chunk })
+  const closed = new Promise<void>(resolve => child.on('close', () => resolve()))
+  try {
+    for (let waited = 0; !output.includes('Applying the project migrations'); waited += 200) {
+      assert.ok(waited < 120000, output)
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
+    // let the slow migration start, then Ctrl-C: the signal reaches the whole group, as from a terminal
+    await new Promise(resolve => setTimeout(resolve, 2500))
+    process.kill(-child.pid!, 'SIGINT')
+    await closed
+    assert.deepEqual(clusters(), before, 'the cluster directory is gone')
+  } finally {
     try { process.kill(-child.pid!, 'SIGKILL') } catch { /* already gone */ }
   }
 })

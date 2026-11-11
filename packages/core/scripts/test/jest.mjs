@@ -14,7 +14,7 @@ import { join } from 'node:path'
 import throwaway from './throwaway-postgres.cjs'
 import { resolveProjectPaths } from '../build/registry/project-mode.mjs'
 import { describeDestination } from '../db/destination.mjs'
-import { selectsDatabaseProject, testDatabaseTarget, DATABASE_PROJECT, TEST_DATABASE_URL, ALLOW_REMOTE_DATABASE } from './test-database.mjs'
+import { selectsDatabaseProject, testDatabaseTarget, isOn, DATABASE_PROJECT, TEST_DATABASE_URL, ALLOW_REMOTE_DATABASE } from './test-database.mjs'
 
 const { HAS_POSTGRES, startCluster, clusterUrl } = throwaway
 const { projectRoot } = resolveProjectPaths(process.cwd())
@@ -34,6 +34,8 @@ console.log('━━━━━━━━━━━━━━━━━━━━━━�
 const jestArgs = process.argv.slice(2)
 const env = { ...process.env }
 let cluster = null
+let child = null
+let signaled = null
 // The cluster is removed however the runner ends, an uncaught error and a signal included
 process.on('exit', () => cluster?.stop())
 
@@ -56,18 +58,29 @@ if (selectsDatabaseProject(jestArgs)) {
   }
   if (target.url) {
     env.DATABASE_URL = target.url
-    const remote = /^\s*["']?(1|true)\b/i.test(process.env[ALLOW_REMOTE_DATABASE] ?? '')
+    const remote = isOn(process.env[ALLOW_REMOTE_DATABASE])
     console.log(`  The ${DATABASE_PROJECT} project runs against ${describeDestination(target.url)} (${TEST_DATABASE_URL}${remote ? `, ${ALLOW_REMOTE_DATABASE} is set` : ''}).\n`)
   } else {
     if (!HAS_POSTGRES) {
       stopWith(`the ${DATABASE_PROJECT} project starts a throwaway PostgreSQL cluster, and initdb and pg_ctl are not on the PATH. ` +
         `Put the PostgreSQL binaries on the PATH (for example /opt/homebrew/opt/postgresql@16/bin), or set ${TEST_DATABASE_URL} to a database on this machine.`)
     }
+    // From here on a signal must not end the runner before it removes the cluster, also while migrations run
+    // (spawnSync holds the event loop, so the handler only records it; the migrations end with the same signal
+    // when it comes from the terminal): the runner stops after them, and the exit handler removes the cluster.
+    // Once Jest runs, the signal goes to it and the cluster goes when it ends.
+    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+      process.on(signal, () => {
+        signaled = signal
+        child?.kill(signal)
+      })
+    }
     try {
       cluster = await startCluster('nextspark-test-db')
     } catch (error) {
       stopWith(`the throwaway PostgreSQL cluster for the ${DATABASE_PROJECT} project did not start.\n${error.message}`)
     }
+    if (signaled) process.exit(1)
     env.DATABASE_URL = clusterUrl(cluster)
     console.log(`  The ${DATABASE_PROJECT} project runs against a throwaway PostgreSQL cluster (host 127.0.0.1, port ${cluster.port}), removed when the run ends.`)
     console.log('  Applying the project migrations to it (no sample data)...')
@@ -75,6 +88,7 @@ if (selectsDatabaseProject(jestArgs)) {
     const migrate = spawnSync(process.execPath, [join(import.meta.dirname, '..', 'db', 'run-migrations.mjs'), '--no-env-file'], {
       cwd: projectRoot, env, encoding: 'utf8', timeout: 600000,
     })
+    if (signaled) process.exit(1)
     if (migrate.status !== 0) {
       const output = `${migrate.stdout ?? ''}${migrate.stderr ?? ''}`.trim().split('\n').slice(-40).join('\n')
       stopWith(`the migrations failed on the throwaway database:\n${output}`)
@@ -83,16 +97,13 @@ if (selectsDatabaseProject(jestArgs)) {
   }
 }
 
-const child = spawn('pnpm', ['exec', 'jest', '--config', configPath, ...jestArgs], {
+child = spawn('pnpm', ['exec', 'jest', '--config', configPath, ...jestArgs], {
   cwd: projectRoot,
   stdio: 'inherit',
   shell: process.platform === 'win32',
   env,
 })
-if (cluster) {
-  // jest gets the signal too and ends; the cluster goes when it does. Without a handler the runner would die first and leave it.
-  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => child.kill(signal))
-}
+if (signaled) child.kill(signaled)
 child.on('error', error => {
   console.error(`Failed to start Jest: ${error.message}`)
   process.exit(1)
