@@ -172,8 +172,8 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
     }
 
     // Build dynamic update query
-    const updates = [];
-    const values = [];
+    const updates: string[] = [];
+    const values: unknown[] = [];
     let paramCount = 1;
 
     if (validatedData.firstName !== undefined) {
@@ -221,7 +221,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
 
       // A superadmin who stops being one goes through the guard: its lock and the write share one transaction on the
       // service connection (a write on the app pool would wait for that lock outside it). Authorized above.
-      const demotesSuperadmin = validatedData.role !== undefined && target.role === 'superadmin' && validatedData.role !== 'superadmin';
+      const demotesSuperadmin = validatedData.role !== undefined && target.role === 'superadmin'; // role is only member or developer
       const rows = demotesSuperadmin
         ? await guardLastSuperadmin(target.id, authResult.user!.id, () => queryWithRLS(query, values, authResult.user!.id, { service: true }))
         : (await mutateWithRLS(query, values, authResult.user!.id)).rows;
