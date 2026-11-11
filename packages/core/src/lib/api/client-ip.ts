@@ -139,9 +139,8 @@ const WARNED = Symbol.for('nextspark.clientIpSourceWarned')
 export function warnClientIpSourceAtStartup(env: Env = process.env): void {
   const state = globalThis as Record<symbol, unknown>
   if (state[WARNED]) return
-  let source: ClientIpSource
   try {
-    source = getClientIpSource(env)
+    getClientIpSource(env)
   } catch (error) {
     state[WARNED] = true
     console.error((error as Error).message)

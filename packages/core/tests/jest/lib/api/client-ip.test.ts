@@ -112,7 +112,7 @@ describe('source modes', () => {
 describe('nothing set on Vercel (VERCEL=1)', () => {
   const vercel = { VERCEL: '1' }
 
-  it('keys a request with a forged cf-connecting-ip by x-vercel-forwarded-for, then x-real-ip', () => {
+  it('keys a request with a cf-connecting-ip by x-vercel-forwarded-for, then x-real-ip', () => {
     expect(ip(vercel, ALL)).toBe('198.51.100.7')
     for (const forged of ['203.0.113.1', '203.0.113.2']) {
       expect(ip(vercel, { 'cf-connecting-ip': forged, 'x-vercel-forwarded-for': '198.51.100.7' })).toBe('198.51.100.7')
