@@ -99,7 +99,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
          SET "firstName" = $1, "lastName" = $2, country = $3, timezone = $4, language = $5, "updatedAt" = CURRENT_TIMESTAMP
          WHERE id = $6
          RETURNING id, email, "firstName", "lastName", country, timezone, language, image, "emailVerified", "createdAt", "updatedAt"`,
-        [firstName, lastName, country, timezone, language, session.user.id],
+        [firstName, lastName, country || null, timezone || null, language, session.user.id],
         session.user.id
       )
       

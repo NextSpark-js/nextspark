@@ -55,10 +55,18 @@ describe('PATCH /api/user/profile', () => {
       ['a first name given a number', { ...VALID_PROFILE, firstName: 5 }],
       ['a first name given an object', { ...VALID_PROFILE, firstName: { a: 1 } }],
       ['a last name given null', { ...VALID_PROFILE, lastName: null }],
-      ['a country that is empty', { ...VALID_PROFILE, country: '' }],
+      ['a country given null', { ...VALID_PROFILE, country: null }],
       ['a timezone given an array', { ...VALID_PROFILE, timezone: ['UTC'] }],
       ['only some of the profile fields', { firstName: 'Ana' }],
     ], {})
+
+    // A new account has no country or timezone, and the form sends them empty with a name change (#433)
+    test('stores an empty country and timezone as NULL', async () => {
+      const response = await invoke(asJson({ ...VALID_PROFILE, country: '', timezone: '' }))
+      expect(response.status).toBe(200)
+      const [, params] = mocks.mutateWithRLS.mock.calls[0] as [string, unknown[]]
+      expect(params.slice(0, 5)).toEqual(['Ana', 'Pérez', null, null, 'es'])
+    })
 
     test.each([['accented Latin', 'María José', 'Núñez'], ['CJK', '太郎', '山田'], ['right-to-left', 'محمد', 'الأحمد'], ['emoji', 'Ana 🐕‍🦺', 'Pérez 🚀']])('stores a %s name unchanged', async (_label, firstName, lastName) => {
       const response = await invoke(asJson({ ...VALID_PROFILE, firstName, lastName }))

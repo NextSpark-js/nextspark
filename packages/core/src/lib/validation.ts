@@ -67,8 +67,10 @@ export const changePasswordSchema = z.object({
 export const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  country: z.string().min(1, 'Please select a country'),
-  timezone: z.string().min(1, 'Please select a timezone'),
+  // May be empty: an account starts with neither (sign-up does not ask for them), and the profile form must still
+  // save a name change without them. The API stores an empty one as NULL (#433)
+  country: z.string(),
+  timezone: z.string(),
   language: z.string().min(1, 'Please select a language'),
 });
 
