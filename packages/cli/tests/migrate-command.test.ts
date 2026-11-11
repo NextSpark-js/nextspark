@@ -14,6 +14,8 @@ import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
 import { projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
+import { loadCoreHost } from '../src/utils/app-tree.js'
+import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
 
 let cliEntry: string
@@ -3306,6 +3308,123 @@ test("migrate compares the app favicon with the one the theme's public/ is about
   } finally {
     await rm(same, { recursive: true, force: true })
     await rm(other, { recursive: true, force: true })
+  }
+})
+
+// #431: a 0.x theme set the title of its pages with templates/layout.meta.ts (a metadata-only override of the root layout);
+// the generated host reads a route's metadata from its route file only
+const LAYOUT_META = "import type { Metadata } from 'next'\n\nexport const metadata: Metadata = {\n  title: { default: 'Acme Portal', template: '%s | Acme Portal' },\n  description: 'The Acme customer portal',\n}\n"
+
+test('migrate carries the root layout.meta.ts of a 0.x theme over to a templates/layout.tsx that re-exports it', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/templates/layout.meta.ts', LAYOUT_META)
+    await commitFixture(root)
+
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.routeMetadata, [{ path: 'templates/layout.meta.ts', route: 'layout', carriedTo: 'templates/layout.tsx', todo: null }])
+    // nothing is written by the dry run
+    assert.equal(git_status(root), '')
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'templates/layout.meta.ts'), 'utf8'), LAYOUT_META)
+    const layout = await readFile(join(root, 'templates/layout.tsx'), 'utf8')
+    assert.match(layout, /^export \{ metadata \} from '\.\/layout\.meta'$/m)
+    assert.match(layout, /^export default function RootTemplate\(\{ children \}: \{ children: ReactNode \}\) \{\n {2}return children\n\}$/m)
+    assert.match(result.stdout, /templates\/layout\.tsx: written, it re-exports the metadata of templates\/layout\.meta\.ts/)
+    // the rollback removes the file the run wrote
+    assert.match(result.stdout, /clean -fdx -- [^\n]*'templates\/layout\.tsx'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate does not guess when a 0.x metadata file has a route file beside it: it says what to add', async () => {
+  const { root } = await moveFixture()
+  try {
+    await write(root, 'contents/themes/acme/templates/layout.tsx', "export const metadata = { title: 'Old' }\nexport default function Layout({ children }) { return children }\n")
+    await write(root, 'contents/themes/acme/templates/layout.meta.ts', LAYOUT_META)
+    await write(root, 'contents/themes/acme/templates/blog/page.tsx', 'export default function Blog() { return null }\n')
+    await write(root, 'contents/themes/acme/templates/blog/page.meta.ts', LAYOUT_META)
+    // a metadata-only override of a core route: the route is core's, so there is no file to add it to
+    await write(root, 'contents/themes/acme/templates/(auth)/layout.meta.ts', LAYOUT_META)
+    // not a page or a layout, so a metadata file of this name never did anything
+    await write(root, 'contents/themes/acme/templates/loading.meta.ts', LAYOUT_META)
+    await write(root, 'contents/themes/acme/templates/seo.meta.ts', LAYOUT_META)
+    await commitFixture(root)
+
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    const entries: { path: string, route: string, carriedTo: string | null, todo: string | null }[] = report.routeMetadata
+    assert.deepEqual(entries.map(entry => [entry.path, entry.route, entry.carriedTo]), [
+      ['templates/(auth)/layout.meta.ts', '(auth)/layout', null],
+      ['templates/blog/page.meta.ts', 'blog/page', null],
+      ['templates/layout.meta.ts', 'layout', null],
+    ])
+    assert.match(entries[0].todo ?? '', /^templates\/\(auth\)\/layout\.meta\.ts is not read by the generated host, which takes a route's metadata from the route file itself\. Core's \(auth\)\/layout keeps its own metadata; to change it, override the route in templates\/\(auth\)\/layout\.tsx and export the metadata there/)
+    assert.match(entries[1].todo ?? '', /in 0\.x it took precedence over a metadata export of templates\/blog\/page\.tsx\. Add  export \{ metadata \} from '\.\/page\.meta'  to templates\/blog\/page\.tsx/)
+    assert.match(entries[2].todo ?? '', /Add  export \{ metadata \} from '\.\/layout\.meta'  to templates\/layout\.tsx and delete any other metadata export in it/)
+    for (const entry of entries) assert.ok(report.warnings.includes(entry.todo), entry.todo ?? '')
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    // the project's own layout is left exactly as the theme had it
+    assert.equal(await readFile(join(root, 'templates/layout.tsx'), 'utf8'), "export const metadata = { title: 'Old' }\nexport default function Layout({ children }) { return children }\n")
+    assert.doesNotMatch(result.stdout, /templates\/layout\.tsx: written/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate leaves the root layout it converted from the app tree alone and lists the layout.meta.ts', async () => {
+  const root = await rootFirstFixture({
+    'contents/themes/acme/templates/layout.meta.ts': LAYOUT_META,
+    'src/app/layout.tsx': "export default function Layout({ children }) { return <html><body>{children}</body></html> }\n",
+  })
+  try {
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.appConversion.overrides.map((file: { destination: string }) => file.destination), ['templates/layout.tsx'])
+    assert.deepEqual(report.routeMetadata.map((entry: { carriedTo: string | null }) => entry.carriedTo), [null])
+    assert.match(report.routeMetadata[0].todo, /Add  export \{ metadata \} from '\.\/layout\.meta'  to templates\/layout\.tsx/)
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(await readFile(join(root, 'templates/layout.tsx'), 'utf8'), "export default function Layout({ children }) { return <html><body>{children}</body></html> }\n")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a project migrated by an earlier release, with its layout.meta.ts left unread, is told how to wire it', async () => {
+  const root = await rootFirstFixture({ 'templates/layout.meta.ts': LAYOUT_META })
+  try {
+    const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.routeMetadata.map((entry: { path: string, carriedTo: string | null }) => [entry.path, entry.carriedTo]), [['templates/layout.meta.ts', null]])
+    assert.match(report.routeMetadata[0].todo, /Create templates\/layout\.tsx with  export \{ metadata \} from '\.\/layout\.meta'  and a default export that returns its children/)
+    // there is nothing to move, so nothing is written either
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /not read by the generated host/)
+    await assert.rejects(access(join(root, 'templates/layout.tsx')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the root layout migrate writes for a layout.meta.ts is one the generator takes as the root template', async () => {
+  const root = await rootFirstFixture()
+  try {
+    const lookup = await loadCoreHost(join(root, 'node_modules/@nextsparkjs/core'))
+    assert.ok('host' in lookup, JSON.stringify(lookup))
+    const emit = (source: string) => lookup.host.emit({ kind: 'layout', target: 'layout.tsx', specifier: '@/templates/layout', source, file: join(root, 'templates/layout.tsx'), projectRoot: root })
+    const emitted = await emit(ROOT_LAYOUT_FROM_METADATA)
+    assert.match(emitted.content, /^export \{ default \} from "@\/templates\/layout"$/m)
+    assert.match(emitted.content, /^export \{ metadata \} from "@\/templates\/layout"$/m)
+    // without its default export the generator refuses it
+    await assert.rejects(emit(ROOT_LAYOUT_FROM_METADATA.replace('export default function', 'function')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })
 

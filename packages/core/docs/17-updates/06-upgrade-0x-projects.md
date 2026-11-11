@@ -106,6 +106,15 @@ A static metadata file at the root of the app tree (`favicon.ico`, `icon.png`, `
 
 Every moved file keeps its relative imports pointing at the same files. Migrate then writes `src/proxy.ts` when the project has none, adds `.nextspark/` and `src/app/` to `.gitignore`, and runs `nextspark prepare`. If generation fails, the project is left converted, the failure is printed, and so is the rollback (`git checkout -- .` plus a `git clean` of exactly what the run created).
 
+## The title and description of a 0.x theme
+
+A 0.x theme set the metadata of a route without writing the route: `templates/layout.meta.ts` for the root layout (the title and description of every page), `templates/(auth)/layout.meta.ts` for a group, `templates/blog/page.meta.ts` for a page. The generated host reads none of these files: a route's metadata is what its route file exports. A project migrated by an earlier release showed core's default title until it wrote `templates/layout.tsx` by hand.
+
+- **The root `templates/layout.meta.ts`**, with no `templates/layout.tsx` beside it: `migrate --yes` writes `templates/layout.tsx` with `export { metadata } from './layout.meta'` and a default export that returns its children. Core's root layout (providers, fonts, protections) renders around it, so the page is the one 0.x built. The report lists it under **Route metadata** (`routeMetadata` in `--json`, with `carriedTo`).
+- **Every other `*.meta.ts`**, or a root one that has a `templates/layout.tsx` beside it (in 0.x the `.meta.ts` took precedence over a `metadata` export of that file): migrate changes nothing and the warning says what to add. Beside a route file, add `export { metadata } from './<name>.meta'` to it and delete its other `metadata` export. Without one, core's route keeps its own metadata; to change it, override the route in `templates/<path>.tsx` and export the metadata there.
+- A project that was migrated before this and still has `templates/layout.meta.ts` is told the same by `migrate --dry-run`, which reads the `templates/` it finds.
+- Only `page.meta.ts` and `layout.meta.ts` are looked at: Next accepts a `metadata` export in those two files only.
+
 ## The theme variable
 
 A root-first project is its own theme, so nothing sets or reads `NEXT_PUBLIC_ACTIVE_THEME` any more: not the runtime, not `nextspark build`, not `db:migrate`. Migrate takes it out of the project:

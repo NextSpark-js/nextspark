@@ -11,6 +11,7 @@ import { closingBrace, sourceView, type SourceView } from '../utils/source-view.
 import { getNextMajorVersion } from '../utils/next-bundler.js';
 import { BUILD_ALLOWLIST, missingTranspilePackages, COMPAT_NOTE, addBuildAllowlist, addCompatRewrites, applyContractsPackage, catalogVersion, checkNextRange, compatRewrites, coreExportsSpecifier, countBlockThumbnails, dropLegacyBuildList, inAiWorkflowDirectory, isBlockConfig, legacyBuildList, hostFrameworkFixes, memberPeerUpdates, removeBlockThumbnails, planContractsPackage, updateHostFramework, updateNextRange, updatePeerRanges, type CompatRewrite, type HostFrameworkFix, type ContractsPlan, type NextRangeCheck, type PeerNote, type PeerUpdate, type PnpmBuildsPlan } from '../utils/migrate-extras.js';
 import { pathToFileURL } from 'node:url';
+import { planRouteMetadata, writeRootLayoutFromMetadata, type RouteMetadataEntry } from '../utils/migrate-route-metadata.js';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { isPreviousTemplate, readPreviousTemplates, type PreviousTemplates as PreviousTemplateHashes } from '../utils/previous-templates.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
@@ -99,6 +100,8 @@ interface MigrateReport {
     unsimulable: string[];
   };
   apiUrlMoves: ApiUrlMove[];
+  /** A 0.x theme's `*.meta.ts` (metadata-only overrides of a route), which the generated host does not read: carried over, or what to do by hand. */
+  routeMetadata: RouteMetadataEntry[];
   rootProxyFiles: {
     generated: string[];
     customizations: string[];
@@ -1939,6 +1942,13 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
     blockers,
     unsimulable,
   };
+  // Where the templates end up: what is there, what the theme moves in, what the app tree becomes
+  const finalTemplates = new Set<string>([
+    ...moveFilesIn(join(host.root, 'templates')),
+    ...(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => item.destination) : []),
+    ...(appPlan?.files ?? []).flatMap(file => file.fate.kind === 'override' || file.fate.kind === 'project' ? [join(host.root, file.fate.destination)] : []),
+  ]);
+  const routeMetadata = planRouteMetadata(host.root, finalTemplates, new Set(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => item.destination) : []));
   const themeNeedle = selectedTheme.name ? new RegExp(`@/contents/themes/${selectedTheme.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/`, 'g') : null;
   const pluginNeedle = /@\/contents\/plugins\//g;
   const imports = hostFiles.reduce((counts, file) => {
@@ -1965,6 +1975,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
   }
   warnings.push(...proxyNotices);
   for (const file of appConversion.projectFiles) if (file.note) warnings.push(`${file.destination}: ${file.note}`);
+  for (const entry of routeMetadata) if (entry.todo) warnings.push(entry.todo);
   if (envExample.action === 'conflict') warnings.push(`${envExample.path} differs from the root .env.example and will not be merged.`);
   warnings.push(...notices);
   warnings.push(...configPlugins.warnings);
@@ -1982,6 +1993,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
     appTemplates,
     appConversion,
     apiUrlMoves: urlMoves,
+    routeMetadata,
     rootProxyFiles,
     routeRootGuard: {
       currentRoots: ['app', 'pages'].filter(path => existsSync(join(host.root, path))),
@@ -2064,6 +2076,11 @@ function printReport(report: MigrateReport, dryRun: boolean): void {
   ]);
   for (const override of conversion.overrides) {
     section(`Override ${override.destination}: the project's ${conversion.root}/${override.path} against ${override.baseline ?? override.core} (${override.diffLines >= 0 ? `${override.diffLines} changed lines` : 'no baseline'})`, override.diff.split('\n'));
+  }
+  if (report.routeMetadata.length > 0) {
+    section("Route metadata (0.x *.meta.ts files: the generated host takes a route's metadata from its route file)", report.routeMetadata.map(entry => entry.carriedTo
+      ? `${entry.path}: ${dryRun ? 'will be' : 'is'} carried over, ${entry.carriedTo} re-exports its metadata and renders its children inside core's root layout`
+      : `${entry.path}: not read, see the warnings for what to add`));
   }
   section('Project URLs that change (core dispatchers under /api/v1/theme/** and /api/v1/plugin/** are gone)', report.apiUrlMoves.length
     ? report.apiUrlMoves.map(move => `${move.file}:${move.line}: ${move.from} -> ${move.to}`)
@@ -3779,6 +3796,8 @@ function rollbackState(repository: string, hostRoot: string, plan: MovePlan, rep
   if (report.config.plannedCreation) destinations.add(pathFrom(repository, join(hostRoot, 'nextspark.config.ts')));
   // Renamed entity directories are new, untracked paths; the old ones come back through `checkout`
   if (report.entitySlugs.rename) for (const directory of renamedDirectories(report.entitySlugs)) destinations.add(pathFrom(repository, join(hostRoot, directory)));
+  // The root layout written to carry a layout.meta.ts over
+  for (const entry of report.routeMetadata) if (entry.carriedTo) destinations.add(pathFrom(repository, join(hostRoot, entry.carriedTo)));
   // Overrides and moved project files created from the app tree
   for (const file of [...report.appConversion.overrides, ...report.appConversion.projectFiles]) destinations.add(pathFrom(repository, join(hostRoot, file.destination)));
   if (report.envExample.action === 'move') destinations.add(pathFrom(repository, join(hostRoot, '.env.example')));
@@ -4517,6 +4536,14 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const result = appTreeOnly
       ? null
       : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : [], report.scaffolds, templates);
+    if (!appTreeOnly) {
+      for (const entry of report.routeMetadata) {
+        if (!entry.carriedTo) continue;
+        writeRootLayoutFromMetadata(hostRoot);
+        console.log(`  ${entry.carriedTo}: written, it re-exports the metadata of ${entry.path} (the title and description a 0.x theme set for every page).`);
+      }
+    }
+    if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
     const nextUpdated = await applyHostFixes(repository, hostRoot, report, simulation);
     if (appPlan) {
       const converted = applyAppConversion(hostRoot, appPlan);
