@@ -3324,7 +3324,7 @@ test('migrate carries the root layout.meta.ts of a 0.x theme over to a templates
     const dryRun = run(root, ['--dry-run', '--json'])
     assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
     const report = JSON.parse(dryRun.stdout)
-    assert.deepEqual(report.routeMetadata, [{ path: 'templates/layout.meta.ts', route: 'layout', carriedTo: 'templates/layout.tsx', todo: null }])
+    assert.deepEqual(report.routeMetadata, [{ path: 'templates/layout.meta.ts', route: 'layout', carriedTo: 'templates/layout.tsx', reexports: 'metadata', todo: null }])
     // nothing is written by the dry run
     assert.equal(git_status(root), '')
 
@@ -3337,6 +3337,52 @@ test('migrate carries the root layout.meta.ts of a 0.x theme over to a templates
     assert.match(result.stdout, /templates\/layout\.tsx: written, it re-exports the metadata of templates\/layout\.meta\.ts/)
     // the rollback removes the file the run wrote
     assert.match(result.stdout, /clean -fdx -- [^\n]*'templates\/layout\.tsx'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate re-exports generateMetadata when that is what layout.meta.ts declares, and writes no layout when it declares neither', async () => {
+  const dynamic = await moveFixture()
+  const none = await moveFixture()
+  try {
+    await write(dynamic.root, 'contents/themes/acme/templates/layout.meta.ts', "export async function generateMetadata() { return { title: 'Acme' } }\n")
+    await commitFixture(dynamic.root)
+    const applied = run(dynamic.root, ['--yes'])
+    assert.equal(applied.status, 0, `${applied.stdout}\n${applied.stderr}`)
+    const layout = await readFile(join(dynamic.root, 'templates/layout.tsx'), 'utf8')
+    assert.match(layout, /^export \{ generateMetadata \} from '\.\/layout\.meta'$/m)
+    assert.doesNotMatch(layout, /\{ metadata \}/)
+
+    for (const source of ["export default { title: 'Acme' }\n", 'export const generateMetadataLater = 1\n', '']) {
+      await write(none.root, 'contents/themes/acme/templates/layout.meta.ts', source)
+      await commitFixture(none.root)
+      const report = JSON.parse(run(none.root, ['--dry-run', '--json']).stdout)
+      assert.equal(report.routeMetadata[0].carriedTo, null, source)
+      assert.match(report.routeMetadata[0].todo, /exports no metadata or generateMetadata/, source)
+    }
+    const result = run(none.root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    await assert.rejects(access(join(none.root, 'templates/layout.tsx')))
+  } finally {
+    await rm(dynamic.root, { recursive: true, force: true })
+    await rm(none.root, { recursive: true, force: true })
+  }
+})
+
+test('migrate stops on an app favicon when public/favicon.ico is a symbolic link, even to the same bytes', async () => {
+  const root = await rootFirstFixture({ 'src/app/favicon.ico': 'ICO\u0000same', 'elsewhere/favicon.ico': 'ICO\u0000same' })
+  try {
+    await mkdir(join(root, 'public'), { recursive: true })
+    await symlink(join(root, 'elsewhere/favicon.ico'), join(root, 'public/favicon.ico'))
+    await commitFixture(root)
+    const blocked = run(root, ['--dry-run', '--json'])
+    assert.equal(blocked.status, 1, `${blocked.stdout}\n${blocked.stderr}`)
+    const blockers: string[] = JSON.parse(blocked.stdout).appConversion.blockers
+    assert.equal(blockers.length, 1, blockers.join('\n'))
+    assert.match(blockers[0], /^src\/app\/favicon\.ico: public\/favicon\.ico is a symbolic link/)
+    assert.notEqual(run(root, ['--yes']).status, 0)
+    assert.equal(await readFile(join(root, 'src/app/favicon.ico'), 'utf8'), 'ICO\u0000same')
   } finally {
     await rm(root, { recursive: true, force: true })
   }

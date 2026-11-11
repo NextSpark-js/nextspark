@@ -1948,7 +1948,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
     ...(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => item.destination) : []),
     ...(appPlan?.files ?? []).flatMap(file => file.fate.kind === 'override' || file.fate.kind === 'project' ? [join(host.root, file.fate.destination)] : []),
   ]);
-  const routeMetadata = planRouteMetadata(host.root, finalTemplates, new Set(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => item.destination) : []));
+  const routeMetadata = planRouteMetadata(host.root, finalTemplates, new Map(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => [item.destination, item.source] as [string, string]) : []));
   const themeNeedle = selectedTheme.name ? new RegExp(`@/contents/themes/${selectedTheme.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/`, 'g') : null;
   const pluginNeedle = /@\/contents\/plugins\//g;
   const imports = hostFiles.reduce((counts, file) => {
@@ -4539,7 +4539,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     if (!appTreeOnly) {
       for (const entry of report.routeMetadata) {
         if (!entry.carriedTo) continue;
-        writeRootLayoutFromMetadata(hostRoot);
+        writeRootLayoutFromMetadata(hostRoot, entry.reexports);
         console.log(`  ${entry.carriedTo}: written, it re-exports the metadata of ${entry.path} (the title and description a 0.x theme set for every page).`);
       }
     }

@@ -598,6 +598,14 @@ function staticMetadataFate(input: AppConversionInput, path: string, content: Bu
   const destination = `public/${path}`;
   const absolute = join(input.hostRoot, destination);
   let existing: Buffer | null = null;
+  // A link is followed by existsSync and readFileSync: equal bytes would drop the real file and leave the link dangling
+  let isLink = false;
+  try {
+    isLink = lstatSync(absolute).isSymbolicLink();
+  } catch {
+    isLink = false;
+  }
+  if (isLink) return { kind: 'unrecognized', reason: `${destination} is a symbolic link, so ${path} cannot be moved there or compared with it: replace the link with the real file (or delete it) and run migrate again` };
   if (existsSync(absolute)) {
     try {
       existing = statSync(absolute).isFile() ? readFileSync(absolute) : null;

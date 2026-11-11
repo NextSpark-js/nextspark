@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, sep } from 'node:path';
 import { assertContained } from './app-tree.js';
 
@@ -23,6 +23,8 @@ export interface RouteMetadataEntry {
   route: string;
   /** The file migrate writes to carry it over (`templates/layout.tsx`), when it does. */
   carriedTo: string | null;
+  /** The export the layout migrate writes re-exports, when it writes one. */
+  reexports?: 'metadata' | 'generateMetadata';
   /** What to do by hand when migrate does not carry it over. */
   todo: string | null;
 }
@@ -31,23 +33,36 @@ const ROUTE_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js'];
 const META_FILE = /^(page|layout)\.meta\.ts$/;
 
 /** The root layout migrate writes: core's root layout stays around it, so it only passes its children through. */
-export const ROOT_LAYOUT_FROM_METADATA = `import type { ReactNode } from 'react'
+export function rootLayoutFromMetadata(name: 'metadata' | 'generateMetadata'): string {
+  return `import type { ReactNode } from 'react'
 
 // The title and description of every page, as templates/layout.meta.ts set them in 0.x.
-export { metadata } from './layout.meta'
+export { ${name} } from './layout.meta'
 
 // Core's root layout (providers, fonts, protections) renders around this layout, so it adds nothing of its own.
 export default function RootTemplate({ children }: { children: ReactNode }) {
   return children
 }
 `;
+}
+
+export const ROOT_LAYOUT_FROM_METADATA = rootLayoutFromMetadata('metadata');
+
+/** Which metadata export a `.meta.ts` declares: the layout can only re-export a name the file has. */
+export function declaredMetadataExport(source: string | null): 'metadata' | 'generateMetadata' | null {
+  if (source === null) return null;
+  for (const name of ['metadata', 'generateMetadata'] as const) {
+    if (new RegExp(`\\bexport\\s+(?:const|let|var|function|async\\s+function)\\s+${name}\\b`).test(source)) return name;
+  }
+  return null;
+}
 
 /**
  * @param hostRoot the host root
  * @param finalTemplates every file that is under templates/ once the migration is done (there now, moved, or converted)
- * @param fromTheme the files of that set that this run moves out of a 0.x theme
+ * @param fromTheme the files of that set that this run moves out of a 0.x theme, with where each one is now
  */
-export function planRouteMetadata(hostRoot: string, finalTemplates: ReadonlySet<string>, fromTheme: ReadonlySet<string>): RouteMetadataEntry[] {
+export function planRouteMetadata(hostRoot: string, finalTemplates: ReadonlySet<string>, fromTheme: ReadonlyMap<string, string>): RouteMetadataEntry[] {
   const templatesRoot = join(hostRoot, 'templates');
   const entries: RouteMetadataEntry[] = [];
   for (const file of [...finalTemplates].sort()) {
@@ -69,9 +84,18 @@ export function planRouteMetadata(hostRoot: string, finalTemplates: ReadonlySet<
         todo: `${unread}, and in 0.x it took precedence over a metadata export of templates/${companion}. Add  ${reexport}  to templates/${companion} and delete any other metadata export in it.`,
       });
     } else if (route === 'layout') {
-      entries.push(fromTheme.has(file)
-        ? { path, route, carriedTo: 'templates/layout.tsx', todo: null }
-        : { path, route, carriedTo: null, todo: `${unread}. Create templates/layout.tsx with  ${reexport}  and a default export that returns its children (it renders inside core's root layout).` });
+      const source = fromTheme.get(file);
+      let declared: ReturnType<typeof declaredMetadataExport> = null;
+      if (source !== undefined) {
+        try {
+          declared = declaredMetadataExport(readFileSync(source, 'utf8'));
+        } catch {
+          declared = null;
+        }
+      }
+      if (source !== undefined && declared) entries.push({ path, route, carriedTo: 'templates/layout.tsx', reexports: declared, todo: null });
+      else if (source !== undefined) entries.push({ path, route, carriedTo: null, todo: `${unread}, and it exports no metadata or generateMetadata (declared with export const, let, var or function), so migrate does not write a layout that re-exports it. Move what it holds into a metadata export of templates/layout.tsx (a default export that returns its children, rendered inside core's root layout).` });
+      else entries.push({ path, route, carriedTo: null, todo: `${unread}. Create templates/layout.tsx with  ${reexport}  and a default export that returns its children (it renders inside core's root layout).` });
     } else {
       entries.push({
         path, route, carriedTo: null,
@@ -83,12 +107,12 @@ export function planRouteMetadata(hostRoot: string, finalTemplates: ReadonlySet<
 }
 
 /** Write `templates/layout.tsx` for the root `layout.meta.ts` that moved. Never overwrites. */
-export function writeRootLayoutFromMetadata(hostRoot: string): void {
+export function writeRootLayoutFromMetadata(hostRoot: string, name: 'metadata' | 'generateMetadata' = 'metadata'): void {
   const target = join(hostRoot, 'templates', 'layout.tsx');
   if (ROUTE_EXTENSIONS.some(extension => existsSync(join(hostRoot, 'templates', `layout.${extension}`)))) {
     throw new Error('Refusing to overwrite templates/layout.tsx');
   }
   assertContained(hostRoot, target);
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, ROOT_LAYOUT_FROM_METADATA);
+  writeFileSync(target, rootLayoutFromMetadata(name));
 }
