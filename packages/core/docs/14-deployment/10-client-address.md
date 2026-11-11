@@ -40,7 +40,7 @@ Each proxy that handles a request appends the address it received the request fr
 NEXTSPARK_CLIENT_IP_SOURCE=vercel
 ```
 
-With the variable unset, core detects Vercel from `VERCEL=1`, which Vercel sets in every deployment, and uses `vercel`. Setting it explicitly does the same and also covers a runtime where `VERCEL` is not set. With Cloudflare or another proxy in front of Vercel that you want to trust instead, set that source.
+With the variable unset, core detects Vercel from `VERCEL=1`, which Vercel sets in every deployment, and uses `vercel`. Outside Vercel, do not leave `VERCEL` in a `.env*` file: `vercel env pull` writes `VERCEL="1"` to `.env.local`, `next start` loads it, and the app would then trust `x-vercel-forwarded-for` and `x-real-ip` as a client sends them. `nextspark doctor` warns when `VERCEL=1` comes from a file. Setting it explicitly does the same and also covers a runtime where `VERCEL` is not set. With Cloudflare or another proxy in front of Vercel that you want to trust instead, set that source.
 
 Vercel sets `x-vercel-forwarded-for` and `x-real-ip` to the client address and does not forward the one a client sends. `x-vercel-forwarded-for` keeps the address Vercel saw even when another proxy sits on top of Vercel. See [Vercel request headers](https://vercel.com/docs/headers/request-headers).
 
