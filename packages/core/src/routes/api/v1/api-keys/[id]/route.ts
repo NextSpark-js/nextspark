@@ -127,7 +127,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response, req);
   }
-}), 'strict');
+}), 'read');
 
 // PATCH /api/v1/api-keys/:id - Update API key (only name and active status)
 export const PATCH = withRateLimitTier(withApiLogging(async (

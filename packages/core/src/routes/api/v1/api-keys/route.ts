@@ -121,7 +121,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response, req);
   }
-}), 'strict');
+}), 'read');
 
 // POST /api/v1/api-keys - Create new API key with dual auth
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {

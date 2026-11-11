@@ -204,7 +204,7 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
 
     return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve user details' });
   }
-}, 'strict');
+}, 'read');
 
 interface UserActionBody {
   action: 'change-role' | 'suspend' | 'unsuspend' | 'verify-email';

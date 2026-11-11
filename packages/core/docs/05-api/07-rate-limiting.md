@@ -259,6 +259,14 @@ To change it:
 - set `NEXTSPARK_CLIENT_IP_SOURCE` so the address read is the real one (`vercel`, `cloudflare`, `xff` with
   `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Without it, every person behind a proxy can look like one address.
 
+### Core's admin routes
+
+The tier is per client address and shared by every route in it. The reads that the superadmin pages (users, user, teams, team and
+subscriptions) and the API keys page make on every load or reload are in `read` (200 per minute per address). What changes users or
+credentials (creating, updating and deleting a user, creating, renaming and revoking an API key) stays in `strict`: 10 per **hour**
+per address, in one bucket for all of them. A page that fetches in the `strict` tier answers 429 with `Retry-After: 3600` after ten
+reloads, which is why those reads are not in it. A project that wants other numbers sets them in `rateLimit.tiers` of `app.config.ts`.
+
 ### Tiered Limits
 
 **Different limits based on plan:**

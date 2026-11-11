@@ -284,7 +284,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve users data' });
   }
-}, 'strict');
+}, 'read');
 
 /**
  * POST /api/superadmin/users

@@ -278,6 +278,6 @@ export const GET = withRateLimitTier(async (
 
     return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to retrieve team data' });
   }
-}, 'strict');
+}, 'read');
 
 export const OPTIONS = corsPreflight;
