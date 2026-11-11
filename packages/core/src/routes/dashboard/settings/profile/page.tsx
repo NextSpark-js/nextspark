@@ -331,6 +331,7 @@ function ProfilePage() {
                   <Label htmlFor="firstName">{t('profile.form.firstName')}</Label>
                   <Input
                     id="firstName"
+                    data-cy={sel('settings.profile.firstName')}
                     {...register('firstName')}
                     placeholder={t('profile.form.firstNamePlaceholder')}
                   />
@@ -343,6 +344,7 @@ function ProfilePage() {
                   <Label htmlFor="lastName">{t('profile.form.lastName')}</Label>
                   <Input
                     id="lastName"
+                    data-cy={sel('settings.profile.lastName')}
                     {...register('lastName')}
                     placeholder={t('profile.form.lastNamePlaceholder')}
                   />
@@ -360,6 +362,7 @@ function ProfilePage() {
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
+                      data-cy={sel('settings.profile.email')}
                       value={profile?.email || ''}
                       disabled
                       className="pl-10 bg-muted"
@@ -410,7 +413,7 @@ function ProfilePage() {
                       }
                     }}
                   >
-                    <SelectTrigger id="language">
+                    <SelectTrigger id="language" data-cy={sel('settings.profile.locale')}>
                       <div className="flex items-center gap-2">
                         <Languages className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         <SelectValue placeholder={t('profile.form.languagePlaceholder')} />
@@ -435,6 +438,7 @@ function ProfilePage() {
                     <PopoverTrigger asChild>
                       <Button
                         id="country"
+                        data-cy={sel('settings.profile.country')}
                         variant="outline"
                         role="combobox"
                         aria-expanded={countryOpen}
@@ -488,6 +492,7 @@ function ProfilePage() {
                     <PopoverTrigger asChild>
                       <Button
                         id="timezone"
+                        data-cy={sel('settings.profile.timezone')}
                         variant="outline"
                         role="combobox"
                         aria-expanded={timezoneOpen}

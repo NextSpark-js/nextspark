@@ -34,3 +34,11 @@ test('a name change saves without a country or a timezone', async () => {
   await user.click(screen.getByRole('button', { name: 'profile.form.updateButton' }))
   await waitFor(() => expect(saved).toEqual([{ firstName: 'Ana', lastName: 'Pérez', country: '', timezone: '', language: 'en' }]))
 })
+
+// The selector test the starter ships (SEL_PROF_001) and an E2E that edits the profile look the fields up by these
+test('every field carries the data-cy the selector map declares for it', () => {
+  const { container } = render(<ProfilePage />)
+  const byCy = (cy: string) => container.querySelector(`[data-cy="${cy}"]`)?.id
+  expect(['profile-first-name', 'profile-last-name', 'profile-email', 'profile-locale', 'profile-country', 'profile-timezone'].map(byCy))
+    .toEqual(['firstName', 'lastName', 'email', 'language', 'country', 'timezone'])
+})

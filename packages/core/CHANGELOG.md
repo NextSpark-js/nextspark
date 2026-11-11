@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **The profile page saves a name change for an account that never chose a country or a timezone.** Sign-up does not ask for either, so every new account has neither, and the form and `PATCH /api/user/profile` required both: Update Profile sent nothing and only showed "Please select a country" and "Please select a timezone". Both may now be empty, and the API stores an empty one as `NULL`. (#433)
+- **The fields of the profile page carry the `data-cy` the selector map declares for them.** `settings.profile.firstName`, `lastName`, `email`, `locale`, `country` and `timezone` were declared but not rendered, so the selector test the starter ships (`SEL_PROF_001`) failed on a new project and an E2E that edits the profile found no field to fill. (#433)
 - **The generated API presets and docs registries stay valid TypeScript when a project has none of their files.** Their header comment named a glob whose `*/` closed the comment early.
 
 - **The root layout no longer needs Google Fonts at build time.** It imported Geist and Geist Mono from `next/font/google`, so `next build` failed without outbound access to `fonts.googleapis.com` and `fonts.gstatic.com`. It now loads them with `next/font/local` from the `geist` package (a new dependency of core, OFL licensed): same families, weights and `--font-geist-sans` / `--font-geist-mono` variables. Geist is preloaded again, as `next/font/local` does by default. A project that wants its own typeface sets it in its CSS. (#419)
