@@ -121,7 +121,7 @@ export function generateApiPresetsRegistry(data, config) {
  * Total presets: 0
  *
  * To add presets, create files in:
- * api/**/presets.ts
+ * api/<route>/presets.ts
  *
  * DO NOT EDIT - This file is auto-generated
  */
@@ -293,7 +293,7 @@ export function generateApiDocsRegistry(data, config) {
  * Total docs: 0
  *
  * To add documentation, create files in:
- * api/**/docs.md
+ * api/<route>/docs.md
  *
  * DO NOT EDIT - This file is auto-generated
  */
