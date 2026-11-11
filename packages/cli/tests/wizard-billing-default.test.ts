@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { DEFAULT_PRESET, getDefaultConfig, getPreset } from '../src/wizard/presets.js'
 import { featureChoices } from '../src/wizard/prompts/features-config.js'
+import { nextsparkConfigSource } from '../src/wizard/generators/index.js'
 
 test('the default preset and default config have no billing', () => {
   for (const config of [getPreset(DEFAULT_PRESET), getDefaultConfig()]) {
@@ -21,4 +22,12 @@ test('the billing feature checkbox follows the chosen billing model', () => {
   assert.equal(billing('free'), false)
   assert.equal(billing('paid'), true)
   assert.equal(billing('freemium'), true)
+})
+
+test('billing left unchecked writes features.billing: false to nextspark.config.ts, and checked writes no flag (#425)', () => {
+  const off = nextsparkConfigSource({ plugins: [], template: 'starter', version: '1.0.0', billing: false })
+  const on = nextsparkConfigSource({ plugins: ['x'], template: 'crm', version: '1.0.0', billing: true })
+  assert.match(off, /\n  features: \{ billing: false \},\n/)
+  assert.doesNotMatch(on, /features/)
+  assert.match(on, /plugins: \["x"\],\n  template: \{ name: "crm", version: "1\.0\.0" \},\n\}\)\n$/)
 })

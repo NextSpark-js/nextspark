@@ -271,7 +271,12 @@ What stays, since plans as tiers read it:
 
 Without the lifecycle cron nothing resets monthly usage counters: a project with monthly limits calls
 `UsageService.processMonthlyReset()` from a job of its own. `billing.webhookExtensions` names modules for the webhook
-routes, so setting it with billing off stops `prepare` (`NS_HOST_BILLING_OFF_WEBHOOK_EXTENSIONS`). A page or route the
+routes, so setting it with billing off stops `prepare` (`NS_HOST_BILLING_OFF_WEBHOOK_EXTENSIONS`). Core's
+components and hooks that call the routes left out answer with a 404 if the project uses them on its own pages:
+`ManageBillingButton` (the portal), `useInvoices` and `useInvoice` (the team invoices API).
+
+`create-nextspark-app` writes `features: { billing: false }` to `nextspark.config.ts` when billing is left unchecked
+(the default preset), and no flag when it is checked. A page or route the
 project provides itself at one of those paths (`templates/dashboard/settings/billing/page.tsx`) is served as the
 project's own.
 

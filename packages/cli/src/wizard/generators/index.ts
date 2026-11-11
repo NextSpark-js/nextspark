@@ -466,6 +466,15 @@ export async function updatePackageJson(
  * the interactive production sign-in prompt (`--yes`, quick mode, presets)
  * rely on that default rather than passing their own.
  */
+/**
+ * The project's nextspark.config.ts. Billing left unchecked writes `features: { billing: false }`, so the generated
+ * host leaves the payment routes and pages out (core #425); with billing on the file sets no flag.
+ */
+export function nextsparkConfigSource({ plugins, template, version, billing }: { plugins: string[]; template: string; version: string; billing: boolean }): string {
+  const features = billing ? '' : '  features: { billing: false },\n'
+  return `import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: ${JSON.stringify(plugins)},\n${features}  template: { name: ${JSON.stringify(template)}, version: ${JSON.stringify(version)} },\n})\n`
+}
+
 export interface ProjectGenerationResult {
   proxyFile: ProxyFileResult | null
 }
@@ -515,7 +524,7 @@ export async function generateProject(
     await fs.ensureDir(path.join(process.cwd(), 'plugins'))
     await fs.writeFile(
       path.join(process.cwd(), 'nextspark.config.ts'),
-      `import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: ${JSON.stringify(plugins)},\n  template: { name: ${JSON.stringify(projectTemplate)}, version: ${JSON.stringify(getNextSparkVersion())} },\n})\n`,
+      nextsparkConfigSource({ plugins, template: projectTemplate, version: getNextSparkVersion(), billing: config.features.billing }),
       'utf-8'
     )
 
