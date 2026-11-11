@@ -55,6 +55,7 @@ module.exports = {
     '^better-auth/plugins$': '<rootDir>/tests/jest/__mocks__/better-auth-plugins.js',
     '^better-auth/social-providers$': '<rootDir>/tests/jest/__mocks__/better-auth-social-providers.js',
     '^next-intl/server$': '<rootDir>/tests/jest/__mocks__/next-intl-server.js',
+    '^use-intl/react$': '<rootDir>/tests/jest/__mocks__/use-intl-react.js',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/jest/setup.ts'],
   transform: {

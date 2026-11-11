@@ -7,7 +7,9 @@ import { Metadata } from "next";
 import { getAllPluginNavItems } from '@nextsparkjs/core/lib/plugins/nav-items'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { requireAreaAccess } from './area-access'
 
 export const defaultMetadata: Metadata = {
@@ -88,8 +90,10 @@ export function withDevtoolsMessages<P extends DevLayoutProps>(ResolvedDevLayout
     await requireAreaAccess('devtools')
     const messages = await getMessages()
     return (
-      <NextIntlClientProvider messages={selectMessages(messages, 'devtools')}>
-        <ResolvedDevLayout {...props} />
+      <NextIntlClientProvider messages={selectMessages(messages, 'devtools', getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED }).devtools)}>
+        <AreaMessagesCheck area="devtools">
+          <ResolvedDevLayout {...props} />
+        </AreaMessagesCheck>
       </NextIntlClientProvider>
     )
   }

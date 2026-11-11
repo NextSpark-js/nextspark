@@ -42,7 +42,11 @@ export const OPTIONAL_ROOT_NAMESPACES = ['consent'] as const
 export type TranslationGroup = keyof typeof NAMESPACE_GROUPS
 type Messages = Record<string, unknown>
 
+/** The areas a project can give its own namespaces to (`i18n.clientNamespaces`); `root` is on every page, so it takes none. */
+export type ClientNamespaceArea = Exclude<TranslationGroup, 'root'>
+
 type TranslationKeyConfig = {
+  i18n?: { clientNamespaces?: Partial<Record<ClientNamespaceArea, readonly string[]>> }
   userRoles?: { displayNames?: Record<string, string> }
   mobileNav?: {
     items?: Array<{ labelKey?: string }>
@@ -63,29 +67,44 @@ function topLevelNamespaces(keys: Iterable<string | undefined>): string[] {
   )]
 }
 
+/** The project namespaces `i18n.clientNamespaces` gives an area; anything that is not a non-empty string is ignored. */
+function declaredNamespaces(appConfig: TranslationKeyConfig, area: ClientNamespaceArea): string[] {
+  const declared = appConfig.i18n?.clientNamespaces?.[area]
+  return Array.isArray(declared) ? declared.filter((namespace): namespace is string => typeof namespace === 'string' && namespace.length > 0) : []
+}
+
 /**
  * Resolves namespaces that are configuration or registry driven rather than
  * visible as literal `useTranslations('namespace')` calls. Layouts pass the
  * generated registry/config so new project entities and keys cross the client
- * boundary without edits to this framework-owned list.
+ * boundary without edits to this framework-owned list, and so do the namespaces
+ * a project declares for an area in `i18n.clientNamespaces` (#427).
  */
 export function getConfiguredClientNamespaces({
   entityRegistry = {},
   appConfig = {},
-}: ClientMessageRegistryInputs = {}): Pick<Record<TranslationGroup, string[]>, 'dashboard' | 'superadmin'> {
+}: ClientMessageRegistryInputs = {}): Record<ClientNamespaceArea, string[]> {
   const mobileNavKeys = [
     ...(appConfig.mobileNav?.items ?? []).map(({ labelKey }) => labelKey),
     ...(appConfig.mobileNav?.moreSheetItems ?? []).map(({ labelKey }) => labelKey),
   ]
+  const declared = (area: ClientNamespaceArea) => declaredNamespaces(appConfig, area)
 
   return {
+    auth: declared('auth'),
+    public: declared('public'),
+    devtools: declared('devtools'),
     // useContentTranslation(entityName) can resolve every entity's name.
     dashboard: [...new Set([
       ...Object.keys(entityRegistry),
       ...topLevelNamespaces(mobileNavKeys),
+      ...declared('dashboard'),
     ])],
     // useRoleTranslations() resolves the complete configured role key map.
-    superadmin: topLevelNamespaces(Object.values(appConfig.userRoles?.displayNames ?? {})),
+    superadmin: [...new Set([
+      ...topLevelNamespaces(Object.values(appConfig.userRoles?.displayNames ?? {})),
+      ...declared('superadmin'),
+    ])],
   }
 }
 

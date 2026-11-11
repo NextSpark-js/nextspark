@@ -4,6 +4,7 @@ import { NextIntlClientProvider, useTranslations } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
 import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
@@ -116,7 +117,9 @@ export function withSuperadminMessages<P extends SuperadminLayoutProps>(Resolved
     const configuredNamespaces = getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED })
     return (
       <NextIntlClientProvider messages={selectMessages(messages, 'superadmin', configuredNamespaces.superadmin)}>
-        <ResolvedSuperadminLayout {...props} />
+        <AreaMessagesCheck area="superadmin">
+          <ResolvedSuperadminLayout {...props} />
+        </AreaMessagesCheck>
       </NextIntlClientProvider>
     )
   }

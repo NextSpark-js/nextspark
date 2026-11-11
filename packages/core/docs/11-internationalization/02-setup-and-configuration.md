@@ -504,6 +504,57 @@ Dashboard also adds every generated entity-registry namespace (and configured
 mobile-navigation key namespace); superadmin adds the namespace of each
 configured user-role display key.
 
+What each area's client components receive:
+
+| Area | Core namespaces (`NAMESPACE_GROUPS`) | Added from the project |
+|---|---|---|
+| `(auth)` | `auth`, `common`, `permissions`, `validation` | `i18n.clientNamespaces.auth` |
+| `(public)` | `auth`, `blog`, `common`, `docs`, `footer`, `home`, `navigation`, `permissions`, `public`, `validation` | `i18n.clientNamespaces.public` |
+| `dashboard` | its group (settings, billing, entities, media, teams, ...) | every entity, the mobile navigation keys' namespaces, `i18n.clientNamespaces.dashboard` |
+| `superadmin` | its group | the role display keys' namespaces, `i18n.clientNamespaces.superadmin` |
+| `devtools` | `common`, `dev`, `devtools`, `permissions` | `i18n.clientNamespaces.devtools` |
+
+### A project namespace in an area: `i18n.clientNamespaces`
+
+A client component of the project that renders in an area and reads a namespace
+of its own (a custom sign-in form under `(auth)`, a landing section under
+`(public)`) needs that namespace in the area's messages. List it for the area in
+`config/app.config.ts`:
+
+```typescript
+// config/app.config.ts
+export const APP_CONFIG_OVERRIDES = {
+  i18n: {
+    clientNamespaces: {
+      auth: ['signIn'],      // messages/<locale>/signIn.json, read by a component under (auth)
+      public: ['landing'],
+    },
+  },
+}
+```
+
+- Only the areas listed carry the extra messages; the rest of the app ships none of them.
+- The `(auth)` and `(public)` pages stay prerendered: without `i18n.requestLocale` their messages are the
+  default locale's, built with the app (core and project messages; a plugin's namespace is not among them), and
+  the setting filters them the same way. With `requestLocale` on, the group gets the request's messages, filtered
+  the same way.
+- Server components need nothing: they read every namespace already.
+
+A namespace an area lacks renders its keys (`signIn.title`). Each area checks it: the
+first key of a missing namespace logs a warning that names the key, the area and the
+setting to add, once per namespace:
+
+```
+[nextspark i18n] "signIn.title" renders as its key in the auth area: its client messages have no "signIn" namespace. List it in i18n.clientNamespaces.auth (config/app.config.ts), and check that the project's messages define it.
+```
+
+It is logged in development (the terminal and the browser console) and on the
+server in production. A page `next build` prerenders (the `(auth)` and `(public)`
+pages without `requestLocale`) prints it in the build output, so the problem shows
+up before deploying; a page rendered per request logs it on its first request. A
+key missing inside a namespace the area has is next-intl's own `MISSING_MESSAGE`
+error.
+
 `getPageNamespaces(pathname)` remains available for code that needs the
 route-to-group lookup, but layouts do not inspect headers or a pathname to
 choose messages. That keeps routes prerenderable.
@@ -515,12 +566,15 @@ layout has no option to turn the fonts off: a project that wants its own
 typeface sets its own `font-family` (or overrides the variables) in its
 `globals.css`, and the Geist files are then simply not used by the page.
 
-### Project template namespace outside its route group
+### Project template namespace for one route only
 
-When a project-owned template needs a namespace that is not part of its route
-group, add a server layout next to that template and explicitly extend the
-group. This makes the extra browser payload visible in the template diff while
-leaving unrelated routes small:
+`i18n.clientNamespaces` adds a namespace to a whole area. When only one
+project-owned template needs it, a server layout next to that template can
+extend the group for its subtree instead. This makes the extra browser payload
+visible in the template diff while leaving the rest of the area small. The
+layout reads the request (`getMessages`), so under `(auth)` or `(public)` with
+Cache Components it turns that subtree to a per-request render; the setting does
+not:
 
 ```tsx
 // templates/(public)/blog/layout.tsx

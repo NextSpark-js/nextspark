@@ -22,10 +22,7 @@ function getPageNamespaces(pathname: string): string[] {
     entityRegistry: ENTITY_REGISTRY,
     appConfig: APP_CONFIG_MERGED,
   })
-  return [...new Set([
-    ...NAMESPACE_GROUPS[group],
-    ...(group === 'dashboard' || group === 'superadmin' ? configuredNamespaces[group] : []),
-  ])]
+  return [...new Set([...NAMESPACE_GROUPS[group], ...configuredNamespaces[group]])]
 }
 
 // Server-side locale detection (safe for server-only contexts)

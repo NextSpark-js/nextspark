@@ -832,6 +832,15 @@ export interface AppConfig {
      * is fixed. Default: both false.
      */
     requestLocale?: { auth?: boolean; public?: boolean }
+    /**
+     * Project namespaces an area's client components also receive, on top of core's own for that area
+     * (`NAMESPACE_GROUPS` in core/lib/i18n/client-messages): `{ auth: ['signIn'], public: ['landing'] }`. Server
+     * components read every namespace already; this is for a client component (`useTranslations`) of the project
+     * that renders in that area. Only the areas listed carry the extra messages, and the `(auth)` and `(public)`
+     * pages stay prerendered: their static messages (the default locale's, core and project) are filtered the same
+     * way. A namespace an area lacks renders its keys, and development logs which one and where to add it.
+     */
+    clientNamespaces?: Partial<Record<'auth' | 'public' | 'dashboard' | 'superadmin' | 'devtools', string[]>>
     cookie: {
       name: string
       maxAge: number

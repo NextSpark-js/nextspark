@@ -12,7 +12,8 @@ jest.mock('next/server', () => ({ connection: async () => undefined }))
 jest.mock('next-intl/server', () => ({ getMessages: () => getMessages(), getLocale: async () => 'fr' }))
 jest.mock('next-intl', () => ({ NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children }))
 const selectMessages = jest.fn(() => ({}))
-jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: (...args: unknown[]) => (selectMessages as (...a: unknown[]) => unknown)(...args), getConfiguredClientNamespaces: () => ({ superadmin: ['plugin-s'], dashboard: ['entity-d'] }) }))
+jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: (...args: unknown[]) => (selectMessages as (...a: unknown[]) => unknown)(...args), getConfiguredClientNamespaces: () => ({ superadmin: ['plugin-s'], dashboard: ['entity-d'], auth: ['project-a'], public: ['project-p'], devtools: [] }) }))
+jest.mock('@nextsparkjs/core/providers/area-messages-check', () => ({ AreaMessagesCheck: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({ get APP_CONFIG_MERGED() { return { i18n } } }))
 jest.mock('@nextsparkjs/core/providers/static-intl-provider', () => ({ StaticIntlProvider: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/registries/request-locale', () => ({
@@ -60,8 +61,8 @@ beforeEach(() => {
 })
 afterEach(() => warn.mockRestore())
 
-describe('extra namespaces of the request wrappers (#414)', () => {
-  it('gives dashboard and superadmin their configured namespaces, and auth, public and devtools none', async () => {
+describe('extra namespaces of the wrappers (#414, #427)', () => {
+  it('gives every request wrapper its area\'s configured namespaces: entities, roles and i18n.clientNamespaces', async () => {
     flags = { auth: true, public: true }
     i18n = { ...MULTI, requestLocale: { auth: true, public: true } }
     const layouts = load()
@@ -72,9 +73,18 @@ describe('extra namespaces of the request wrappers (#414)', () => {
     }
     expect(await extraOf(layouts.withDashboardMessages)).toEqual(['entity-d'])
     expect(await extraOf(layouts.withSuperadminMessages)).toEqual(['plugin-s'])
-    expect(await extraOf(layouts.withAuthMessages)).toEqual([])
-    expect(await extraOf(layouts.withPublicMessages)).toEqual([])
+    expect(await extraOf(layouts.withAuthMessages)).toEqual(['project-a'])
+    expect(await extraOf(layouts.withPublicMessages)).toEqual(['project-p'])
     expect(await extraOf(layouts.withDevtoolsMessages)).toEqual([])
+  })
+
+  it('filters the static messages of auth and public the same way, without reading the request', async () => {
+    const layouts = load()
+    for (const [wrapper, group, extra] of [[layouts.withAuthMessages, 'auth', ['project-a']], [layouts.withPublicMessages, 'public', ['project-p']]] as const) {
+      selectMessages.mockClear()
+      expect((await render(wrapper)).requested).toBe(false)
+      expect((selectMessages.mock.calls[0] as unknown[]).slice(1)).toEqual([group, extra])
+    }
   })
 })
 

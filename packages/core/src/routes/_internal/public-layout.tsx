@@ -2,7 +2,9 @@ import type { ComponentType } from 'react'
 import type { Metadata } from "next"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 import { resolveAppUrl } from '@nextsparkjs/core/lib/utils/base-url'
 
@@ -34,8 +36,10 @@ export function withPublicMessages<P extends { children: React.ReactNode }>(Publ
   return async function PublicLayoutWithMessages(props: P) {
     const messages = await getMessages()
     return (
-      <NextIntlClientProvider messages={selectMessages(messages, 'public')}>
-        <PublicLayout {...props} />
+      <NextIntlClientProvider messages={selectMessages(messages, 'public', getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED }).public)}>
+        <AreaMessagesCheck area="public">
+          <PublicLayout {...props} />
+        </AreaMessagesCheck>
       </NextIntlClientProvider>
     )
   }

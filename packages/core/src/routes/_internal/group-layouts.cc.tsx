@@ -4,9 +4,10 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { connection } from 'next/server'
 import { StaticIntlProvider } from '@nextsparkjs/core/providers/static-intl-provider'
+import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
 import { checkRequestLocale, isLocaleFixedFor } from '@nextsparkjs/core/lib/config/locale-detection'
-import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { getConfiguredClientNamespaces, selectMessages, type ClientNamespaceArea } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 import { REQUEST_LOCALE_AUTH, REQUEST_LOCALE_PUBLIC } from '@nextsparkjs/registries/request-locale'
 import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
@@ -35,6 +36,9 @@ import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/transla
  * reads `params`, `searchParams`, cookies or headers (a project's too) then streams in while the layout
  * around it (navbar, footer, sidebar) stays in the prerendered shell. Without one Next fails the build.
  *
+ * Every wrapper adds the namespaces the project lists for its area in `i18n.clientNamespaces` (#427), and puts the
+ * area's content in AreaMessagesCheck, which names the namespace a client component's key is missing.
+ *
  * ISR hosts keep the wrappers of `auth-layout`, `public-layout`, ... (they await `getMessages()`).
  *
  * The guard wrappers of the protected groups live in `superadmin-layout.cc` / `devtools-layout.cc`, not here: the
@@ -44,6 +48,13 @@ import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/transla
 type LayoutProps = { children: ReactNode }
 
 /**
+ * Each area's namespaces beyond its core group: the entities' and the navigation's for dashboard, the role keys' for
+ * superadmin, and those the project lists in `i18n.clientNamespaces` for any area (#427). Read from the generated
+ * registry and the config only, never the request, so the static wrappers stay prerendered.
+ */
+const configuredNamespaces = () => getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
+
+/**
  * The wrappers hand every prop to the layout they wrap: `children`, and the parallel route slots a project layout declares
  * (`@modal` -> `modal`). Only `children` is put behind a Suspense boundary here; a slot that reads request data has its own.
  */
@@ -51,10 +62,12 @@ function staticMessagesWrapper(group: 'auth' | 'public') {
   return <P extends LayoutProps>(ResolvedLayout: ComponentType<P>) =>
     function LayoutWithStaticMessages(props: P) {
       return (
-        <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, group)}>
-          <ResolvedLayout {...props}>
-            <Suspense fallback={null}>{props.children}</Suspense>
-          </ResolvedLayout>
+        <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, group, configuredNamespaces()[group])}>
+          <AreaMessagesCheck area={group}>
+            <ResolvedLayout {...props}>
+              <Suspense fallback={null}>{props.children}</Suspense>
+            </ResolvedLayout>
+          </AreaMessagesCheck>
         </StaticIntlProvider>
       )
     }
@@ -66,11 +79,11 @@ async function DynamicMarker() {
   return null
 }
 
-async function RequestMessages({ group, extraNamespaces, markLanguage, children }: LayoutProps & { group: 'auth' | 'public' | 'devtools' | 'dashboard' | 'superadmin'; extraNamespaces: readonly string[]; markLanguage?: boolean }) {
+async function RequestMessages({ group, markLanguage, children }: LayoutProps & { group: ClientNamespaceArea; markLanguage?: boolean }) {
   const messages = await getMessages()
   const provider = (
-    <NextIntlClientProvider messages={selectMessages(messages, group, extraNamespaces)}>
-      {children}
+    <NextIntlClientProvider messages={selectMessages(messages, group, configuredNamespaces()[group])}>
+      <AreaMessagesCheck area={group}>{children}</AreaMessagesCheck>
     </NextIntlClientProvider>
   )
   if (!markLanguage) return provider
@@ -78,19 +91,16 @@ async function RequestMessages({ group, extraNamespaces, markLanguage, children 
   return <div lang={await getLocale()} style={{ display: 'contents' }}>{provider}</div>
 }
 
-function requestMessagesWrapper(group: 'auth' | 'public' | 'devtools' | 'dashboard' | 'superadmin') {
+function requestMessagesWrapper(group: ClientNamespaceArea) {
   return <P extends LayoutProps>(ResolvedLayout: ComponentType<P>) =>
     function LayoutWithRequestMessages(props: P) {
-      const configured = getConfiguredClientNamespaces({ entityRegistry: ENTITY_REGISTRY, appConfig: APP_CONFIG_MERGED })
       const toRequest = group === 'auth' || group === 'public'
-      // `devtools` has no plugin or entity namespaces: core and project messages only, as in the ISR module
-      const extra = toRequest ? [] : group === 'dashboard' || group === 'superadmin' ? configured[group] : []
       return (
         <Suspense fallback={null}>
           <Suspense>
             <DynamicMarker />
           </Suspense>
-          <RequestMessages group={group} extraNamespaces={extra} markLanguage={toRequest}>
+          <RequestMessages group={group} markLanguage={toRequest}>
             <ResolvedLayout {...props} />
           </RequestMessages>
         </Suspense>

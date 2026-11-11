@@ -7,7 +7,7 @@
  * resolve end to end, even though every target .d.ts file genuinely exists
  * on disk — an upstream packaging issue, not a NextSpark bug (#131).
  *
- * Declares only what providers/static-intl-provider.tsx actually uses.
+ * Declares only what providers/static-intl-provider.tsx and providers/area-messages-check.tsx use.
  */
 declare module 'use-intl/react' {
   import type { ReactNode } from 'react'
@@ -20,8 +20,10 @@ declare module 'use-intl/react' {
     timeZone?: string
     formats?: Record<string, unknown>
     onError?: (error: unknown) => void
-    getMessageFallback?: (info: unknown) => string
+    getMessageFallback?: (info: { error: { code: string }; key: string; namespace?: string }) => string
   }
 
   export function IntlProvider(props: IntlProviderProps): JSX.Element
+  export function useLocale(): string
+  export function useMessages(): Record<string, unknown>
 }

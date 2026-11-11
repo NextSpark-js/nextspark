@@ -2,7 +2,9 @@ import type { ComponentType } from 'react'
 import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
+import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { APP_NAME } from '@nextsparkjs/core/lib/config/public-config-client'
 import { GroupToaster } from '@nextsparkjs/core/providers/group-toaster'
 import { getAuthTranslations } from '@nextsparkjs/core/lib/i18n/auth-translations'
@@ -36,10 +38,12 @@ export function withAuthMessages<P extends { children: React.ReactNode }>(AuthLa
   return async function AuthLayoutWithMessages(props: P) {
     const messages = await getMessages()
     return (
-      <NextIntlClientProvider messages={selectMessages(messages, 'auth')}>
-        <GroupToaster>
-          <AuthLayout {...props} />
-        </GroupToaster>
+      <NextIntlClientProvider messages={selectMessages(messages, 'auth', getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED }).auth)}>
+        <AreaMessagesCheck area="auth">
+          <GroupToaster>
+            <AuthLayout {...props} />
+          </GroupToaster>
+        </AreaMessagesCheck>
       </NextIntlClientProvider>
     )
   }

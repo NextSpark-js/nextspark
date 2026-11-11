@@ -260,3 +260,22 @@ test('dashboard includes every registered entity namespace and superadmin includ
     customRoles: { auditor: 'Auditor' },
   })
 })
+
+test('i18n.clientNamespaces gives each listed area its project namespaces, and no other area (#427)', () => {
+  const configured = getConfiguredClientNamespaces({
+    entityRegistry: { widgets: {} },
+    appConfig: {
+      i18n: { clientNamespaces: { auth: ['signInExtras', '', 42 as unknown as string], public: ['landing'], dashboard: ['reports', 'widgets'] } },
+    },
+  })
+  const messages = { signInExtras: { help: 'Help' }, landing: { hero: 'Hero' }, reports: { title: 'Reports' }, widgets: { title: 'Widgets' } }
+
+  assert.deepEqual(configured.auth, ['signInExtras'])
+  assert.deepEqual(configured.public, ['landing'])
+  assert.deepEqual(configured.dashboard, ['widgets', 'reports'])
+  assert.deepEqual(configured.devtools, [])
+  assert.deepEqual(configured.superadmin, [])
+  assert.deepEqual(selectMessages(messages, 'auth', configured.auth), { signInExtras: { help: 'Help' } })
+  assert.deepEqual(selectMessages(messages, 'public', configured.public), { landing: { hero: 'Hero' } })
+  assert.deepEqual(selectMessages(messages, 'devtools', configured.devtools), {})
+})

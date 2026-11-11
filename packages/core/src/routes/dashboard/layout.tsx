@@ -3,6 +3,7 @@ import { getMessages } from 'next-intl/server'
 import { AuthenticatedDashboardLayout } from '@nextsparkjs/core/components/dashboard/layouts/AuthenticatedDashboardLayout'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
 import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
+import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { ENTITY_REGISTRY } from '@nextsparkjs/registries/entity-registry'
 
 /**
@@ -19,7 +20,9 @@ export default async function CoreDashboardLayout({ children }: { children: Reac
 
   return (
     <NextIntlClientProvider messages={selectMessages(messages, 'dashboard', configuredNamespaces.dashboard)}>
-      <AuthenticatedDashboardLayout>{children}</AuthenticatedDashboardLayout>
+      <AreaMessagesCheck area="dashboard">
+        <AuthenticatedDashboardLayout>{children}</AuthenticatedDashboardLayout>
+      </AreaMessagesCheck>
     </NextIntlClientProvider>
   )
 }
