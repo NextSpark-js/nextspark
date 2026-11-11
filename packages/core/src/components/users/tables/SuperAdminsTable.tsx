@@ -50,6 +50,7 @@ import type { SessionUser } from '../../../lib/auth';
 import { useToast } from '../../../hooks/useToast';
 import { withBasePath } from '../../../lib/base-path';
 import { canActOnUser } from '../../../lib/auth/assignable-roles';
+import { actionErrorMessage } from './action-error';
 import type { UserRole } from '../../../types/user.types';
 
 interface SuperAdmin {
@@ -107,7 +108,7 @@ export function SuperAdminsTable({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(type === 'demote' ? { action: 'change-role', role: 'member' } : { action: 'suspend' }),
           });
-      if (!response.ok) throw new Error((await response.json()).error || t('confirm.failed'));
+      if (!response.ok) throw new Error(await actionErrorMessage(response, t, t('confirm.failed')));
       return response.json();
     },
     onSuccess: () => {

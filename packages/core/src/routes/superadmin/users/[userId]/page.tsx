@@ -40,6 +40,7 @@ import {
 import Link from "next/link";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format"
+import { rateLimitedMessage } from "@nextsparkjs/core/components/users/tables/action-error"
 
 interface TeamMembership {
   teamId: string;
@@ -125,7 +126,7 @@ function UserDetailPage() {
         if (response.status === 404) {
           throw new Error(t("userDetail.notFound"));
         }
-        throw new Error(t("userDetail.fetchFailed"));
+        throw new Error(rateLimitedMessage(response, (key, values) => t(`users.${key}`, values)) ?? t("userDetail.fetchFailed"));
       }
       return response.json();
     },

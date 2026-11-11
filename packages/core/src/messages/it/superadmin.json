@@ -137,6 +137,7 @@
       "error": "Errore",
       "actionCompleted": "Azione completata con successo",
       "deleteFailed": "Eliminazione non riuscita",
+      "rateLimited": "Troppe richieste. Riprova tra {minutes, plural, one {# minuto} other {# minuti}}.",
       "deleted": "Utente eliminato",
       "deletedDescription": "L’utente è stato eliminato con successo"
     }

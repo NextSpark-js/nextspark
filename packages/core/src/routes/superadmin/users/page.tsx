@@ -30,6 +30,7 @@ import {
 import Link from "next/link";
 import { UsersTable } from "@nextsparkjs/core/components/users/tables/UsersTable";
 import { SuperAdminsTable } from "@nextsparkjs/core/components/users/tables/SuperAdminsTable";
+import { rateLimitedMessage } from "@nextsparkjs/core/components/users/tables/action-error";
 import { useSession } from "@nextsparkjs/core/lib/auth-client";
 import type { User } from "@nextsparkjs/core/types/user.types";
 import {
@@ -127,7 +128,7 @@ function UsersPage() {
       const queryString = getQueryParams();
       const response = await fetch(withBasePath(`/api/superadmin/users?${queryString}`));
       if (!response.ok) {
-        throw new Error(t("usersPage.fetchFailed"));
+        throw new Error(rateLimitedMessage(response, (key, values) => t(`users.${key}`, values)) ?? t("usersPage.fetchFailed"));
       }
       return response.json();
     },

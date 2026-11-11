@@ -137,6 +137,7 @@
       "error": "Error",
       "actionCompleted": "Acción completada correctamente",
       "deleteFailed": "No se pudo eliminar",
+      "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo en {minutes, plural, one {# minuto} other {# minutos}}.",
       "deleted": "Usuario eliminado",
       "deletedDescription": "El usuario se eliminó correctamente"
     }

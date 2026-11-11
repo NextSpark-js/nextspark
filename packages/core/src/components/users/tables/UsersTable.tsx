@@ -53,6 +53,7 @@ import { useCommonText } from '../../../lib/i18n/common-text';
 import { useSession, type ClientSession } from '../../../lib/auth-client';
 import type { SessionUser } from '../../../lib/auth';
 import { canActOnUser, canGrantUserRole } from '../../../lib/auth/assignable-roles';
+import { actionErrorMessage } from './action-error';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatLocaleDate } from '../../../lib/i18n/format';
 import type { UserRole } from '../../../types/user.types';
@@ -128,10 +129,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, role }),
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || t('confirm.failed'));
-      }
+      if (!response.ok) throw new Error(await actionErrorMessage(response, t, t('confirm.failed')));
       return response.json();
     },
     onSuccess: (data) => {
@@ -157,10 +155,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
       const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
         method: "DELETE",
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || t('toast.deleteFailed'));
-      }
+      if (!response.ok) throw new Error(await actionErrorMessage(response, t, t('toast.deleteFailed')));
       return response.json();
     },
     onSuccess: (data) => {

@@ -137,6 +137,7 @@
       "error": "Fehler",
       "actionCompleted": "Aktion erfolgreich abgeschlossen",
       "deleteFailed": "Löschen fehlgeschlagen",
+      "rateLimited": "Zu viele Anfragen. Versuchen Sie es in {minutes, plural, one {# Minute} other {# Minuten}} erneut.",
       "deleted": "Benutzer gelöscht",
       "deletedDescription": "Der Benutzer wurde erfolgreich gelöscht"
     }

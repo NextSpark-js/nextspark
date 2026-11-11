@@ -137,6 +137,7 @@
       "error": "Erreur",
       "actionCompleted": "Action terminée avec succès",
       "deleteFailed": "Échec de la suppression",
+      "rateLimited": "Trop de requêtes. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
       "deleted": "Utilisateur supprimé",
       "deletedDescription": "L’utilisateur a été supprimé avec succès"
     }
