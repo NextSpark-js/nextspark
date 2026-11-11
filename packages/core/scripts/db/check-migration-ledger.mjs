@@ -2,7 +2,7 @@
  * The recorded migrations against the files on disk (#428): `nextspark doctor` runs this file. It reads the
  * ledgers of DATABASE_URL and writes nothing, not even the hash of a row that has none.
  *
- *   node check-migration-ledger.mjs   (in the project root, DATABASE_URL in the environment)
+ *   node check-migration-ledger.mjs   (in the project root, MIGRATE_DATABASE_URL or else DATABASE_URL in the environment)
  *   exit 0: the database was read; stdout is a JSON object
  *     { edited: [{ file, source }], accept: [<UPDATE>], renamed: [{ from, to, source, update }] };
  *   exit 2: no DATABASE_URL, or the database could not be read; stdout is the reason.
@@ -16,7 +16,8 @@ import { scriptClient } from './ssl-config.mjs'
 import { rememberSecrets, scrub } from './destination.mjs'
 
 async function main() {
-  const url = process.env.DATABASE_URL
+  // The ledgers are for the migration role: the application's role (nextspark_app) cannot read them
+  const url = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL
   if (!url) {
     console.log('DATABASE_URL is not set')
     return 2
@@ -39,7 +40,8 @@ async function main() {
     return 0
   } catch (error) {
     // never the URL: it holds the password
-    console.log(`Could not read the recorded migrations: ${scrub(error.message)}`)
+    const hint = error.code === '42501' ? ' (the ledgers are for the migration role: set MIGRATE_DATABASE_URL to its connection)' : ''
+    console.log(`Could not read the recorded migrations: ${scrub(error.message)}${hint}`)
     return 2
   } finally {
     await client.end().catch(() => {})

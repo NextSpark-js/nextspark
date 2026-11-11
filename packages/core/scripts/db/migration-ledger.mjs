@@ -66,6 +66,62 @@ export function compareLedger(ledger, rows, files) {
   return { edited, renamed, unhashed };
 }
 
+/** The roles the application connects as: they have no business in the ledgers. */
+const RUNTIME_ROLES = ['nextspark_app', 'authenticated', 'anon'];
+
+/**
+ * The ledgers are for the migration role, their owner. 022 grants every table of the schema to nextspark_app, and a
+ * managed host may grant new ones to authenticated and anon, so the runner locks the tables it creates: row-level
+ * security on (no policy, no FORCE, so the owner is not subject to it) and every privilege revoked from the runtime
+ * roles, on the table and on its id sequence. Migration 045 does the same for the tables a database already has;
+ * this is the same statement for the ones the runner creates after it (_content_migrations and _entity_migrations
+ * come after the core migrations, and every table after 022's default privileges). A table that is already so is
+ * left alone, without taking a lock; one the role does not own is reported, not an error.
+ * Returns the warnings the server raised.
+ */
+export async function lockdownLedgers(client) {
+  const list = values => `ARRAY[${values.map(escapeLiteral).join(', ')}]`;
+  const warnings = [];
+  const onNotice = notice => { if (notice.severity === 'WARNING') warnings.push(notice.message); };
+  client.on('notice', onNotice);
+  try {
+    await client.query(`
+      DO $$
+      DECLARE
+        ledger text;
+        runtime_role text;
+        ledger_oid regclass;
+        ledger_sequence text;
+      BEGIN
+        FOREACH ledger IN ARRAY ${list(LEDGERS.map(({ table }) => table))} LOOP
+          BEGIN
+            ledger_oid := to_regclass(format('public.%I', ledger));
+            CONTINUE WHEN ledger_oid IS NULL;
+            IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = ledger_oid) THEN
+              EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', ledger_oid);
+            END IF;
+            ledger_sequence := pg_get_serial_sequence(ledger_oid::text, 'id');
+            FOREACH runtime_role IN ARRAY ${list(RUNTIME_ROLES)} LOOP
+              CONTINUE WHEN NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = runtime_role);
+              IF has_table_privilege(runtime_role, ledger_oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER') THEN
+                EXECUTE format('REVOKE ALL ON TABLE %s FROM %I', ledger_oid, runtime_role);
+              END IF;
+              IF ledger_sequence IS NOT NULL AND has_sequence_privilege(runtime_role, ledger_sequence, 'USAGE, SELECT, UPDATE') THEN
+                EXECUTE format('REVOKE ALL ON SEQUENCE %s FROM %I', ledger_sequence, runtime_role);
+              END IF;
+            END LOOP;
+          EXCEPTION WHEN insufficient_privilege THEN
+            RAISE WARNING 'Ledger lockdown: could not restrict % (%).', ledger, SQLERRM;
+          END;
+        END LOOP;
+      END $$;
+    `);
+  } finally {
+    client.off('notice', onNotice);
+  }
+  return warnings;
+}
+
 /** Whether a ledger table exists, and has the hash column. */
 async function ledgerState(client, table) {
   const { rows } = await client.query(

@@ -347,7 +347,7 @@ Found 7 migration file(s)
 
 ### Migration Tracking
 
-The system maintains three tracking tables:
+The system maintains three tracking tables. They are for the migration role, which owns them: each has row-level security enabled with no policy (and no `FORCE`, so the owner is not subject to it), and `nextspark_app`, `authenticated` and `anon` have no privilege on them or on their `id` sequences, whatever the grants of migration 022 or the defaults of the host say. Migration `045_migration_ledgers_row_level_security.sql` does this to the tables a database already has, and `db:migrate` creates the others (`_content_migrations` and `_entity_migrations` come after the core migrations) the same way. Run `db:migrate` with `MIGRATE_DATABASE_URL` set to the migration role's connection after the runtime cutover: the `DATABASE_URL` of the application cannot read them, and neither can `nextspark doctor` through it (it reads `MIGRATE_DATABASE_URL` first).
 
 #### 1. Core Migrations (`_migrations`)
 ```sql

@@ -1,7 +1,8 @@
 /**
  * Recorded migrations Health Check (#428)
  *
- * Runs core's scripts/db/check-migration-ledger.mjs against DATABASE_URL: a migration file that was edited after it
+ * Runs core's scripts/db/check-migration-ledger.mjs against MIGRATE_DATABASE_URL, else DATABASE_URL (the ledgers are for
+ * the migration role): a migration file that was edited after it
  * was applied never reaches that database, and one that was renamed would be applied a second time. Nothing is
  * written, not even the hash of a row that has none (db:migrate fills it in). An edit is a warning, because the
  * database still migrates correctly; a rename fails, because db:migrate refuses to run until the ledger is updated.
@@ -12,7 +13,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { getCoreDir } from '../../utils/paths.js'
 import type { HealthCheckResult } from '../index.js'
-import { resolveDatabaseUrl } from './database.js'
+import { readProjectEnv, resolveDatabaseUrl } from './database.js'
 
 interface Findings {
   edited: { file: string; source: string }[]
@@ -28,9 +29,11 @@ export async function checkMigrationLedger(coreDir = getCoreDir()): Promise<Heal
   // the Database check already says when there is no DATABASE_URL
   if (!databaseUrl) return { name, status: 'pass', message: 'Not checked: DATABASE_URL not configured' }
 
+  // The ledgers are for the migration role, which is not the one DATABASE_URL connects as after the runtime cutover
+  const migrateUrl = process.env.MIGRATE_DATABASE_URL || (await readProjectEnv())['MIGRATE_DATABASE_URL']
   const run = spawnSync(process.execPath, [script], {
     cwd: process.cwd(),
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: { ...process.env, DATABASE_URL: databaseUrl, ...(migrateUrl ? { MIGRATE_DATABASE_URL: migrateUrl } : {}) },
     encoding: 'utf8',
     timeout: 30000,
   })

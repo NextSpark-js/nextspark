@@ -5,7 +5,7 @@ import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
 import { compareMigrations } from './migration-order.mjs';
 import { collectAllMigrations, collectCoreMigrations } from './migration-files.mjs';
-import { LEDGERS, ledgerFiles, ledgerFindings, readLedger, ensureHashColumns, editedReport, renamedReport, migrationHash, HASH_COLUMN } from './migration-ledger.mjs';
+import { LEDGERS, ledgerFiles, ledgerFindings, readLedger, ensureHashColumns, lockdownLedgers, editedReport, renamedReport, migrationHash, HASH_COLUMN } from './migration-ledger.mjs';
 import { setProjectEnv } from './ssl-config.mjs';
 import { describeDestination, rememberSecrets, scrub, unexpectedTarget } from './destination.mjs';
 import { nestedSlugsSetting } from './nested-slugs.mjs';
@@ -144,6 +144,10 @@ function useHashColumns({ hashed, failures }) {
     console.log(`⚠️  Could not add ${HASH_COLUMN} to "${table}" (${scrub(message)}): edits to the migrations it records will not be noticed.\n`);
   }
 }
+// The ledgers the runner creates are born restricted to the migration role (see lockdownLedgers)
+async function lockLedgers(client) {
+  for (const warning of await lockdownLedgers(client)) console.log(`⚠️  ${scrub(warning)}`);
+}
 /** The row that records `sql` as run in `table`: the hash goes along where the ledger has the column. */
 const withHash = (table, row, sql) => (hashedLedgers.has(table) ? { ...row, [HASH_COLUMN]: migrationHash(sql) } : row);
 
@@ -214,6 +218,8 @@ async function runMigrations() {
         // the comment on the role is only a description: nothing to repeat
         if (!notice.message.includes('only a description')) roleSetupWarnings.push(notice.message);
       }
+      // 045: a bookkeeping table the migration role does not own stays as it was
+      else if (notice.severity === 'WARNING' && notice.message?.startsWith('Ledger lockdown:')) console.log(`⚠️  ${notice.message}`);
     });
     
     // Create migrations tracking table
@@ -224,6 +230,7 @@ async function runMigrations() {
         executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await lockLedgers(client);
     useHashColumns(await ensureHashColumns(client));
     
     // Get list of migration files (from package, not project root)
@@ -584,6 +591,7 @@ async function runEntityMigrations() {
         END $$;
       `);
 
+      await lockLedgers(client);
       useHashColumns(await ensureHashColumns(client));
     }
 
