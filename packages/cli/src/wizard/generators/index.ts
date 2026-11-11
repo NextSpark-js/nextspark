@@ -470,7 +470,7 @@ export async function updatePackageJson(
  * The project's nextspark.config.ts. Billing left unchecked writes `features: { billing: false }`, so the generated
  * host leaves the payment routes and pages out (core #425); with billing on the file sets no flag.
  */
-export function nextsparkConfigSource({ plugins, template, version, billing }: { plugins: string[]; template: string; version: string; billing: boolean }): string {
+export function nextsparkConfigSource({ plugins, template, version, billing }: { plugins: readonly string[]; template: string; version: string; billing: boolean }): string {
   const features = billing ? '' : '  features: { billing: false },\n'
   return `import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: ${JSON.stringify(plugins)},\n${features}  template: { name: ${JSON.stringify(template)}, version: ${JSON.stringify(version)} },\n})\n`
 }
