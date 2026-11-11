@@ -42,11 +42,13 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 import { useQuickCreateEntities } from '@nextsparkjs/core/hooks/useQuickCreateEntities'
+import { FEATURES } from '@nextsparkjs/core/lib/config/build-features'
 
 export function CRMTopBar() {
     const t = useTranslations('crm.topBar')
     const { user, signOut, isLoading } = useAuth()
-    const canAccessBilling = usePermission('settings.billing' as Permission)
+    // With `features.billing: false` there is no billing page to link to (#425)
+    const canAccessBilling = usePermission('settings.billing' as Permission) && FEATURES.billing
     const { theme, setTheme } = useTheme()
     const [searchQuery, setSearchQuery] = useState('')
     const [showSearch, setShowSearch] = useState(false)

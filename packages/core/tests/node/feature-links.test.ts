@@ -3,7 +3,7 @@
  * The UI must then link to none of the pages it left out. Checked against the route manifest:
  *
  * - the page URLs of src/lib/config/feature-pages.ts are exactly those of the omitted page routes;
- * - every link core's source writes (a JSX `href`, a `push`/`replace` call, an `href`/`url` property) to an omitted page
+ * - every link core's source (and the code of its project templates) writes (a JSX `href`, a `push`/`replace` call, an `href`/`url` property) to an omitted page
  *   sits in a file that checks the flag (`FEATURES.<flag>` or `isServedPath`), or in a file only the omitted routes
  *   reach (followed through the imports; an index file that only re-exports does not count as a user, but a file that
  *   only such an index reaches does not count as unreachable either), or in a default config whose links config-client
@@ -51,7 +51,13 @@ function resolveModule(from: string, specifier: string): string | null {
   return null
 }
 
-const files = walk(SRC)
+/**
+ * The project templates' own code is project code: a link it writes to an omitted page needs the check too. Their
+ * tests are left out, and so are their config files, whose menus servedAppConfig / servedDashboardConfig filter.
+ */
+const TEMPLATES = path.join(CORE, 'templates/projects')
+const templateFiles = walk(TEMPLATES).filter(file => !/[/\\](tests|config|node_modules)[/\\]/.test(path.relative(TEMPLATES, file)))
+const files = [...walk(SRC), ...templateFiles]
 const sources = new Map(files.map(file => [file, ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)]))
 
 /** An index file that only re-exports: it renders nothing, so it is not a user of what it re-exports. */

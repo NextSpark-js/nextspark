@@ -40,6 +40,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
 import { withBasePath, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
+import { FEATURES } from '@nextsparkjs/core/lib/config/build-features'
 
 interface Board {
     id: string
@@ -49,7 +50,8 @@ interface Board {
 
 export function ProductivityTopBar() {
     const { user, signOut, isLoading } = useAuth()
-    const canAccessBilling = usePermission('settings.billing' as Permission)
+    // With `features.billing: false` there is no billing page to link to (#425)
+    const canAccessBilling = usePermission('settings.billing' as Permission) && FEATURES.billing
     const pathname = usePathname()
     const params = useParams()
     const { theme, setTheme } = useTheme()
