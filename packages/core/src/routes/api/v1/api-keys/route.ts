@@ -9,7 +9,7 @@ import {
   readJsonObject,
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth';
-import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS, apiKeyNameSchema } from '@nextsparkjs/core/lib/api/keys';
+import { ApiKeyManager, getApiScopes, API_KEY_LIMITS, apiKeyNameSchema } from '@nextsparkjs/core/lib/api/keys';
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import * as z from 'zod';
@@ -146,12 +146,14 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     // Validar que los scopes sean válidos
     const scopeValidation = ApiKeyManager.validateScopes(validatedData.scopes);
     if (!scopeValidation.valid) {
+      // validScopes is what ApiKeyManager.validateScopes accepted against: core's scopes and the project's own (api.scopes)
       const response = createApiError(
-        'Invalid scopes provided', 
-        400, 
-        { 
+        "Invalid scopes provided. The valid scopes are core's and the ones the project declares in api.scopes of config/app.config.ts " +
+          "(for example api: { scopes: { 'integrations:write': 'Provision from an external system' } }); they are listed in details.validScopes",
+        400,
+        {
           invalidScopes: scopeValidation.invalidScopes,
-          validScopes: Object.keys(API_SCOPES)
+          validScopes: Object.keys(getApiScopes())
         },
         'INVALID_SCOPES'
       );

@@ -23,6 +23,7 @@ import { checkQueryClients } from './checks/query-client.js'
 import { checkNextThemesImports } from './checks/next-themes.js'
 import { checkQueryHooksWithoutProvider } from './checks/query-hooks.js'
 import { checkHoisting } from './checks/hoisting.js'
+import { checkApiKeyScopes } from './checks/api-key-scopes.js'
 
 /**
  * Result of a health check
@@ -124,6 +125,7 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'Query caches', fn: checkQueryClients },
     { name: 'Theme imports', fn: checkNextThemesImports },
     { name: 'React Query providers', fn: checkQueryHooksWithoutProvider },
+    { name: 'API key scopes', fn: checkApiKeyScopes },
     { name: 'Hoisting', fn: () => checkHoisting() },
   ]
 

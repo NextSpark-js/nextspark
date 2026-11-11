@@ -30,6 +30,7 @@ import '../../../utils/console-guard.mjs'
 import { NoCoreRouteManifestError, PrepareError, checkContractsOnly, checkHost, diagnosticLines, prepareContractsOnly, prepareHost, projectHostConfig, watchHost } from './prepare.mjs'
 import { LEGACY_APP_MESSAGE, resolveHostMode } from './mode.mjs'
 import { unsafeWritePlaces, unsafeWritePlacesLines } from '../write-places.mjs'
+import { API_KEY_NO_SCOPE_WARNING, API_KEY_UNDECLARED_SCOPE_WARNING } from '../../../maintenance/api-key-scopes.mjs'
 
 const args = new Set(process.argv.slice(2))
 const flag = name => args.has(`--${name}`)
@@ -74,9 +75,15 @@ function summary(result) {
 }
 
 /** The plan's notices (not problems), as terminal lines; the ones that move auth and permissions to the project, or leave a file outside them, are warnings. */
-const WARNING_NOTICES = new Set(['NS_HOST_ENTITY_NOT_PUBLIC', 'NS_HOST_ENTITY_TEMPLATE_NOT_USED', 'NS_HOST_ENTITY_API_OVERRIDDEN', 'NS_HOST_CORE_API_REPLACED', 'NS_HOST_AREA_FILE_UNGUARDED', 'NS_PROXY_PROTECTED_AREA_MISSING', 'NS_PROXY_FACADE_MISSING', 'NS_INSTRUMENTATION_FACADE_MISSING', 'NS_INSTRUMENTATION_NOT_LOADED', 'NS_PROJECT_ENTRY_NOT_REPLACED', 'NS_PLUGIN_TRANSPILE_UNREADABLE', 'NS_PLUGIN_TRANSPILE_SEVERAL_CONFIGS', 'NS_QUERY_HOOK_WITHOUT_PROVIDER'])
+const WARNING_NOTICES = new Set(['NS_HOST_ENTITY_NOT_PUBLIC', 'NS_HOST_ENTITY_TEMPLATE_NOT_USED', 'NS_HOST_ENTITY_API_OVERRIDDEN', 'NS_HOST_CORE_API_REPLACED', 'NS_HOST_AREA_FILE_UNGUARDED', 'NS_PROXY_PROTECTED_AREA_MISSING', 'NS_PROXY_FACADE_MISSING', 'NS_INSTRUMENTATION_FACADE_MISSING', 'NS_INSTRUMENTATION_NOT_LOADED', 'NS_PROJECT_ENTRY_NOT_REPLACED', 'NS_PLUGIN_TRANSPILE_UNREADABLE', 'NS_PLUGIN_TRANSPILE_SEVERAL_CONFIGS', 'NS_QUERY_HOOK_WITHOUT_PROVIDER', API_KEY_NO_SCOPE_WARNING, API_KEY_UNDECLARED_SCOPE_WARNING])
 function noticeLines(result) {
   return (result.notices ?? []).map(notice => `${WARNING_NOTICES.has(notice.code) ? 'Warning' : 'Info'}: [${notice.code}] ${notice.message}`)
+}
+
+/** What `--check` says besides whether the host is up to date: the findings about the project's own code (they never change the exit code). */
+const CHECK_NOTICES = new Set([API_KEY_NO_SCOPE_WARNING, API_KEY_UNDECLARED_SCOPE_WARNING])
+function checkNoticeLines(result) {
+  return noticeLines({ notices: (result.notices ?? []).filter(notice => CHECK_NOTICES.has(notice.code)) })
 }
 
 /** The contracts module line (and its warnings), when the host generates one. */
@@ -118,6 +125,7 @@ async function main() {
 
   if (flag('check')) {
     const result = await checkHost(config, { dev: flag('dev') })
+    for (const line of checkNoticeLines(result)) console.log(line)
     if (result.ok) {
       console.log(`src/app and the registries${config.contracts ? ' and the portable contracts' : ''} match what nextspark prepare generates.`)
       process.exit(0)

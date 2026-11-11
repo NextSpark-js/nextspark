@@ -302,6 +302,33 @@ handler to remember:
 **Session authentication is unaffected** — a session always carries full
 access, exactly as before this change.
 
+**Find the routes that declare nothing before you deploy.** The rejection only
+shows request by request, when a caller's key stops working. `nextspark doctor`
+and `nextspark prepare` (also `prepare --check` and `build`) read the project's
+Route Handlers, its templates' and its plugins' without running them, and list each call to
+`authenticateRequest` or `validateAndAuthenticateRequest` that passes neither
+option, with the file, the line and the call (`NS_API_KEY_ROUTE_WITHOUT_SCOPE`).
+They also list a route that requires a scope neither core nor `api.scopes`
+declares (`NS_API_KEY_SCOPE_NOT_DECLARED`): a key cannot be created with it, so
+only a wildcard key passes. They read the calls written in the route file itself, with the options
+written as an object literal; a call in a helper the route imports, or options built at runtime, are not
+seen. `prepare` prints them as warnings and never changes its exit code.
+
+A scope of your own is declared in `config/app.config.ts`, and it is then valid
+when creating a key (`POST /api/v1/api-keys` answers `INVALID_SCOPES` otherwise,
+naming `api.scopes` and listing the valid ones in `details.validScopes`, core's
+and yours):
+
+```typescript
+export const APP_CONFIG_OVERRIDES = {
+  api: {
+    scopes: {
+      'reports:read': 'Read the reports',
+    },
+  },
+}
+```
+
 ```typescript
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
@@ -515,7 +542,8 @@ This means the *route* forgot to declare a scope — not a problem with the
 caller's key. Fix it by adding `{ requiredScope: '<scope>' }` (or
 `{ allowAnyScope: true }` if the route is genuinely scope-agnostic) to its
 `authenticateRequest` call. See [Scope Enforcement Fails
-Closed](#scope-enforcement-fails-closed).
+Closed](#scope-enforcement-fails-closed); `nextspark doctor` lists the routes that
+need it.
 
 **Issue**: "API key expired"
 

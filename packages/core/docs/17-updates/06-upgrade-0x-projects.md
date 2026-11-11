@@ -266,6 +266,20 @@ export const POST = withRateLimitTier(postHandler, 'write')
 
 Counters are per client address and tier across all routes (in `0.1.0-beta.184` a request with an `x-api-key` header was counted per key instead). Wrapping a method with `withRateLimitTier` yourself (on any release; to choose another tier, `'strict'` for example) differs from the old dispatcher in two ways you want: it refuses a cookie-authenticated write from an untrusted origin (403) and adds core's CORS headers to every response. A route called from another origin also exports `export const OPTIONS = corsPreflight` (`import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'`). See [rate limiting](../05-api/07-rate-limiting.md#your-own-api-routes-project-and-plugins) and the CORS section of [authentication](../05-api/02-authentication.md#issue-4-cors-errors).
 
+### API keys: a route that declares no scope refuses every key
+
+Since `0.1.0-beta.191` a route that calls `authenticateRequest` or `validateAndAuthenticateRequest` must say what it needs from an API key: `{ requiredScope: '<scope>' }` (a string, or a list satisfied by any one entry) or, for a route that really accepts any valid key, `{ allowAnyScope: true }`. A call that passes neither (nothing, `{}` or an empty list) answers every API-key request with **403 `SCOPE_NOT_DECLARED`** ("API key access is not enabled for this route: it declares no required scope") and logs the route on the server. A session is not affected, so the route still works in the browser and fails only for the integrations that call it with a key, request by request, once the release is deployed. The routes an upgrade is most likely to break are the project's own integration and ingestion endpoints.
+
+Find them before deploying: `pnpm exec nextspark doctor` and `pnpm exec nextspark prepare` (also `prepare --check`, and so `build`) list every such call with its file, line and method (`NS_API_KEY_ROUTE_WITHOUT_SCOPE`), and every route that requires a scope that neither core nor `api.scopes` declares (`NS_API_KEY_SCOPE_NOT_DECLARED`). A scope of your own goes in `config/app.config.ts`, which makes it valid when creating a key:
+
+```ts
+export const APP_CONFIG_OVERRIDES = {
+  api: { scopes: { 'reports:read': 'Read the reports' } },
+}
+```
+
+Existing keys keep the scopes they have; once a route declares one, a key needs that scope (or the wildcard `*`) to pass it. See [Scope Enforcement Fails Closed](../06-authentication/04-api-keys.md#scope-enforcement-fails-closed).
+
 ### Entity slugs with an underscore
 
 An underscore is valid in an entity slug again (`campaign_members`): a slug starts with a lowercase letter and then uses `a-z`, `0-9`, `-` and `_`. Nothing has to be renamed. Between `0.1.0-beta.192` and `0.1.0-beta.199`, `nextspark prepare` refused such a slug with `NS_CONTRACTS_BAD_SLUG`; a project that renamed `campaign_members` to `campaign-members` to get past it can stay as it is, or rename it back (the directory, the `slug`, the permission key, the scopes and the URLs, as below, in the other direction). Two entities whose slugs differ only in `_` against `-` (`a_b` and `a-b`) export the same names and are refused (`NS_CONTRACTS_NAME_CLASH`).

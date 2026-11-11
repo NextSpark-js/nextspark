@@ -54,6 +54,7 @@ import { proxyPathDiagnostics } from './proxy-paths.mjs'
 import { ENTRY_NOT_REPLACED, INSTRUMENTATION_MOVED, INSTRUMENTATION_NOT_LOADED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
 import { HostPlanError, PLAN_NOTICES, compareTargets, planHost } from './plan.mjs'
 import { findQueryHooksWithoutProvider, queryHookNotice } from '../../../maintenance/query-providers.mjs'
+import { apiKeyScopeNotices, findApiKeyScopeProblems } from '../../../maintenance/api-key-scopes.mjs'
 import { DEV_DIAGNOSTIC_FILE, DEV_STATUS_FILE, devDiagnosticModule, devFailureDiagnostic, renderHost } from './render.mjs'
 import {
   GENERATION_FILE,
@@ -140,7 +141,8 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
   })
   const { routes } = planned
   const queryNotice = queryHookNotice(findQueryHooksWithoutProvider({ projectRoot: config.project?.root ?? config.projectRoot, plugins: declared.plugins, routes }))
-  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : []), ...vercelApiDirNotice(config, routes)]
+  const apiKeyNotices = apiKeyScopeNotices(await findApiKeyScopeProblems({ projectRoot: config.project?.root ?? config.projectRoot, routes }))
+  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : []), ...apiKeyNotices, ...vercelApiDirNotice(config, routes)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({
@@ -372,7 +374,8 @@ export async function checkHost(config, { dev = false } = {}) {
     rendered = await renderHostFiles(config, { devStatus: dev })
   } catch (error) {
     if (!(error instanceof PrepareError)) throw error
-    return { ok: false, problems: error.diagnostics.map(d => ({ state: 'invalid', detail: `[${d.code}] ${d.message}` })) }
+    const problems = error.diagnostics.map(d => ({ state: 'invalid', detail: `[${d.code}] ${d.message}` }))
+    return error.notices?.length > 0 ? { ok: false, problems, notices: error.notices } : { ok: false, problems }
   }
   const inputs = config.inputs ? config.inputs({ manifest: rendered.manifest }) : null
   // The contracts plan, and the typed client planned from it (#277): the client is checked file by file
@@ -416,7 +419,8 @@ export async function checkHost(config, { dev = false } = {}) {
     }
     result.ok = result.problems.length === 0
   }
-  return result
+  // What the plan says about the project's own code (the API-key scope notices), whether or not the host is up to date; present only when there is something
+  return rendered.notices.length > 0 ? { ...result, notices: rendered.notices } : result
 }
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 
 import { routeHarness, makeReq, asJson, idParams, noWrites, describeMalformedBodies, describeRejectedValues, expectCleanRejection, sessionAs, MEMBER, allWrites } from './__helpers__/route-harness'
 import { API_KEY_LIMITS, API_SCOPES } from '@/core/lib/api/keys'
+import { API_CONFIG } from '@/core/lib/config/config-client'
 import { POST as createKey } from '@/app/api/v1/api-keys/route'
 import { PATCH as patchKey, GET as getKey, DELETE as deleteKey } from '@/app/api/v1/api-keys/[id]/route'
 
@@ -46,6 +47,22 @@ describe('POST /api/v1/api-keys', () => {
 
     test('a scope that does not exist is refused with 400 INVALID_SCOPES and nothing is written', async () => {
       await expectCleanRejection(await invoke(asJson({ ...VALID, scopes: ['nothing:ever'] })), { status: 400, code: 'INVALID_SCOPES' })
+      noWrites()
+    })
+
+    test('INVALID_SCOPES names api.scopes and lists the scopes the project declared with core\'s (#426)', async () => {
+      const api = API_CONFIG as { scopes?: Record<string, string> }
+      const saved = api.scopes
+      api.scopes = { 'integrations:write': 'Provision from an external system' }
+      try {
+        const body = await expectCleanRejection(await invoke(asJson({ ...VALID, scopes: ['nothing:ever'] })), { status: 400, code: 'INVALID_SCOPES' })
+        expect(body.error).toMatch(/api\.scopes/)
+        const details = body.details as { invalidScopes: string[]; validScopes: string[] }
+        expect(details.invalidScopes).toEqual(['nothing:ever'])
+        expect(details.validScopes).toEqual(expect.arrayContaining([...Object.keys(API_SCOPES), 'integrations:write']))
+      } finally {
+        api.scopes = saved
+      }
       noWrites()
     })
 
