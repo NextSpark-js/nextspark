@@ -80,8 +80,9 @@ export function createProfileSchema(t: (key: string) => string) {
   return z.object({
     firstName: z.string().min(2, t('validation.firstName.min')),
     lastName: z.string().min(2, t('validation.lastName.min')),
-    country: z.string().min(1, t('validation.country.required')),
-    timezone: z.string().min(1, t('validation.timezone.required')),
+    // May be empty, as in profileSchema: an account starts with neither (#433)
+    country: z.string(),
+    timezone: z.string(),
     language: z.string().min(1, t('validation.language.required')),
   });
 }
