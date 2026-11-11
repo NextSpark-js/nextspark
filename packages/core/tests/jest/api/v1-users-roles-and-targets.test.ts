@@ -32,12 +32,16 @@ jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({ withRateLimitTier: (h
 
 const USERS: Record<string, string> = { sa: 'superadmin', sa2: 'superadmin', dev: 'developer', dev2: 'developer', mem: 'member', mem2: 'member', sus: 'suspended' }
 const queryOneWithRLS = jest.fn(async (_sql: string, [id]: string[]) => (USERS[id] ? { id, email: `${id}@x`, role: USERS[id] } : null))
-const queryWithRLS = jest.fn(async () => [])
+// the guard's lock lists the superadmins; its write answers the row it wrote
+const queryWithRLS = jest.fn(async (sql: string, params: unknown[] = []) =>
+  sql.includes('FOR UPDATE') ? Object.keys(USERS).filter((id) => USERS[id] === 'superadmin').map((id) => ({ id }))
+    : /^\s*(UPDATE|DELETE)/.test(sql) ? [{ id: params[params.length - 1] ?? params[0] }] : [])
 const mutateWithRLS = jest.fn(async (_sql: string, values: unknown[]) => ({ rows: [{ id: values[values.length - 1] }] }))
 jest.mock('@nextsparkjs/core/lib/db', () => ({
   queryOneWithRLS: (...args: [string, string[]]) => queryOneWithRLS(...args),
   queryWithRLS: (...args: []) => queryWithRLS(...args),
   mutateWithRLS: (...args: [string, unknown[]]) => mutateWithRLS(...args),
+  withServiceTransaction: (fn: () => Promise<unknown>) => fn(),
 }))
 
 const updateUserMeta = jest.fn()
@@ -176,5 +180,36 @@ describe('/api/v1/users/:id/meta/:key writes follow the same targets', () => {
     as('mem')
     expect(await put('mem')).toBe(200)
     expect(await put('mem2')).toBe(403)
+  })
+})
+
+describe('the last superadmin (#433)', () => {
+  afterEach(() => { USERS.sa2 = 'superadmin' })
+  const writes = () => [...queryWithRLS.mock.calls, ...mutateWithRLS.mock.calls].filter(([sql]) => /^\s*(UPDATE|DELETE)/.test(String(sql)))
+
+  it('is neither demoted by PATCH role nor deleted: 409, nothing written', async () => {
+    USERS.sa2 = 'member'
+    as('dev')
+    queryWithRLS.mockClear(); mutateWithRLS.mockClear()
+    expect(await patch('sa', { role: 'member' })).toBe(409)
+    expect(await del('sa')).toBe(409)
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('with another superadmin left, the demotion and the deletion are written on the service connection, in the guard', async () => {
+    as('dev')
+    queryWithRLS.mockClear(); mutateWithRLS.mockClear()
+    expect(await patch('sa', { role: 'member' })).toBe(200)
+    expect(await del('sa')).toBe(200)
+    const guarded = queryWithRLS.mock.calls.filter(([sql]) => /^\s*(UPDATE|DELETE)/.test(String(sql)))
+    expect(guarded).toHaveLength(2)
+    for (const call of guarded) expect(call[3]).toEqual({ service: true })
+    expect(mutateWithRLS.mock.calls.filter(([sql]) => /^\s*(UPDATE|DELETE)/.test(String(sql)))).toHaveLength(0)
+  })
+
+  it('a name change of the last superadmin does not go through the guard', async () => {
+    USERS.sa2 = 'member'
+    as('dev')
+    expect(await patch('sa', { firstName: 'Ana' })).toBe(200)
   })
 })

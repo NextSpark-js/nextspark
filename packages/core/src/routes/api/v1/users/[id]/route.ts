@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db';
+import { queryOneWithRLS, mutateWithRLS, queryWithRLS } from '@nextsparkjs/core/lib/db';
+import { LAST_SUPERADMIN, guardLastSuperadmin } from '@nextsparkjs/core/lib/auth/last-superadmin';
 import {
   createApiResponse,
   createApiError,
@@ -16,6 +17,10 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { canAccessUser, hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
 import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import * as z from 'zod';
+
+// The last superadmin is never demoted or deleted (guardLastSuperadmin), as in /api/superadmin/users/:id
+const lastSuperadminError = () =>
+  createApiError('Cannot demote, suspend or delete the last superadmin. Make another user a superadmin first', 409, null, 'LAST_SUPERADMIN');
 import { updateProfileSchema } from '@nextsparkjs/core/lib/users/schema';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
@@ -213,7 +218,14 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
         RETURNING id, email, name, "firstName", "lastName", image, country, timezone, language, role, "emailVerified", "createdAt", "updatedAt"
       `;
 
-      const result = await mutateWithRLS(query, values, authResult.user!.id);
+      // A superadmin who stops being one goes through the guard: its lock and the write share one transaction on the
+      // service connection (a write on the app pool would wait for that lock outside it). Authorized above.
+      const demotesSuperadmin = validatedData.role !== undefined && target.role === 'superadmin' && validatedData.role !== 'superadmin';
+      const rows = demotesSuperadmin
+        ? await guardLastSuperadmin(target.id, authResult.user!.id, () => queryWithRLS(query, values, authResult.user!.id, { service: true }))
+        : (await mutateWithRLS(query, values, authResult.user!.id)).rows;
+      if (rows === LAST_SUPERADMIN) return addCorsHeaders(lastSuperadminError(), req);
+      const result = { rows };
 
       if (result.rows.length === 0) {
         const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
@@ -316,11 +328,13 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    const result = await mutateWithRLS(
-      'DELETE FROM "users" WHERE id = $1 RETURNING id',
-      [(targetUser as Record<string, unknown>).id],
-      authResult.user!.id
-    );
+    // Deleting a superadmin goes through the guard, on the service connection as its lock (authorized above)
+    const targetId = (targetUser as { id: string }).id;
+    const rows = (targetUser as { role: string }).role === 'superadmin'
+      ? await guardLastSuperadmin(targetId, authResult.user!.id, () => queryWithRLS('DELETE FROM "users" WHERE id = $1 RETURNING id', [targetId], authResult.user!.id, { service: true }))
+      : (await mutateWithRLS('DELETE FROM "users" WHERE id = $1 RETURNING id', [targetId], authResult.user!.id)).rows;
+    if (rows === LAST_SUPERADMIN) return addCorsHeaders(lastSuperadminError(), req);
+    const result = { rows };
 
     if (result.rows.length === 0) {
       const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');

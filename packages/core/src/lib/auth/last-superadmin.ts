@@ -19,7 +19,7 @@ export async function guardLastSuperadmin<T>(
 ): Promise<T | typeof LAST_SUPERADMIN> {
   return withServiceTransaction(async () => {
     const superadmins = await queryWithRLS<{ id: string }>(
-      `SELECT id FROM "users" WHERE role = 'superadmin' FOR UPDATE`,
+      `SELECT id FROM "users" WHERE role = 'superadmin' ORDER BY id FOR UPDATE`,
       [],
       actorId,
       { service: true },

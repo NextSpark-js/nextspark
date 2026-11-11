@@ -32,7 +32,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, 'error').mockImplementation(() => {})
   queryWithRLS.mockImplementation(async (sql: string, params: string[]) => {
-    if (sql.includes(`WHERE role = 'superadmin' FOR UPDATE`)) return Object.keys(USERS).filter((id) => USERS[id] === 'superadmin').map((id) => ({ id }))
+    if (sql.includes('FOR UPDATE')) return Object.keys(USERS).filter((id) => USERS[id] === 'superadmin').map((id) => ({ id }))
     if (sql.includes('SELECT id, role, email FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]], email: `${params[0]}@x` }] : []
     if (sql.includes('SELECT id, role FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]] }] : []
     if (sql.includes('WITH suspended AS')) return [{ suspended: 1, sessions: 2, keyHashes: ['h1', 'h2'] }]
