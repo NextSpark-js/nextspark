@@ -73,7 +73,8 @@ async function ledgerState(client, table) {
             EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass($1) AND attname = $2 AND NOT attisdropped) AS "hashed"`,
     [escapeIdentifier(table), HASH_COLUMN]
   );
-  return rows[0];
+  // a server that answers with no row has no such table
+  return rows[0] ?? { exists: false, hashed: false };
 }
 
 /**
