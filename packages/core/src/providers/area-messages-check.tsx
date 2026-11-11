@@ -44,7 +44,7 @@ export function AreaMessagesCheck({ area, children }: { area: MessagesArea; chil
   // Stable while the area and its messages are, so the IntlProvider below keeps its memoized context
   const getMessageFallback = useCallback((info: FallbackInfo) => {
     const found = reportsHere() ? missingMessage(messages, info) : null
-    const once = found && `${area}:${found.missing === 'key' ? found.path : found.namespace}`
+    const once = found && `${area}:${found.missing === 'key' ? `${locale}:${found.path}` : found.namespace}`
     if (found && once && !warned.has(once)) {
       warned.add(once)
       console.warn(found.missing === 'namespace'

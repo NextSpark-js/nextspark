@@ -18,14 +18,14 @@ function Texts({ namespace, keys }: { namespace: string; keys: string[] }) {
   return h('p', null, keys.map((key) => t(key)).join('|'))
 }
 
-function render(area: 'auth' | 'public', messages: Record<string, unknown>, namespace: string, keys: string[]) {
+function render(area: 'auth' | 'public', messages: Record<string, unknown>, namespace: string, keys: string[], locale = 'es') {
   const warnings: string[] = []
   const { warn, error } = console
   console.warn = (message: string) => void warnings.push(message)
   console.error = () => {} // next-intl's own MISSING_MESSAGE report
   try {
     const html = renderToString(
-      h(IntlProvider, { locale: 'es', messages, children: h(AreaMessagesCheck, { area, children: h(Texts, { namespace, keys }) }) }),
+      h(IntlProvider, { locale, messages, children: h(AreaMessagesCheck, { area, children: h(Texts, { namespace, keys }) }) }),
     )
     return { html, warnings }
   } finally {
@@ -69,4 +69,12 @@ test('in production the browser does not warn, while the server does (next build
     delete (globalThis as { window?: unknown }).window
     process.env.NODE_ENV = env
   }
+})
+
+test('a missing key is reported once per locale (#427)', () => {
+  const messages = { perLocale: { hero: 'x' } }
+  assert.equal(render('public', messages, 'perLocale', ['cta'], 'es').warnings.length, 1)
+  assert.equal(render('public', messages, 'perLocale', ['cta'], 'es').warnings.length, 0, 'the same locale warns once')
+  const [warning] = render('public', messages, 'perLocale', ['cta'], 'de').warnings
+  assert.match(warning, /in the "de" messages/)
 })
