@@ -262,9 +262,10 @@ To change it:
 ### Core's admin routes
 
 The tier is per client address and shared by every route in it. The reads that the superadmin pages (users, user, teams, team and
-subscriptions) and the API keys page make on every load or reload are in `read` (200 per minute per address). What changes users or
-credentials (creating, updating and deleting a user, creating, renaming and revoking an API key) stays in `strict`: 10 per **hour**
-per address, in one bucket for all of them. A page that fetches in the `strict` tier answers 429 with `Retry-After: 3600` after ten
+subscriptions) and the API keys page make on every load or reload are in `read` (200 per minute per address). What changes users (updating and
+deleting a user, and the `POST` and `PUT` of `/api/superadmin/users`) is in `write` (50 per minute per address), so a run of role changes is
+not stopped at ten. What changes credentials (creating, renaming and revoking an API key), and billing, plan flags, ownership
+transfer and account deletion, stays in `strict`: 10 per **hour** per address, in one bucket for all of them. A page that fetches in the `strict` tier answers 429 with `Retry-After: 3600` after ten
 reloads, which is why those reads are not in it. A project that wants other numbers sets them in `rateLimit.tiers` of `app.config.ts`.
 
 ### Tiered Limits

@@ -1,7 +1,7 @@
 /**
  * The tier of the superadmin and API-key routes (#434): their reads are in the `read` tier (200 requests per minute per
  * address), not in `strict` (10 per HOUR, one bucket for every strict route of the address), which a page that
- * fetches on every load or reload ran through in ten reloads. What changes data or credentials stays `strict`.
+ * fetches on every load or reload ran through in ten reloads. Changes to users are `write`; credentials stay `strict`.
  */
 const mockTiers = new Map<unknown, string>()
 jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({
@@ -46,12 +46,19 @@ describe('reads of the admin pages', () => {
   })
 })
 
-describe('what changes users or credentials stays strict', () => {
+describe('what changes users is in the write tier (50 a minute), so a run of role changes is not stopped at ten', () => {
   it.each([
     ['POST /api/superadmin/users', superadminUsers, 'POST'],
     ['PUT /api/superadmin/users', superadminUsers, 'PUT'],
     ['PATCH /api/superadmin/users/:userId', superadminUser, 'PATCH'],
     ['DELETE /api/superadmin/users/:userId', superadminUser, 'DELETE'],
+  ] as const)('%s', (_name, module, method) => {
+    expect(tierOf(module, method)).toBe('write')
+  })
+})
+
+describe('what changes credentials stays strict', () => {
+  it.each([
     ['POST /api/v1/api-keys', apiKeys, 'POST'],
     ['PATCH /api/v1/api-keys/:id', apiKey, 'PATCH'],
     ['DELETE /api/v1/api-keys/:id', apiKey, 'DELETE'],

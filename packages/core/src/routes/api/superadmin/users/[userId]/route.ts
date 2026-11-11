@@ -373,7 +373,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
 
     return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to perform user action' });
   }
-}, 'strict');
+}, 'write');
 
 /**
  * DELETE /api/superadmin/users/[userId]
@@ -497,6 +497,6 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
 
     return createApiError('Internal server error', 500, undefined, 'INTERNAL_ERROR', { message: 'Failed to delete user' });
   }
-}, 'strict');
+}, 'write');
 
 export const OPTIONS = corsPreflight;

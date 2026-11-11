@@ -294,7 +294,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
  */
 export const POST = withRateLimitTier(async () => {
   return createApiError('Not implemented yet', 501, undefined, 'HTTP_501');
-}, 'strict');
+}, 'write');
 
 /**
  * PUT /api/superadmin/users
@@ -304,6 +304,6 @@ export const POST = withRateLimitTier(async () => {
  */
 export const PUT = withRateLimitTier(async () => {
   return createApiError('Not implemented yet', 501, undefined, 'HTTP_501');
-}, 'strict');
+}, 'write');
 
 export const OPTIONS = corsPreflight;
