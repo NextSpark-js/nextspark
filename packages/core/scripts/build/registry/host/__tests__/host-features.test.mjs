@@ -1,0 +1,117 @@
+/**
+ * The `features` flags of nextspark.config.ts in the generated host (#425): a flag set to false leaves its core routes
+ * out of the plan (and so of `prepare --check`, which plans the same way), out of the API route list of the
+ * registries, and the generated `features` registry carries it to the UI.
+ *
+ * Run: node --test packages/core/scripts/build/registry/host/__tests__/host-features.test.mjs
+ */
+
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+
+import { planHost } from '../plan.mjs'
+import { FEATURE_DIAGNOSTICS, featureConfigDiagnostics, omittingFeature } from '../features.mjs'
+import { generateFeatures } from '../../generators/features.mjs'
+import { discoverCoreRoutes } from '../../discovery/core-routes.mjs'
+
+const CORE_ROOT = join(import.meta.dirname, '../../../../..')
+const MANIFEST = JSON.parse(readFileSync(join(CORE_ROOT, 'src/routes/manifest.json'), 'utf8'))
+const PAGE = 'export default function Page() { return null }\n'
+
+const core = route => ({ ...route, file: `/core/${route.target}`, protected: false })
+const targets = planned => planned.routes.map(route => route.target)
+
+function project(files) {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-host-features-'))
+  for (const [path, content] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, path)), { recursive: true })
+    writeFileSync(join(root, path), content)
+  }
+  return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) }
+}
+
+const BILLING_OFF = [
+  'api/cron/billing/lifecycle/route.ts',
+  'api/v1/billing/cancel/route.ts',
+  'api/v1/billing/change-plan/route.ts',
+  'api/v1/billing/checkout/route.ts',
+  'api/v1/billing/portal/route.ts',
+  'api/v1/billing/webhooks/lemonsqueezy/route.ts',
+  'api/v1/billing/webhooks/paddle/route.ts',
+  'api/v1/billing/webhooks/polar/route.ts',
+  'api/v1/billing/webhooks/stripe/route.ts',
+  'api/v1/teams/[teamId]/invoices/[invoiceNumber]/route.ts',
+  'api/v1/teams/[teamId]/invoices/route.ts',
+  'dashboard/settings/billing/loading.tsx',
+  'dashboard/settings/billing/page.tsx',
+  'dashboard/settings/invoices/[invoiceNumber]/page.tsx',
+  'dashboard/settings/invoices/loading.tsx',
+  'dashboard/settings/invoices/page.tsx',
+  'dashboard/settings/plans/loading.tsx',
+  'dashboard/settings/plans/page.tsx',
+]
+
+test('features.billing: false leaves out the payment routes and pages of the manifest, and keeps what plans as tiers read', () => {
+  const omitted = MANIFEST.filter(route => omittingFeature(route.target, { billing: false })).map(route => route.target).sort()
+  assert.deepEqual(omitted, BILLING_OFF)
+  for (const kept of ['api/v1/billing/plans/route.ts', 'api/v1/billing/check-action/route.ts', 'api/v1/teams/[teamId]/subscription/route.ts', 'api/v1/teams/[teamId]/usage/[limitSlug]/route.ts', 'superadmin/subscriptions/page.tsx', 'api/superadmin/subscriptions/route.ts']) {
+    assert.ok(MANIFEST.some(route => route.target === kept), kept)
+    assert.equal(omittingFeature(kept, { billing: false }), null, kept)
+  }
+  // true, or not set: nothing is left out
+  assert.equal(MANIFEST.filter(route => omittingFeature(route.target, { billing: true }) || omittingFeature(route.target, {})).length, 0)
+})
+
+test('the plan has no billing route with the flag off, and the same routes as before with it on or unset', () => {
+  const coreRoutes = MANIFEST.filter(route => route.kind === 'page' || route.kind === 'route' || route.kind === 'loading').map(core)
+  const { root, cleanup } = project({})
+  try {
+    const on = planHost({ coreRoutes, project: { root }, features: { billing: true } })
+    const unset = planHost({ coreRoutes, project: { root } })
+    const off = planHost({ coreRoutes, project: { root }, features: { billing: false } })
+    assert.deepEqual(off.diagnostics, [])
+    assert.deepEqual(targets(on), targets(unset))
+    assert.deepEqual(targets(on).filter(target => !targets(off).includes(target)), BILLING_OFF)
+  } finally {
+    cleanup()
+  }
+})
+
+test('a project page at a path billing left out is the project\'s own route', () => {
+  const { root, cleanup } = project({ 'templates/dashboard/settings/billing/page.tsx': PAGE })
+  try {
+    const coreRoutes = MANIFEST.filter(route => route.target.startsWith('dashboard/settings/billing/')).map(core)
+    const planned = planHost({ coreRoutes, project: { root }, features: { billing: false } })
+    assert.deepEqual(planned.diagnostics, [])
+    assert.deepEqual(planned.routes.map(route => `${route.target} <- ${route.origin}`), ['dashboard/settings/billing/page.tsx <- project'])
+  } finally {
+    cleanup()
+  }
+})
+
+test('billing.webhookExtensions with features.billing: false stops prepare, naming both settings', () => {
+  assert.deepEqual(featureConfigDiagnostics({ features: { billing: true }, billing: { webhookExtensions: { stripe: './x' } } }), [])
+  assert.deepEqual(featureConfigDiagnostics({ features: { billing: false } }), [])
+  const [diagnostic, ...rest] = featureConfigDiagnostics({ features: { billing: false }, billing: { webhookExtensions: { stripe: './x', polar: './y' } } })
+  assert.equal(rest.length, 0)
+  assert.equal(diagnostic.code, FEATURE_DIAGNOSTICS.BILLING_WEBHOOK_EXTENSIONS)
+  assert.match(diagnostic.message, /features\.billing to false/)
+  assert.match(diagnostic.message, /billing\.webhookExtensions .*\(stripe, polar\)/)
+})
+
+test('the API route list of the registries leaves out the routes of a flag that is off', async () => {
+  const on = (await discoverCoreRoutes({ coreDir: CORE_ROOT, features: { billing: true } })).map(route => route.path)
+  const off = (await discoverCoreRoutes({ coreDir: CORE_ROOT, features: { billing: false } })).map(route => route.path)
+  assert.ok(on.includes('/api/v1/billing/checkout'))
+  assert.deepEqual(on.filter(path => !off.includes(path)).sort(), ['/api/v1/billing/cancel', '/api/v1/billing/change-plan', '/api/v1/billing/checkout', '/api/v1/billing/portal', '/api/v1/billing/webhooks/lemonsqueezy', '/api/v1/billing/webhooks/paddle', '/api/v1/billing/webhooks/polar', '/api/v1/billing/webhooks/stripe'])
+  assert.ok(off.includes('/api/v1/billing/check-action'))
+})
+
+test('the features registry carries the flags, every one true unless set to false', () => {
+  assert.match(generateFeatures({ billing: false }), /export const FEATURES: \{ readonly billing: boolean \} = \{"billing":false\}/)
+  assert.match(generateFeatures({}), /= \{"billing":true\}/)
+  assert.match(generateFeatures(), /= \{"billing":true\}/)
+})

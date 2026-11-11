@@ -10,6 +10,7 @@ import type { EntityConfig } from '../lib/entities/types'
 import { useLocalizedEntityConfigs } from './useEntityText'
 import { useLocale, useTranslations } from 'next-intl'
 import { entityNameInText } from '../lib/entities/entity-text'
+import { isServedPath } from '../lib/config/build-features'
 
 export interface EntitySearchResult {
   id: string
@@ -122,7 +123,7 @@ export function useEntitySearch(): EntitySearchHookResult {
       }
     ]
 
-    return systemPages.filter(page => page.id !== 'billing' || canAccessBilling).map(page => ({
+    return systemPages.filter(page => isServedPath(page.url) && (page.id !== 'billing' || canAccessBilling)).map(page => ({
       ...page,
       entityType: 'system',
       type: 'system' as const,

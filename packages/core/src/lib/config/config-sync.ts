@@ -18,6 +18,7 @@ import { DEFAULT_APP_CONFIG } from './app.config'
 import { DEFAULT_DASHBOARD_CONFIG } from './dashboard.config'
 import { ThemeService } from '../services/theme.service'
 import { mergeConfigs } from '../utils/config-merge'
+import { servedAppConfig, servedDashboardConfig } from './build-features'
 import { mergeRolesConfig } from './roles-merge'
 import { resolveAuthMethods } from '../auth/auth-methods'
 import { resolveOtpConfig } from '../auth/otp-config'
@@ -201,8 +202,9 @@ function loadDevConfig() {
 }
 
 // Load and export merged configs
-export const APP_CONFIG_MERGED = loadAppConfig()
-export const DASHBOARD_CONFIG = loadDashboardConfig()
+// Without the links to pages a `features` flag left out of the host, as config-client (#425)
+export const APP_CONFIG_MERGED = servedAppConfig(loadAppConfig())
+export const DASHBOARD_CONFIG = servedDashboardConfig(loadDashboardConfig())
 export const DEV_CONFIG = loadDevConfig()
 
 // Re-export common configuration values for easy access (using merged config)

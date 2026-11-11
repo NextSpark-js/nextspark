@@ -14,6 +14,7 @@
  *   entities,          // async ({ manifest }) => ({ routes, diagnostics }) - per-entity routes (entity-routes.mjs)
  *   webhooks,          // () => ({ routes, diagnostics }) - composed billing webhook routes (webhooks.mjs)
  *   sitemap,           // () => sitemapPlan(...) - composes core's sitemap and robots routes (sitemap.mjs)
+ *   features,          // nextspark.config.ts `features`: a flag set to false leaves its core routes out (features.mjs)
  *   stylesheet,        // the project's global stylesheet specifier the root layout imports
  *   modes, pageExtensions, cacheComponents,   // see render.mjs
  *   registries,        // async ({ mode }) => [{ path, content, grammar }] - staged registry files
@@ -48,6 +49,7 @@ import { CLIENT_DIR, planClient } from '../client/index.mjs'
 import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { sitemapPlan } from './sitemap.mjs'
 import { webhookRoutes } from './webhooks.mjs'
+import { featureConfigDiagnostics } from './features.mjs'
 import { coreRouteRateLimit } from './rate-limit.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
 import { proxyPathDiagnostics } from './proxy-paths.mjs'
@@ -134,6 +136,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
     withheld: entityPlan.withheld,
     webhooks: webhookPlan.routes,
     sitemap: config.sitemap ? config.sitemap() : undefined,
+    features: config.features,
     plugins: declared.plugins,
     project: config.project,
     modes: config.modes ?? [],
@@ -596,12 +599,20 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
     contracts: projectContracts({ projectRoot: config.projectRoot, coreRoot: CORE_ROOT, currentConfig, plugins: pluginsOf }),
     // The typed client and hooks (#277): generated from the contracts' entities, written with the registries
     client: { plan: ({ entities, children, target }) => planClient({ entities, children, projectRoot: config.projectRoot, target }) },
-    webhooks: () =>
-      webhookRoutes({
-        webhookExtensions: currentConfig().billing?.webhookExtensions,
+    // Read on every generation, like the plugins: a flag turned off in nextspark.config.ts leaves its core routes out
+    get features() {
+      return currentConfig().features
+    },
+    webhooks: () => {
+      const current = currentConfig()
+      const off = featureConfigDiagnostics(current)
+      if (off.length > 0) return { routes: {}, diagnostics: off }
+      return webhookRoutes({
+        webhookExtensions: current.billing?.webhookExtensions,
         projectRoot: config.projectRoot,
         resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier),
-      }),
+      })
+    },
     sitemap: () => sitemapPlan({ sitemap: currentConfig().sitemap, resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier) }),
     // Project and plugin API routes get core's default rate limit (rate-limit.mjs)
     rateLimit: coreRouteRateLimit(specifier => resolveCoreRouteFile(coreRoot, specifier)),

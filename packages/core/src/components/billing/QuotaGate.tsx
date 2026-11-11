@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '../ui/button'
 import { Lock, ArrowLeft, ArrowRight } from 'lucide-react'
 import { useQuotaCheck } from '../../hooks/useQuotaCheck'
+import { FEATURES } from '../../lib/config/build-features'
 
 interface QuotaGateProps {
   /** Action to check (e.g., 'professionals.create') */
@@ -59,12 +60,15 @@ export function QuotaGate({ action, entityName, backHref, children }: QuotaGateP
 
         {/* Primary CTA first (most important action) */}
         <div className="flex flex-col sm:flex-row justify-center gap-3 pt-1">
-          <Button asChild className="gap-1.5">
-            <Link href="/dashboard/settings/plans">
-              {t('quota.viewPlans')}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </Button>
+          {/* With `features.billing: false` there is no plans page (#425): the way back is the only action */}
+          {FEATURES.billing && (
+            <Button asChild className="gap-1.5">
+              <Link href="/dashboard/settings/plans">
+                {t('quota.viewPlans')}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline" className="gap-1.5">
             <Link href={backHref}>
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />

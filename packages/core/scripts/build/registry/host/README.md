@@ -282,6 +282,11 @@ spread and no expression. A host with another core (the conformance fixture) pas
 - **Billing webhooks** (`webhooks.mjs`): `nextspark.config.ts` `billing.webhookExtensions: { stripe: './lib/...', polar: './lib/...' }`
   replaces core's webhook route with `export const POST = createStripeWebhookRoute(stripeWebhookExtensions)`, the module
   imported statically (it must export `stripeWebhookExtensions` / `polarWebhookExtensions`).
+- **Feature flags** (`features.mjs`, #425): a `features` flag of `nextspark.config.ts` set to `false` leaves its core routes out
+  of the plan (`planHost({ features })`), and so of `prepare --check`; a project or plugin route at one of those paths is its own.
+  `billing: false` leaves out the payment routes, the provider webhooks, the lifecycle cron, the team invoices API and the
+  billing, plans and invoices pages; with `billing.webhookExtensions` set it stops `prepare` (`NS_HOST_BILLING_OFF_WEBHOOK_EXTENSIONS`).
+  The registries leave the same routes out of the API route list and write the flags to `features.ts`, which the UI reads.
 - **API rate limit** (`rate-limit.mjs`, #226): every method of a Route Handler under `src/app/api/` that a project or plugin
   provides is composed with core's per-address limit, as the 0.x theme and plugin dispatchers did:
   `export const GET = withReadRateLimit(NextSparkGET)` (`GET`, `HEAD`), `withWriteRateLimit` (`POST`, `PUT`, `PATCH`, `DELETE`),

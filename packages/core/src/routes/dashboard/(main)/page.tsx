@@ -6,6 +6,7 @@ import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 import { resolveHomeRoute } from '@nextsparkjs/core/lib/auth/home-route'
 import { DASHBOARD_HOME_CONFIG } from '@nextsparkjs/core/lib/config/public-config-client'
+import { FEATURES } from '@nextsparkjs/core/lib/config/build-features'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -33,7 +34,8 @@ function DefaultDashboardPage() {
   const locale = useLocale()
 
   const { user: authUser } = useAuth()
-  const canAccessBilling = usePermission('settings.billing' as Permission)
+  // With `features.billing: false` there is no billing page to link to (#425)
+  const canAccessBilling = usePermission('settings.billing' as Permission) && FEATURES.billing
 
   useEffect(() => {
     if (!isLoading && !user) {

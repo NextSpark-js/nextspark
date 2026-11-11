@@ -9,6 +9,7 @@
 
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { loadCoreRouteManifest } from '../host/core-routes.mjs'
+import { omittingFeature } from '../host/features.mjs'
 import { verbose, extractHttpMethods } from '../../../utils/index.mjs'
 
 /**
@@ -32,7 +33,8 @@ function isExcludedDirectory(name) {
 /**
  * Discover core's api/v1 routes from core's route manifest, each read from the core module that
  * implements it (what the generated src/app/api/v1 holds a facade of): src/app is output of
- * `nextspark prepare`, never an input of the registries. Dynamic routes are left out.
+ * `nextspark prepare`, never an input of the registries. Dynamic routes are left out, and so are the routes a
+ * `features` flag turned off leaves out of the host (host/features.mjs).
  *
  * @param {object} config - configuration from getConfig()
  * @returns {Promise<Array<{ path: string, methods: string[], relativePath: string, category: string, filePath: string }>>}
@@ -41,7 +43,7 @@ export async function discoverCoreRoutes(config = DEFAULT_CONFIG) {
   const manifest = await loadCoreRouteManifest({ coreRoot: config.coreDir })
   const routes = []
   for (const route of manifest?.routes ?? []) {
-    if (route.kind !== 'route' || !route.target.startsWith('api/v1/')) continue
+    if (route.kind !== 'route' || !route.target.startsWith('api/v1/') || omittingFeature(route.target, config.features)) continue
     const relativePath = route.target.slice('api/v1/'.length).split('/').slice(0, -1).join('/')
     if (relativePath.split('/').some(isExcludedDirectory)) continue
     routes.push({

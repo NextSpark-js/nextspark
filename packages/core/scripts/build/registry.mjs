@@ -69,6 +69,7 @@ import { generateTranslationRegistry, detectPPREnabled } from './registry/genera
 import { generateScopeRegistry } from './registry/generators/scope-registry.mjs'
 import { readProvidersScope, generateProvidersScope, generateRootProviders } from './registry/generators/root-providers.mjs'
 import { readRequestLocale, generateRequestLocale } from './registry/generators/request-locale.mjs'
+import { generateFeatures } from './registry/generators/features.mjs'
 import { generateNamespaceRegistry } from './registry/generators/namespace-registry.mjs'
 import { generateBillingRegistry } from './registry/generators/billing-registry.mjs'
 import { generateUnifiedRegistry } from './registry/generators/unified-registry.mjs'
@@ -125,6 +126,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
       { name: 'providers-scope.ts', content: generateProvidersScope(providersScope) },
       { name: 'root-providers.ts', content: generateRootProviders(providersScope, CONFIG) },
       { name: 'request-locale.ts', content: generateRequestLocale(requestLocale, detectPPREnabled(CONFIG.projectRoot)) },
+      { name: 'features.ts', content: generateFeatures(CONFIG.features) },
       { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(serverPlugins, themes, coreRoutes, entities) },
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
       { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },

@@ -11,6 +11,7 @@ import { SEARCH_TYPE_PRIORITIES } from '@nextsparkjs/registries/entity-types'
 import { useLocale, useTranslations } from 'next-intl'
 import { useEntityLocalizer } from './useEntityText'
 import { entityNameInText } from '../lib/entities/entity-text'
+import { isServedPath } from '../lib/config/build-features'
 
 export interface SearchResult {
   id: string
@@ -132,7 +133,7 @@ export function useSearch() {
     const systemResults = SYSTEM_PAGES.map((page, index) => ({
       id: `page-${index}`,
       ...page
-    })).filter(page => canAccessBilling || page.url !== '/dashboard/settings/billing')
+    })).filter(page => isServedPath(page.url) && (canAccessBilling || page.url !== '/dashboard/settings/billing'))
     return [...entityResults, ...systemResults]
   }, [entityResults, canAccessBilling])
 

@@ -13,6 +13,7 @@ import { DEFAULT_APP_CONFIG } from './app.config'
 import { DEFAULT_DASHBOARD_CONFIG } from './dashboard.config'
 import { mergeConfigs } from '../utils/config-merge'
 import { mergeRolesConfig } from './roles-merge'
+import { servedAppConfig, servedDashboardConfig } from './build-features'
 import {
   AVAILABLE_ROLES as REGISTRY_AVAILABLE_ROLES,
   ROLE_HIERARCHY as REGISTRY_ROLE_HIERARCHY,
@@ -44,7 +45,8 @@ if (DEFAULT_APP_CONFIG.teams?.roles) {
   }
 }
 
-export const APP_CONFIG_MERGED = mergedConfig
+// The links to pages a `features` flag left out of the host are dropped here, so no menu shows them (#425)
+export const APP_CONFIG_MERGED = servedAppConfig(mergedConfig)
 export const I18N_CONFIG = APP_CONFIG_MERGED.i18n
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || APP_CONFIG_MERGED.app.name
 export const APP_VERSION = APP_CONFIG_MERGED.app.version
@@ -55,7 +57,7 @@ export const MOBILE_NAV_CONFIG = APP_CONFIG_MERGED.mobileNav
 
 // Dashboard UI configuration is likewise client-safe: it comes from its own
 // generated input, never from config-sync's full server theme registry.
-export const DASHBOARD_CONFIG = mergeConfigs(DEFAULT_DASHBOARD_CONFIG, DASHBOARD_CONFIG_OVERRIDES)
+export const DASHBOARD_CONFIG = servedDashboardConfig(mergeConfigs(DEFAULT_DASHBOARD_CONFIG, DASHBOARD_CONFIG_OVERRIDES))
 export const TOPBAR_CONFIG = DASHBOARD_CONFIG.topbar
 export const SETTINGS_CONFIG = DASHBOARD_CONFIG.settings
 

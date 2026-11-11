@@ -238,6 +238,43 @@ Payment provider integration (Stripe, Polar, and more) via the Gateway Factory p
 - **Webhooks:** Automatic subscription updates (provider-specific routes, rate-limited)
 - **Lifecycle Jobs:** Trial expiration, grace periods
 
+## Plans Without Payments: `features.billing: false`
+
+A project that keeps plans as tiers of its own (features and limits per plan, set by hand or by its own code) but takes
+no payments turns billing off in `nextspark.config.ts`:
+
+```ts
+export default defineConfig({
+  features: { billing: false },
+})
+```
+
+`nextspark prepare` (and `prepare --check`) then leaves out of the generated host:
+
+- the payment routes: `/api/v1/billing/checkout`, `/portal`, `/change-plan` and `/cancel`, and the provider webhooks
+  (`/api/v1/billing/webhooks/stripe`, `/polar`, `/paddle`, `/lemonsqueezy`);
+- the lifecycle cron, `/api/cron/billing/lifecycle` (trial expiry, past-due grace and the monthly usage reset);
+- the team invoices API, `/api/v1/teams/[teamId]/invoices` and `/invoices/[invoiceNumber]`;
+- the billing, plans and invoices settings pages (`/dashboard/settings/billing`, `/plans`, `/invoices`).
+
+The UI follows: the settings menu, the mobile navigation, the top bar menus, the search, the dashboard's quick actions,
+the "view plans" links of the quota and 403 pages and the invoice links show no entry for those pages.
+
+What stays, since plans as tiers read it:
+
+- the billing config (`config/billing.config.ts`), its registry, its migrations and the `plans`, `subscriptions` and
+  usage tables;
+- the plans list (`GET /api/v1/billing/plans`), `POST /api/v1/billing/check-action`, the team's subscription
+  (`/api/v1/teams/[teamId]/subscription`) and usage (`/api/v1/teams/[teamId]/usage/[limitSlug]`), so `useSubscription`,
+  `useFeature`, `useQuotaCheck` and the quota gates keep working;
+- the superadmin subscriptions page and its API.
+
+Without the lifecycle cron nothing resets monthly usage counters: a project with monthly limits calls
+`UsageService.processMonthlyReset()` from a job of its own. `billing.webhookExtensions` names modules for the webhook
+routes, so setting it with billing off stops `prepare` (`NS_HOST_BILLING_OFF_WEBHOOK_EXTENSIONS`). A page or route the
+project provides itself at one of those paths (`templates/dashboard/settings/billing/page.tsx`) is served as the
+project's own.
+
 ## Next Steps
 
 - [Configuration Guide](./02-configuration.md) - Theme billing configuration

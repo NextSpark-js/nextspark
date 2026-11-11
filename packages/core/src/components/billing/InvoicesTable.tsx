@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
@@ -14,6 +15,7 @@ import {
 import { InvoiceStatusBadge, type InvoiceStatus } from './InvoiceStatusBadge'
 import { InvoicesEmptyState } from './InvoicesEmptyState'
 import { InvoicesPagination } from './InvoicesPagination'
+import { FEATURES } from '../../lib/config/build-features'
 
 export interface Invoice {
   id: string
@@ -23,6 +25,12 @@ export interface Invoice {
   currency: string
   status: InvoiceStatus
   pdfUrl: string | null
+}
+
+/** A row's link to the invoice page; with `features.billing: false` that page is left out (#425), so the row shows plain text. */
+function InvoiceLink({ invoiceNumber, children, ...props }: { invoiceNumber: string; children: ReactNode; className: string; 'aria-label'?: string }) {
+  if (!FEATURES.billing) return <span {...props}>{children}</span>
+  return <Link href={`/dashboard/settings/invoices/${encodeURIComponent(invoiceNumber)}`} {...props}>{children}</Link>
 }
 
 interface InvoicesTableProps {
@@ -110,45 +118,45 @@ export function InvoicesTable({
                   className="cursor-pointer hover:bg-muted/50"
                 >
                   <TableCell className="font-medium">
-                    <Link
-                      href={`/dashboard/settings/invoices/${encodeURIComponent(invoice.invoiceNumber)}`}
+                    <InvoiceLink
+                      invoiceNumber={invoice.invoiceNumber}
                       className="block"
                     >
                       {formatDate(invoice.date)}
-                    </Link>
+                    </InvoiceLink>
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/dashboard/settings/invoices/${encodeURIComponent(invoice.invoiceNumber)}`}
+                    <InvoiceLink
+                      invoiceNumber={invoice.invoiceNumber}
                       className="block"
                     >
                       {formatCurrency(invoice.amount, invoice.currency)}
-                    </Link>
+                    </InvoiceLink>
                   </TableCell>
                   <TableCell className="font-mono text-sm">
-                    <Link
-                      href={`/dashboard/settings/invoices/${encodeURIComponent(invoice.invoiceNumber)}`}
+                    <InvoiceLink
+                      invoiceNumber={invoice.invoiceNumber}
                       className="block"
                     >
                       {invoice.invoiceNumber}
-                    </Link>
+                    </InvoiceLink>
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/dashboard/settings/invoices/${encodeURIComponent(invoice.invoiceNumber)}`}
+                    <InvoiceLink
+                      invoiceNumber={invoice.invoiceNumber}
                       className="block"
                     >
                       <InvoiceStatusBadge status={invoice.status} />
-                    </Link>
+                    </InvoiceLink>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link
-                      href={`/dashboard/settings/invoices/${encodeURIComponent(invoice.invoiceNumber)}`}
+                    <InvoiceLink
+                      invoiceNumber={invoice.invoiceNumber}
                       className="inline-flex items-center text-muted-foreground hover:text-foreground"
                       aria-label={t('download.tooltip')}
                     >
                       <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                    </Link>
+                    </InvoiceLink>
                   </TableCell>
                 </TableRow>
               ))

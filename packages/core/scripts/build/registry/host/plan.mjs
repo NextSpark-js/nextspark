@@ -70,6 +70,7 @@ import { join, posix, relative, sep } from 'node:path'
 
 import { kindForFileStem } from './facade-emitter.mjs'
 import { applySitemap } from './sitemap.mjs'
+import { servedCoreRoutes } from './features.mjs'
 import { PLUGIN_DIAGNOSTICS, capabilitiesOf } from '../discovery/plugin-capabilities.mjs'
 
 export const PLAN_DIAGNOSTICS = Object.freeze({
@@ -257,10 +258,12 @@ function dynamicKind(segment) {
  * @param {string[]} [input.extensions] - source extensions
  * @param {Record<string, object>} [input.webhooks] - composed webhook routes by target (`webhookRoutes`)
  * @param {object} [input.sitemap] - `sitemapPlan(...)`: composes core's sitemap and robots routes with the project's settings
+ * @param {Record<string, boolean>} [input.features] - nextspark.config.ts `features`: a flag set to false leaves its core routes out (features.mjs)
  * @returns {{ routes: object[], diagnostics: object[], notices: object[] }}
  */
-export function planHost({ coreRoutes, entityRoutes = [], entityNames = [], withheld = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {}, sitemap }) {
+export function planHost({ coreRoutes: manifestRoutes, entityRoutes = [], entityNames = [], withheld = [], plugins = [], project, modes = [], extensions = DEFAULT_EXTENSIONS, webhooks = {}, sitemap, features = {} }) {
   const diagnostics = []
+  const coreRoutes = servedCoreRoutes(manifestRoutes, features)
   const pattern = sourceFilePattern(modes, extensions)
   const candidates = [
     ...coreRoutes.map(route => ({ ...route, mode: route.mode ?? null, layer: 'core', source: `core route ${route.specifier}` })),

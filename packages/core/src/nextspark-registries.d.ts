@@ -465,6 +465,11 @@ declare module '@nextsparkjs/registries/providers-scope' {
   export const PROVIDERS_SCOPE: 'root' | 'groups'
 }
 
+declare module '@nextsparkjs/registries/features' {
+  /** `features` of nextspark.config.ts: a flag that is false left its core routes and pages out of the host (#425). */
+  export const FEATURES: { readonly billing: boolean }
+}
+
 declare module '@nextsparkjs/registries/request-locale' {
   /** `i18n.requestLocale.auth`: the `(auth)` group renders in the request's locale. */
   export const REQUEST_LOCALE_AUTH: boolean

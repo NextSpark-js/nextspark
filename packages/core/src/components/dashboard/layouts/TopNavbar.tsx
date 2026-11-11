@@ -31,6 +31,7 @@ import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
 import { useIsDeveloper } from '../../app/guards/DeveloperGuard'
 import { DynamicNavigation } from '../navigation/DynamicNavigation'
 import { isTopbarFeatureEnabled, getTopbarFeatureConfig, TOPBAR_CONFIG, APP_NAME, APP_CONFIG_MERGED } from '../../../lib/config/config-client'
+import { FEATURES } from '../../../lib/config/build-features'
 
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
 
@@ -41,7 +42,8 @@ interface TopNavbarProps {
 
 export function TopNavbar({ entities, className }: TopNavbarProps) {
   const { user, signOut, isLoading } = useAuth()
-  const canAccessBilling = usePermission('settings.billing' as Permission)
+  // With `features.billing: false` there is no billing page to link to (#425)
+  const canAccessBilling = usePermission('settings.billing' as Permission) && FEATURES.billing
   const pathname = usePathname()
   const { isCollapsed, toggleSidebar } = useSidebar()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
