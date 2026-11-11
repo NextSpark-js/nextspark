@@ -24,6 +24,7 @@ import { checkNextThemesImports } from './checks/next-themes.js'
 import { checkQueryHooksWithoutProvider } from './checks/query-hooks.js'
 import { checkHoisting } from './checks/hoisting.js'
 import { checkApiKeyScopes } from './checks/api-key-scopes.js'
+import { checkClientIp } from './checks/client-ip.js'
 
 /**
  * Result of a health check
@@ -126,6 +127,7 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'Theme imports', fn: checkNextThemesImports },
     { name: 'React Query providers', fn: checkQueryHooksWithoutProvider },
     { name: 'API key scopes', fn: checkApiKeyScopes },
+    { name: 'Client address', fn: () => checkClientIp() },
     { name: 'Hoisting', fn: () => checkHoisting() },
   ]
 
