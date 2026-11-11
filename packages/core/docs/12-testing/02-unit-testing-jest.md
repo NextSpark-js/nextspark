@@ -71,6 +71,53 @@ A project generated before the preset keeps working with its own `jest.config.cj
 
 Core's package `exports` also carry a `default` condition next to `import` on every subpath, so a tool that resolves with `require` finds the files without a custom mapper (it still needs a transform for the ESM build).
 
+### Database suites
+
+A suite that needs a real PostgreSQL goes in a Jest project named `db` in your config, and runs through the project runner, `scripts/test/jest.mjs` of core (it is the `test` script of a generated project):
+
+```javascript
+// tests/jest/jest.config.cjs
+module.exports = {
+  projects: [
+    { displayName: 'unit', /* ... */ testMatch: ['<rootDir>/tests/jest/unit/**/*.test.ts'] },
+    { displayName: 'db', /* ... */ testMatch: ['<rootDir>/tests/jest/db/**/*.test.ts'] },
+  ],
+}
+```
+
+```bash
+node node_modules/@nextsparkjs/core/scripts/test/jest.mjs --selectProjects db
+```
+
+With `--selectProjects db` the runner gives the suites a database of their own. It starts a throwaway PostgreSQL cluster on a free port of `127.0.0.1` (it needs `initdb` and `pg_ctl` on the `PATH`, for example `/opt/homebrew/opt/postgresql@16/bin` with Homebrew), applies the project's migrations to it (core's and yours, without sample data), hands it to the suites as `DATABASE_URL`, and removes it when the run ends, also on Ctrl-C and on `SIGTERM`. Nothing needs a `DATABASE_URL` in the environment, and the one that is there is not used: the project says so when it is set. The runner prints the target before Jest starts:
+
+```text
+  The db project runs against a throwaway PostgreSQL cluster (host 127.0.0.1, port 54329), removed when the run ends.
+```
+
+A suite that is run without `--selectProjects db` (the whole config, or another project) gets the environment as it is. Select the `db` project to run against a database of its own.
+
+**Using a database you started.** `NEXTSPARK_TEST_DATABASE_URL=postgresql://...` names the database the `db` project uses instead of a throwaway cluster. The runner does not migrate it or write to it; the suites do. A database on this machine (`localhost`, a loopback address, a socket directory) is used as it is. **A host that is not this machine is refused**, before Jest starts or anything connects, because the suites write to their database and often empty it:
+
+```text
+Error: NEXTSPARK_TEST_DATABASE_URL points at host db.example.com, database shared, which is not this machine, and the db project writes to its database. To run against it anyway, set NEXTSPARK_TEST_ALLOW_REMOTE_DATABASE=1. To use a throwaway database on this machine instead, unset NEXTSPARK_TEST_DATABASE_URL. Nothing was run.
+```
+
+`NEXTSPARK_TEST_ALLOW_REMOTE_DATABASE=1` allows it, and the runner prints that it is set next to the target. The user and password are never printed. A CI job whose database is a service container on `localhost` sets `NEXTSPARK_TEST_DATABASE_URL` to it (a project that used to run its database suites against `DATABASE_URL` does the same).
+
+**Starting a cluster yourself.** The helper the runner and core's own suites use is part of the package, plain CommonJS with types, and the preset maps `@nextsparkjs/core/scripts/*` to it:
+
+```typescript
+import { HAS_POSTGRES, startCluster, clusterUrl } from '@nextsparkjs/core/scripts/test/throwaway-postgres.cjs'
+
+const cluster = await startCluster('my-suite')   // a data directory in the OS temp directory, on a free port
+const url = clusterUrl(cluster)                  // postgresql://owner@127.0.0.1:<port>/postgres?sslmode=disable
+// ...
+cluster.stop()                                   // stops the server and removes the directory; safe to call twice
+```
+
+`startCluster` retries a port another process takes between picking it and binding it, waits long enough for a loaded machine, and throws an error that carries the server's own log when the cluster cannot start. Its user is `owner`, a superuser, with `trust` authentication on the loopback interface only. `HAS_POSTGRES` is false when `initdb` or `pg_ctl` is not on the `PATH`: skip the suite then.
+
 ### Running Tests
 
 ```bash

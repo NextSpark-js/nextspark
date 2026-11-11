@@ -9,7 +9,8 @@
  *
  * It maps core's subpaths to the built package (Jest 29 does not follow every condition of `exports`), including
  * `@nextsparkjs/core/selectors`, whose file is not at the path the generic mapper would build, and `server-only`, which
- * throws outside a React Server Components build. It also transforms core's ESM build so Jest can load it. It sets no
+ * throws outside a React Server Components build, and `@nextsparkjs/core/scripts/*` (the throwaway PostgreSQL helper of
+ * `scripts/test/throwaway-postgres.cjs`). It also transforms core's ESM build so Jest can load it. It sets no
  * test environment, setup file or project aliases: those stay in the project's config.
  */
 const path = require('path')
@@ -26,6 +27,8 @@ module.exports = {
     '^@nextsparkjs/core/selectors/(.*)$': path.join(dist, 'lib/selectors/by-domain/$1.js'),
     // Exported as ./actions, built to lib/actions
     '^@nextsparkjs/core/actions$': path.join(dist, 'lib/actions/index.js'),
+    // The scripts ship as they are, not built into dist: the throwaway PostgreSQL helper for database suites
+    '^@nextsparkjs/core/scripts/(.*)$': path.join(root, 'scripts', '$1'),
     '^@nextsparkjs/core/(.*)$': path.join(dist, '$1'),
     '^@nextsparkjs/core$': path.join(dist, 'index.js'),
     '^server-only$': path.join(mocks, 'server-only.js'),

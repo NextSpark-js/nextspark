@@ -46,7 +46,7 @@ test('the starter config extends the preset instead of repeating the core mapper
   assert.doesNotMatch(config, /node_modules\/@nextsparkjs\/core\/dist/)
 })
 
-test('a project built on the starter config runs tests that import core selectors and a server-only module', () => {
+test('a project built on the starter config runs tests that import core selectors, a server-only module and the throwaway cluster helper', () => {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-jest-preset-')))
   try {
     const jest = path.join(root, 'tests/jest')
@@ -65,13 +65,15 @@ test('a project built on the starter config runs tests that import core selector
     // resolved, not evaluated: the actions barrel needs the project's generated registries
     fs.writeFileSync(path.join(jest, 'actions.test.ts'), "// @ts-nocheck\nit('resolves the actions subpath', () => { expect(require.resolve('@nextsparkjs/core/actions')).toMatch(/lib[\\\\/]actions[\\\\/]index\\.js$/) })\n")
     fs.writeFileSync(path.join(jest, 'server-only.test.ts'), "// @ts-nocheck\nimport { secret } from '@/lib/secret'\nit('loads a module that imports server-only', () => { expect(secret).toBe('kept on the server') })\n")
+    // the throwaway PostgreSQL helper that database suites start their own cluster with (#430): loaded, not started
+    fs.writeFileSync(path.join(jest, 'throwaway.test.ts'), "import { HAS_POSTGRES, startCluster, clusterUrl } from '@nextsparkjs/core/scripts/test/throwaway-postgres.cjs'\nit('exposes the throwaway cluster helper', () => { expect(typeof HAS_POSTGRES).toBe('boolean'); expect(typeof startCluster).toBe('function'); expect(clusterUrl({ port: 5439 } as any, 'app')).toBe('postgresql://owner@127.0.0.1:5439/app?sslmode=disable') })\n")
     const run = spawnSync(process.execPath, [path.join(fs.realpathSync(path.join(CORE, 'node_modules/jest')), 'bin/jest.js'), '--config', 'tests/jest/jest.config.cjs', '--maxWorkers=1', '--no-watchman', '--ci'], {
       cwd: root,
       encoding: 'utf8',
       timeout: 240_000,
     })
     assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`)
-    assert.match(run.stderr, /Tests:\s+3 passed, 3 total/)
+    assert.match(run.stderr, /Tests:\s+4 passed, 4 total/)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
