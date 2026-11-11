@@ -3,15 +3,16 @@ import path from "path";
 import { fileURLToPath } from 'url';
 import { scriptClient } from './ssl-config.mjs';
 import { rememberSecrets, scrub } from './destination.mjs';
+import { projectEnvFiles } from '../utils/env-files.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// An exported DATABASE_URL beats the project .env (as in run-migrations.mjs); the .env, read by hand
-// to avoid cache issues, only fills it in when the environment leaves it unset
+// An exported DATABASE_URL beats the project .env.local and .env (as in run-migrations.mjs); the files, read by hand
+// to avoid cache issues, only fill it in when the environment leaves it unset, the first that sets it winning
 let DATABASE_URL = process.env.DATABASE_URL || null;
-const envPath = path.join(process.cwd(), '.env');
-if (!DATABASE_URL && fs.existsSync(envPath)) {
+for (const envPath of projectEnvFiles().map(file => path.join(process.cwd(), file))) {
+  if (DATABASE_URL || !fs.existsSync(envPath)) continue;
   fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
     if (line && !line.startsWith('#')) {
       const [key, ...valueParts] = line.split('=');

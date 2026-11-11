@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRecordMigration, migrationFailure } from './migration-time-limit.mjs';
 import { getConfig } from '../build/registry/config.mjs';
-import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
+import { isProduction, isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
+import { projectEnvFiles } from '../utils/env-files.mjs';
 import { compareMigrations } from './migration-order.mjs';
 import { collectAllMigrations, collectCoreMigrations } from './migration-files.mjs';
 import { LEDGERS, ledgerFiles, ledgerFindings, readLedger, ensureHashColumns, lockdownLedgers, editedReport, renamedReport, migrationHash, HASH_COLUMN } from './migration-ledger.mjs';
@@ -16,11 +17,10 @@ const projectRoot = projectConfig.projectRoot;
 const packageRoot = projectConfig.coreDir;
 const PROJECT_NAME = projectConfig.projectName;
 
-// An exported variable beats the project .env (as dotenv, Next.js and Prisma do): the .env
-// only fills what the environment leaves unset. `--no-env-file` skips the .env file, so the
+// An exported variable beats the project .env.local and .env (as dotenv, Next.js and Prisma do): the
+// files only fill what the environment leaves unset. `--no-env-file` skips them, so the
 // connection comes only from the environment this process was started with (the template
 // verifier uses it that way).
-const envPath = path.join(projectRoot, '.env');
 const readEnvFile = !process.argv.includes('--no-env-file');
 
 let DATABASE_URL = process.env.DATABASE_URL || null;
@@ -57,12 +57,16 @@ function optionValue(name) {
 }
 const EXPECT_DATABASE = optionValue('--expect-database');
 const EXPECT_HOST = optionValue('--expect-host');
-// What the .env says about NODE_ENV and the sample-data switch (see sample-data.mjs)
+// What the env files say about NODE_ENV and the sample-data switch (see sample-data.mjs)
 const fileEnv = {};
 
-if (readEnvFile && fs.existsSync(envPath)) {
+// .env.local before .env, as Next.js reads them (scripts/utils/env-files.mjs): the first file that sets a value wins,
+// except that NODE_ENV=production in any of them counts, so a .env.local cannot switch the sample-data guard off
+for (const envPath of readEnvFile ? projectEnvFiles().map(file => path.join(projectRoot, file)) : []) {
+  if (!fs.existsSync(envPath)) continue;
   const envContent = fs.readFileSync(envPath, 'utf8');
   const envLines = envContent.split('\n');
+  const thisFile = {};
 
   envLines.forEach(line => {
     if (line && !line.startsWith('#')) {
@@ -81,11 +85,14 @@ if (readEnvFile && fs.existsSync(envPath)) {
       // `export NODE_ENV=...` counts too; sample-data.mjs reads the value itself (case, trailing comment)
       const name = key?.trim().replace(/^export\s+/, '');
       if (['NODE_ENV', 'NEXTSPARK_SEED_SAMPLE_DATA'].includes(name) && valueParts.length > 0) {
-        fileEnv[name] = value;
+        thisFile[name] = value;
       }
     }
   });
+  fileEnv.NEXTSPARK_SEED_SAMPLE_DATA ??= thisFile.NEXTSPARK_SEED_SAMPLE_DATA;
+  if (thisFile.NODE_ENV !== undefined && (fileEnv.NODE_ENV === undefined || isProduction(thisFile.NODE_ENV))) fileEnv.NODE_ENV = thisFile.NODE_ENV;
 }
+for (const name of Object.keys(fileEnv)) if (fileEnv[name] === undefined) delete fileEnv[name];
 
 if (!DATABASE_URL) {
   console.error("❌ DATABASE_URL not found in environment variables");

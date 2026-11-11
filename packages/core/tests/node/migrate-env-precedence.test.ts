@@ -133,3 +133,45 @@ test('db:verify-tables prints no user or password from a server error', async t 
   assert.match(output, /password authentication failed for user "\*\*\*"/, output)
   noCredentials(output)
 })
+
+// #438: the runner reads .env.local before .env, as Next.js does, and no .env.local when NODE_ENV is test
+const LOCAL_URL = 'postgres://localuser:localsecret@127.0.0.1:1/localdb'
+function withLocal(root: string, content: string) {
+  fs.writeFileSync(path.join(root, '.env.local'), content)
+  return root
+}
+
+test('.env.local beats .env for DATABASE_URL and MIGRATE_DATABASE_URL, and an exported one beats both', t => {
+  const root = withLocal(project(t, `DATABASE_URL=${ENV_URL}\nMIGRATE_DATABASE_URL=${ENV_URL}\n`), `DATABASE_URL=${LOCAL_URL}\n`)
+  assert.match(run(root, {}), /database envdb/, 'MIGRATE_DATABASE_URL is only in .env, and it is the connection')
+  fs.writeFileSync(path.join(root, '.env.local'), `MIGRATE_DATABASE_URL=${LOCAL_URL}\n`)
+  assert.match(run(root, {}), /database localdb/)
+  fs.writeFileSync(path.join(root, '.env'), `DATABASE_URL=${ENV_URL}\n`)
+  fs.writeFileSync(path.join(root, '.env.local'), `DATABASE_URL=${LOCAL_URL}\n`)
+  assert.match(run(root, {}), /database localdb/)
+  assert.match(run(root, { DATABASE_URL: EXPORTED_URL }), /database exporteddb/)
+})
+
+test('with NODE_ENV=test the runner ignores .env.local, as Next.js does', t => {
+  const root = withLocal(project(t, `DATABASE_URL=${ENV_URL}\n`), `DATABASE_URL=${LOCAL_URL}\n`)
+  const output = run(root, { NODE_ENV: 'test' })
+  assert.match(output, /database envdb/)
+  assert.ok(!output.includes('localdb'), output)
+})
+
+test('NODE_ENV=production in .env still refuses the sample data when .env.local says development', t => {
+  const root = withLocal(project(t, `DATABASE_URL=${ENV_URL}\nNODE_ENV=production\n`), 'NODE_ENV=development\n')
+  const output = run(root, {}, ['--sample-data'])
+  assert.match(output, /Sample data is not applied: NODE_ENV is production/, output)
+})
+
+test('db:verify-tables reads .env.local before .env too', t => {
+  const root = withLocal(project(t, 'DATABASE_URL=postgres://envuser:envsecret@127.0.0.1:2/envdb\n'), 'DATABASE_URL=postgres://localuser:localsecret@127.0.0.1:1/localdb\n')
+  const env: NodeJS.ProcessEnv = { ...process.env }
+  delete env.DATABASE_URL
+  delete env.NODE_ENV
+  const result = spawnSync(process.execPath, [path.join(CORE, 'scripts/db/verify-tables.mjs')], { cwd: root, encoding: 'utf8', timeout: 60000, env })
+  const output = `${result.stdout}${result.stderr}`
+  assert.match(output, /127\.0\.0\.1:1\b/, output)
+  assert.ok(!output.includes('127.0.0.1:2'), output)
+})

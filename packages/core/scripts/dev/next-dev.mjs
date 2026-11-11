@@ -10,12 +10,16 @@
  *   node scripts/next-dev.mjs
  *
  * Port Configuration:
- *   - Reads PORT from .env (via dotenv)
+ *   - Reads PORT from .env.local or .env (via dotenv)
  *   - Defaults to 5173 if PORT is not set
  */
 
 import { spawn } from 'child_process'
-import 'dotenv/config'
+import { config } from 'dotenv'
+import { projectEnvFiles } from '../utils/env-files.mjs'
+
+// .env.local before .env, as Next.js reads them; an exported variable still wins
+config({ path: projectEnvFiles() })
 
 const port = process.env.PORT || 5173
 

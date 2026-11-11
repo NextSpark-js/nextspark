@@ -7,8 +7,10 @@
 
 import dotenv from 'dotenv'
 import { scriptPool } from './ssl-config.mjs'
+import { projectEnvFiles } from '../utils/env-files.mjs'
 
-dotenv.config()
+// .env.local before .env, as Next.js reads them; an exported variable still wins
+dotenv.config({ path: projectEnvFiles() })
 
 async function verifyTeamsSetup() {
   const pool = scriptPool(process.env.DATABASE_URL)
