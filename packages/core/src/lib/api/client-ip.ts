@@ -149,6 +149,15 @@ export function warnClientIpSourceAtStartup(env: Env = process.env): void {
   const origin = getClientIpSourceOrigin(env)
   if (origin === 'vercel') {
     state[WARNED] = true
+    // Vercel's runtime sets VERCEL_REGION; `vercel env pull` writes VERCEL="1" to .env.local without it
+    if (!env.VERCEL_REGION) {
+      console.warn(
+        '[client-ip] VERCEL=1 is set without VERCEL_REGION, so it was probably copied from a .env file (vercel env pull ' +
+          'writes it) and this may not be Vercel: the client address is read from x-vercel-forwarded-for, then x-real-ip, ' +
+          'which a client can send elsewhere. Set NEXTSPARK_CLIENT_IP_SOURCE for this deployment.'
+      )
+      return
+    }
     console.info(
       '[client-ip] NEXTSPARK_CLIENT_IP_SOURCE is not set and VERCEL=1, so the client address comes from ' +
         'x-vercel-forwarded-for, then x-real-ip. Behind another proxy in front of Vercel, set the variable.'

@@ -335,17 +335,28 @@ describe('startup warning', () => {
     for (const NODE_ENV of ['production', 'development']) {
       delete (globalThis as Record<symbol, unknown>)[WARNED]
       info.mockClear()
-      const env = { NODE_ENV, VERCEL: '1' }
+      const env = { NODE_ENV, VERCEL: '1', VERCEL_REGION: 'iad1' }
       warnClientIpSourceAtStartup(env)
       getClientIp(new Headers(ALL), env)
       expect(info).toHaveBeenCalledTimes(1)
       expect(String(info.mock.calls[0][0])).toContain('x-vercel-forwarded-for')
     }
+    expect(warn).not.toHaveBeenCalled()
     delete (globalThis as Record<symbol, unknown>)[WARNED]
     info.mockClear()
     warnClientIpSourceAtStartup({ NODE_ENV: 'production', VERCEL: '1', NEXTSPARK_CLIENT_IP_SOURCE: 'cloudflare' })
     expect(info).not.toHaveBeenCalled()
     expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('warns once when VERCEL=1 comes without VERCEL_REGION, as when copied from a .env file, and still detects vercel', () => {
+    const env = { NODE_ENV: 'production', VERCEL: '1' }
+    warnClientIpSourceAtStartup(env)
+    warnClientIpSourceAtStartup(env)
+    expect(getClientIp(new Headers(ALL), env)).toBe('198.51.100.7')
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][0])).toMatch(/VERCEL_REGION.*NEXTSPARK_CLIENT_IP_SOURCE/)
+    expect(info).not.toHaveBeenCalled()
   })
 
   it('stays quiet outside production and when a source is set', () => {
