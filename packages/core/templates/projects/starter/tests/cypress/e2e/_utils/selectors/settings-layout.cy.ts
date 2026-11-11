@@ -105,10 +105,11 @@ describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors', '@set
     })
 
     // With `features: { billing: false }` in nextspark.config.ts (the wizard's default) there is no billing page,
-    // so the menu has no entry for it: the test applies only with billing on (the spec runs from tests/)
+    // so the menu has no entry for it: the test applies only with billing on. cy.readFile resolves from the
+    // project root, where cy.mjs runs Cypress.
     it('should find billing nav item', function () {
-      cy.readFile('../nextspark.config.ts').then((config: string) => {
-        if (/billing\s*:\s*false/.test(config)) this.skip()
+      cy.readFile('nextspark.config.ts').then((config: string) => {
+        if (/['"]?billing['"]?\s*:\s*false/.test(config)) this.skip()
         cy.get(settings.selectors.sidebarNavItem('billing')).should('exist')
       })
     })
