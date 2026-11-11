@@ -12,8 +12,9 @@
  *
  * What it reads: the calls written in the route module itself, to the two entry points imported from
  * `@nextsparkjs/core` (by name, renamed or through a namespace import). Their options are read when written as an object
- * literal, or as a name bound once to one in the same file. A call that declares nothing in a function that also compares
- * a `.type` with `'session'` is a route that answers only sessions on purpose, and is not listed. What it does not see
+ * literal, or as a name bound once to one in the same file. A call that declares nothing, whose result is guarded at once with
+ * `if (auth.type !== 'session') return ...` and with no comparison with `'api-key'` in the function, answers only sessions on
+ * purpose and is not listed. What it does not see
  * (no false alarm, a missed one): a call in a helper module the route imports, options built at runtime, a
  * `requiredScope` that is not a string literal (or a list of them), and the scopes of `api.scopes` when
  * config/app.config.ts does not write them as literals.
@@ -29,7 +30,7 @@ import { loadTypeScriptFor } from '../build/registry/shared/typescript-compiler.
 export const API_KEY_NO_SCOPE_WARNING = 'NS_API_KEY_ROUTE_WITHOUT_SCOPE'
 export const API_KEY_UNDECLARED_SCOPE_WARNING = 'NS_API_KEY_SCOPE_NOT_DECLARED'
 
-/** The scopes core enforces (`API_SCOPES` of src/lib/api/keys.ts; tests/node/api-key-scopes.test.ts keeps the two equal). */
+/** The scopes core enforces (`API_SCOPES` of src/lib/api/keys.ts; scripts/build/registry/host/__tests__/host-api-key-scopes.test.mjs keeps the two equal). */
 export const CORE_API_SCOPES = Object.freeze([
   'users:read', 'users:write', 'users:delete',
   'tasks:read', 'tasks:write', 'tasks:delete',
@@ -139,21 +140,37 @@ export function scanApiKeyCalls({ source, file, ts }) {
     }
     return null
   }
-  // A route that answers only sessions says so in its own code (`auth.type !== 'session'`): refusing every key is what it means
+  // A route that answers only sessions says so with a guard on the result of this very call:
+  // `const auth = await authenticateRequest(r); if (auth.type !== 'session') return ...`. Anything looser (a ternary, a
+  // comparison with 'api-key' in the function, a `.type` of something else) means keys are handled, so it is not excluded.
   const isFunction = node => ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)
+  const COMPARES = [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken]
+  const NOT_EQUAL = [ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken]
+  const disjuncts = expression => {
+    const node = unwrap(expression, ts)
+    return ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.BarBarToken ? [...disjuncts(node.left), ...disjuncts(node.right)] : [node]
+  }
+  const leaves = guard => ts.isReturnStatement(guard) || ts.isThrowStatement(guard) || (ts.isBlock(guard) && guard.statements.length > 0 && (ts.isReturnStatement(guard.statements[0]) || ts.isThrowStatement(guard.statements[0])))
   const sessionOnly = node => {
+    let holder = node.parent
+    while (holder && (ts.isAwaitExpression(holder) || ts.isParenthesizedExpression(holder) || ts.isAsExpression(holder) || ts.isNonNullExpression(holder))) holder = holder.parent
+    if (!holder || !ts.isVariableDeclaration(holder) || !ts.isIdentifier(holder.name)) return false
+    const variable = holder.name.text
     let scope = node.parent
     while (scope && !isFunction(scope)) scope = scope.parent
-    let session = false
+    let guarded = false
+    let apiKey = false
     const search = child => {
-      if (ts.isBinaryExpression(child) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken].includes(child.operatorToken.kind)) {
-        const sides = [child.left, child.right].map(side => unwrap(side, ts))
-        if (sides.some(side => isText(side, ts) && side.text === 'session') && sides.some(side => ts.isPropertyAccessExpression(side) && side.name.text === 'type')) session = true
-      }
-      if (!session) ts.forEachChild(child, search)
+      if (ts.isBinaryExpression(child) && COMPARES.includes(child.operatorToken.kind) && [child.left, child.right].some(side => { const text = unwrap(side, ts); return isText(text, ts) && text.text === 'api-key' })) apiKey = true
+      if (ts.isIfStatement(child) && leaves(child.thenStatement) && disjuncts(child.expression).some(part => {
+        if (!ts.isBinaryExpression(part) || !NOT_EQUAL.includes(part.operatorToken.kind)) return false
+        const sides = [part.left, part.right].map(side => unwrap(side, ts))
+        return sides.some(side => isText(side, ts) && side.text === 'session') && sides.some(side => ts.isPropertyAccessExpression(side) && side.name.text === 'type' && ts.isIdentifier(side.expression) && side.expression.text === variable)
+      })) guarded = true
+      ts.forEachChild(child, search)
     }
     search(scope ?? sourceFile)
-    return session
+    return guarded && !apiKey
   }
   const found = []
   const visit = node => {

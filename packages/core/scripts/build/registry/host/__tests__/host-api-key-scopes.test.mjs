@@ -37,14 +37,26 @@ test('a call without options, with an empty object, or whose scope list is empty
   assert.deepEqual(declaredOf('export async function GET(r) { await authenticateRequest(r, { allowAnyScope: false }) }'), ['none'])
 })
 
-test('a call that declares nothing in a function that checks the result is a session is a session-only route, not a finding', () => {
+test('only a guard on the result of the call that leaves at once makes a session-only route; anything looser is still a finding', () => {
+  // the guard form, with the result variable of that same call
   assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.type !== 'session') return null }"), ['session'])
-  assert.deepEqual(declaredOf("export const GET = limit(async (r) => { const auth = await authenticateRequest(r); if (!auth.success || auth.type !== 'session') return null }, 'api')"), ['session'])
-  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); return auth.type === 'session' ? a() : b() }"), ['session'])
-  // the check has to be in the function that makes the call, and on the type of the result
-  assert.deepEqual(declaredOf("function other(a) { return a.type === 'session' }\nexport async function GET(r) { await authenticateRequest(r) }"), ['none'])
-  assert.deepEqual(declaredOf("export async function GET(r) { await authenticateRequest(r); return r.kind === 'session' }"), ['none'])
-  assert.deepEqual(declaredOf("export async function GET(r) { await authenticateRequest(r); return r.type === 'other' }"), ['none'])
+  assert.deepEqual(declaredOf("export const GET = limit(async (r) => { const auth = await authenticateRequest(r); if (!auth.success || auth.type !== 'session') { return null } }, 'api')"), ['session'])
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.type != 'session') throw new Error('x') }"), ['session'])
+  // a ternary handles keys too
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); return auth.type === 'session' ? auth.team : r.headers.get('x-team-id') }"), ['none'])
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.type === 'session') return null }"), ['none'])
+  // a guard that does not leave, or whose then-branch does something first
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.type !== 'session') log() }"), ['none'])
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.type !== 'session') { log(); return null } }"), ['none'])
+  // the function also deals with api-key callers
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.type !== 'session') return null; if (auth.type === 'api-key') use() }"), ['none'])
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.type !== 'session') return null; return auth.kind !== 'api-key' }"), ['none'])
+  // a .type that is not the result of the call
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (auth.user.type !== 'session') return null }"), ['none'])
+  assert.deepEqual(declaredOf("export async function GET(r) { const auth = await authenticateRequest(r); if (other.type !== 'session') return null }"), ['none'])
+  assert.deepEqual(declaredOf("export async function GET(r) { await authenticateRequest(r); if (r.type !== 'session') return null }"), ['none'])
+  // the check has to be in the function that makes the call
+  assert.deepEqual(declaredOf("function other(auth) { if (auth.type !== 'session') return null }\nexport async function GET(r) { const auth = await authenticateRequest(r) }"), ['none'])
 })
 
 test('requiredScope as a string or a list, and allowAnyScope: true, declare something', () => {
