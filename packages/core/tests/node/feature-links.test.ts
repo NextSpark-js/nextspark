@@ -8,7 +8,7 @@
  *   reach (followed through the imports; an index file that only re-exports does not count as a user, but a file that
  *   only such an index reaches does not count as unreachable either), or in a default config whose links config-client
  *   and config-sync filter
- *   (servedAppConfig, servedDashboardConfig: jest checks them in feature-links.test.ts).
+ *   (servedAppConfig, servedDashboardConfig: tests/jest/lib/config/build-features.test.ts checks them).
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
