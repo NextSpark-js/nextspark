@@ -10,7 +10,7 @@ const secrets = new Set();
  * not read the way it was written. A `host` in the query string (a socket directory, or the host of a URL with none in
  * the authority) is the one pg connects to, so it is the one named.
  */
-export function destinationParts(connectionString) {
+export function destinationParts(connectionString, env = process.env) {
   try {
     const url = new URL(connectionString);
     const database = decodeURIComponent(url.pathname.replace(/^\//, ''));
@@ -19,15 +19,16 @@ export function destinationParts(connectionString) {
     if (database.includes('/') || database.includes('@') || (!url.username && connectionString.replace(/^[^:]+:\/\//, '').split('/')[0].includes('@'))) {
       return null;
     }
-    return { host: url.searchParams.get('host') || url.hostname, database };
+    // With no host at all, node-postgres connects to PGHOST (or PGHOSTADDR)
+    return { host: url.searchParams.get('host') || url.hostname || env.PGHOST || env.PGHOSTADDR || '', database };
   } catch {
     return null;
   }
 }
 
 /** The destination of a connection URL, as `host H, database D`, or `unreadable URL`. */
-export function describeDestination(connectionString) {
-  const parts = destinationParts(connectionString);
+export function describeDestination(connectionString, env = process.env) {
+  const parts = destinationParts(connectionString, env);
   return parts ? `host ${parts.host || '(none)'}, database ${parts.database || '(none)'}` : 'unreadable URL';
 }
 
@@ -37,9 +38,9 @@ const sameHost = (a, b) => a.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/
  * Why a connection URL is not the target that was expected (`--expect-database`, `--expect-host`), or null when it is or
  * nothing was expected. It names the host and database only, never the user, the password or the URL.
  */
-export function unexpectedTarget(connectionString, { database = null, host = null } = {}) {
+export function unexpectedTarget(connectionString, { database = null, host = null } = {}, env = process.env) {
   if (database === null && host === null) return null;
-  const parts = destinationParts(connectionString);
+  const parts = destinationParts(connectionString, env);
   const flags = [database !== null && `--expect-database ${database}`, host !== null && `--expect-host ${host}`].filter(Boolean).join(' ');
   if (!parts) return `${flags}: the connection URL cannot be read, so the target cannot be checked.`;
   const wrong = [];

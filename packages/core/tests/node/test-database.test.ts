@@ -56,3 +56,12 @@ test('a URL that cannot be read is refused: it could point anywhere', () => {
   // a host in the query string is the one that is connected to
   assert.throws(() => testDatabaseTarget({ [TEST_DATABASE_URL]: 'postgres://u@127.0.0.1/app?host=db.example.com' }), /points at host db\.example\.com/)
 })
+
+test('a URL with no host connects to PGHOST, so that is the host that is checked', () => {
+  const noHost = 'postgresql:///app'
+  assert.deepEqual(testDatabaseTarget({ [TEST_DATABASE_URL]: noHost }), { url: noHost })
+  assert.deepEqual(testDatabaseTarget({ [TEST_DATABASE_URL]: noHost, PGHOST: '/var/run/postgresql' }), { url: noHost })
+  assert.throws(() => testDatabaseTarget({ [TEST_DATABASE_URL]: noHost, PGHOST: 'db.example.com' }), /points at host db\.example\.com/)
+  assert.throws(() => testDatabaseTarget({ [TEST_DATABASE_URL]: noHost, PGHOSTADDR: '10.0.0.5' }), /points at host 10\.0\.0\.5/)
+  assert.deepEqual(testDatabaseTarget({ [TEST_DATABASE_URL]: 'postgresql://u@127.0.0.1/app', PGHOST: 'db.example.com' }), { url: 'postgresql://u@127.0.0.1/app' }, 'a host in the URL wins')
+})

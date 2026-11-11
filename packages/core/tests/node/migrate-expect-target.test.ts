@@ -77,6 +77,13 @@ test('the target is read from the URL as the runner connects with it', () => {
   assert.equal(describeDestination('postgres://u:p@h/db%20x'), 'host h, database db x')
 })
 
+test('a URL with no host is the PGHOST it connects to, for --expect-host and the description', () => {
+  assert.deepEqual(destinationParts('postgres:///app', { PGHOST: 'db.example.com' }), { host: 'db.example.com', database: 'app' })
+  assert.equal(describeDestination('postgres:///app', { PGHOST: 'db.example.com' }), 'host db.example.com, database app')
+  assert.equal(unexpectedTarget('postgres:///app', { host: 'db.example.com' }, { PGHOST: 'DB.example.com' }), null)
+  assert.match(unexpectedTarget('postgres:///app', { host: 'db.example.com' }, {}), /host \(none\) \(expected db\.example\.com\)/)
+})
+
 test('unexpectedTarget accepts the matching target and names the difference otherwise', () => {
   assert.equal(unexpectedTarget('postgres://u:p@h/app', {}), null)
   assert.equal(unexpectedTarget('postgres://u:p@h/app', { database: 'app', host: 'H' }), null)

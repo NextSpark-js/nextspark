@@ -15,7 +15,7 @@ export const TEST_DATABASE_URL = 'NEXTSPARK_TEST_DATABASE_URL';
 /** `1` or `true` lets TEST_DATABASE_URL name a database that is not on this machine. */
 export const ALLOW_REMOTE_DATABASE = 'NEXTSPARK_TEST_ALLOW_REMOTE_DATABASE';
 
-const isOn = value => /^\s*["']?(1|true)\b/i.test(String(value ?? ''));
+export const isOn = value => /^\s*["']?(1|true)\b/i.test(String(value ?? ''));
 
 /** Whether the Jest arguments select the `db` project: `--selectProjects db`, `--selectProjects=db`, among others. */
 export function selectsDatabaseProject(args) {
@@ -42,9 +42,10 @@ export function isLocalHost(host) {
  * without ALLOW_REMOTE_DATABASE, and for a URL it cannot read (it could be anywhere).
  */
 export function testDatabaseTarget(env) {
+  // (a URL with no host connects to PGHOST, which destinationParts reads from the same environment)
   const url = env[TEST_DATABASE_URL];
   if (!url) return { url: null };
-  const parts = destinationParts(url);
+  const parts = destinationParts(url, env);
   if (!parts) {
     throw new Error(`${TEST_DATABASE_URL} is not a connection URL that can be read, so it cannot be checked for being on this machine. Nothing was run.`);
   }
