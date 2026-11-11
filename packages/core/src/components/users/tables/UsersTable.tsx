@@ -408,8 +408,15 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
 
                     {canAct(user) ? (
                       <>
-                      {/* Role Change Submenu: a suspended user comes back only through unsuspend (the API answers 400) */}
-                      {user.role !== "suspended" && (
+                      {/* Role Change Submenu: a suspended user comes back only through unsuspend (the API answers 400).
+                          Without the developer role there is no other role to give (superadmin is never assigned through
+                          the API): the row says so instead of a submenu with only the current role */}
+                      {user.role !== "suspended" && !canGrantDeveloper && (
+                        <DropdownMenuItem disabled title={t('actions.roleChangeDeveloperOnly')} data-cy={`superadmin-user-role-restricted-${user.id}`}>
+                          {t('actions.roleChangeDeveloperOnly')}
+                        </DropdownMenuItem>
+                      )}
+                      {user.role !== "suspended" && canGrantDeveloper && (
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
                           <Edit className="mr-2 h-4 w-4" />
@@ -423,11 +430,9 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                             <DropdownMenuRadioItem value="member">
                               {tPage('roles.member')}
                             </DropdownMenuRadioItem>
-                            {(canGrantDeveloper || user.role === "developer") && (
-                              <DropdownMenuRadioItem value="developer">
-                                {tPage('roles.developer')}
-                              </DropdownMenuRadioItem>
-                            )}
+                            <DropdownMenuRadioItem value="developer">
+                              {tPage('roles.developer')}
+                            </DropdownMenuRadioItem>
                           </DropdownMenuRadioGroup>
                         </DropdownMenuSubContent>
                       </DropdownMenuSub>

@@ -99,6 +99,7 @@
       "revokeAdmin": "Révoquer admin",
       "restrictedTarget": "Seul un développeur peut modifier ce compte",
       "ownAccount": "Vous ne pouvez pas modifier votre propre compte ici",
+      "roleChangeDeveloperOnly": "Seul un développeur peut changer les rôles",
       "demoteToMember": "Rétrograder en membre",
       "deleteUser": "Supprimer l'utilisateur",
       "changeRole": "Changer le rôle",

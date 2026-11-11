@@ -29,8 +29,17 @@ it.each([['developer', 1], ['superadmin', 0]] as const)('as a %s, the developer 
   expect(screen.queryAllByText('Developer')).toHaveLength(offered)
 })
 
+// A superadmin has no role to give (member is the only one, and superadmin is never assigned through the API): the row
+// says that only a developer changes roles, not a Change Role submenu with only the current role in it (#433)
+it.each([['superadmin', false], ['developer', true]] as const)('as a %s, a member row offers Change Role: %s', (r, offered) => {
+  role = r
+  render(<UsersTable users={[user('m', 'member')] as never} />)
+  expect(screen.queryAllByText('Change Role')).toHaveLength(offered ? 1 : 0)
+  expect(screen.queryAllByText('Only a developer can change roles')).toHaveLength(offered ? 0 : 1)
+})
+
 describe('actions on a row follow the API rule (canActOnUser)', () => {
-  const menu = ['Change Role', 'Verify Email', 'Suspend User', 'Delete User']
+  const menu = ['Verify Email', 'Suspend User', 'Delete User']
   const unverified = (id: string, r: string) => ({ ...user(id, r), emailVerified: false })
 
   it.each([
