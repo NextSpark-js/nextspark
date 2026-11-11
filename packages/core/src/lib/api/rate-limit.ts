@@ -89,7 +89,9 @@ export function apiKeyRateLimitResponse(request: Request, auth: ApiKeyAuth): Nex
   }
   if (result.allowed) return null;
   const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
-  return NextResponse.json(
+  // With core's CORS for the request: the route returns this as it is, often without withRateLimitTier around it,
+  // and a browser from another origin would otherwise see a CORS error instead of the 429 (#432)
+  return withCors(NextResponse.json(
     {
       success: false,
       error: 'Rate limit exceeded',
@@ -106,7 +108,7 @@ export function apiKeyRateLimitResponse(request: Request, auth: ApiKeyAuth): Nex
         'Retry-After': retryAfter.toString()
       }
     }
-  );
+  ), request);
 }
 
 /**
@@ -208,7 +210,7 @@ export function applyRateLimit(
   const rateLimit = checkRateLimit(keyId, rateLimits.requests, rateLimits.windowMs);
   
   if (!rateLimit.allowed) {
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       { 
         success: false,
         error: 'Rate limit exceeded',
@@ -230,7 +232,7 @@ export function applyRateLimit(
           'Retry-After': Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString()
         }
       }
-    );
+    ), request);
   }
   
   return null; // No rate limit hit

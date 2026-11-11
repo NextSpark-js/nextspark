@@ -197,7 +197,9 @@ plugin dispatchers did up to `0.1.0-beta.191`:
 
 The counters are per client address and tier, shared with every other route in that tier. A blocked request gets
 `429` with `Retry-After` and the `X-RateLimit-*` headers. The default only limits: it adds no CORS headers and no
-origin check, so a route keeps what it does about those itself.
+origin check, so a route keeps what it does about those itself. The 429 of the per-API-key limit, which a route returns
+when `authenticateRequest` or `validateAndAuthenticate*Request` reports a key over its limit, is the exception: it carries
+core's CORS headers for the request, so a browser on another origin reads the 429 instead of a CORS error.
 
 **Choose a tier for a method** by wrapping it yourself with `withRateLimitTier`, imported from
 `@nextsparkjs/core/lib/api/rate-limit` (or `@nextsparkjs/core/lib/api`). The host leaves that method alone when its
