@@ -18,11 +18,12 @@ import { canAccessUser, hasAdminPermission } from '@nextsparkjs/core/lib/api/aut
 import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import * as z from 'zod';
 
+import { updateProfileSchema } from '@nextsparkjs/core/lib/users/schema';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+
 // The last superadmin is never demoted or deleted (guardLastSuperadmin), as in /api/superadmin/users/:id
 const lastSuperadminError = () =>
   createApiError('Cannot demote, suspend or delete the last superadmin. Make another user a superadmin first', 409, null, 'LAST_SUPERADMIN');
-import { updateProfileSchema } from '@nextsparkjs/core/lib/users/schema';
-import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 // Only the profile fields this route stores; the schema also holds name, country and timezone, for the actions
 const updateUserSchema = updateProfileSchema.pick({ firstName: true, lastName: true, language: true }).extend({
