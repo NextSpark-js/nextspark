@@ -2,9 +2,9 @@
 -- 045 · The migration bookkeeping tables are for the migration role only
 -- ============================================================================
 -- _migrations, _content_migrations and _entity_migrations record what db:migrate has run. Only the migration
--- role (their owner) reads or writes them. 022 grants SELECT, INSERT, UPDATE and DELETE on every table of the
--- schema to nextspark_app, and a managed host can grant to authenticated and anon by default, so until now the
--- runtime roles could read and change them.
+-- role (their owner) reads or writes them, so the runtime roles need no access to them. This takes back what
+-- the blanket grants of 022 (to nextspark_app) and a managed host's default privileges (to authenticated and
+-- anon) give a table.
 --
 -- This enables row-level security on each (no policy, so nothing is visible to a role that is subject to it; no
 -- FORCE, so the owner that runs the migrations is not) and revokes every privilege on the table, and on its id
@@ -33,10 +33,10 @@ BEGIN
       FOREACH runtime_role IN ARRAY ARRAY['nextspark_app', 'authenticated', 'anon'] LOOP
         CONTINUE WHEN NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = runtime_role);
         IF has_table_privilege(runtime_role, ledger_oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER') THEN
-          EXECUTE format('REVOKE ALL ON TABLE %s FROM %I', ledger_oid, runtime_role);
+          EXECUTE 'REVOKE ALL ON TABLE ' || ledger_oid || ' FROM ' || quote_ident(runtime_role);
         END IF;
         IF ledger_sequence IS NOT NULL AND has_sequence_privilege(runtime_role, ledger_sequence, 'USAGE, SELECT, UPDATE') THEN
-          EXECUTE format('REVOKE ALL ON SEQUENCE %s FROM %I', ledger_sequence, runtime_role);
+          EXECUTE 'REVOKE ALL ON SEQUENCE ' || ledger_sequence || ' FROM ' || quote_ident(runtime_role);
         END IF;
       END LOOP;
     EXCEPTION WHEN insufficient_privilege THEN

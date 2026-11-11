@@ -104,10 +104,10 @@ export async function lockdownLedgers(client) {
             FOREACH runtime_role IN ARRAY ${list(RUNTIME_ROLES)} LOOP
               CONTINUE WHEN NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = runtime_role);
               IF has_table_privilege(runtime_role, ledger_oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER') THEN
-                EXECUTE format('REVOKE ALL ON TABLE %s FROM %I', ledger_oid, runtime_role);
+                EXECUTE 'REVOKE ALL ON TABLE ' || ledger_oid || ' FROM ' || quote_ident(runtime_role);
               END IF;
               IF ledger_sequence IS NOT NULL AND has_sequence_privilege(runtime_role, ledger_sequence, 'USAGE, SELECT, UPDATE') THEN
-                EXECUTE format('REVOKE ALL ON SEQUENCE %s FROM %I', ledger_sequence, runtime_role);
+                EXECUTE 'REVOKE ALL ON SEQUENCE ' || ledger_sequence || ' FROM ' || quote_ident(runtime_role);
               END IF;
             END LOOP;
           EXCEPTION WHEN insufficient_privilege THEN
