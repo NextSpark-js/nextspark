@@ -16,6 +16,7 @@ import { checkDatabase } from './checks/database.js'
 import { checkAuthSchema } from './checks/auth-schema.js'
 import { checkRlsRuntime } from './checks/rls-runtime.js'
 import { checkAppRole } from './checks/app-role.js'
+import { checkMigrationLedger } from './checks/migration-ledger.js'
 import { checkImports } from './checks/imports.js'
 import { checkDuplicateDependencies, checkZodBelowCore } from './checks/lockfile.js'
 import { checkQueryClients } from './checks/query-client.js'
@@ -116,6 +117,7 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'Auth schema', fn: () => checkAuthSchema() },
     { name: 'Row-level security', fn: () => checkRlsRuntime() },
     { name: 'App role', fn: () => checkAppRole() },
+    { name: 'Migrations', fn: () => checkMigrationLedger() },
     { name: 'Imports', fn: checkImports },
     { name: 'Duplicates', fn: checkDuplicateDependencies },
     { name: 'Zod', fn: checkZodBelowCore },

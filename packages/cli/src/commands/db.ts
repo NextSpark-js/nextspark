@@ -50,10 +50,27 @@ export function resolveDbEnv(
   return env;
 }
 
+/** What db:migrate and db:seed take (the commander option names). */
+export interface DbRunOptions {
+  envFile?: boolean;
+  legacyTheme?: string;
+  strict?: boolean;
+}
+
+/** The arguments the migration runner (scripts/db/run-migrations.mjs) takes for these options. */
+export function runnerArguments(options: DbRunOptions & { sampleData?: boolean }): string[] {
+  return [
+    ...(options.sampleData ? ['--sample-data'] : []),
+    ...(options.envFile === false ? ['--no-env-file'] : []),
+    ...(options.legacyTheme ? ['--legacy-theme', options.legacyTheme] : []),
+    ...(options.strict ? ['--strict'] : []),
+  ];
+}
+
 /**
  * Run database migrations
  */
-export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?: boolean; legacyTheme?: string } = {}): Promise<void> {
+export async function dbMigrateCommand(options: DbRunOptions & { sampleData?: boolean } = {}): Promise<void> {
   const spinner = ora('Preparing to run migrations...').start();
 
   try {
@@ -83,12 +100,7 @@ export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?
 
     spinner.start('Running database migrations...');
 
-    const migrateProcess = spawn('node', [
-      migrationsScript,
-      ...(options.sampleData ? ['--sample-data'] : []),
-      ...(options.envFile === false ? ['--no-env-file'] : []),
-      ...(options.legacyTheme ? ['--legacy-theme', options.legacyTheme] : []),
-    ], {
+    const migrateProcess = spawn('node', [migrationsScript, ...runnerArguments(options)], {
       cwd: projectRoot,
       stdio: 'inherit',
       env: {
@@ -125,11 +137,11 @@ export async function dbMigrateCommand(options: { sampleData?: boolean; envFile?
  * Run the migrations and apply the sample data (development only).
  * The migration script refuses the sample data when NODE_ENV is production.
  */
-export async function dbSeedCommand(options: { envFile?: boolean; legacyTheme?: string } = {}): Promise<void> {
+export async function dbSeedCommand(options: DbRunOptions = {}): Promise<void> {
   console.log(chalk.cyan('ℹ️  Running the migrations with the sample data (development only; never applied when NODE_ENV is production)...'));
   console.log(chalk.yellow('   Never use a database seeded this way in production: its sample accounts share a documented password.\n'));
 
-  await dbMigrateCommand({ sampleData: true, envFile: options.envFile, legacyTheme: options.legacyTheme });
+  await dbMigrateCommand({ ...options, sampleData: true });
 }
 
 /**

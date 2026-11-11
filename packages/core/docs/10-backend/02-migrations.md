@@ -93,7 +93,7 @@ Migrations follow a strict naming pattern:
 **Rules:**
 - Always use sequential numbers with leading zeros (001, 002, 003...)
 - Use descriptive snake_case names
-- Never change filenames after execution
+- Never change filenames after execution (or update their records in the ledger when you do, see [Editing or renaming an applied migration](#editing-or-renaming-an-applied-migration))
 - Never delete executed migration files
 
 ### Order of Execution
@@ -102,7 +102,7 @@ Migrations follow a strict naming pattern:
 
 **Numbering a project migration:** list the numbers already used in `migrations/` and in every `entities/*/migrations/` (and in the plugins you enable), and take the next one up. The width does not matter (`151`, `0152` and `1001` order as 151, 152 and 1001), but keep one width within a project so file listings stay readable. Core and the project templates use three digits.
 
-The ledgers record an applied migration by file name, never by position, so a file added with a number lower than one already applied still runs (once, on the next `db:migrate`) and an applied one is never run again. Give a new migration a number above the highest applied one, because a migration that depends on later schema changes would run against the database as it is, not as the number implies.
+The ledgers record an applied migration by file name, never by position, so a file added with a number lower than one already applied still runs (once, on the next `db:migrate`) and an applied one is never run again. Because they record the name, renaming an applied file needs its record renamed too: see [Editing or renaming an applied migration](#editing-or-renaming-an-applied-migration). Give a new migration a number above the highest applied one, because a migration that depends on later schema changes would run against the database as it is, not as the number implies.
 
 ---
 
@@ -329,7 +329,8 @@ The system maintains three tracking tables:
 CREATE TABLE "_migrations" (
   id SERIAL PRIMARY KEY,
   filename TEXT UNIQUE NOT NULL,
-  executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  content_hash TEXT               -- SHA-256 of the file as it ran
 );
 ```
 
@@ -341,6 +342,7 @@ CREATE TABLE "_content_migrations" (
   source_name TEXT NOT NULL,      -- Theme/plugin name
   filename TEXT NOT NULL,
   executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  content_hash TEXT,
   UNIQUE(source_type, source_name, filename)
 );
 ```
@@ -354,9 +356,12 @@ CREATE TABLE "_entity_migrations" (
   source_name TEXT NOT NULL,      -- Theme/plugin name
   filename TEXT NOT NULL,
   executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  content_hash TEXT,
   UNIQUE(entity_name, filename)
 );
 ```
+
+`content_hash` is added to a ledger that lacks it the first time `db:migrate` runs, and is the reason the next two sections can tell an edit from a rename. See [Editing or renaming an applied migration](#editing-or-renaming-an-applied-migration).
 
 ### One Transaction per File
 
@@ -376,6 +381,30 @@ Limits:
   Such a file runs as it is and is recorded only after it has run, so a run stopped in between starts it over: it has to be safe to run again (`IF NOT EXISTS`, no `DROP … CASCADE` of tables that hold data).
 - Atomic is per file, not per run: files that ran before a failure stay applied and recorded.
 - Nothing undoes a migration that ran to the end. Take a backup before `db:migrate` when you need to be able to return to the data as it was before it (see [Rollback Strategies](#rollback-strategies)).
+
+### Editing or renaming an applied migration
+
+The ledgers record a file by name, so a file that already ran is never run again. Editing it (a new `ALTER`, a new constraint) changes the databases created from then on and none that ran the earlier version: the environments drift apart silently, and the first symptom is often a later migration that depends on the edit failing only on the older databases. `db:migrate` stores the SHA-256 of each file in `content_hash` when it applies it (line endings do not count), and compares it on every run, before anything is applied.
+
+**An edited file warns.** `db:migrate` lists each file whose content differs from the one that ran, with the database it checked, and goes on: everything pending is still applied correctly, and an edit is often a comment or formatting that a database does not see, so stopping every run over it would only teach people to skip the check. The warning is printed again as the last thing of the output, and `nextspark doctor` reports it too (`NS_MIGRATION_EDITED`). To make it fail instead, run `pnpm db:migrate --strict`: an edited file then stops the run before it applies anything. Use it in the pipeline that deploys, where nobody reads the output.
+
+What to do about an edited file:
+
+- Put the change in a **new** migration (the next number), and restore the old file to what ran.
+- If the edit changes nothing a database sees, accept the file as it is now with the statement the warning prints, run by a person on that database, for example `UPDATE "_migrations" SET content_hash = NULL WHERE filename IN ('017_x.sql');`. The next `db:migrate` records the hash of the file as it is.
+
+A ledger written before `content_hash` existed, or a row with no hash, is not compared: the first run fills the hash in from the files as they are, trusting them to be what ran. Only an edit made after that run is noticed. A ledger table the migration role cannot alter (it does not own it) is skipped with a warning, and its migrations are not checked.
+
+**A renamed file stops the run.** A recorded file name that is no longer on disk, next to a file with the same content and no record, is a rename, and `db:migrate` would apply that file a second time: it fails halfway on `CREATE TABLE`, or repeats the inserts of a sample-data file. It stops before running anything, names both files and prints the `UPDATE` that records the new name:
+
+```sql
+UPDATE "_content_migrations" SET filename = '001_schema.sql'
+  WHERE source_type = 'project' AND source_name = 'app' AND filename = '999_schema.sql';
+```
+
+Run it as a person, on that database, and run `db:migrate` again. If the new file is meant to run again as a new migration, delete the old record instead. `doctor` reports it as `NS_MIGRATION_RENAMED`. A file renamed **and** edited has no match, so it is not found.
+
+**Why this comes up with the order.** Files run in numeric order (see [Order of Execution](#order-of-execution)), which differs from the order of their names as text. A project that numbered its files for the old order can find a file, usually the initial schema, running after migrations that need it on a **new** database, and fixes that by renaming it to the number it needs. The ledger of an existing database still holds the old name, so without the `UPDATE` above the runner would apply the schema again: this is the rename the check finds. Renaming a file is the one change to an applied migration that is safe, as long as its record changes with it.
 
 ---
 
@@ -787,6 +816,10 @@ WHERE filename = 'failed_migration.sql';
 -- Re-run
 pnpm db:migrate
 ```
+
+### An Applied Migration Was Edited
+
+`db:migrate` printed `N migration file(s) changed after they were applied`. The edit did not reach this database. See [Editing or renaming an applied migration](#editing-or-renaming-an-applied-migration) for the two ways out.
 
 ### Entity Migrations Not Running
 

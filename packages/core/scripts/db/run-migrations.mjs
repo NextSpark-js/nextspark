@@ -4,6 +4,8 @@ import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runAndRec
 import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
 import { compareMigrations } from './migration-order.mjs';
+import { collectAllMigrations, collectCoreMigrations } from './migration-files.mjs';
+import { ledgerFiles, ledgerFindings, ensureHashColumns, editedReport, renamedReport, migrationHash, HASH_COLUMN } from './migration-ledger.mjs';
 import { setProjectEnv } from './ssl-config.mjs';
 import { describeDestination, rememberSecrets, scrub } from './destination.mjs';
 import { nestedSlugsSetting } from './nested-slugs.mjs';
@@ -38,6 +40,8 @@ if (LEGACY_THEME_FLAG !== null && (LEGACY_THEME_FLAG === '' || LEGACY_THEME_FLAG
   console.error('❌ --legacy-theme needs the name of the theme the project was migrated from: --legacy-theme <theme>');
   process.exit(1);
 }
+// `--strict`: an applied migration that was edited stops the run before anything is applied, instead of a warning (#428)
+const STRICT = process.argv.includes('--strict');
 // What the .env says about NODE_ENV and the sample-data switch (see sample-data.mjs)
 const fileEnv = {};
 
@@ -102,6 +106,41 @@ setProjectEnv(fileEnv);
 
 // The role steps 022 could not run, to say again at the very end of the output
 const roleSetupWarnings = [];
+// The ledgers that have the content_hash column: a migration recorded in one of them is recorded with its hash (#428)
+let hashedLedgers = new Set();
+// What the run said about migration files edited after they were applied, to say again at the very end
+let editedWarning = null;
+const reportedFailures = new Set();
+// Keeps the ledgers that have the column, and says once which could not get it (the role does not own the table)
+function useHashColumns({ hashed, failures }) {
+  hashedLedgers = hashed;
+  for (const { table, message } of failures) {
+    if (reportedFailures.has(table)) continue;
+    reportedFailures.add(table);
+    console.log(`⚠️  Could not add ${HASH_COLUMN} to "${table}" (${scrub(message)}): edits to the migrations it records will not be noticed.\n`);
+  }
+}
+/** The row that records `sql` as run in `table`: the hash goes along where the ledger has the column. */
+const withHash = (table, row, sql) => (hashedLedgers.has(table) ? { ...row, [HASH_COLUMN]: migrationHash(sql) } : row);
+
+// The recorded migrations against the files, before anything runs. Ledgers written by an earlier version have no
+// hash: it is filled in here, from the files as they are. An edited file only warns (see ledgerWarnings): the run
+// is still right for everything that is pending, and an edit is often a comment, so stopping every deploy over one
+// would teach people to bypass the check; --strict stops. A renamed file always stops, because the run would
+// apply it again, which duplicates its effects or fails halfway through.
+async function checkRecordedMigrations(client) {
+  const files = ledgerFiles({ core: collectCoreMigrations(packageRoot), migrations: MIGRATIONS });
+  const { edited, renamed, hashed, failures } = await ledgerFindings(client, files, { write: true });
+  useHashColumns({ hashed, failures });
+  const destination = describeDestination(MIGRATION_URL);
+  const renamedText = renamedReport(renamed, destination);
+  if (renamedText) throw new Error(`${renamedText}\nNothing was run.`);
+  editedWarning = editedReport(edited, destination);
+  if (editedWarning) {
+    if (STRICT) throw new Error(`${editedWarning}\n--strict: nothing was run.`);
+    console.log(`⚠️  ${editedWarning}\n`);
+  }
+}
 
 async function runMigrations() {
   const client = migrationClient(MIGRATION_URL, TIME_LIMIT);
@@ -112,6 +151,7 @@ async function runMigrations() {
 
     // Before anything runs: an upgrade whose theme cannot be told stops here
     LEGACY_THEME = await legacyTheme(client);
+    await checkRecordedMigrations(client);
 
     // 029_sample_accounts_outside_development.sql reads it: a run that applies sample data keeps the sample accounts
     await client.query("SELECT set_config('nextspark.seed_sample_data', $1, false)", [SAMPLE_DATA.apply ? 'on' : 'off']);
@@ -137,6 +177,7 @@ async function runMigrations() {
         executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    useHashColumns(await ensureHashColumns(client));
     
     // Get list of migration files (from package, not project root)
     const migrationsDir = path.join(packageRoot, 'migrations');
@@ -170,7 +211,7 @@ async function runMigrations() {
       try {
         // Runs the file and records it in one transaction (see runAndRecordMigration)
         await runAndRecordMigration(client, {
-          file, sql, table: '_migrations', row: { filename: file }, limit: TIME_LIMIT, connectionString: MIGRATION_URL,
+          file, sql, table: '_migrations', row: withHash('_migrations', { filename: file }, sql), limit: TIME_LIMIT, connectionString: MIGRATION_URL,
         });
         
         console.log(`✅ Successfully executed ${file}\n`);
@@ -201,146 +242,6 @@ async function runMigrations() {
 // Read enabled local plugins from nextspark.config.ts.
 async function getActivePlugins() {
   return projectConfig.plugins;
-}
-
-// Helper: Collect all migration files from a directory (theme/plugin level)
-function collectContentMigrations(migrationsPath, sourceType, sourceName) {
-  if (!fs.existsSync(migrationsPath)) return [];
-
-  const files = fs.readdirSync(migrationsPath)
-    .filter(f => f.endsWith('.sql'))
-    .sort(compareMigrations);
-
-  return files.map(file => ({
-    type: 'content',
-    sourceType,
-    sourceName,
-    filename: file,
-    fullPath: path.join(migrationsPath, file),
-    isSampleData: isSampleDataMigration(file, fs.readFileSync(path.join(migrationsPath, file), 'utf8'))
-  }));
-}
-
-// `nextspark migrate --rename-entity-slugs` renames an entity directory and writes the old name in
-// <entity>/.renamed-from as `old -> new`, so the rows recorded under the old name are taken over (see
-// executeEntityMigration). It counts only in the directory it names: a copy of that directory under another
-// name, or a directory renamed again, ignores it.
-function readRenamedFrom(entityPath, entityName) {
-  try {
-    const match = /^([a-z][a-z0-9_-]*)\s*->\s*([a-z][a-z0-9_-]*)$/.exec(fs.readFileSync(path.join(entityPath, '.renamed-from'), 'utf8').trim());
-    return match && match[2] === entityName && match[1] !== entityName ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-// Helper: Collect all entity migration files recursively
-function collectEntityMigrations(baseDir, sourceType, sourceName, depth = 0) {
-  const migrations = [];
-
-  if (!fs.existsSync(baseDir)) return migrations;
-
-  const entries = fs.readdirSync(baseDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-
-    const entityPath = path.join(baseDir, entry.name);
-    const entityName = entry.name;
-    const renamedFrom = readRenamedFrom(entityPath, entityName);
-
-    // Check for migrations in this entity
-    const migrationsPath = path.join(entityPath, 'migrations');
-    if (fs.existsSync(migrationsPath)) {
-      const files = fs.readdirSync(migrationsPath)
-        .filter(f => f.endsWith('.sql'))
-        .sort(compareMigrations);
-
-      for (const file of files) {
-        migrations.push({
-          type: 'entity',
-          sourceType,
-          sourceName,
-          entityName,
-          renamedFrom,
-          filename: file,
-          fullPath: path.join(migrationsPath, file),
-          isSampleData: isSampleDataMigration(file, fs.readFileSync(path.join(migrationsPath, file), 'utf8')),
-          depth
-        });
-      }
-    }
-
-    // Check for children entities
-    const possibleChildrenDirs = ['children', 'childs'];
-    for (const childDirName of possibleChildrenDirs) {
-      const childrenDir = path.join(entityPath, childDirName);
-      if (fs.existsSync(childrenDir)) {
-        const childMigrations = collectEntityMigrations(childrenDir, sourceType, sourceName, depth + 1);
-        migrations.push(...childMigrations);
-        break;
-      }
-    }
-  }
-
-  return migrations;
-}
-
-// Every project and plugin migration, in the order found
-function collectAllMigrations(activePlugins) {
-  const allContentMigrations = [];
-  const allEntityMigrations = [];
-
-  const projectMigrationsDir = path.join(projectRoot, 'migrations');
-  allContentMigrations.push(...collectContentMigrations(projectMigrationsDir, 'project', PROJECT_NAME));
-
-  // Collect project entity migrations
-  const projectEntitiesDir = path.join(projectRoot, 'entities');
-  allEntityMigrations.push(...collectEntityMigrations(projectEntitiesDir, 'project', PROJECT_NAME));
-
-  // Collect project settings migrations (settings/<area>/migrations/)
-  const projectSettingsDir = path.join(projectRoot, 'settings');
-  if (fs.existsSync(projectSettingsDir)) {
-    const settingAreas = fs.readdirSync(projectSettingsDir, { withFileTypes: true })
-      .filter(e => e.isDirectory()).map(e => e.name);
-    for (const area of settingAreas) {
-      const settingsMigrationsDir = path.join(projectSettingsDir, area, 'migrations');
-      allContentMigrations.push(...collectContentMigrations(
-        settingsMigrationsDir, 'project-settings', `${PROJECT_NAME}/settings/${area}`
-      ));
-    }
-  }
-
-  // Collect plugin migrations
-  const pluginsDir = path.join(projectRoot, 'plugins');
-  if (fs.existsSync(pluginsDir) && activePlugins.length > 0) {
-    for (const pluginName of activePlugins) {
-      const pluginDir = path.join(pluginsDir, pluginName);
-
-      // Plugin-level migrations
-      const pluginMigrationsDir = path.join(pluginDir, 'migrations');
-      allContentMigrations.push(...collectContentMigrations(pluginMigrationsDir, 'plugin', pluginName));
-
-      // Plugin entity migrations
-      const pluginEntitiesDir = path.join(pluginDir, 'entities');
-      allEntityMigrations.push(...collectEntityMigrations(pluginEntitiesDir, 'plugin', pluginName));
-
-      // Plugin settings migrations (settings/<area>/migrations/)
-      const pluginSettingsDir = path.join(pluginDir, 'settings');
-      if (fs.existsSync(pluginSettingsDir)) {
-        const settingAreas = fs.readdirSync(pluginSettingsDir, { withFileTypes: true })
-          .filter(e => e.isDirectory()).map(e => e.name);
-        for (const area of settingAreas) {
-          const settingsMigrationsDir = path.join(pluginSettingsDir, area, 'migrations');
-          allContentMigrations.push(...collectContentMigrations(
-            settingsMigrationsDir, 'plugin-settings', `${pluginName}/settings/${area}`
-          ));
-        }
-      }
-    }
-  }
-
-  return { allContentMigrations, allEntityMigrations };
 }
 
 // Where 0.1.0-beta.184 and earlier recorded a project migration, while it lived in
@@ -453,7 +354,7 @@ async function executeContentMigration(client, migration) {
     file: filename,
     sql,
     table: '_content_migrations',
-    row: { source_type: sourceType, source_name: sourceName, filename },
+    row: withHash('_content_migrations', { source_type: sourceType, source_name: sourceName, filename }, sql),
     limit: TIME_LIMIT,
     connectionString: MIGRATION_URL,
   });
@@ -519,7 +420,7 @@ async function executeEntityMigration(client, migration) {
     file: filename,
     sql,
     table: '_entity_migrations',
-    row: { entity_name: entityName, source_type: sourceType, source_name: sourceName, filename },
+    row: withHash('_entity_migrations', { entity_name: entityName, source_type: sourceType, source_name: sourceName, filename }, sql),
     limit: TIME_LIMIT,
     connectionString: MIGRATION_URL,
   });
@@ -600,6 +501,8 @@ async function runEntityMigrations() {
         END IF;
       END $$;
     `);
+
+    useHashColumns(await ensureHashColumns(client));
 
     // Get active plugins
     const activePlugins = await getActivePlugins();
@@ -770,6 +673,8 @@ async function runAllMigrations() {
   await checkAuthSchema();
 
   console.log("\n🎉 All migrations completed successfully!");
+  // The warning about edited files is at the top of a long output: say it again as the last thing printed
+  if (editedWarning) console.log(`\n⚠️  ${editedWarning}`);
   // 022 goes on after a role step it cannot run, in the middle of a long output: say it again as the last thing printed
   if (roleSetupWarnings.length > 0) {
     console.log("\n⚠️  Needs a superuser, by hand (022 could not run it):");
@@ -797,7 +702,7 @@ async function checkAuthSchema() {
 
 let MIGRATIONS;
 try {
-  MIGRATIONS = collectAllMigrations(projectConfig.plugins);
+  MIGRATIONS = collectAllMigrations({ projectRoot, projectName: PROJECT_NAME, plugins: projectConfig.plugins });
 } catch (error) {
   console.error(`❌ ${error.message}`);
   process.exit(1);

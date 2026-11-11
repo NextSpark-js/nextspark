@@ -27,7 +27,7 @@ import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
 import { addMobileCommand } from './commands/add-mobile.js';
 import { doctorCommand } from './commands/doctor.js';
-import { dbMigrateCommand, dbSeedCommand, dbDemoResetCommand } from './commands/db.js';
+import { dbMigrateCommand, dbSeedCommand, dbDemoResetCommand, type DbRunOptions } from './commands/db.js';
 import { setupAICommand } from './commands/setup-ai.js';
 import { syncAICommand } from './commands/sync-ai.js';
 import { skillsGetCommand, skillsListCommand } from './commands/skills.js';
@@ -205,39 +205,37 @@ program
   .addOption(new Option('--simulation-nonce <nonce>').hideHelp())
   .action(migrateCommand);
 
+// Options db:migrate and db:seed share, with their aliases
+const withMigrateOptions = (command: Command) => command
+  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
+  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
+  .option('--strict', 'Stop before running anything when a migration file that was already applied has been edited (otherwise it only warns)');
+
 // Database commands
 const db = program
   .command('db')
   .description('Database management commands');
 
-db
+withMigrateOptions(db
   .command('migrate')
-  .description('Run database migrations')
-  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
-  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbMigrateCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
+  .description('Run database migrations'))
+  .action((opts: DbRunOptions) => dbMigrateCommand(opts));
 
-db
+withMigrateOptions(db
   .command('seed')
-  .description('Run migrations with the sample data (development only)')
-  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
-  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbSeedCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
+  .description('Run migrations with the sample data (development only)'))
+  .action((opts: DbRunOptions) => dbSeedCommand(opts));
 
 // Shorthand aliases for database commands
-program
+withMigrateOptions(program
   .command('db:migrate')
-  .description('Run database migrations (alias)')
-  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
-  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbMigrateCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
+  .description('Run database migrations (alias)'))
+  .action((opts: DbRunOptions) => dbMigrateCommand(opts));
 
-program
+withMigrateOptions(program
   .command('db:seed')
-  .description('Run migrations with the sample data, development only (alias)')
-  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
-  .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
-  .action((opts: { envFile: boolean; legacyTheme?: string }) => dbSeedCommand({ envFile: opts.envFile, legacyTheme: opts.legacyTheme }));
+  .description('Run migrations with the sample data, development only (alias)'))
+  .action((opts: DbRunOptions) => dbSeedCommand(opts));
 
 program
   .command('db:demo-reset')
