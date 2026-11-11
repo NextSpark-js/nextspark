@@ -6,7 +6,9 @@ type Translate = (key: string, values?: Record<string, number>) => string
  */
 export function rateLimitedMessage(response: Response, t: Translate): string | null {
   if (response.status !== 429) return null
-  const seconds = Number(response.headers.get('Retry-After'))
+  // Retry-After is a number of seconds or an HTTP date
+  const header = response.headers.get('Retry-After')?.trim() ?? ''
+  const seconds = /^\d+$/.test(header) ? Number(header) : (Date.parse(header) - Date.now()) / 1000
   return t('toast.rateLimited', { minutes: seconds > 0 ? Math.ceil(seconds / 60) : 1 })
 }
 

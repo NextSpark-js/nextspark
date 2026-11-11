@@ -26,6 +26,13 @@ test('the pages read the same wait for a 429, and nothing for another status', (
   expect(rateLimitedMessage(json(500, {}), t)).toBeNull()
 })
 
+test('a Retry-After given as an HTTP date is read as the time until it', async () => {
+  const at = new Date(Date.now() + 5 * 60_000 + 30_000).toUTCString()
+  const response = json(429, { error: 'Rate limit exceeded' }, { 'Retry-After': at })
+  // toUTCString drops the milliseconds: 5 min 29-30 s ahead, rounded up
+  expect(await actionErrorMessage(response, t, 'Action failed')).toBe('Too many requests. Try again in 6 minutes.')
+})
+
 test('the refusal to remove the last superadmin reads the catalog (#433)', async () => {
   const response = json(409, { error: 'Cannot demote, suspend or delete the last superadmin', code: 'LAST_SUPERADMIN' })
   expect(await actionErrorMessage(response, t, 'Action failed')).toBe('The last superadmin cannot be demoted, suspended or deleted. Make another user a superadmin first.')
