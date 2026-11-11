@@ -77,7 +77,7 @@ And I should find the security nav link
 And I should find the password nav link
 And I should find the notifications nav link
 And I should find the api-keys nav link
-And I should find the billing nav link
+And I should find the billing nav link, unless nextspark.config.ts sets features.billing to false
 And I should find the teams nav link
 ```
 

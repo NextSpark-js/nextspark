@@ -104,8 +104,13 @@ describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors', '@set
       cy.get(settings.selectors.sidebarNavItem('api-keys')).should('exist')
     })
 
-    it('should find billing nav item', () => {
-      cy.get(settings.selectors.sidebarNavItem('billing')).should('exist')
+    // With `features: { billing: false }` in nextspark.config.ts (the wizard's default) there is no billing page,
+    // so the menu has no entry for it: the test applies only with billing on (the spec runs from tests/)
+    it('should find billing nav item', function () {
+      cy.readFile('../nextspark.config.ts').then((config: string) => {
+        if (/billing\s*:\s*false/.test(config)) this.skip()
+        cy.get(settings.selectors.sidebarNavItem('billing')).should('exist')
+      })
     })
 
     it('should find teams nav item', () => {
