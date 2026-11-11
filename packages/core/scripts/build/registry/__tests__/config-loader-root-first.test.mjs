@@ -16,7 +16,7 @@ test('loads defineConfig and applies root-first defaults', async () => {
     assert.deepEqual(loadNextSparkConfigSync(root), {
       plugins: ['local'],
       apiDir: 'api',
-      features: { billing: true, teams: true, superadmin: true, aiChat: true },
+      features: { billing: true, superadmin: true, aiChat: true },
     })
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -29,6 +29,23 @@ test('rejects unsupported selector fields before discovery', async () => {
   try {
     assert.throws(() => loadNextSparkConfigSync(root), /project is not a supported/)
   } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('prints the warning of a flag that is not read, once however many times the config is loaded (#425)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-config-'))
+  await writeFile(join(root, 'nextspark.config.ts'), 'export default { features: { teams: false } }\n')
+  const warnings = []
+  const warn = console.warn
+  console.warn = message => warnings.push(message)
+  try {
+    loadNextSparkConfigSync(root)
+    loadNextSparkConfigSync(root)
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /^\[nextspark\] nextspark\.config\.ts: features\.teams is not read/)
+  } finally {
+    console.warn = warn
     await rm(root, { recursive: true, force: true })
   }
 })

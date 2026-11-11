@@ -10,17 +10,28 @@ describe('nextspark.config.ts source contract', () => {
     expect(result).toEqual({
       valid: true,
       errors: [],
+      warnings: [],
       config: {
         plugins: [],
         apiDir: 'api',
         features: {
           billing: true,
-          teams: true,
           superadmin: true,
           aiChat: true,
         },
       },
     })
+  })
+
+  it('accepts features.teams with a warning, and leaves it out of the resolved config (#425)', () => {
+    const result = validateNextSparkConfig({ features: { teams: false, billing: true } })
+
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+    expect(result.config.features).toEqual({ billing: true, superadmin: true, aiChat: true })
+    expect(result.warnings).toEqual([expect.stringContaining("features.teams is not read and will be removed")])
+    expect(result.warnings[0]).toContain("teams.mode: 'single-user'")
+    expect(validateNextSparkConfig({ features: { teams: 'no' } })).toEqual({ valid: false, errors: ['features.teams must be a boolean; received string.'] })
   })
 
   it('accepts local plugin names, packaged plugin names, and template provenance for the project root', () => {
@@ -37,7 +48,6 @@ describe('nextspark.config.ts source contract', () => {
     expect(result.config.plugins).toEqual(['analytics', 'billing-local', '@nextsparkjs/plugin-langchain'])
     expect(result.config.features).toEqual({
       billing: true,
-      teams: true,
       superadmin: true,
       aiChat: false,
     })

@@ -15,7 +15,6 @@ export default defineConfig({
   plugins: ['@nextsparkjs/plugin-langchain'],
   features: {
     billing: true,
-    teams: true,
     superadmin: true,
     aiChat: true,
   },

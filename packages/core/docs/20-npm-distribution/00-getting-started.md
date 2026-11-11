@@ -37,7 +37,6 @@ export default defineConfig({
   template: { name: 'starter', version: '0.1.0-beta.192' },
   features: {
     billing: true,
-    teams: true,
     superadmin: true,
     aiChat: false
   }

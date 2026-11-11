@@ -49,5 +49,13 @@ export function loadNextSparkConfigSync(projectRoot) {
   if (!validation.valid) {
     throw new Error(`Invalid nextspark.config.ts:\n- ${validation.errors.join('\n- ')}`)
   }
+  for (const warning of validation.warnings ?? []) {
+    // The config is loaded several times per generation (and on every edit by the dev watcher): each warning once
+    if (printedWarnings.has(warning)) continue
+    printedWarnings.add(warning)
+    console.warn(`[nextspark] nextspark.config.ts: ${warning}`)
+  }
   return validation.config
 }
+
+const printedWarnings = new Set()

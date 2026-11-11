@@ -7,9 +7,13 @@
 
 export interface NextSparkFeatureConfig {
   billing?: boolean
-  teams?: boolean
   superadmin?: boolean
   aiChat?: boolean
+  /**
+   * @deprecated Not read, and it will be removed (#425): the data of every project is kept per team, so team support
+   * cannot be left out. A project without team features sets `teams.mode: 'single-user'` in config/app.config.ts.
+   */
+  teams?: boolean
 }
 
 export interface NextSparkTemplateOrigin {
@@ -80,21 +84,31 @@ export interface NextSparkConfig {
   }
 }
 
+/** The feature flags that are read: the deprecated ones are left out of the resolved config. */
+export type ResolvedNextSparkFeatures = Required<Omit<NextSparkFeatureConfig, 'teams'>>
+
 export interface ResolvedNextSparkConfig extends Omit<NextSparkConfig, 'plugins' | 'features' | 'apiDir'> {
   plugins: string[]
-  features: Required<NextSparkFeatureConfig>
+  features: ResolvedNextSparkFeatures
   apiDir: string
 }
 
+/** `warnings`: settings that are accepted but have no effect (a deprecated flag); the loaders print them. */
 export type NextSparkConfigValidationResult =
-  | { valid: true; errors: []; config: ResolvedNextSparkConfig }
+  | { valid: true; errors: []; warnings: string[]; config: ResolvedNextSparkConfig }
   | { valid: false; errors: string[] }
 
-const DEFAULT_FEATURES: Required<NextSparkFeatureConfig> = {
+const DEFAULT_FEATURES: ResolvedNextSparkFeatures = {
   billing: true,
-  teams: true,
   superadmin: true,
   aiChat: true,
+}
+
+/** Flags still accepted but not read (#425): the warning that says what to do instead. */
+const DEPRECATED_FEATURES: Record<string, string> = {
+  teams:
+    "features.teams is not read and will be removed: the data of every project is kept per team, so team support cannot be left out. " +
+    "A project without team features sets teams.mode: 'single-user' in config/app.config.ts. Delete the key.",
 }
 
 const DEFAULT_API_DIR = 'api'
@@ -177,15 +191,19 @@ function validatePlugins(value: unknown, errors: string[]): void {
   })
 }
 
-function validateFeatures(value: unknown, errors: string[]): void {
+function validateFeatures(value: unknown, errors: string[], warnings: string[]): void {
   if (value === undefined) return
   if (!isRecord(value)) {
     errors.push(`features must be an object; received ${receivedType(value)}.`)
     return
   }
-  validateKnownFields(value, Object.keys(DEFAULT_FEATURES), 'features.', errors)
-  for (const field of Object.keys(DEFAULT_FEATURES)) {
+  const fields = [...Object.keys(DEFAULT_FEATURES), ...Object.keys(DEPRECATED_FEATURES)]
+  validateKnownFields(value, fields, 'features.', errors)
+  for (const field of fields) {
     validateOptionalBoolean(value[field], `features.${field}`, errors)
+  }
+  for (const [field, warning] of Object.entries(DEPRECATED_FEATURES)) {
+    if (value[field] !== undefined) warnings.push(warning)
   }
 }
 
@@ -341,13 +359,14 @@ export function validateNextSparkConfig(value: unknown): NextSparkConfigValidati
   }
 
   const errors: string[] = []
+  const warnings: string[] = []
   for (const field of Object.keys(value)) {
     if (!ROOT_FIELDS.has(field)) errors.push(`${field} is not a supported nextspark.config.ts field.`)
   }
 
   validatePlugins(value.plugins, errors)
   validateApiDir(value.apiDir, errors)
-  validateFeatures(value.features, errors)
+  validateFeatures(value.features, errors, warnings)
   validateTemplate(value.template, errors)
   validateDatabase(value.database, errors)
   validateAuth(value.auth, errors)
@@ -358,14 +377,18 @@ export function validateNextSparkConfig(value: unknown): NextSparkConfigValidati
   if (errors.length > 0) return { valid: false, errors }
 
   const config = value as NextSparkConfig
+  const features = Object.fromEntries(
+    Object.entries(DEFAULT_FEATURES).map(([field, fallback]) => [field, config.features?.[field as keyof ResolvedNextSparkFeatures] ?? fallback]),
+  ) as ResolvedNextSparkFeatures
   return {
     valid: true,
     errors: [],
+    warnings,
     config: {
       ...config,
       plugins: [...(config.plugins ?? [])],
       apiDir: config.apiDir ?? DEFAULT_API_DIR,
-      features: { ...DEFAULT_FEATURES, ...config.features },
+      features,
     },
   }
 }

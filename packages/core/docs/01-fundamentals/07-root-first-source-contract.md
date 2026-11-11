@@ -91,7 +91,7 @@ export default defineConfig({
 | `apiDir` | `string` | `'api'` | No | Directory of the project's Route Handlers, from the project root (`'routes'`, `'server/api'`). It is still served at `/api/<path>`; the generated routes, `nextspark migrate` and `prepare --check` follow it. A relative path with segments of letters, digits, `-` and `_`, not under another root directory (`app`, `public`, `node_modules`, `templates`, ...) or `api/`. See [Vercel Deployment](../14-deployment/03-vercel-deployment.md#the-projects-api-directory). |
 | `features` | object | all current flags enabled | No | Build-time feature selection. |
 | `features.billing` | `boolean` | `true` | No | Include billing contributions. |
-| `features.teams` | `boolean` | `true` | No | Include team contributions. |
+| `features.teams` | `boolean` | absent | No | Deprecated, not read; it will be removed. The data of every project is kept per team, so team support cannot be left out: a project without team features sets `teams.mode: 'single-user'` in `config/app.config.ts`. Setting the key prints a warning when the config is loaded. |
 | `features.superadmin` | `boolean` | `true` | No | Include superadmin contributions. |
 | `features.aiChat` | `boolean` | `true` | No | Include AI chat contributions. |
 | `billing.webhookExtensions` | `{ stripe?: string; polar?: string }` | absent | No | Paths (from the project root) of the modules that extend core's billing webhooks. `nextspark prepare` imports each one statically into the generated webhook route: `stripe` must export `stripeWebhookExtensions`, `polar` must export `polarWebhookExtensions`. |

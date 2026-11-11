@@ -179,7 +179,6 @@ export default defineConfig({
   // Feature flags
   features: {
     billing: true,
-    teams: true,
     superadmin: true,
     aiChat: true
   }
