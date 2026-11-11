@@ -268,6 +268,31 @@ DATABASE_URL=postgresql://user:pass@host:5432/database
 - project configured
 - Node.js installed
 
+### Dry run and expected target
+
+`db:migrate` (and `db:seed`) name the target and start applying right away, so a connection string that came from an unexpected place shows itself as migrations applied to the wrong database. Two options put a check in front of that:
+
+```bash
+# Connect, print the target and the pending files in run order, write nothing
+pnpm db:migrate --dry-run
+
+# Stop before the first statement unless the target is the one you expect
+pnpm db:migrate --expect-database app --expect-host db.example.com
+```
+
+`--dry-run` connects with the same connection a real run would use and prints `Dry run against host H, database D`, then the migrations it would apply, numbered in run order and tagged with where each comes from: core, then the project and plugin files, then the entities, and last the sample data when the run would apply it (`db:seed --dry-run`, or `--sample-data`):
+
+```text
+Pending migrations, in the order a real run applies them (3):
+    1. [core] 045_new_core_table.sql
+    2. [project app] 012_add_status.sql
+    3. [entity tasks, project app] 003_task_index.sql
+```
+
+It writes nothing: the ledger tables are not created, the `content_hash` column is not added, a row with no hash does not get one, and the session it reads on is read-only, so the server refuses any write. It reports an edited or renamed migration the same way a real run does, and exits 1 where a real run would stop there. An old database whose `"_theme_migrations"` table has not been moved yet is flagged: a real run moves its rows first, so some project or plugin file listed may be already applied.
+
+`--expect-database <name>` and `--expect-host <host>` compare the target the connection string resolved to (`MIGRATE_DATABASE_URL`, else `DATABASE_URL`, with the exported variable ahead of the `.env`) with what you wrote, case-insensitively for the host. When they differ, the run exits with a non-zero code before it connects, naming both, for example `--expect-database app: the connection points at database app_staging (expected app). Nothing was run.` They work with `--dry-run` and on `db:seed`. The message shows the host and database name only, never the user, the password or the URL. Use both in a production runbook: a dry run first, then the run with the same expected target ([Database Migrations in Production](../14-deployment/05-database-migrations-production.md)).
+
 ### Execute Migrations
 
 **Run All Migrations:**

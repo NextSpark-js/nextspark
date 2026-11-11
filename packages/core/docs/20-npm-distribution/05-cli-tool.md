@@ -107,6 +107,9 @@ Options:
 | Option | Effect |
 |---|---|
 | `--no-env-file` | Ignore the project `.env`; the connection comes only from the exported environment |
+| `--dry-run` | Connect, print the target and the pending migrations in run order, and exit without writing anything, not even the ledger tables. See [Dry run and expected target](../10-backend/02-migrations.md#dry-run-and-expected-target) |
+| `--expect-database <name>` | Stop before connecting, and before the first statement, unless the database the connection string resolved to is `<name>` |
+| `--expect-host <host>` | The same for the host (compared ignoring case) |
 | `--strict` | Stop before applying anything when a migration file that was already applied has been edited. Without it the edit is listed as a warning and the run goes on. A renamed file always stops the run. See [Editing or renaming an applied migration](../10-backend/02-migrations.md#editing-or-renaming-an-applied-migration) |
 | `--legacy-theme <theme>` | Only for the first run on a database a 0.x project used, when it recorded the project's migrations under several themes: the theme the project was migrated from. See [The database of a 0.x project](../17-updates/06-upgrade-0x-projects.md#the-database-of-a-0x-project) |
 

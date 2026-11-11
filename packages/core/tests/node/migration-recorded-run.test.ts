@@ -6,86 +6,17 @@
  *
  * The test starts a throwaway cluster with initdb and pg_ctl on a free port, and is skipped when they are not on the PATH.
  */
-import { test, before, after } from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import pg from 'pg'
-import { HAS_POSTGRES, startCluster, type ThrowawayCluster } from '../support/throwaway-postgres'
+import { spawnSync } from 'node:child_process'
+import { logging, migrationProjects, CHECK_LEDGER } from '../support/migration-project'
 
-const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
-const CHECK = path.join(CORE, 'scripts/db/check-migration-ledger.mjs')
-const skip = !HAS_POSTGRES && 'initdb/pg_ctl not on PATH'
-
-let cluster: ThrowawayCluster
-let admin: pg.Client
-let databases = 0
-const toClean: string[] = []
-
-before(async () => {
-  if (!HAS_POSTGRES) return
-  cluster = await startCluster('migration-recorded-pg')
-  admin = new pg.Client({ connectionString: `postgresql://owner@127.0.0.1:${cluster.port}/postgres?sslmode=disable` })
-  admin.on('error', () => {})
-  await admin.connect()
-}, { timeout: 120000 })
-
-after(async () => {
-  await admin?.end()
-  cluster?.stop()
-  for (const dir of toClean) fs.rmSync(dir, { recursive: true, force: true })
-})
+const { project, skip } = migrationProjects('migration-recorded-pg')
 
 const sha = (sql: string) => createHash('sha256').update(sql).digest('hex')
-const logging = (table: string, id: string) => `CREATE TABLE IF NOT EXISTS ${table} (file text); INSERT INTO ${table} VALUES ('${id}');`
-
-/** A project (a fixture monorepo whose core has one migration), on a database of its own. */
-async function project(files: Record<string, string> = {}) {
-  const database = `recorded_${++databases}`
-  await admin.query(`CREATE DATABASE ${database}`)
-  const url = `postgresql://owner@127.0.0.1:${cluster.port}/${database}?sslmode=disable`
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'migration-recorded-'))
-  toClean.push(root)
-  const write = (relative: string, content: string) => {
-    fs.mkdirSync(path.dirname(path.join(root, relative)), { recursive: true })
-    fs.writeFileSync(path.join(root, relative), content)
-  }
-  write('nextspark.config.ts', 'export default { plugins: [] }\n')
-  write('package.json', JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.2' } }))
-  write('pnpm-workspace.yaml', 'packages: []\n')
-  write('config/theme.config.ts', "export const themeConfig = { name: 'fixture' }\n")
-  write('packages/core/migrations/001_core.sql', logging('core_log', '001'))
-  write('migrations/001_project.sql', logging('project_log', '001'))
-  write('entities/widgets/migrations/001_widgets.sql', logging('widget_log', '001'))
-  for (const [relative, content] of Object.entries(files)) write(relative, content)
-
-  const env = { ...process.env, DATABASE_URL: url }
-  delete env.MIGRATE_DATABASE_URL
-  delete env.MIGRATION_TIMEOUT_SECONDS
-  const client = new pg.Client({ connectionString: url })
-  client.on('error', () => {})
-  await client.connect()
-  const run = (script: string, ...args: string[]) => {
-    const result = spawnSync(process.execPath, [script, ...args], { cwd: root, env, encoding: 'utf8', timeout: 60000 })
-    return { status: result.status, out: `${result.stdout}${result.stderr}` }
-  }
-  return {
-    database,
-    root,
-    write,
-    client,
-    migrate: (...args: string[]) => run(RUNNER, '--no-env-file', ...args),
-    check: () => run(CHECK),
-    rows: async (sql: string) => (await client.query(sql)).rows,
-    log: async (table: string) => (await client.query(`SELECT file FROM ${table} ORDER BY file`)).rows.map(row => row.file),
-    end: () => client.end(),
-  }
-}
 
 test('a run records the hash of every file it applies, and a second run says nothing', { skip, timeout: 120000 }, async () => {
   const p = await project()
@@ -216,7 +147,7 @@ test('the doctor check reports edits and renames from the ledgers and writes not
     assert.equal(found.renamed[0].update, `UPDATE "_migrations" SET filename = '000_core.sql' WHERE filename = '001_core.sql';`)
     assert.equal((await p.rows('SELECT content_hash FROM "_entity_migrations"'))[0].content_hash, null)
 
-    const unreachable = spawnSync(process.execPath, [CHECK], { cwd: p.root, env: { ...process.env, DATABASE_URL: 'postgresql://owner:secret@127.0.0.1:1/x' }, encoding: 'utf8', timeout: 60000 })
+    const unreachable = spawnSync(process.execPath, [CHECK_LEDGER], { cwd: p.root, env: { ...process.env, DATABASE_URL: 'postgresql://owner:secret@127.0.0.1:1/x' }, encoding: 'utf8', timeout: 60000 })
     assert.equal(unreachable.status, 2)
     assert.doesNotMatch(unreachable.stdout, /secret/)
   } finally {

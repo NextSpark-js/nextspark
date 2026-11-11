@@ -55,6 +55,9 @@ export interface DbRunOptions {
   envFile?: boolean;
   legacyTheme?: string;
   strict?: boolean;
+  dryRun?: boolean;
+  expectDatabase?: string;
+  expectHost?: string;
 }
 
 /** The arguments the migration runner (scripts/db/run-migrations.mjs) takes for these options. */
@@ -64,6 +67,9 @@ export function runnerArguments(options: DbRunOptions & { sampleData?: boolean }
     ...(options.envFile === false ? ['--no-env-file'] : []),
     ...(options.legacyTheme ? ['--legacy-theme', options.legacyTheme] : []),
     ...(options.strict ? ['--strict'] : []),
+    ...(options.dryRun ? ['--dry-run'] : []),
+    ...(options.expectDatabase !== undefined ? ['--expect-database', options.expectDatabase] : []),
+    ...(options.expectHost !== undefined ? ['--expect-host', options.expectHost] : []),
   ];
 }
 
@@ -98,7 +104,7 @@ export async function dbMigrateCommand(options: DbRunOptions & { sampleData?: bo
       process.exit(1);
     }
 
-    spinner.start('Running database migrations...');
+    spinner.start(options.dryRun ? 'Reading the pending migrations...' : 'Running database migrations...');
 
     const migrateProcess = spawn('node', [migrationsScript, ...runnerArguments(options)], {
       cwd: projectRoot,
@@ -117,10 +123,10 @@ export async function dbMigrateCommand(options: DbRunOptions & { sampleData?: bo
 
     migrateProcess.on('close', (code) => {
       if (code === 0) {
-        console.log(chalk.green('\n✅ Migrations completed successfully!'));
+        if (!options.dryRun) console.log(chalk.green('\n✅ Migrations completed successfully!'));
         process.exit(0);
       } else {
-        console.error(chalk.red(`\n❌ Migrations failed with exit code ${code}`));
+        console.error(chalk.red(`\n❌ ${options.dryRun ? 'The dry run' : 'Migrations'} failed with exit code ${code}`));
         process.exit(code ?? 1);
       }
     });
@@ -138,8 +144,12 @@ export async function dbMigrateCommand(options: DbRunOptions & { sampleData?: bo
  * The migration script refuses the sample data when NODE_ENV is production.
  */
 export async function dbSeedCommand(options: DbRunOptions = {}): Promise<void> {
-  console.log(chalk.cyan('ℹ️  Running the migrations with the sample data (development only; never applied when NODE_ENV is production)...'));
-  console.log(chalk.yellow('   Never use a database seeded this way in production: its sample accounts share a documented password.\n'));
+  if (options.dryRun) {
+    console.log(chalk.cyan('ℹ️  Dry run of db:seed: listing the migrations, sample data included, that a real run would apply. Nothing is written.\n'));
+  } else {
+    console.log(chalk.cyan('ℹ️  Running the migrations with the sample data (development only; never applied when NODE_ENV is production)...'));
+    console.log(chalk.yellow('   Never use a database seeded this way in production: its sample accounts share a documented password.\n'));
+  }
 
   await dbMigrateCommand({ ...options, sampleData: true });
 }

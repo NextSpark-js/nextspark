@@ -5,9 +5,9 @@ import { getConfig } from '../build/registry/config.mjs';
 import { isSampleDataMigration, sampleDataPolicy } from './sample-data.mjs';
 import { compareMigrations } from './migration-order.mjs';
 import { collectAllMigrations, collectCoreMigrations } from './migration-files.mjs';
-import { ledgerFiles, ledgerFindings, ensureHashColumns, editedReport, renamedReport, migrationHash, HASH_COLUMN } from './migration-ledger.mjs';
+import { LEDGERS, ledgerFiles, ledgerFindings, readLedger, ensureHashColumns, editedReport, renamedReport, migrationHash, HASH_COLUMN } from './migration-ledger.mjs';
 import { setProjectEnv } from './ssl-config.mjs';
-import { describeDestination, rememberSecrets, scrub } from './destination.mjs';
+import { describeDestination, rememberSecrets, scrub, unexpectedTarget } from './destination.mjs';
 import { nestedSlugsSetting } from './nested-slugs.mjs';
 import { authSchemaProblems, authSchemaReport } from './check-auth-schema.mjs';
 
@@ -42,6 +42,21 @@ if (LEGACY_THEME_FLAG !== null && (LEGACY_THEME_FLAG === '' || LEGACY_THEME_FLAG
 }
 // `--strict`: an applied migration that was edited stops the run before anything is applied, instead of a warning (#428)
 const STRICT = process.argv.includes('--strict');
+// `--dry-run`: connect, list the migrations a real run would apply, in run order, and write nothing, not even the ledger tables (#429)
+const DRY_RUN = process.argv.includes('--dry-run');
+// `--expect-database <name>` and `--expect-host <host>`: stop before connecting when the target the run resolved is another (#429)
+function optionValue(name) {
+  const at = process.argv.findIndex(arg => arg === name || arg.startsWith(`${name}=`));
+  if (at < 0) return null;
+  const value = process.argv[at].startsWith(`${name}=`) ? process.argv[at].slice(name.length + 1) : process.argv[at + 1] ?? '';
+  if (value === '' || value.startsWith('-')) {
+    console.error(`❌ ${name} needs a value: ${name} <value>`);
+    process.exit(1);
+  }
+  return value;
+}
+const EXPECT_DATABASE = optionValue('--expect-database');
+const EXPECT_HOST = optionValue('--expect-host');
 // What the .env says about NODE_ENV and the sample-data switch (see sample-data.mjs)
 const fileEnv = {};
 
@@ -83,7 +98,16 @@ const MIGRATION_URL = MIGRATE_DATABASE_URL || DATABASE_URL;
 // Name the destination before anything runs: host and database only, never the user, password or URL.
 // Error messages from the server can name the role, so they go through scrub() too.
 rememberSecrets(MIGRATION_URL, DATABASE_URL, MIGRATE_DATABASE_URL);
-console.log(`🎯 Migrating ${describeDestination(MIGRATION_URL)}\n`);
+// A target that is not the expected one stops here, before anything connects (see unexpectedTarget)
+const unexpected = unexpectedTarget(MIGRATION_URL, { database: EXPECT_DATABASE, host: EXPECT_HOST });
+if (unexpected) {
+  console.error(`❌ ${unexpected} Nothing was run.`);
+  process.exit(1);
+}
+const expectedNote = EXPECT_DATABASE !== null || EXPECT_HOST !== null ? ' (the expected target)' : '';
+console.log(DRY_RUN
+  ? `🎯 Dry run against ${describeDestination(MIGRATION_URL)}${expectedNote}: nothing will be written\n`
+  : `🎯 Migrating ${describeDestination(MIGRATION_URL)}${expectedNote}\n`);
 
 // How long each migration may run, when MIGRATION_TIMEOUT_SECONDS asks for a limit
 // (see migration-time-limit.mjs). Without it, a migration runs for as long as it takes.
@@ -123,14 +147,24 @@ function useHashColumns({ hashed, failures }) {
 /** The row that records `sql` as run in `table`: the hash goes along where the ledger has the column. */
 const withHash = (table, row, sql) => (hashedLedgers.has(table) ? { ...row, [HASH_COLUMN]: migrationHash(sql) } : row);
 
+// What a dry run found it would apply, in run order, and the migrations it would only record as already applied
+const pending = [];
+const takenOver = [];
+const dryRunNotes = [];
+// A dry run does not create the ledgers: one that does not exist yet has no rows to read
+const missingLedgers = new Set();
+const ledgerQuery = (client, table, text, params) => (missingLedgers.has(table) ? Promise.resolve({ rows: [], rowCount: 0 }) : client.query(text, params));
+// The per-file chatter of a real run; a dry run prints only its report
+const log = (...args) => { if (!DRY_RUN) console.log(...args); };
+
 // The recorded migrations against the files, before anything runs. Ledgers written by an earlier version have no
-// hash: it is filled in here, from the files as they are. An edited file only warns (see ledgerWarnings): the run
+// hash: it is filled in here, from the files as they are. An edited file only warns (see editedWarning): the run
 // is still right for everything that is pending, and an edit is often a comment, so stopping every deploy over one
 // would teach people to bypass the check; --strict stops. A renamed file always stops, because the run would
 // apply it again, which duplicates its effects or fails halfway through.
 async function checkRecordedMigrations(client) {
   const files = ledgerFiles({ core: collectCoreMigrations(packageRoot), migrations: MIGRATIONS });
-  const { edited, renamed, hashed, failures } = await ledgerFindings(client, files, { write: true });
+  const { edited, renamed, hashed, failures } = await ledgerFindings(client, files, { write: !DRY_RUN });
   useHashColumns({ hashed, failures });
   const destination = describeDestination(MIGRATION_URL);
   const renamedText = renamedReport(renamed, destination);
@@ -148,10 +182,23 @@ async function runMigrations() {
   try {
     await client.connect();
     console.log("✅ Connected to database\n");
+    // The server refuses every write of this session, so a dry run cannot change the database whatever the code below does
+    if (DRY_RUN) await client.query('SET default_transaction_read_only = on');
 
     // Before anything runs: an upgrade whose theme cannot be told stops here
     LEGACY_THEME = await legacyTheme(client);
     await checkRecordedMigrations(client);
+
+    if (DRY_RUN) {
+      const recorded = new Set((await readLedger(client, LEDGERS[0])).map(row => row.filename));
+      for (const { filename } of collectCoreMigrations(packageRoot)) {
+        if (recorded.has(filename)) continue;
+        if (!SAMPLE_DATA.apply && isSampleDataMigration(filename, fs.readFileSync(path.join(packageRoot, 'migrations', filename), 'utf8'))) continue;
+        pending.push({ where: 'core', filename });
+      }
+      await client.end();
+      return;
+    }
 
     // 029_sample_accounts_outside_development.sql reads it: a run that applies sample data keeps the sample accounts
     await client.query("SELECT set_config('nextspark.seed_sample_data', $1, false)", [SAMPLE_DATA.apply ? 'on' : 'off']);
@@ -322,29 +369,40 @@ async function executeContentMigration(client, migration) {
   const { sourceType, sourceName, filename, fullPath } = migration;
 
   // Check if already executed
-  const result = await client.query(
+  const result = await ledgerQuery(
+    client,
+    '_content_migrations',
     'SELECT * FROM "_content_migrations" WHERE source_type = $1 AND source_name = $2 AND filename = $3',
     [sourceType, sourceName, filename]
   );
 
   if (result.rows.length > 0) {
-    console.log(`  ⏭️  ${filename} (already executed)`);
+    log(`  ⏭️  ${filename} (already executed)`);
     return false;
   }
 
   // Applied before the project left contents/themes: record it under the new key, keep the old row
+  // (a dry run only looks for the row that would be copied)
   const legacy = LEGACY_THEME && legacyKey(migration, LEGACY_THEME);
   if (legacy) {
-    const taken = await client.query(
-      `INSERT INTO "_content_migrations" (source_type, source_name, filename, executed_at)
-       SELECT $1, $2, filename, executed_at FROM "_content_migrations" WHERE source_type = $3 AND source_name = $4 AND filename = $5
-       ON CONFLICT DO NOTHING`,
-      [sourceType, sourceName, ...legacy, filename]
-    );
+    const taken = DRY_RUN
+      ? await ledgerQuery(client, '_content_migrations', 'SELECT 1 FROM "_content_migrations" WHERE source_type = $1 AND source_name = $2 AND filename = $3', [...legacy, filename])
+      : await client.query(
+        `INSERT INTO "_content_migrations" (source_type, source_name, filename, executed_at)
+         SELECT $1, $2, filename, executed_at FROM "_content_migrations" WHERE source_type = $3 AND source_name = $4 AND filename = $5
+         ON CONFLICT DO NOTHING`,
+        [sourceType, sourceName, ...legacy, filename]
+      );
     if (taken.rowCount > 0) {
-      console.log(`  ⏭️  ${filename}: already applied as theme ${LEGACY_THEME}; recorded for the project`);
+      if (DRY_RUN) takenOver.push({ where: `${sourceType} ${sourceName}`, filename, from: `theme ${LEGACY_THEME}` });
+      else console.log(`  ⏭️  ${filename}: already applied as theme ${LEGACY_THEME}; recorded for the project`);
       return false;
     }
+  }
+
+  if (DRY_RUN) {
+    pending.push({ where: `${sourceType} ${sourceName}`, filename, sampleData: migration.isSampleData });
+    return false;
   }
 
   console.log(`  🔄 ${filename}...`);
@@ -369,13 +427,15 @@ async function executeEntityMigration(client, migration) {
   const indent = '  '.repeat(depth + 1);
 
   // Check if already executed
-  const result = await client.query(
+  const result = await ledgerQuery(
+    client,
+    '_entity_migrations',
     'SELECT * FROM "_entity_migrations" WHERE entity_name = $1 AND filename = $2',
     [entityName, filename]
   );
 
   if (result.rows.length > 0) {
-    console.log(`${indent}⏭️  ${filename} (already executed)`);
+    log(`${indent}⏭️  ${filename} (already executed)`);
     return false;
   }
 
@@ -394,7 +454,14 @@ async function executeEntityMigration(client, migration) {
   for (const origin of origins) {
     // The row of a directory `migrate` renamed is moved, so it can be taken only once; a 0.x spelling is copied
     const moved = migration.renamedFrom && origin[0] === sourceType && origin[1] === sourceName;
-    const taken = moved
+    const taken = DRY_RUN
+      ? await ledgerQuery(
+        client,
+        '_entity_migrations',
+        `SELECT 1 FROM "_entity_migrations" e WHERE entity_name = $1 AND filename = $2 AND to_jsonb(e)->>'source_type' = $3 AND to_jsonb(e)->>'source_name' = $4`,
+        [legacyName, filename, ...origin]
+      )
+      : moved
       ? await client.query(
         `UPDATE "_entity_migrations" SET entity_name = $1
          WHERE entity_name = $2 AND filename = $3 AND source_type = $4 AND source_name = $5`,
@@ -408,9 +475,15 @@ async function executeEntityMigration(client, migration) {
         [entityName, sourceType, sourceName, legacyName, filename, ...origin]
       );
     if (taken.rowCount > 0) {
-      console.log(`${indent}⏭️  ${filename}: already applied as entity ${legacyName}; recorded for ${entityName}`);
+      if (DRY_RUN) takenOver.push({ where: `entity ${entityName}, ${sourceType} ${sourceName}`, filename, from: `entity ${legacyName}` });
+      else console.log(`${indent}⏭️  ${filename}: already applied as entity ${legacyName}; recorded for ${entityName}`);
       return false;
     }
+  }
+
+  if (DRY_RUN) {
+    pending.push({ where: `entity ${entityName}, ${sourceType} ${sourceName}`, filename, sampleData: migration.isSampleData });
+    return false;
   }
 
   console.log(`${indent}🔄 ${filename}...`);
@@ -435,79 +508,89 @@ async function runEntityMigrations() {
 
   try {
     await client.connect();
+    // The server refuses every write of this session, so a dry run cannot change the database whatever the code below does
+    if (DRY_RUN) await client.query('SET default_transaction_read_only = on');
     // 004_pages_slug_check.sql reads it: the slug CHECK of pages follows access.allowNestedSlugs
     const nested = await nestedSlugsSetting(projectRoot);
     if (nested.warning) console.warn(`⚠️  ${nested.warning}`);
-    await client.query("SELECT set_config('nextspark.pages_allow_nested_slugs', $1, false)", [nested.setting]);
-    console.log("🔄 Running content & entity migrations (sample_data deferred)...\n");
-    console.log(`📌 Project: ${PROJECT_NAME}\n`);
+    if (!DRY_RUN) await client.query("SELECT set_config('nextspark.pages_allow_nested_slugs', $1, false)", [nested.setting]);
+    log("🔄 Running content & entity migrations (sample_data deferred)...\n");
+    log(`📌 Project: ${PROJECT_NAME}\n`);
 
-    // Create tracking tables
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "_entity_migrations" (
-        id SERIAL PRIMARY KEY,
-        entity_name TEXT NOT NULL,
-        source_type TEXT NOT NULL,
-        source_name TEXT NOT NULL,
-        filename TEXT NOT NULL,
-        executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(entity_name, filename)
-      )
-    `);
+    if (DRY_RUN) {
+      // Nothing is created: a ledger that is not there has no rows
+      const { rows } = await client.query(`SELECT to_regclass('"_content_migrations"') IS NULL AS no_content, to_regclass('"_entity_migrations"') IS NULL AS no_entity, to_regclass('"_theme_migrations"') IS NOT NULL AS old_theme`);
+      if (rows[0].no_content) missingLedgers.add('_content_migrations');
+      if (rows[0].no_entity) missingLedgers.add('_entity_migrations');
+      if (rows[0].old_theme) dryRunNotes.push('"_theme_migrations" exists: a real run first moves its rows into "_content_migrations", so some project or plugin migration listed here may already be applied.');
+    } else {
+      // Create tracking tables
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_entity_migrations" (
+          id SERIAL PRIMARY KEY,
+          entity_name TEXT NOT NULL,
+          source_type TEXT NOT NULL,
+          source_name TEXT NOT NULL,
+          filename TEXT NOT NULL,
+          executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(entity_name, filename)
+        )
+      `);
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "_content_migrations" (
-        id SERIAL PRIMARY KEY,
-        source_type TEXT NOT NULL,
-        source_name TEXT NOT NULL,
-        filename TEXT NOT NULL,
-        executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(source_type, source_name, filename)
-      )
-    `);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "_content_migrations" (
+          id SERIAL PRIMARY KEY,
+          source_type TEXT NOT NULL,
+          source_name TEXT NOT NULL,
+          filename TEXT NOT NULL,
+          executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(source_type, source_name, filename)
+        )
+      `);
 
-    // Migrate old _theme_migrations table if exists
-    await client.query(`
-      DO $$
-      BEGIN
-        IF EXISTS (
-          SELECT 1 FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = '_theme_migrations'
-        ) THEN
-          INSERT INTO "_content_migrations" (source_type, source_name, filename, executed_at)
-          SELECT source_type, source_name, filename, executed_at
-          FROM "_theme_migrations"
-          ON CONFLICT DO NOTHING;
-          DROP TABLE "_theme_migrations";
-        END IF;
-      END $$;
-    `);
+      // Migrate old _theme_migrations table if exists
+      await client.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = '_theme_migrations'
+          ) THEN
+            INSERT INTO "_content_migrations" (source_type, source_name, filename, executed_at)
+            SELECT source_type, source_name, filename, executed_at
+            FROM "_theme_migrations"
+            ON CONFLICT DO NOTHING;
+            DROP TABLE "_theme_migrations";
+          END IF;
+        END $$;
+      `);
 
-    // Auto-update table if columns are missing
-    await client.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_name = '_entity_migrations' AND column_name = 'source_type'
-        ) THEN
-          ALTER TABLE "_entity_migrations" ADD COLUMN source_type TEXT;
-        END IF;
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_name = '_entity_migrations' AND column_name = 'source_name'
-        ) THEN
-          ALTER TABLE "_entity_migrations" ADD COLUMN source_name TEXT;
-        END IF;
-      END $$;
-    `);
+      // Auto-update table if columns are missing
+      await client.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = '_entity_migrations' AND column_name = 'source_type'
+          ) THEN
+            ALTER TABLE "_entity_migrations" ADD COLUMN source_type TEXT;
+          END IF;
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = '_entity_migrations' AND column_name = 'source_name'
+          ) THEN
+            ALTER TABLE "_entity_migrations" ADD COLUMN source_name TEXT;
+          END IF;
+        END $$;
+      `);
 
-    useHashColumns(await ensureHashColumns(client));
+      useHashColumns(await ensureHashColumns(client));
+    }
 
     // Get active plugins
     const activePlugins = await getActivePlugins();
-    console.log(`🔌 Active plugins: ${activePlugins.length > 0 ? activePlugins.join(', ') : 'none'}\n`);
-    console.log("📦 Collecting all migrations...\n");
+    log(`🔌 Active plugins: ${activePlugins.length > 0 ? activePlugins.join(', ') : 'none'}\n`);
+    log("📦 Collecting all migrations...\n");
 
     // =========================================================================
     // PHASE 2A: COLLECT ALL MIGRATIONS (done once, before PHASE 1: see MIGRATIONS)
@@ -526,15 +609,15 @@ async function runEntityMigrations() {
     const entitySchema = allEntityMigrations.filter(m => !m.isSampleData).sort(sortByFilename);
     const entitySampleData = allEntityMigrations.filter(m => m.isSampleData && SAMPLE_DATA.apply).sort(sortByFilename);
 
-    console.log(`📊 Migration breakdown:`);
-    console.log(`   - Content schema: ${contentSchema.length}`);
-    console.log(`   - Content sample_data: ${contentSampleData.length}`);
-    console.log(`   - Entity schema: ${entitySchema.length}`);
-    console.log(`   - Entity sample_data: ${entitySampleData.length}`);
+    log(`📊 Migration breakdown:`);
+    log(`   - Content schema: ${contentSchema.length}`);
+    log(`   - Content sample_data: ${contentSampleData.length}`);
+    log(`   - Entity schema: ${entitySchema.length}`);
+    log(`   - Entity sample_data: ${entitySampleData.length}`);
     for (const m of [...allContentMigrations, ...allEntityMigrations].filter(m => m.isSampleData && !SAMPLE_DATA.apply)) {
-      console.log(`⏭️  Skipping ${m.filename} (sample data, ${m.sourceName})`);
+      log(`⏭️  Skipping ${m.filename} (sample data, ${m.sourceName})`);
     }
-    console.log('');
+    log('');
 
     let totalContentMigrations = 0;
     let totalEntityMigrations = 0;
@@ -542,11 +625,11 @@ async function runEntityMigrations() {
     // =========================================================================
     // PHASE 2C: EXECUTE SCHEMA MIGRATIONS FIRST
     // =========================================================================
-    console.log("🏗️  STEP 1: Schema migrations (tables, indexes, RLS)\n");
+    log("🏗️  STEP 1: Schema migrations (tables, indexes, RLS)\n");
 
     // Content schema migrations
     if (contentSchema.length > 0) {
-      console.log(`🎨 Theme/Plugin schema migrations:`);
+      log(`🎨 Theme/Plugin schema migrations:`);
       for (const migration of contentSchema) {
         try {
           const executed = await executeContentMigration(client, migration);
@@ -556,17 +639,17 @@ async function runEntityMigrations() {
           throw error;
         }
       }
-      console.log('');
+      log('');
     }
 
     // Entity schema migrations (grouped by entity for readability)
     if (entitySchema.length > 0) {
-      console.log(`🎨 Entity schema migrations:`);
+      log(`🎨 Entity schema migrations:`);
       const entitiesSeen = new Set();
       for (const migration of entitySchema) {
         if (!entitiesSeen.has(migration.entityName)) {
           const entityCount = entitySchema.filter(m => m.entityName === migration.entityName).length;
-          console.log(`  📁 ${migration.entityName} (${entityCount} schema migration(s))`);
+          log(`  📁 ${migration.entityName} (${entityCount} schema migration(s))`);
           entitiesSeen.add(migration.entityName);
         }
         try {
@@ -577,17 +660,17 @@ async function runEntityMigrations() {
           throw error;
         }
       }
-      console.log('');
+      log('');
     }
 
     // =========================================================================
     // PHASE 2D: EXECUTE SAMPLE_DATA MIGRATIONS LAST
     // =========================================================================
-    console.log("🌱 STEP 2: Sample data migrations (INSERT statements)\n");
+    log("🌱 STEP 2: Sample data migrations (INSERT statements)\n");
 
     // Content sample_data migrations
     if (contentSampleData.length > 0) {
-      console.log(`🎨 Theme/Plugin sample_data migrations:`);
+      log(`🎨 Theme/Plugin sample_data migrations:`);
       for (const migration of contentSampleData) {
         try {
           const executed = await executeContentMigration(client, migration);
@@ -597,17 +680,17 @@ async function runEntityMigrations() {
           throw error;
         }
       }
-      console.log('');
+      log('');
     }
 
     // Entity sample_data migrations
     if (entitySampleData.length > 0) {
-      console.log(`🎨 Entity sample_data migrations:`);
+      log(`🎨 Entity sample_data migrations:`);
       const entitiesSeen = new Set();
       for (const migration of entitySampleData) {
         if (!entitiesSeen.has(migration.entityName)) {
           const entityCount = entitySampleData.filter(m => m.entityName === migration.entityName).length;
-          console.log(`  📁 ${migration.entityName} (${entityCount} sample_data migration(s))`);
+          log(`  📁 ${migration.entityName} (${entityCount} sample_data migration(s))`);
           entitiesSeen.add(migration.entityName);
         }
         try {
@@ -618,7 +701,13 @@ async function runEntityMigrations() {
           throw error;
         }
       }
-      console.log('');
+      log('');
+    }
+
+    // A dry run has listed what it found
+    if (DRY_RUN) {
+      await client.end();
+      return;
     }
 
     // Show migration history
@@ -657,17 +746,39 @@ async function runEntityMigrations() {
   }
 }
 
+// What a dry run found: the migrations a real run would apply, in the order it applies them
+function printDryRun() {
+  console.log(pending.length === 0
+    ? 'Nothing is pending: a real run would apply no migration.'
+    : `Pending migrations, in the order a real run applies them (${pending.length}):`);
+  pending.forEach(({ where, filename, sampleData }, index) => {
+    console.log(`${String(index + 1).padStart(5)}. [${where}] ${filename}${sampleData ? ' (sample data)' : ''}`);
+  });
+  if (takenOver.length > 0) {
+    console.log(`\nApplied before the project was moved, which a real run only records (${takenOver.length}):`);
+    for (const { where, filename, from } of takenOver) console.log(`       [${where}] ${filename} (recorded as ${from})`);
+  }
+  for (const note of dryRunNotes) console.log(`\n⚠️  ${note}`);
+  console.log('\n✅ Dry run finished. Nothing was written: no migration ran, and the ledgers were neither created nor changed.');
+}
+
 // Main migration runner
 async function runAllMigrations() {
-  console.log("🚀 Starting migration process...\n");
+  console.log(DRY_RUN ? "🔎 Dry run: reading what is pending, writing nothing\n" : "🚀 Starting migration process...\n");
   console.log(`🌱 ${SAMPLE_DATA.notice}\n`);
   
   // First run core migrations
-  console.log("📋 PHASE 1: Core migrations");
+  log("📋 PHASE 1: Core migrations");
   await runMigrations();
   
-  console.log("\n📋 PHASE 2: Entity migrations");
+  log("\n📋 PHASE 2: Entity migrations");
   await runEntityMigrations();
+
+  if (DRY_RUN) {
+    printDryRun();
+    if (editedWarning) console.log(`\n⚠️  ${editedWarning}`);
+    return;
+  }
 
   // A theme or project migration can leave an auth table Better Auth refuses to start on
   await checkAuthSchema();

@@ -209,7 +209,10 @@ program
 const withMigrateOptions = (command: Command) => command
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
   .option('--legacy-theme <theme>', 'The theme a 0.x project was migrated from, when its database recorded migrations under several')
-  .option('--strict', 'Stop before running anything when a migration file that was already applied has been edited (otherwise it only warns)');
+  .option('--strict', 'Stop before running anything when a migration file that was already applied has been edited (otherwise it only warns)')
+  .option('--dry-run', 'Connect, print the target and the pending migrations in run order, and exit without writing anything')
+  .option('--expect-database <name>', 'Stop before the first statement unless the database the connection resolved to is <name>')
+  .option('--expect-host <host>', 'Stop before the first statement unless the host the connection resolved to is <host>');
 
 // Database commands
 const db = program

@@ -5,20 +5,47 @@
 
 const secrets = new Set();
 
-/** The destination of a connection URL, as `host H, database D`, or `unreadable URL`. */
-export function describeDestination(connectionString) {
+/**
+ * The host and database a connection URL names: `{ host, database }`, either possibly empty, or null when the URL does
+ * not read the way it was written. A `host` in the query string (a socket directory, or the host of a URL with none in
+ * the authority) is the one pg connects to, so it is the one named.
+ */
+export function destinationParts(connectionString) {
   try {
     const url = new URL(connectionString);
     const database = decodeURIComponent(url.pathname.replace(/^\//, ''));
     // A "/" or "@" in the database, or an "@" the parser did not take for credentials, means the URL did not
     // parse the way it was written (an unencoded "/" in the password): what it shows would be part of the password
     if (database.includes('/') || database.includes('@') || (!url.username && connectionString.replace(/^[^:]+:\/\//, '').split('/')[0].includes('@'))) {
-      return 'unreadable URL';
+      return null;
     }
-    return `host ${url.hostname || '(none)'}, database ${database || '(none)'}`;
+    return { host: url.searchParams.get('host') || url.hostname, database };
   } catch {
-    return 'unreadable URL';
+    return null;
   }
+}
+
+/** The destination of a connection URL, as `host H, database D`, or `unreadable URL`. */
+export function describeDestination(connectionString) {
+  const parts = destinationParts(connectionString);
+  return parts ? `host ${parts.host || '(none)'}, database ${parts.database || '(none)'}` : 'unreadable URL';
+}
+
+const sameHost = (a, b) => a.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '') === b.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+
+/**
+ * Why a connection URL is not the target that was expected (`--expect-database`, `--expect-host`), or null when it is or
+ * nothing was expected. It names the host and database only, never the user, the password or the URL.
+ */
+export function unexpectedTarget(connectionString, { database = null, host = null } = {}) {
+  if (database === null && host === null) return null;
+  const parts = destinationParts(connectionString);
+  const flags = [database !== null && `--expect-database ${database}`, host !== null && `--expect-host ${host}`].filter(Boolean).join(' ');
+  if (!parts) return `${flags}: the connection URL cannot be read, so the target cannot be checked.`;
+  const wrong = [];
+  if (database !== null && parts.database !== database) wrong.push(`database ${parts.database || '(none)'} (expected ${database})`);
+  if (host !== null && !sameHost(parts.host, host)) wrong.push(`host ${parts.host || '(none)'} (expected ${host})`);
+  return wrong.length > 0 ? `${flags}: the connection points at ${wrong.join(' and ')}.` : null;
 }
 
 /** Remembers the credentials in these URLs, so `scrub` can take them out of a message. */

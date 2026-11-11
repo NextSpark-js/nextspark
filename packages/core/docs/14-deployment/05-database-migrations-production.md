@@ -19,14 +19,19 @@ Database migrations must be handled carefully in production to avoid data loss a
 # 1. Connect to production database
 # Set DATABASE_URL to production
 
-# 2. Run migrations
-pnpm db:migrate
+# 2. Dry run: connects, prints the target and the pending files, writes nothing
+pnpm db:migrate --dry-run --expect-database app --expect-host db.example.com
 
-# 3. Inspect the affected schema with read-only queries in the database console
+# 3. Run migrations against the same expected target
+pnpm db:migrate --expect-database app --expect-host db.example.com
 
-# 4. Deploy application code
+# 4. Inspect the affected schema with read-only queries in the database console
+
+# 5. Deploy application code
 pnpm vercel:deploy --prod
 ```
+
+`--expect-database` and `--expect-host` make the run stop before its first statement, and before it connects, when the connection string resolved to another database or host. They guard against the case that is easy to miss: a `DATABASE_URL` or `MIGRATE_DATABASE_URL` that came from an unexpected place (a shell profile, a CI variable, a `.env` file), which the first sign of is migrations applied to the wrong database. `--dry-run` lists what the run would apply, in run order, so the pending files can be read before anything changes. See [Dry run and expected target](../10-backend/02-migrations.md#dry-run-and-expected-target).
 
 ---
 
@@ -37,6 +42,9 @@ pnpm vercel:deploy --prod
 ```bash
 # Run all pending migrations
 pnpm db:migrate
+
+# Or first list them, and stop unless the target is the expected one
+pnpm db:migrate --dry-run --expect-database app --expect-host db.example.com
 
 # Script does:
 # 1. Reads migrations from core/migrations/ directory
@@ -112,8 +120,8 @@ const PRE_MIGRATION_CHECKLIST = [
 # 1. Backup database
 # Supabase → Database → Backups → Create backup
 
-# 2. Run migration
-pnpm db:migrate
+# 2. Run migration (after a --dry-run, with the same --expect-database and --expect-host)
+pnpm db:migrate --expect-database app --expect-host db.example.com
 
 # 3. Inspect the affected schema with read-only queries
 
@@ -200,10 +208,11 @@ psql $DATABASE_URL
 ```bash
 # 1. Backup production database
 # 2. Test migration on staging
-# 3. Run migration on production
-# 4. Verify success
-# 5. Deploy application code
-# 6. Monitor for issues
+# 3. Dry run on production: pnpm db:migrate --dry-run --expect-database <name> --expect-host <host>
+# 4. Run migration on production, with the same expected target
+# 5. Verify success
+# 6. Deploy application code
+# 7. Monitor for issues
 ```
 
 ---
