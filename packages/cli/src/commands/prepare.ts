@@ -83,6 +83,8 @@ export async function prepareCommand(options: PrepareOptions): Promise<void> {
         return;
       }
       spinner.succeed('src/app and the registries are up to date');
+      // The warnings the check carries about the project's own code (the API-key scope findings): they never change the verdict
+      for (const line of checked.successLines.filter((line) => /^(Warning|Info): \[NS_/.test(line))) console.log(chalk.yellow(line));
       return;
     }
 

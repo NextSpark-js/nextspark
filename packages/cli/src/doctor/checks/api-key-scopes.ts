@@ -30,8 +30,8 @@ export async function checkApiKeyScopes(): Promise<HealthCheckResult> {
   const first = withoutScope.length > 0
   const code = first ? 'NS_API_KEY_ROUTE_WITHOUT_SCOPE' : 'NS_API_KEY_SCOPE_NOT_DECLARED'
   const parts = [
-    withoutScope.length > 0 ? `${withoutScope.length} call${withoutScope.length === 1 ? '' : 's'} declare neither requiredScope nor allowAnyScope, so every API key is refused there with 403 SCOPE_NOT_DECLARED (${shown(withoutScope, describe)})` : null,
-    undeclared.length > 0 ? `${undeclared.length} require${undeclared.length === 1 ? 's' : ''} a scope that core and api.scopes do not declare (${shown(undeclared, describe)})` : null,
+    withoutScope.length > 0 ? `${withoutScope.length} call${withoutScope.length === 1 ? '' : 's'} declare${withoutScope.length === 1 ? 's' : ''} neither requiredScope nor allowAnyScope, so every API key is refused there with 403 SCOPE_NOT_DECLARED (${shown(withoutScope, describe)})` : null,
+    undeclared.length > 0 ? `${undeclared.length} call${undeclared.length === 1 ? '' : 's'} require${undeclared.length === 1 ? 's' : ''} a scope that core and api.scopes do not declare (${shown(undeclared, describe)})` : null,
   ].filter(Boolean)
   return {
     name,

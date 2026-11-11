@@ -26,6 +26,11 @@ if (fail) {
   console.error('[NS_HOST_ROUTE_COLLISION] src/app/about/page.tsx: two project files provide this route')
   process.exit(1)
 }
+if (args.includes('--check') && existsSync(process.cwd() + '/warn-check')) {
+  console.log('Warning: [NS_API_KEY_ROUTE_WITHOUT_SCOPE] 1 call declares neither requiredScope nor allowAnyScope: api/intake/route.ts:3 POST authenticateRequest(request)')
+  console.log('src/app and the registries match what nextspark prepare generates.')
+  process.exit(0)
+}
 if (args.includes('--watch')) {
   console.log('[prepare] Watching')
   appendFileSync(process.cwd() + '/watcher-pids.txt', process.pid + '\\n')
@@ -117,6 +122,20 @@ test('prepare --check passes the verdict through: 0 up to date, 1 with what is s
     assert.match(stale.output, /not up to date/)
     assert.match(stale.output, /NS_HOST_ROUTE_COLLISION/)
     assert.deepEqual((await project.runs()).map((entry) => entry.args), [['--check'], ['--check']])
+  } finally {
+    await project.cleanup()
+  }
+})
+
+test('prepare --check shows the warnings about the project that the check carries (#426), once, and keeps the verdict', async () => {
+  const project = await hostProject()
+  try {
+    await writeFile(join(project.root, 'warn-check'), '')
+    const checked = run(project.root, ['prepare', '--check'])
+    assert.equal(checked.status, 0, checked.output)
+    assert.match(checked.output, /up to date/)
+    assert.equal(checked.output.match(/Warning: \[NS_API_KEY_ROUTE_WITHOUT_SCOPE\] 1 call declares neither requiredScope nor allowAnyScope: api\/intake\/route\.ts:3 POST/g)?.length, 1, checked.output)
+    assert.doesNotMatch(checked.output, /match what nextspark prepare generates/, 'the script\'s own verdict line is not repeated under the spinner\'s')
   } finally {
     await project.cleanup()
   }
