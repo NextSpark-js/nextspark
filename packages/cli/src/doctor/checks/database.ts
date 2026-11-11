@@ -43,29 +43,15 @@ function parseEnvFile(content: string): Record<string, string> {
 }
 
 /**
- * The variables of the project's .env.local and .env (.env.local first)
+ * The variables of the project's .env and .env.local, with .env.local winning as in Next.js
  */
 export async function readProjectEnv(cwd = process.cwd()): Promise<Record<string, string>> {
-  const envPath = path.join(cwd, '.env')
-  const envLocalPath = path.join(cwd, '.env.local')
-
   let envVars: Record<string, string> = {}
-
-  // Try to read .env.local first (has priority)
-  if (await fs.pathExists(envLocalPath)) {
+  for (const file of ['.env', '.env.local']) {
+    const filePath = path.join(cwd, file)
+    if (!(await fs.pathExists(filePath))) continue
     try {
-      const content = await fs.readFile(envLocalPath, 'utf-8')
-      envVars = { ...envVars, ...parseEnvFile(content) }
-    } catch {
-      // Ignore read errors
-    }
-  }
-
-  // Then read .env
-  if (await fs.pathExists(envPath)) {
-    try {
-      const content = await fs.readFile(envPath, 'utf-8')
-      envVars = { ...envVars, ...parseEnvFile(content) }
+      envVars = { ...envVars, ...parseEnvFile(await fs.readFile(filePath, 'utf-8')) }
     } catch {
       // Ignore read errors
     }

@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 
-import { checkDatabase, resolveDatabaseUrl } from '../src/doctor/checks/database.js'
+import { checkDatabase, readProjectEnv, resolveDatabaseUrl } from '../src/doctor/checks/database.js'
 
 function inProject(env: string, run: (dir: string) => Promise<void>) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'doctor-db-'))
@@ -54,3 +54,10 @@ test('doctor does not ask for a .env file when DATABASE_URL is exported', async 
     fs.rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test('.env.local wins over .env, as in Next.js (#438)', () =>
+  inProject('DATABASE_URL=postgres://localhost/from_env\nONLY_ENV=1\n', async dir => {
+    fs.writeFileSync(path.join(dir, '.env.local'), 'DATABASE_URL=postgres://localhost/from_env_local\n')
+    assert.deepEqual(await readProjectEnv(dir), { DATABASE_URL: 'postgres://localhost/from_env_local', ONLY_ENV: '1' })
+    assert.equal(await resolveDatabaseUrl(dir, {}), 'postgres://localhost/from_env_local')
+  }))
