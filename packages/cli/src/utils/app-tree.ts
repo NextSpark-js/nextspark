@@ -141,7 +141,7 @@ export type AppFileFate =
   | { kind: 'remove'; evidence: string }
   | { kind: 'loader'; template: string | null }
   | { kind: 'override'; destination: string; core: string; baseline: string | null; diff: string; diffLines: number }
-  | { kind: 'project'; destination: string }
+  | { kind: 'project'; destination: string; /** What the person has to do because the file moved (the metadata tag Next added for it is gone). */ note?: string }
   | { kind: 'unrecognized'; reason: string };
 
 export interface AppFilePlan {
@@ -174,6 +174,8 @@ export interface AppConversionInput {
   core: CoreHostLookup;
   /** Absolute paths the rest of the migration is about to create, which a converted file must not collide with. */
   reserved: ReadonlySet<string>;
+  /** For a reserved path that a move will fill: the file that moves there (to tell a duplicate from a different file). */
+  reservedSources?: ReadonlyMap<string, string>;
   /** Where the project's Route Handlers go (`apiDir` of nextspark.config.ts). Default `api`. */
   apiDir?: string;
   /** Core's `templates/` directory (its stubs are how an untouched webhook extension is recognized). */
@@ -562,6 +564,62 @@ function destinationFor(path: string, host: CoreHost, override: boolean, apiDir:
 }
 
 /**
+ * The static metadata files Next reads from the app root (`favicon.ico`, `icon.png`, `apple-icon.png`, `opengraph-image.png`,
+ * `twitter-image.png`, with their one-digit variants). The generated `src/app` holds route code only, so they are served from
+ * `public/` instead: the destination is the file's own name, whatever else is in the project.
+ */
+const STATIC_METADATA_FILE = /^(?:favicon\.ico|icon\d?\.(?:ico|jpe?g|png|svg)|apple-icon\d?\.(?:jpe?g|png)|(?:opengraph|twitter)-image\d?\.(?:jpe?g|png|gif))$/;
+
+/** Whether a path of the app tree is one of the static metadata files of the app root. */
+export function isStaticMetadataFile(path: string): boolean {
+  return !path.includes('/') && STATIC_METADATA_FILE.test(path);
+}
+
+/**
+ * What the person adds so that a static metadata file served from `public/` is still announced: Next wrote the `<link>` or
+ * `<meta>` tag for the file by itself only while it was in the app root. `favicon.ico` needs nothing: browsers ask for
+ * `/favicon.ico` on their own.
+ */
+function staticMetadataNote(name: string): string | undefined {
+  if (name === 'favicon.ico') return undefined;
+  const entry = (key: string, value: string) => `${key}: ${value}`;
+  const tag = name.startsWith('apple-icon') ? entry('icons', `{ apple: '/${name}' }`)
+    : name.startsWith('icon') ? entry('icons', `{ icon: '/${name}' }`)
+    : name.startsWith('opengraph-image') ? entry('openGraph', `{ images: ['/${name}'] }`)
+    : entry('twitter', `{ images: ['/${name}'] }`);
+  return `Next added the tag for ${name} by itself only while it was in the app root, and the generated src/app has no such files: add  ${tag}  to the metadata of templates/layout.tsx to keep it${/^(?:opengraph|twitter)-image/.test(name) ? ' (an absolute URL needs metadataBase there too)' : ''}`;
+}
+
+/**
+ * The fate of a static metadata file of the app root: moved to `public/<name>`; dropped when that is already the same file
+ * (the theme's `public/` is moving a copy there, or the project had one); blocking when `public/<name>` is a different file.
+ */
+function staticMetadataFate(input: AppConversionInput, path: string, content: Buffer): AppFileFate {
+  const destination = `public/${path}`;
+  const absolute = join(input.hostRoot, destination);
+  let existing: Buffer | null = null;
+  if (existsSync(absolute)) {
+    try {
+      existing = statSync(absolute).isFile() ? readFileSync(absolute) : null;
+    } catch {
+      existing = null;
+    }
+    if (!existing) return { kind: 'unrecognized', reason: `${destination} already exists and is not a file, so ${path} cannot be moved there: remove or rename it and run migrate again` };
+  } else if (input.reserved.has(absolute)) {
+    const source = input.reservedSources?.get(absolute);
+    try {
+      existing = source ? readFileSync(source) : null;
+    } catch {
+      existing = null;
+    }
+    if (!existing) return { kind: 'unrecognized', reason: `${destination} is about to be created by this migration, so ${path} cannot be moved there: merge the two by hand and run migrate again` };
+  }
+  if (!existing) return { kind: 'project', destination, note: staticMetadataNote(path) };
+  if (existing.equals(content)) return { kind: 'remove', evidence: `identical to ${destination}` };
+  return { kind: 'unrecognized', reason: `${destination} already exists with other content, so ${path} cannot be moved there: Next would refuse the build with both, and a root-first project serves ${destination}. Keep the one you want in ${destination}, delete the other, and run migrate again` };
+}
+
+/**
  * Decide what happens to every file of the app tree.
  *
  * @throws never: what cannot be placed is `unrecognized` in the plan
@@ -579,6 +637,10 @@ export async function planAppConversion(input: AppConversionInput): Promise<AppC
 
   if ('unavailable' in core) {
     for (const path of [...input.files].sort()) {
+      if (isStaticMetadataFile(path)) {
+        record(path, staticMetadataFate(input, path, readFileSync(join(appRootDirectory, path))));
+        continue;
+      }
       const evidence = generated.get(path);
       if (evidence) record(path, { kind: 'remove', evidence });
       else record(path, { kind: 'unrecognized', reason: core.unavailable });
@@ -589,6 +651,11 @@ export async function planAppConversion(input: AppConversionInput): Promise<AppC
 
   const candidates: { path: string; content: Buffer }[] = [];
   for (const path of [...input.files].sort()) {
+    // Even a copy of core's own favicon goes to public/: the generator emits no file, and without one the browser's request for it hits a page route
+    if (isStaticMetadataFile(path)) {
+      record(path, staticMetadataFate(input, path, readFileSync(join(appRootDirectory, path))));
+      continue;
+    }
     const evidence = generated.get(path);
     if (evidence) {
       record(path, { kind: 'remove', evidence });
@@ -634,7 +701,7 @@ export async function planAppConversion(input: AppConversionInput): Promise<AppC
     const routeStem = name.split('.')[0];
     const isRoute = parts !== null && ROUTE_FILE_EXTENSIONS.includes(parts.extension) && host.kindForFileStem(routeStem) !== null;
     if (!isText(content) && !path.includes('/')) {
-      record(path, { kind: 'unrecognized', reason: `it is a binary file of the app root (${name}): move it to public/ by hand (Next serves public/favicon.ico), then run migrate again` });
+      record(path, { kind: 'unrecognized', reason: `it is a binary file of the app root (${name}): move it to public/ by hand, then run migrate again` });
       continue;
     }
     const place = destinationFor(path, host, coreRoute !== undefined, apiDir);

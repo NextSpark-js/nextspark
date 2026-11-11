@@ -102,6 +102,8 @@ It looks at `app/` (before the `src/` layout) or `src/app/`, and decides file by
 | A file you added | Moves it to `templates/<path>`, or a Route Handler under `api/<name>/route.ts` to `api/<name>/route.ts` |
 | A billing webhook route core generated, when `lib/billing/<provider>-webhook-extensions` holds more than core's empty stub | Removes the route and adds `billing: { webhookExtensions: { <provider>: './lib/billing/...' } }` to `nextspark.config.ts` |
 
+A static metadata file at the root of the app tree (`favicon.ico`, `icon.png`, `apple-icon.png`, `opengraph-image.png`, `twitter-image.png`, with their one-digit variants) is not a route: the generated `src/app` holds route code only. Migrate moves it to `public/<name>` and lists the move under **project-only files moved** (`appConversion.projectFiles` in `--json`), even when it is a copy of core's own favicon: the generator emits no file, and without a `public/favicon.ico` the browser's request for it reaches a page route. When `public/<name>` already has the same bytes (or the theme's `public/` is about to put the same file there), the app copy is dropped. When it has other content, migrate stops before writing and names both. `favicon.ico` needs nothing else, since browsers ask for `/favicon.ico` on their own. Next wrote the `<link>` or `<meta>` tag of the other files by itself only while they were in the app root, so a moved `icon.png` is announced by the `metadata` of `templates/layout.tsx` (`icons: { icon: '/icon.png' }`; `icons: { apple: ... }`, `openGraph: { images: [...] }` and `twitter: { images: [...] }` for the others, the last two with `metadataBase`): the warnings say it for each file moved.
+
 Every moved file keeps its relative imports pointing at the same files. Migrate then writes `src/proxy.ts` when the project has none, adds `.nextspark/` and `src/app/` to `.gitignore`, and runs `nextspark prepare`. If generation fails, the project is left converted, the failure is printed, and so is the rollback (`git checkout -- .` plus a `git clean` of exactly what the run created).
 
 ## The theme variable
@@ -140,7 +142,8 @@ Anything it cannot place with certainty stops the run **before it writes**, nami
 
 | Reason | What to do |
 | --- | --- |
-| A file of the app root that is not a route (`globals.css`, `favicon.ico`, a `robots.txt`) | Move what it holds to `styles/globals.css` or `public/`, delete it, run again |
+| A file of the app root that is not a route (`globals.css`, a `robots.txt`, a binary file such as `logo.png`) | Move what it holds to `styles/globals.css` or `public/`, delete it, run again |
+| `public/favicon.ico` (or another static metadata file of the app root) already exists with other content | Keep the one you want in `public/`, delete the other, run again |
 | A project route under `api/v1/**` or `api/plugins/**` | Those namespaces belong to core and plugins. Rename the directory to `api/<name>` (the URL becomes `/api/<name>`) and update its callers |
 | The generator cannot use the file as a facade (for example `export const dynamic = someVariable`) | Write the segment config as a literal (`export const dynamic = 'force-dynamic'`) |
 | The file imports another file of the app tree that is not kept | Import from `@nextsparkjs/core/...` or the project's own directories |
@@ -339,7 +342,7 @@ The group is `'root'`, `'public'`, `'auth'`, `'dashboard'`, `'superadmin'` or `'
 
 ### Files under the old `app/` that stop migrate
 
-Migrate names each file it cannot place, with the reason and what to do, and stops before writing anything; the usual cases are in [When migrate stops](#when-migrate-stops). A `globals.css`, `favicon.ico` or `robots.txt` at the root of the old `app/` is the common one: move what it holds to `styles/globals.css` or `public/`, delete it, run migrate again.
+Migrate names each file it cannot place, with the reason and what to do, and stops before writing anything; the usual cases are in [When migrate stops](#when-migrate-stops). A `globals.css` or `robots.txt` at the root of the old `app/` is the common one: move what it holds to `styles/globals.css` or `public/`, delete it, run migrate again. The static metadata files of the app root (`favicon.ico`, `icon.*`, `apple-icon.*`, `opengraph-image.*`, `twitter-image.*`) are not among them: migrate moves them to `public/` itself.
 
 ### Client address behind a proxy or on Vercel
 

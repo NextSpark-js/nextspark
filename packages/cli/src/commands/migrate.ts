@@ -5,7 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
-import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
+import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, isStaticMetadataFile, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
@@ -90,7 +90,8 @@ interface MigrateReport {
     removed: { path: string; evidence: string }[];
     loaders: { path: string; template: string | null }[];
     overrides: { path: string; destination: string; core: string; baseline: string | null; diffLines: number; diff: string }[];
-    projectFiles: { path: string; destination: string }[];
+    /** `note`: what to add by hand because the file moved (Next's tag for a static metadata file is gone). */
+    projectFiles: { path: string; destination: string; note?: string }[];
     webhookExtensions: { provider: string; module: string }[];
     /** What stops the migration before it writes anything. */
     blockers: string[];
@@ -889,6 +890,7 @@ function hasUnclassifiedLegacyAppFiles(hostRoot: string, root: 'app' | 'src/app'
   const state = readSyncState(hostRoot);
   return legacyAppFilesIn(appRoot).some(projectFile => {
     const file = pathFrom(appRoot, projectFile);
+    if (isStaticMetadataFile(file)) return false;
     const content = readFileSync(projectFile);
     if (file.startsWith('(templates)/') || readGeneratedTagAt(`${root}/${file}`, content)?.intact) return false;
     return state?.files[`${root}/${file}`]?.written !== contentHash(content);
@@ -1168,6 +1170,8 @@ function classifyApp(hostRoot: string, root: 'app' | 'src/app' | null, previous:
   let unproven = 0;
   for (const projectFile of projectFiles) {
     const file = pathFrom(appRoot as string, projectFile);
+    // core's generator emits no static metadata file: the conversion carries these to public/, whatever the evidence says
+    if (isStaticMetadataFile(file)) continue;
     const content = readFileSync(projectFile);
     // A valid generated tag identifies an untouched generated host file even
     // when it came from an older core template revision.
@@ -1766,6 +1770,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
       baselineFor: path => previousTemplateCandidates(previousLookup.templates, path, selectedTheme.name, usePpr)[0],
       core: await loadCoreHost(templates ? dirname(templates) : null),
       reserved: new Set(movePlan ? [...movePlan.moves, ...movePlan.duplicates].map(item => item.destination) : []),
+      reservedSources: new Map(movePlan ? movePlan.moves.map(item => [item.destination, item.source] as [string, string]) : []),
       coreTemplates: templates,
       apiDir,
     })
@@ -1929,7 +1934,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
     overrides: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'override'
       ? [{ path: file.path, destination: file.fate.destination, core: file.fate.core, baseline: file.fate.baseline, diffLines: file.fate.diffLines, diff: file.fate.diff }]
       : []),
-    projectFiles: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'project' ? [{ path: file.path, destination: file.fate.destination }] : []),
+    projectFiles: (appPlan?.files ?? []).flatMap(file => file.fate.kind === 'project' ? [{ path: file.path, destination: file.fate.destination, ...(file.fate.note ? { note: file.fate.note } : {}) }] : []),
     webhookExtensions: appPlan?.webhookExtensions ?? [],
     blockers,
     unsimulable,
@@ -1959,6 +1964,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
       : `Could not use @nextsparkjs/core@${previousEvidence.version} (${previousLookup.unavailableReason}) to classify old generated files; unmatched files remain customizations.`);
   }
   warnings.push(...proxyNotices);
+  for (const file of appConversion.projectFiles) if (file.note) warnings.push(`${file.destination}: ${file.note}`);
   if (envExample.action === 'conflict') warnings.push(`${envExample.path} differs from the root .env.example and will not be merged.`);
   warnings.push(...notices);
   warnings.push(...configPlugins.warnings);
@@ -4511,7 +4517,6 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const result = appTreeOnly
       ? null
       : applyMove(repository, hostRoot, themeRoot, pluginsRoot, theme as string, plan, aliasesBeforeMove as AliasCatalog, report.envExample, report.config.plugins, hadLegacyApp ? report.rootProxyFiles.customizations : [], report.scaffolds, templates);
-    if (renameSlugs) renameEntitySlugs(repository, hostRoot, report.entitySlugs);
     const nextUpdated = await applyHostFixes(repository, hostRoot, report, simulation);
     if (appPlan) {
       const converted = applyAppConversion(hostRoot, appPlan);

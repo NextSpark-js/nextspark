@@ -3171,7 +3171,8 @@ test('migrate names every file whose shape it does not recognize and writes noth
     // A project template already at the destination
     'templates/about/page.tsx': 'export default function About() { return null }\n',
     'src/app/about/page.tsx': 'export default function AboutOld() { return null }\n',
-    'src/app/favicon.ico': 'ICO\u0000',
+    // A binary file that is not static metadata: it has no place to go
+    'src/app/logo.png': 'PNG\u0000',
   })
   try {
     const dryRun = run(root, ['--dry-run', '--json'])
@@ -3184,7 +3185,7 @@ test('migrate names every file whose shape it does not recognize and writes noth
     assert.match(reasonFor('pricing/page.tsx'), /the generator cannot use it as templates\/pricing\/page\.tsx: \[NS_HOST_NON_LITERAL_SEGMENT_CONFIG\] segment config "dynamic" is not a literal/)
     assert.match(reasonFor('(auth)/login/page.tsx'), /looks a template up at run time and also holds code of its own/)
     assert.match(reasonFor('about/page.tsx'), /templates\/about\/page\.tsx already exists, so this file cannot be moved there/)
-    assert.match(reasonFor('favicon.ico'), /it is a binary file of the app root \(favicon\.ico\): move it to public\//)
+    assert.match(reasonFor('logo.png'), /it is a binary file of the app root \(logo\.png\): move it to public\/ by hand, then run migrate again/)
     assert.equal(blockers.length, 7, blockers.join('\n'))
 
     const result = run(root, ['--yes'])
@@ -3194,6 +3195,117 @@ test('migrate names every file whose shape it does not recognize and writes noth
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
     await rm(root, { recursive: true, force: true })
+  }
+})
+
+// #431: a static metadata file of the app root (favicon.ico, icon.*, apple-icon.*, opengraph-image.*, twitter-image.*) is
+// served from public/ in a root-first project; migrate moves it instead of stopping on it
+test('migrate moves the static metadata files of the app root to public/ and says what a moved icon needs', async () => {
+  const root = await rootFirstFixture({
+    'src/app/favicon.ico': 'ICO\u0000one',
+    'src/app/icon.png': 'PNG\u0000icon',
+    'src/app/apple-icon.png': 'PNG\u0000apple',
+    'src/app/opengraph-image.jpg': 'JPG\u0000og',
+  })
+  try {
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.appConversion.blockers, [])
+    const moved = report.appConversion.projectFiles as { path: string, destination: string, note?: string }[]
+    assert.deepEqual(moved.map(file => [file.path, file.destination]), [
+      ['apple-icon.png', 'public/apple-icon.png'],
+      ['favicon.ico', 'public/favicon.ico'],
+      ['icon.png', 'public/icon.png'],
+      ['opengraph-image.jpg', 'public/opengraph-image.jpg'],
+    ])
+    // the browser asks for /favicon.ico by itself; the other tags were Next's to write
+    const note = (path: string) => moved.find(file => file.path === path)?.note
+    assert.equal(note('favicon.ico'), undefined)
+    assert.match(note('icon.png') ?? '', /add  icons: \{ icon: '\/icon\.png' \}  to the metadata of templates\/layout\.tsx/)
+    assert.match(note('apple-icon.png') ?? '', /icons: \{ apple: '\/apple-icon\.png' \}/)
+    assert.match(note('opengraph-image.jpg') ?? '', /openGraph: \{ images: \['\/opengraph-image\.jpg'\] \}.*metadataBase/)
+    assert.ok(report.warnings.some((line: string) => line.startsWith('public/icon.png: Next added the tag for icon.png')), report.warnings.join('\n'))
+
+    const result = run(root, ['--yes'])
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.deepEqual(await readFile(join(root, 'public/favicon.ico')), Buffer.from('ICO\u0000one'))
+    assert.deepEqual(await readFile(join(root, 'public/icon.png')), Buffer.from('PNG\u0000icon'))
+    assert.deepEqual(await readFile(join(root, 'public/apple-icon.png')), Buffer.from('PNG\u0000apple'))
+    assert.deepEqual(await readFile(join(root, 'public/opengraph-image.jpg')), Buffer.from('JPG\u0000og'))
+    await assert.rejects(access(join(root, 'src/app/favicon.ico')))
+    // the rollback cleans what the run created, public/favicon.ico included
+    assert.match(result.stdout, /clean -fdx -- [^\n]*'public\/favicon\.ico'/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("migrate moves a favicon even when the evidence says it is core's own: the generator emits no file", async () => {
+  const ico = Buffer.from('ICO\u0000core')
+  const root = await rootFirstFixture({
+    'src/app/favicon.ico': ico.toString('utf8'),
+    '.nextspark/sync-state.json': JSON.stringify({ coreVersion: '0.1.0-beta.190', files: { 'src/app/favicon.ico': { core: 'old', written: createHash('sha256').update(ico).digest('hex') } } }),
+  })
+  try {
+    const dryRun = run(root, ['--dry-run', '--json'])
+    assert.equal(dryRun.status, 0, `${dryRun.stdout}\n${dryRun.stderr}`)
+    const report = JSON.parse(dryRun.stdout)
+    assert.deepEqual(report.appConversion.removed, [])
+    assert.deepEqual(report.appConversion.projectFiles, [{ path: 'favicon.ico', destination: 'public/favicon.ico' }])
+    assert.deepEqual(report.appTemplates.generatedBySyncState, [])
+    assert.equal(run(root, ['--yes']).status, 0)
+    assert.deepEqual(await readFile(join(root, 'public/favicon.ico')), ico)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('migrate drops the app favicon when public/ already holds the same file, and stops when it holds another', async () => {
+  const same = await rootFirstFixture({ 'src/app/favicon.ico': 'ICO\u0000same', 'public/favicon.ico': 'ICO\u0000same' })
+  const other = await rootFirstFixture({ 'src/app/favicon.ico': 'ICO\u0000app', 'public/favicon.ico': 'ICO\u0000public' })
+  try {
+    const report = JSON.parse(run(same, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(report.appConversion.removed, [{ path: 'favicon.ico', evidence: 'identical to public/favicon.ico' }])
+    assert.deepEqual(report.appConversion.blockers, [])
+    assert.equal(run(same, ['--yes']).status, 0)
+    assert.equal(await readFile(join(same, 'public/favicon.ico'), 'utf8'), 'ICO\u0000same')
+    await assert.rejects(access(join(same, 'src/app/favicon.ico')))
+
+    const blocked = run(other, ['--dry-run', '--json'])
+    assert.equal(blocked.status, 1, `${blocked.stdout}\n${blocked.stderr}`)
+    const blockers: string[] = JSON.parse(blocked.stdout).appConversion.blockers
+    assert.equal(blockers.length, 1, blockers.join('\n'))
+    assert.match(blockers[0], /^src\/app\/favicon\.ico: public\/favicon\.ico already exists with other content, so favicon\.ico cannot be moved there/)
+    const refused = run(other, ['--yes'])
+    assert.notEqual(refused.status, 0)
+    assert.match(refused.stderr, /Refusing to migrate: 1 blocker\(s\).*Nothing was written/)
+    assert.equal(await readFile(join(other, 'public/favicon.ico'), 'utf8'), 'ICO\u0000public')
+    assert.equal(git_status(other), '')
+  } finally {
+    await rm(same, { recursive: true, force: true })
+    await rm(other, { recursive: true, force: true })
+  }
+})
+
+test("migrate compares the app favicon with the one the theme's public/ is about to put in public/", async () => {
+  const same = await rootFirstFixture({ 'src/app/favicon.ico': 'ICO\u0000same', 'contents/themes/acme/public/favicon.ico': 'ICO\u0000same' })
+  const other = await rootFirstFixture({ 'src/app/favicon.ico': 'ICO\u0000app', 'contents/themes/acme/public/favicon.ico': 'ICO\u0000theme' })
+  try {
+    const sameReport = JSON.parse(run(same, ['--dry-run', '--json']).stdout)
+    assert.deepEqual(sameReport.appConversion.removed, [{ path: 'favicon.ico', evidence: 'identical to public/favicon.ico' }])
+    assert.deepEqual(sameReport.appConversion.blockers, [])
+    const applied = run(same, ['--yes'])
+    assert.equal(applied.status, 0, `${applied.stdout}\n${applied.stderr}`)
+    assert.equal(await readFile(join(same, 'public/favicon.ico'), 'utf8'), 'ICO\u0000same')
+
+    const blocked = run(other, ['--dry-run', '--json'])
+    assert.equal(blocked.status, 1, `${blocked.stdout}\n${blocked.stderr}`)
+    assert.match(JSON.parse(blocked.stdout).appConversion.blockers[0], /^src\/app\/favicon\.ico: public\/favicon\.ico already exists with other content/)
+    assert.equal(git_status(other), '')
+  } finally {
+    await rm(same, { recursive: true, force: true })
+    await rm(other, { recursive: true, force: true })
   }
 })
 
