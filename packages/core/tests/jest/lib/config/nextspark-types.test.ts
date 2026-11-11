@@ -17,7 +17,6 @@ describe('nextspark.config.ts source contract', () => {
         features: {
           billing: true,
           superadmin: true,
-          aiChat: true,
         },
       },
     })
@@ -28,16 +27,25 @@ describe('nextspark.config.ts source contract', () => {
 
     expect(result.valid).toBe(true)
     if (!result.valid) return
-    expect(result.config.features).toEqual({ billing: true, superadmin: true, aiChat: true })
+    expect(result.config.features).toEqual({ billing: true, superadmin: true })
     expect(result.warnings).toEqual([expect.stringContaining("features.teams is not read and will be removed")])
     expect(result.warnings[0]).toContain("teams.mode: 'single-user'")
     expect(validateNextSparkConfig({ features: { teams: 'no' } })).toEqual({ valid: false, errors: ['features.teams must be a boolean; received string.'] })
   })
 
+  it('accepts features.aiChat with a warning that points to the plugins, and leaves it out of the resolved config (#425)', () => {
+    const result = validateNextSparkConfig({ features: { aiChat: false } })
+
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+    expect(result.config.features).toEqual({ billing: true, superadmin: true })
+    expect(result.warnings).toEqual([expect.stringContaining('features.aiChat is not read and will be removed: core has no AI chat')])
+  })
+
   it('accepts local plugin names, packaged plugin names, and template provenance for the project root', () => {
     const config = defineConfig({
       plugins: ['analytics', 'billing-local', '@nextsparkjs/plugin-langchain'],
-      features: { aiChat: false },
+      features: { billing: false },
       template: { name: 'crm', version: '0.1.0-beta.193' },
     })
 
@@ -47,9 +55,8 @@ describe('nextspark.config.ts source contract', () => {
     if (!result.valid) return
     expect(result.config.plugins).toEqual(['analytics', 'billing-local', '@nextsparkjs/plugin-langchain'])
     expect(result.config.features).toEqual({
-      billing: true,
+      billing: false,
       superadmin: true,
-      aiChat: false,
     })
     expect(result.config.template).toEqual({ name: 'crm', version: '0.1.0-beta.193' })
   })

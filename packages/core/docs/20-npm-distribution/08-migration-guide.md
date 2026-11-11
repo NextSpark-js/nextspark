@@ -179,8 +179,7 @@ export default defineConfig({
   // Feature flags
   features: {
     billing: true,
-    superadmin: true,
-    aiChat: true
+    superadmin: true
   }
 })
 ```

@@ -8,6 +8,10 @@
 export interface NextSparkFeatureConfig {
   billing?: boolean
   superadmin?: boolean
+  /**
+   * @deprecated Not read, and it will be removed (#425): core has no AI chat. The AI features come from plugins, which
+   * a project turns on in `plugins`.
+   */
   aiChat?: boolean
   /**
    * @deprecated Not read, and it will be removed (#425): the data of every project is kept per team, so team support
@@ -85,7 +89,7 @@ export interface NextSparkConfig {
 }
 
 /** The feature flags that are read: the deprecated ones are left out of the resolved config. */
-export type ResolvedNextSparkFeatures = Required<Omit<NextSparkFeatureConfig, 'teams'>>
+export type ResolvedNextSparkFeatures = Required<Omit<NextSparkFeatureConfig, 'teams' | 'aiChat'>>
 
 export interface ResolvedNextSparkConfig extends Omit<NextSparkConfig, 'plugins' | 'features' | 'apiDir'> {
   plugins: string[]
@@ -101,7 +105,6 @@ export type NextSparkConfigValidationResult =
 const DEFAULT_FEATURES: ResolvedNextSparkFeatures = {
   billing: true,
   superadmin: true,
-  aiChat: true,
 }
 
 /** Flags still accepted but not read (#425): the warning that says what to do instead. */
@@ -109,6 +112,9 @@ const DEPRECATED_FEATURES: Record<string, string> = {
   teams:
     "features.teams is not read and will be removed: the data of every project is kept per team, so team support cannot be left out. " +
     "A project without team features sets teams.mode: 'single-user' in config/app.config.ts. Delete the key.",
+  aiChat:
+    'features.aiChat is not read and will be removed: core has no AI chat. The AI features come from plugins, ' +
+    'turned on in plugins (such as @nextsparkjs/plugin-langchain). Delete the key.',
 }
 
 const DEFAULT_API_DIR = 'api'

@@ -16,7 +16,6 @@ export default defineConfig({
   features: {
     billing: true,
     superadmin: true,
-    aiChat: true,
   },
   template: {
     name: 'starter',

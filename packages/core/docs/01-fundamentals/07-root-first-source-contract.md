@@ -74,7 +74,7 @@ import { defineConfig } from '@nextsparkjs/core/lib/config'
 export default defineConfig({
   plugins: ['analytics', 'billing-local'],
   features: {
-    aiChat: false,
+    billing: false,
   },
   template: {
     name: 'crm',
@@ -93,7 +93,7 @@ export default defineConfig({
 | `features.billing` | `boolean` | `true` | No | Include billing contributions. |
 | `features.teams` | `boolean` | absent | No | Deprecated, not read; it will be removed. The data of every project is kept per team, so team support cannot be left out: a project without team features sets `teams.mode: 'single-user'` in `config/app.config.ts`. Setting the key prints a warning when the config is loaded. |
 | `features.superadmin` | `boolean` | `true` | No | Include superadmin contributions. |
-| `features.aiChat` | `boolean` | `true` | No | Include AI chat contributions. |
+| `features.aiChat` | `boolean` | absent | No | Deprecated, not read; it will be removed. Core has no AI chat: the AI features come from plugins, turned on in `plugins`. Setting the key prints a warning when the config is loaded. |
 | `billing.webhookExtensions` | `{ stripe?: string; polar?: string }` | absent | No | Paths (from the project root) of the modules that extend core's billing webhooks. `nextspark prepare` imports each one statically into the generated webhook route: `stripe` must export `stripeWebhookExtensions`, `polar` must export `polarWebhookExtensions`. |
 | `sitemap` | `{ enabled?: boolean; urls?: string[]; exclude?: string[] }` | `enabled: true` | No | `/sitemap.xml` and the `Sitemap:` line of `/robots.txt`. `urls` adds paths from the app root, `exclude` removes exact paths or prefixes ending in `*`; `enabled: false` serves no sitemap. `nextspark prepare` writes them into the generated sitemap route. See [SEO guide](../23-search-engine-optimization/01-guide.md). |
 
