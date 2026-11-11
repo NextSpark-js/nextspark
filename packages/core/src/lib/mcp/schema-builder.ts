@@ -254,6 +254,8 @@ function buildListStrict(listShape: McpShape): z.ZodTypeAny {
     .object(listShape)
     .strict()
     .superRefine((value, ctx) => {
+      // zod 4.6 runs refinements even when .strict() already reported unknown keys; don't stack a second, misleading message on top.
+      if (ctx.issues.some((i) => i.code === 'unrecognized_keys')) return
       const v = value as Record<string, unknown>
       if ((v.from || v.to) && !v.dateField) {
         ctx.addIssue({

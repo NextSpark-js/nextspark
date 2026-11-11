@@ -91,6 +91,14 @@ describe('buildEntitySchemas', () => {
     expect(listStrict.safeParse({ from: '2026-01-01', dateField: 'dueDate' }).success).toBe(true);
   });
 
+  it('an unknown key is the only issue: the from/to rule does not stack a second message', () => {
+    const config = entity([field({ name: 'dueDate', type: 'date' })]);
+    const { listStrict } = buildEntitySchemas(config);
+    const r = listStrict.safeParse({ from: '2026-01-01', bogus: 1 });
+    expect(r.success).toBe(false);
+    expect(r.error!.issues.map((i) => i.code)).toEqual(['unrecognized_keys']);
+  });
+
   it('never exposes `distinct` in the list shape', () => {
     const config = entity([field({ name: 'name', type: 'text' })]);
     const { listShape } = buildEntitySchemas(config);
