@@ -11,9 +11,10 @@
  *                                             (default 1) trusted proxies from the right
  *   NEXTSPARK_CLIENT_IP_SOURCE=none           no client address: every request shares one bucket
  *
- * Unset keeps the order core always used (cf-connecting-ip, rightmost X-Forwarded-For, x-real-ip,
- * true-client-ip), and production logs one warning saying what to set. Next.js gives route handlers
- * no socket address, so 'none' cannot fall back to one.
+ * Unset on Vercel (VERCEL=1) means vercel, said once at startup. Unset elsewhere reads the rightmost
+ * X-Forwarded-For, then x-real-ip, then true-client-ip (never cf-connecting-ip: behind Cloudflare, set
+ * cloudflare), and production logs one warning saying what to set. A set value always wins. Next.js
+ * gives route handlers no socket address, so 'none' cannot fall back to one.
  * What to set per deployment: the upgrade note in CHANGELOG.md, and https://nextspark.dev/docs.
  */
 
@@ -29,12 +30,20 @@ export type ClientIpSource =
 
 type Env = Record<string, string | undefined>
 
+/** Where the effective source came from: the variable, the Vercel detection (VERCEL=1), or neither. */
+export type ClientIpSourceOrigin = 'variable' | 'vercel' | 'default'
+
+export function getClientIpSourceOrigin(env: Env = process.env): ClientIpSourceOrigin {
+  if (env.NEXTSPARK_CLIENT_IP_SOURCE?.trim()) return 'variable'
+  return env.VERCEL === '1' ? 'vercel' : 'default'
+}
+
 const HEADER_NAME = /^[a-z0-9!#$%&'*+.^_`|~-]+$/
 
 /** Reads the setting. Throws on a value it does not understand: a typo must not silently trust a header. */
 export function getClientIpSource(env: Env = process.env): ClientIpSource {
   const raw = env.NEXTSPARK_CLIENT_IP_SOURCE?.trim().toLowerCase()
-  if (!raw) return { kind: 'default' }
+  if (!raw) return env.VERCEL === '1' ? { kind: 'vercel' } : { kind: 'default' }
   if (raw === 'vercel' || raw === 'cloudflare' || raw === 'none') return { kind: raw }
   if (raw === 'xff') {
     const hopsRaw = env.NEXTSPARK_TRUSTED_PROXY_HOPS?.trim() || '1'
@@ -81,7 +90,6 @@ export function getClientIp(headers: Headers, env: Env = process.env): string {
       return UNKNOWN_CLIENT_IP
     default:
       return (
-        headers.get('cf-connecting-ip') ||
         lastEntry(headers.get('x-forwarded-for')) ||
         headers.get('x-real-ip') ||
         headers.get('true-client-ip') ||
@@ -124,8 +132,8 @@ export function getBetterAuthIpHeaders(env: Env = process.env): string[] | undef
 const WARNED = Symbol.for('nextspark.clientIpSourceWarned')
 
 /**
- * Logs once per process when the client address source is invalid (in every environment) or, in production
- * only, not set. Called at server start (logAuthReadinessAtStartup) and again on first use, for projects whose
+ * Logs once per process when the client address source is invalid (in every environment), detected as Vercel
+ * (in every environment) or, in production only, not set. Called at server start (logAuthReadinessAtStartup) and again on first use, for projects whose
  * instrumentation does not run it; the flag lives on globalThis so both bundles share it.
  */
 export function warnClientIpSourceAtStartup(env: Env = process.env): void {
@@ -139,11 +147,21 @@ export function warnClientIpSourceAtStartup(env: Env = process.env): void {
     console.error((error as Error).message)
     return
   }
-  if (source.kind !== 'default' || env.NODE_ENV !== 'production') return
+  const origin = getClientIpSourceOrigin(env)
+  if (origin === 'vercel') {
+    state[WARNED] = true
+    console.info(
+      '[client-ip] NEXTSPARK_CLIENT_IP_SOURCE is not set and VERCEL=1, so the client address comes from ' +
+        'x-vercel-forwarded-for, then x-real-ip. Behind another proxy in front of Vercel, set the variable.'
+    )
+    return
+  }
+  if (origin !== 'default' || env.NODE_ENV !== 'production') return
   state[WARNED] = true
   console.warn(
     '[client-ip] NEXTSPARK_CLIENT_IP_SOURCE is not set, so rate limits and audit logs read the client address ' +
-      'from request headers in a fixed order. Set it for your deployment: vercel, cloudflare, xff ' +
-      '(with NEXTSPARK_TRUSTED_PROXY_HOPS) or header:<name>; none if nothing in front sets a client address.'
+      'from the rightmost X-Forwarded-For, then x-real-ip, then true-client-ip. cf-connecting-ip is not read: ' +
+      'behind Cloudflare, set NEXTSPARK_CLIENT_IP_SOURCE=cloudflare. Otherwise set it for your deployment: ' +
+      'vercel, xff (with NEXTSPARK_TRUSTED_PROXY_HOPS) or header:<name>; none if nothing in front sets a client address.'
   )
 }

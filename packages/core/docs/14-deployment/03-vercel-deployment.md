@@ -51,7 +51,7 @@ VERCEL_PROJECT=your-project-name  # Optional
 
 ### 5. Set the Client Address Source
 
-Add `NEXTSPARK_CLIENT_IP_SOURCE=vercel` to the production and preview environment variables, so rate limits and audit logs use the client address Vercel sets. See [Client Address](./10-client-address.md).
+Rate limits and audit logs use the client address Vercel sets. With `NEXTSPARK_CLIENT_IP_SOURCE` unset, core detects Vercel from the `VERCEL=1` variable Vercel sets and uses `vercel`, saying so once at startup. Setting `NEXTSPARK_CLIENT_IP_SOURCE=vercel` in the production and preview environments makes it explicit; set another source only when something you trust sits in front of Vercel, such as `cloudflare`. See [Client Address](./10-client-address.md).
 
 ---
 

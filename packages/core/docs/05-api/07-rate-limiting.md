@@ -258,6 +258,9 @@ To change it:
 - set the numbers for either tier in the `APP_CONFIG_OVERRIDES` of `app.config.ts`: `rateLimit: { tiers: { auth: { limit: 120, windowMs: 15 * 60_000 }, authIdentifier: { limit: 10, windowMs: 15 * 60_000 } } }` (a field you leave out keeps its default). Anyone who knows an email can use up that email's budgets for 15 minutes; that is the cost of limiting by identifier;
 - set `NEXTSPARK_CLIENT_IP_SOURCE` so the address read is the real one (`vercel`, `cloudflare`, `xff` with
   `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Without it, every person behind a proxy can look like one address.
+  On Vercel (`VERCEL=1`) an unset variable means `vercel`; elsewhere it means the rightmost `X-Forwarded-For`, `x-real-ip`
+  and `true-client-ip`, and never `cf-connecting-ip`, so behind Cloudflare set `cloudflare`. A set value always wins.
+  `nextspark doctor` shows which source applies. See [Client address](../14-deployment/10-client-address.md).
 
 ### Core's admin routes
 

@@ -369,4 +369,4 @@ Migrate names each file it cannot place, with the reason and what to do, and sto
 
 ### Client address behind a proxy or on Vercel
 
-Set `NEXTSPARK_CLIENT_IP_SOURCE` explicitly (`vercel` on Vercel, `cloudflare`, `xff` with `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Unset, core falls back to guessing from several headers and production logs a warning at startup, and the rate limits above count whatever address it picks. See [Client address](../14-deployment/10-client-address.md).
+Set `NEXTSPARK_CLIENT_IP_SOURCE` explicitly (`vercel` on Vercel, `cloudflare`, `xff` with `NEXTSPARK_TRUSTED_PROXY_HOPS`, or `header:<name>`). Unset on Vercel (`VERCEL=1`), core uses `vercel`. Unset elsewhere, core reads the rightmost `X-Forwarded-For`, `x-real-ip` and `true-client-ip`, production logs a warning at startup, and the rate limits above count whatever address it picks; `cf-connecting-ip` is not read unless you set `cloudflare`, so a project behind Cloudflare must set it. See [Client address](../14-deployment/10-client-address.md).

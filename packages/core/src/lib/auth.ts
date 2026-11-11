@@ -627,7 +627,7 @@ export const auth = betterAuth({
     // Emails and other deferred work run after the database transaction, not inside it (lib/auth/background-tasks)
     backgroundTasks: { handler: runAfterResponse },
     // Better Auth's own rate limiter reads the client address from the header NEXTSPARK_CLIENT_IP_SOURCE
-    // names (lib/api/client-ip); unset, 'xff' and 'none' keep Better Auth's default.
+    // names (lib/api/client-ip), Vercel's headers when unset on Vercel; unset elsewhere and 'xff' keep Better Auth's default.
     ...(betterAuthIpHeaders ? { ipAddress: { ipAddressHeaders: betterAuthIpHeaders } } : {}),
     // Cross-subdomain session cookies (opt-in via env).
     //
