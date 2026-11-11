@@ -286,6 +286,8 @@ spread and no expression. A host with another core (the conformance fixture) pas
   of the plan (`planHost({ features })`), and so of `prepare --check`; a project or plugin route at one of those paths is its own.
   `billing: false` leaves out the payment routes, the provider webhooks, the lifecycle cron, the team invoices API and the
   billing, plans and invoices pages; with `billing.webhookExtensions` set it stops `prepare` (`NS_HOST_BILLING_OFF_WEBHOOK_EXTENSIONS`).
+  `superadmin: false` leaves out the `/superadmin` area and `/api/superadmin/*`; a project or plugin route under `/superadmin`
+  would have no role check left, so it stops `prepare` (`NS_HOST_AREA_OFF`), and the proxy notice stops asking for the area.
   The registries leave the same routes out of the API route list and write the flags to `features.ts`, which the UI reads.
 - **API rate limit** (`rate-limit.mjs`, #226): every method of a Route Handler under `src/app/api/` that a project or plugin
   provides is composed with core's per-address limit, as the 0.x theme and plugin dispatchers did:

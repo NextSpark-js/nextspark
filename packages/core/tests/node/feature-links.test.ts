@@ -5,7 +5,9 @@
  * - the page URLs of src/lib/config/feature-pages.ts are exactly those of the omitted page routes;
  * - every link core's source writes (a JSX `href`, a `push`/`replace` call, an `href`/`url` property) to an omitted page
  *   sits in a file that checks the flag (`FEATURES.<flag>` or `isServedPath`), or in a file only the omitted routes
- *   reach (followed through the imports), or in a default config whose links config-client and config-sync filter
+ *   reach (followed through the imports; an index file that only re-exports does not count as a user, but a file that
+ *   only such an index reaches does not count as unreachable either), or in a default config whose links config-client
+ *   and config-sync filter
  *   (servedAppConfig, servedDashboardConfig: jest checks them in feature-links.test.ts).
  */
 import { test } from 'node:test'
@@ -52,9 +54,13 @@ function resolveModule(from: string, specifier: string): string | null {
 const files = walk(SRC)
 const sources = new Map(files.map(file => [file, ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)]))
 
-/** Who imports each file (static imports and re-exports). */
+/** An index file that only re-exports: it renders nothing, so it is not a user of what it re-exports. */
+const barrels = new Set([...sources].filter(([, source]) => source.statements.every(statement => ts.isExportDeclaration(statement) && statement.moduleSpecifier)).map(([file]) => file))
+
+/** Who imports each file (static imports and re-exports), index files that only re-export left out. */
 const importers = new Map<string, Set<string>>()
 for (const [file, source] of sources) {
+  if (barrels.has(file)) continue
   for (const statement of source.statements) {
     const specifier = (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) && statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
       ? statement.moduleSpecifier.text : null

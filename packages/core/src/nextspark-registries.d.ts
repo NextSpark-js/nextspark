@@ -467,7 +467,7 @@ declare module '@nextsparkjs/registries/providers-scope' {
 
 declare module '@nextsparkjs/registries/features' {
   /** `features` of nextspark.config.ts: a flag that is false left its core routes and pages out of the host (#425). */
-  export const FEATURES: { readonly billing: boolean }
+  export const FEATURES: { readonly billing: boolean; readonly superadmin: boolean }
 }
 
 declare module '@nextsparkjs/registries/request-locale' {

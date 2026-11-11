@@ -23,6 +23,7 @@ import {
   Globe
 } from "lucide-react";
 import { cn } from '../../lib/utils';
+import { FEATURES } from '../../lib/config/build-features';
 import { Button } from '../ui/button';
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -289,8 +290,8 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
           )}
         </Link>
 
-        {/* Link to Superadmin Panel (if user is also superadmin) */}
-        <Link
+        {/* Link to Superadmin Panel (if user is also superadmin); with `features.superadmin: false` the area is not served (#425) */}
+        {FEATURES.superadmin && <Link
           href="/superadmin"
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
@@ -308,7 +309,7 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
               <p className="text-xs text-muted-foreground">{t('superAdminArea')}</p>
             </div>
           )}
-        </Link>
+        </Link>}
 
         {/* Security Notice */}
         {!isCollapsed && (

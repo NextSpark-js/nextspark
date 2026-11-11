@@ -6,7 +6,7 @@
  */
 import { isServedPathWith } from '@/core/lib/config/feature-pages'
 
-let flags = { billing: true }
+let flags = { billing: true, superadmin: true }
 jest.mock('@nextsparkjs/registries/features', () => ({ get FEATURES() { return flags } }))
 
 type Loaded = { APP_CONFIG_MERGED: any; DASHBOARD_CONFIG: any }
@@ -31,10 +31,10 @@ function menuLinks({ APP_CONFIG_MERGED, DASHBOARD_CONFIG }: Loaded): string[] {
 }
 
 describe.each(['config-client', 'config-sync'] as const)('%s with features.billing', (module) => {
-  afterEach(() => { flags = { billing: true } })
+  afterEach(() => { flags = { billing: true, superadmin: true } })
 
   it('false: no menu links to the billing, plans or invoices pages, and those settings pages are disabled', () => {
-    flags = { billing: false }
+    flags = { billing: false, superadmin: true }
     const config = load(module)
     const links = menuLinks(config)
     expect(links.length).toBeGreaterThan(0)

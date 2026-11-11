@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl'
 import { useCanAccessAdmin } from '../../app/guards/SuperAdminGuard'
 import { useState } from 'react'
 import { MOBILE_NAV_CONFIG } from '../../../lib/config/config-client'
+import { FEATURES } from '../../../lib/config/build-features'
 import { getIcon } from '../../../lib/config/icon-map'
 import type { MobileNavMoreItem } from '../../../lib/config/types'
 import type { LucideIcon } from 'lucide-react'
@@ -80,7 +81,8 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
   const tDashboard = useTranslations('dashboard')
   // Use root namespace for dynamic config-based translations (supports both core and theme namespaces)
   const t = useTranslations()
-  const canAccessAdmin = useCanAccessAdmin()
+  // With `features.superadmin: false` the area is not served (#425)
+  const canAccessAdmin = useCanAccessAdmin() && FEATURES.superadmin
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   const handleSignOut = async () => {

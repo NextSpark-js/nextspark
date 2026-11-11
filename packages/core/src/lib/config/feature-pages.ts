@@ -5,6 +5,7 @@
  */
 export const FEATURE_PAGES = {
   billing: ['/dashboard/settings/billing', '/dashboard/settings/plans', '/dashboard/settings/invoices'],
+  superadmin: ['/superadmin'],
 } as const
 
 export type FeatureFlags = { readonly [flag in keyof typeof FEATURE_PAGES]: boolean }

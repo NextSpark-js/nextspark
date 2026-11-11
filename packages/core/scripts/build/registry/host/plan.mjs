@@ -70,7 +70,7 @@ import { join, posix, relative, sep } from 'node:path'
 
 import { kindForFileStem } from './facade-emitter.mjs'
 import { applySitemap } from './sitemap.mjs'
-import { servedCoreRoutes } from './features.mjs'
+import { FEATURE_DIAGNOSTICS, omittingFeature, servedCoreRoutes } from './features.mjs'
 import { PLUGIN_DIAGNOSTICS, capabilitiesOf } from '../discovery/plugin-capabilities.mjs'
 
 export const PLAN_DIAGNOSTICS = Object.freeze({
@@ -357,6 +357,25 @@ export function planHost({ coreRoutes: manifestRoutes, entityRoutes = [], entity
   candidates.push(...projectRoutes)
   for (const [target, webhook] of Object.entries(webhooks)) {
     candidates.push({ kind: 'route', target, mode: null, specifier: webhook.specifier, file: webhook.file, layer: 'project', source: webhook.source, webhook, configured: true })
+  }
+
+  // An area whose layout a flag left out (features.mjs) has no role check left: nothing a project or plugin puts under
+  // its URL may be served, or it would reach anyone
+  const areasOff = manifestRoutes
+    .filter(route => route.access && omittingFeature(route.target, features))
+    .map(route => ({ url: urlSegments(route.target).join('/'), flag: omittingFeature(route.target, features) }))
+  for (const route of candidates.filter(candidate => candidate.layer !== 'core')) {
+    const url = servedUrlSegments(route.target).join('/')
+    const area = areasOff.find(candidate => url === candidate.url || url.startsWith(`${candidate.url}/`))
+    if (!area) continue
+    diagnostics.push({
+      code: FEATURE_DIAGNOSTICS.AREA_OFF,
+      target: route.target,
+      sources: [route.source],
+      message:
+        `src/app/${route.target}: ${route.source} is under /${area.url}, but nextspark.config.ts sets features.${area.flag} to false, which leaves out ` +
+        `that area and its role check, so it would be served to anyone: remove the file or move it out of /${area.url}, or turn the area back on`,
+    })
   }
 
   // The templates of public item pages are named after the catch-all path they replaced; the entity route

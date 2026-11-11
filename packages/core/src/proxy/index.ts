@@ -36,6 +36,7 @@ import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../lib/teams/active-
 import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '../lib/auth/session-hint'
 import { isDocsPublic, legacyDocsAccessMessage } from '../lib/docs/access'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
+import { FEATURES } from '@nextsparkjs/registries/features'
 
 /**
  * Session type for proxy (inline definition)
@@ -614,7 +615,8 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
     const [, sectionSlug, pageSlug] = oldDocsMatch
     const newUrl = appUrl(request, '/docs')
     newUrl.search = target.search
-    const superadminSection = DOCS_REGISTRY.superadmin.find((section) => section.slug === sectionSlug)
+    // With `features.superadmin: false` there are no /superadmin/docs to send an old URL to (#425)
+    const superadminSection = FEATURES.superadmin ? DOCS_REGISTRY.superadmin.find((section) => section.slug === sectionSlug) : undefined
     const publicSection = DOCS_REGISTRY.public.find((section) => section.slug === sectionSlug)
 
     if (superadminSection?.pages.some((page) => page.slug === pageSlug)) {

@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path'
 import { planHost } from '../plan.mjs'
 import { FEATURE_DIAGNOSTICS, featureConfigDiagnostics, omittingFeature } from '../features.mjs'
 import { generateFeatures } from '../../generators/features.mjs'
+import { missingProxyAreas } from '../proxy-areas.mjs'
 import { discoverCoreRoutes } from '../../discovery/core-routes.mjs'
 
 const CORE_ROOT = join(import.meta.dirname, '../../../../..')
@@ -111,7 +112,53 @@ test('the API route list of the registries leaves out the routes of a flag that 
 })
 
 test('the features registry carries the flags, every one true unless set to false', () => {
-  assert.match(generateFeatures({ billing: false }), /export const FEATURES: \{ readonly billing: boolean \} = \{"billing":false\}/)
-  assert.match(generateFeatures({}), /= \{"billing":true\}/)
-  assert.match(generateFeatures(), /= \{"billing":true\}/)
+  assert.match(generateFeatures({ billing: false }), /export const FEATURES: \{ readonly billing: boolean; readonly superadmin: boolean \} = \{"billing":false,"superadmin":true\}/)
+  assert.match(generateFeatures({ superadmin: false }), /= \{"billing":true,"superadmin":false\}/)
+  assert.match(generateFeatures({}), /= \{"billing":true,"superadmin":true\}/)
+  assert.match(generateFeatures(), /= \{"billing":true,"superadmin":true\}/)
+})
+
+test('features.superadmin: false leaves out the /superadmin area and /api/superadmin, and nothing else', () => {
+  const omitted = MANIFEST.filter(route => omittingFeature(route.target, { superadmin: false })).map(route => route.target)
+  assert.ok(omitted.includes('superadmin/layout.tsx'))
+  assert.ok(omitted.includes('superadmin/docs/[section]/[page]/page.tsx'))
+  assert.ok(omitted.includes('api/superadmin/users/route.ts'))
+  assert.deepEqual(omitted.filter(target => !/^(api\/)?superadmin\//.test(target)), [])
+  assert.deepEqual(MANIFEST.filter(route => /^(api\/)?superadmin\//.test(route.target)).map(route => route.target).sort(), omitted.sort())
+  assert.ok(MANIFEST.some(route => route.target.startsWith('devtools/')), 'devtools is a manifest area')
+  assert.equal(MANIFEST.filter(route => route.target.startsWith('devtools/') && omittingFeature(route.target, { superadmin: false })).length, 0)
+})
+
+test('with the superadmin area off, a project or plugin route under /superadmin stops the plan instead of being served without the role check', () => {
+  const { root, cleanup } = project({
+    'templates/superadmin/reports/page.tsx': PAGE,
+    'templates/dashboard/reports/page.tsx': PAGE,
+    'api/superadmin-stats/route.ts': 'export async function GET() { return Response.json({}) }\n',
+    'plugins/audit/templates/superadmin/audit/page.tsx': PAGE,
+  })
+  try {
+    const coreRoutes = MANIFEST.filter(route => /^(superadmin|devtools)\//.test(route.target) || route.target === 'layout.tsx').map(core)
+    const plugins = [{ name: 'audit', root: join(root, 'plugins/audit'), importBase: '@/plugins/audit' }]
+    const on = planHost({ coreRoutes, project: { root }, plugins, features: { superadmin: true } })
+    assert.deepEqual(on.diagnostics, [])
+    assert.equal(on.routes.find(route => route.target === 'superadmin/reports/page.tsx').access.wrapper, 'withSuperadminAccess')
+
+    const off = planHost({ coreRoutes, project: { root }, plugins, features: { superadmin: false } })
+    assert.deepEqual(off.diagnostics.map(diagnostic => `${diagnostic.code} ${diagnostic.target}`).sort(), [
+      `${FEATURE_DIAGNOSTICS.AREA_OFF} superadmin/audit/page.tsx`,
+      `${FEATURE_DIAGNOSTICS.AREA_OFF} superadmin/reports/page.tsx`,
+    ])
+    assert.match(off.diagnostics[0].message, /is under \/superadmin, but nextspark\.config\.ts sets features\.superadmin to false.*served to anyone/)
+    // devtools keeps its layout and its role check
+    assert.ok(off.routes.some(route => route.target === 'devtools/layout.tsx' && route.origin === 'core'))
+    assert.ok(off.routes.filter(route => route.target.startsWith('devtools/') && route.kind === 'page').every(route => route.access?.wrapper === 'withDevtoolsAccess'))
+  } finally {
+    cleanup()
+  }
+})
+
+test('the proxy notice does not ask for /superadmin when the area is off', () => {
+  const source = "export function proxy(request) { if (request.nextUrl.pathname.startsWith('/dashboard')) return null }\n"
+  assert.deepEqual(missingProxyAreas(source).map(area => area.path), ['/superadmin', '/devtools'])
+  assert.deepEqual(missingProxyAreas(source, { superadmin: false }).map(area => area.path), ['/devtools'])
 })

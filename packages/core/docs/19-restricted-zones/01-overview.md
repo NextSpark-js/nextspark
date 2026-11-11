@@ -51,6 +51,32 @@ Each zone has a dedicated layout with:
 - **Color-Coded Branding**: Visual differentiation (red for Admin Panel, purple for DevTools)
 - **Scrollable Content Area**: Main content with overflow handling
 
+## An App Without the Admin Panel: `features.superadmin: false`
+
+A project that has no use for the Admin Panel turns it off in `nextspark.config.ts`:
+
+```ts
+export default defineConfig({
+  features: { superadmin: false },
+})
+```
+
+`nextspark prepare` (and `prepare --check`) then leaves the whole `/superadmin` area out of the generated host (its
+layout, every page, the private docs at `/superadmin/docs`) together with `/api/superadmin/*`, and:
+
+- the top bar, the mobile menu and the DevTools sidebar show no link to it;
+- a `dashboard.homeRoute` entry inside `/superadmin` is not used: that role lands on the default route;
+- the proxy no longer redirects an old `/docs/core/...` link to the private docs (it goes to the public docs, or their home);
+- `prepare` does not ask a project's own proxy to protect `/superadmin`.
+
+The area's role check is part of its layout, so a page, layout or Route Handler that the project or a plugin puts under
+`/superadmin` would be served to anyone without it. `prepare` stops instead (`NS_HOST_AREA_OFF`), naming the file:
+move it out of `/superadmin`, remove it, or turn the area back on. A plugin that contributes a superadmin page (its
+navigation entries in the area included) cannot be enabled together with the flag.
+
+DevTools is not affected: `/devtools` keeps its layout, its pages and its role check. The `superadmin` and `developer`
+roles stay as they are (permissions, RLS, the API); only the area is gone.
+
 ## Quick Reference
 
 ### When to Use Admin Panel

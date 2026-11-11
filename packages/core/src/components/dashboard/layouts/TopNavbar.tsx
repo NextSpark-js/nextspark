@@ -61,7 +61,8 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
   const helpHref = (supportLinks.find(link => link.url === '/support') ?? supportLinks.find(link => link.url))?.url
 
   // Determine visibility
-  const showSuperadmin = superadminConfig?.enabled && (isSuperAdmin || (isDeveloper && superadminConfig?.showToDevelopers))
+  // With `features.superadmin: false` the area is not served (#425)
+  const showSuperadmin = FEATURES.superadmin && superadminConfig?.enabled && (isSuperAdmin || (isDeveloper && superadminConfig?.showToDevelopers))
   const showDevZone = devtoolsConfig?.enabled && isDeveloper
 
   // Icon mapping for user menu items and settings menu

@@ -7,6 +7,7 @@
  * `/\host` would take the user to another site right after they sign in.
  */
 import { safeCallbackPath } from './callback-url'
+import { FEATURES } from '../config/build-features'
 
 export type HomeRouteConfig = string | Record<string, string>
 
@@ -36,10 +37,11 @@ export function assertHomeRoute(dashboardConfig: object | undefined): void {
   assertPath(homeRoute, '')
 }
 
-// The roles each restricted area lets in (the proxy and routes/_internal/area-access apply the same rules)
+// The roles each restricted area lets in (the proxy and routes/_internal/area-access apply the same rules). With
+// `features.superadmin: false` the area is not served, so a landing route inside it is closed to every role (#425).
 const AREA_ROLES: Record<string, readonly string[]> = {
   admin: ['superadmin', 'developer'],
-  superadmin: ['superadmin', 'developer'],
+  superadmin: FEATURES.superadmin ? ['superadmin', 'developer'] : [],
   devtools: ['developer'],
 }
 

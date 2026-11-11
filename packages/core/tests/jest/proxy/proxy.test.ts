@@ -22,6 +22,7 @@ import { auth } from '@nextsparkjs/core/lib/auth'
 import { getProjectAppConfig } from '@nextsparkjs/core/lib/middleware'
 import { NextRequest } from 'next/server'
 import { createProxy, proxy } from '@nextsparkjs/core/proxy'
+import { FEATURES } from '@nextsparkjs/registries/features'
 
 type PassThrough = { type?: string; requestHeaders?: Headers | null; redirectUrl?: string; setCookies?: Array<{ name: string; value: string; maxAge?: number }> }
 
@@ -317,6 +318,18 @@ describe('proxy path boundaries and redirect targets', () => {
 
     expect(response.type).toBe('redirect')
     expect(response.redirectUrl).toContain('/superadmin/docs/setup/configuration')
+  })
+
+  test('with features.superadmin: false that link goes to the docs home, since /superadmin/docs is not served (#425)', async () => {
+    const features = FEATURES as { superadmin: boolean }
+    features.superadmin = false
+    try {
+      const response = (await proxy(makeRequest('/docs/core/setup/configuration'))) as unknown as PassThrough
+      expect(response.type).toBe('redirect')
+      expect(new URL(response.redirectUrl!).pathname).toBe('/docs')
+    } finally {
+      features.superadmin = true
+    }
   })
 
   // core/theme-system, core/entities, core/api and core/authentication were

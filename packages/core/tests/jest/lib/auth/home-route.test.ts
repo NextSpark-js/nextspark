@@ -116,3 +116,18 @@ describe('accessDeniedPath', () => {
     expect(accessDeniedPath(config, 'admin')).toBe('/dashboard/team?tab=1&error=access_denied')
   })
 })
+
+describe('with features.superadmin: false (#425)', () => {
+  test('a landing route in /superadmin is closed to every role, so they land on the default', () => {
+    let resolve: typeof resolveHomeRoute | undefined
+    jest.isolateModules(() => {
+      jest.doMock('@nextsparkjs/registries/features', () => ({ FEATURES: { billing: true, superadmin: false } }))
+      resolve = require('@/core/lib/auth/home-route').resolveHomeRoute
+    })
+    const config = { homeRoute: { default: '/dashboard/tasks', superadmin: '/superadmin', developer: '/superadmin/users' } }
+    expect(resolve!(config, 'superadmin')).toBe('/dashboard')
+    expect(resolve!(config, 'developer')).toBe('/dashboard')
+    expect(resolve!(config, 'member')).toBe('/dashboard/tasks')
+    expect(resolve!({ homeRoute: '/devtools' }, 'developer')).toBe('/devtools')
+  })
+})

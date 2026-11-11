@@ -67,16 +67,19 @@ export function withoutComments(source) {
 /** A proxy built on core's proxy entry (the scaffold's facade, or createProxy) has core's checks. */
 const USES_CORE_PROXY = /['"]@nextsparkjs\/core\/proxy['"]/
 
-/** The protected areas a proxy's source never names as a path (`'/superadmin'`, `"/devtools"`, `` `/devtools` ``). */
-export function missingProxyAreas(source) {
+/**
+ * The protected areas a proxy's source never names as a path (`'/superadmin'`, `"/devtools"`, `` `/devtools` ``). An area
+ * a `features` flag of nextspark.config.ts left out (`superadmin: false`) is not served, so it is not asked for (#425).
+ */
+export function missingProxyAreas(source, features = {}) {
   const code = withoutComments(source)
   if (REEXPORTS_CORE_PROXY.test(code) || USES_CORE_PROXY.test(code)) return []
-  return PROTECTED_AREAS.filter(area => !new RegExp(`['"\`]${area.path}(?![\\w-])`).test(source))
+  return PROTECTED_AREAS.filter(area => features[area.path.slice(1)] !== false && !new RegExp(`['"\`]${area.path}(?![\\w-])`).test(source))
 }
 
 /** The warning for one proxy file whose source misses some areas, or null. */
-export function proxyAreaNotice(file, source) {
-  const missing = missingProxyAreas(source)
+export function proxyAreaNotice(file, source, features = {}) {
+  const missing = missingProxyAreas(source, features)
   if (missing.length === 0) return null
   return {
     code: PROXY_AREA_WARNING,
@@ -141,10 +144,10 @@ export function proxySessionCachedNotice(file, source) {
 }
 
 /** The warnings for the proxy Next would load in `projectRoot` (the first of PROXY_FILES that exists). */
-export function proxyAreaNotices(projectRoot) {
+export function proxyAreaNotices(projectRoot, features = {}) {
   if (!projectRoot) return []
   const file = PROXY_FILES.find(candidate => existsSync(join(projectRoot, candidate)))
   if (!file) return []
   const source = readFileSync(join(projectRoot, file), 'utf8')
-  return [proxyAreaNotice(file, source), proxySessionNotice(file, source), proxySessionCachedNotice(file, source)].filter(Boolean)
+  return [proxyAreaNotice(file, source, features), proxySessionNotice(file, source), proxySessionCachedNotice(file, source)].filter(Boolean)
 }

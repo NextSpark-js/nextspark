@@ -11,8 +11,11 @@
  *   plans and invoices settings pages. What a project that uses plans as plain tiers reads stays: the plans list,
  *   `check-action`, the team's subscription and usage, and the superadmin subscriptions page; so do the billing config,
  *   its migrations and its tables.
+ * - `superadmin: false`: the `/superadmin` area goes (its layout, pages and private docs) with `/api/superadmin/*`. Its
+ *   role check is part of the area's layout, so a page, layout or Route Handler a project or plugin puts under
+ *   `/superadmin` would be served to anyone: it stops prepare instead. `/devtools` and the developer role stay.
  *
- * Routes a project or plugin provides itself at those paths are not touched.
+ * Other routes a project or plugin provides itself at those paths are not touched.
  *
  * @module core/scripts/build/registry/host/features
  */
@@ -20,6 +23,8 @@
 export const FEATURE_DIAGNOSTICS = Object.freeze({
   /** `billing.webhookExtensions` names modules for webhook routes that `billing: false` leaves out */
   BILLING_WEBHOOK_EXTENSIONS: 'NS_HOST_BILLING_OFF_WEBHOOK_EXTENSIONS',
+  /** a project or plugin route under an area whose layout, and role check, a flag left out */
+  AREA_OFF: 'NS_HOST_AREA_OFF',
 })
 
 /** The core route targets (paths under src/app) each flag leaves out when false. */
@@ -30,6 +35,7 @@ export const OMITTED_CORE_ROUTES = Object.freeze({
     /^api\/v1\/teams\/\[teamId\]\/invoices\//,
     /^dashboard\/settings\/(billing|plans|invoices)\//,
   ],
+  superadmin: [/^superadmin\//, /^api\/superadmin\//],
 })
 
 /** The flag (set to false in `features`) that leaves out the core route at `target`, or null. */
