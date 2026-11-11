@@ -21,7 +21,7 @@ before(() => { CLI_ENTRY = buildCli() })
 const ENV_URL = 'postgres://envuser:envpass@127.0.0.1:1/from_env_file'
 const EXPORTED_URL = 'postgres://expuser:exppass@127.0.0.1:1/from_exported'
 
-async function run(args: string[], exported: Record<string, string>) {
+async function run(args: string[], exported: Record<string, string>, local?: string) {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-no-env-file-'))
   try {
     await mkdir(join(root, 'node_modules/@nextsparkjs'), { recursive: true })
@@ -29,8 +29,10 @@ async function run(args: string[], exported: Record<string, string>) {
     await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
     await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.2' } }))
     await writeFile(join(root, '.env'), `DATABASE_URL=${ENV_URL}\n`)
+    if (local !== undefined) await writeFile(join(root, '.env.local'), local)
     const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '0', ...exported }
     if (!exported.DATABASE_URL) delete env.DATABASE_URL
+    if (!exported.NODE_ENV) delete env.NODE_ENV
     const result = spawnSync(process.execPath, [CLI_ENTRY, ...args], { cwd: root, timeout: 60_000, killSignal: 'SIGKILL', encoding: 'utf-8', env })
     return `${result.stdout}${result.stderr}`
   } finally {
@@ -57,6 +59,30 @@ for (const command of [['db:migrate'], ['db:seed'], ['db', 'migrate'], ['db', 's
     assert.doesNotMatch(output, /from_env_file/)
   })
 }
+
+// #438: the CLI loads .env.local before .env, as Next.js does, and no .env.local with NODE_ENV=test
+const LOCAL_URL = 'postgres://localuser:localpass@127.0.0.1:1/from_env_local'
+
+test('db:migrate takes the database from .env.local over .env, and an exported one still wins', async () => {
+  const output = await run(['db:migrate'], {}, `DATABASE_URL=${LOCAL_URL}\n`)
+  assert.match(output, /from_env_local/)
+  assert.doesNotMatch(output, /from_env_file/)
+  const exported = await run(['db:migrate'], { DATABASE_URL: EXPORTED_URL }, `DATABASE_URL=${LOCAL_URL}\n`)
+  assert.match(exported, /from_exported/)
+  assert.doesNotMatch(exported, /from_env_local/)
+})
+
+test('with NODE_ENV=test, db:migrate ignores .env.local, as Next.js does', async () => {
+  const output = await run(['db:migrate'], { NODE_ENV: 'test' }, `DATABASE_URL=${LOCAL_URL}\n`)
+  assert.match(output, /from_env_file/)
+  assert.doesNotMatch(output, /from_env_local/)
+})
+
+test('--no-env-file keeps .env.local out too', async () => {
+  const output = await run(['db:migrate', '--no-env-file'], {}, `DATABASE_URL=${LOCAL_URL}\n`)
+  assert.match(output, /DATABASE_URL not found/)
+  assert.doesNotMatch(output, /from_env_local/)
+})
 
 test('without --no-env-file the .env still supplies the database, and an exported one still wins', async () => {
   assert.match(await run(['db:migrate'], {}), /from_env_file/)

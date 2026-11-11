@@ -7,6 +7,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 import type { HealthCheckResult } from '../index.js'
+import { projectEnvFiles } from '../../utils/env-files.js'
 
 /**
  * Parse a .env file and return key-value pairs
@@ -43,11 +44,12 @@ function parseEnvFile(content: string): Record<string, string> {
 }
 
 /**
- * The variables of the project's .env and .env.local, with .env.local winning as in Next.js
+ * The variables of the project's .env and .env.local, with .env.local winning as in Next.js (projectEnvFiles; none
+ * from .env.local when NODE_ENV is test)
  */
-export async function readProjectEnv(cwd = process.cwd()): Promise<Record<string, string>> {
+export async function readProjectEnv(cwd = process.cwd(), nodeEnv = process.env.NODE_ENV): Promise<Record<string, string>> {
   let envVars: Record<string, string> = {}
-  for (const file of ['.env', '.env.local']) {
+  for (const file of [...projectEnvFiles(nodeEnv)].reverse()) {
     const filePath = path.join(cwd, file)
     if (!(await fs.pathExists(filePath))) continue
     try {

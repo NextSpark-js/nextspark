@@ -6,6 +6,7 @@ import chalk from './utils/colors.js';
 import { readFileSync } from 'fs';
 import { devCommand } from './commands/dev.js';
 import { breaksALine, guardOutput, shownLine, shownPath } from './utils/shown-path.js';
+import { projectEnvFiles } from './utils/env-files.js';
 
 // Guard CLI output before dotenv or a command can print anything
 guardOutput();
@@ -14,8 +15,9 @@ guardOutput();
 // contract and must not be prefixed by unrelated startup output.
 // Migration reporting deliberately reads only .env.example (or an already-set
 // environment variable), never a project's private .env files.
-// `--no-env-file` (db:migrate, db:seed) means only the exported environment: the file must not reach process.env.
-if (process.argv[2] !== 'migrate' && !process.argv.includes('--no-env-file')) config({ quiet: true });
+// `--no-env-file` (db:migrate, db:seed) means only the exported environment: the files must not reach process.env.
+// .env.local before .env, as Next.js reads them (the first file that sets a variable wins; an exported one beats both).
+if (process.argv[2] !== 'migrate' && !process.argv.includes('--no-env-file')) config({ path: projectEnvFiles(), quiet: true });
 import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
 import { prepareCommand } from './commands/prepare.js';

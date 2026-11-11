@@ -4,12 +4,19 @@ import { join } from 'node:path';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
+import { projectEnvFiles } from '../utils/env-files.js';
 
 /**
- * Load environment variables from project root .env file
+ * Load environment variables from the project's .env.local and .env (projectEnvFiles): the first file that sets a
+ * variable wins, as in Next.js
  */
-function loadProjectEnv(projectRoot: string): Record<string, string> {
-  const envPath = join(projectRoot, '.env');
+function loadProjectEnv(projectRoot: string, nodeEnv: string | undefined): Record<string, string> {
+  const envVars: Record<string, string> = {};
+  for (const file of [...projectEnvFiles(nodeEnv)].reverse()) Object.assign(envVars, loadEnvFile(join(projectRoot, file)));
+  return envVars;
+}
+
+function loadEnvFile(envPath: string): Record<string, string> {
   const envVars: Record<string, string> = {};
 
   if (existsSync(envPath)) {
@@ -35,16 +42,16 @@ function loadProjectEnv(projectRoot: string): Record<string, string> {
 }
 
 /**
- * The environment the runner starts with: the project .env fills what the
- * process environment leaves unset, so an exported variable always wins.
- * `envFile: false` (--no-env-file) ignores the .env altogether.
+ * The environment the runner starts with: the project .env.local and .env fill
+ * what the process environment leaves unset, so an exported variable always wins.
+ * `envFile: false` (--no-env-file) ignores the files altogether.
  */
 export function resolveDbEnv(
   projectRoot: string,
   processEnv: NodeJS.ProcessEnv,
   options: { envFile?: boolean } = {},
 ): NodeJS.ProcessEnv {
-  const projectEnv = options.envFile === false ? {} : loadProjectEnv(projectRoot);
+  const projectEnv = options.envFile === false ? {} : loadProjectEnv(projectRoot, processEnv.NODE_ENV);
   const env = { ...projectEnv, ...processEnv };
   env.DATABASE_URL = processEnv.DATABASE_URL || projectEnv.DATABASE_URL;
   return env;

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'dotenv';
+import { projectEnvFiles } from './env-files.js';
 import { captureChildOutput } from './registry-build.js';
 import { loadCoreWritePlaces } from './core-write-places.js';
 import { nextThemesImportLines } from './next-themes-imports.js';
@@ -57,12 +58,16 @@ export function preparationWatchExitCode(stopping: boolean, code: number | null,
 
 /**
  * Resolve project settings exactly as the existing registry commands do: values
- * explicitly supplied to the CLI process override `.env`, while production
+ * explicitly supplied to the CLI process override `.env.local` and `.env` (the
+ * first of those that sets a value wins, as in Next.js), while production
  * preparation always gives the child NODE_ENV=production.
  */
 export function preparationEnvironment(projectRoot: string, options: PreparationOptions, env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
-  const envPath = join(projectRoot, '.env');
-  const projectEnv = existsSync(envPath) ? parse(readFileSync(envPath)) : {};
+  const projectEnv: Record<string, string> = {};
+  for (const file of [...projectEnvFiles(env.NODE_ENV)].reverse()) {
+    const envPath = join(projectRoot, file);
+    if (existsSync(envPath)) Object.assign(projectEnv, parse(readFileSync(envPath)));
+  }
   return {
     ...projectEnv,
     ...env,

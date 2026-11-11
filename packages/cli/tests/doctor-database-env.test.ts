@@ -60,4 +60,6 @@ test('.env.local wins over .env, as in Next.js (#438)', () =>
     fs.writeFileSync(path.join(dir, '.env.local'), 'DATABASE_URL=postgres://localhost/from_env_local\n')
     assert.deepEqual(await readProjectEnv(dir), { DATABASE_URL: 'postgres://localhost/from_env_local', ONLY_ENV: '1' })
     assert.equal(await resolveDatabaseUrl(dir, {}), 'postgres://localhost/from_env_local')
+    // Next.js reads no .env.local when NODE_ENV is test
+    assert.equal((await readProjectEnv(dir, 'test')).DATABASE_URL, 'postgres://localhost/from_env')
   }))
