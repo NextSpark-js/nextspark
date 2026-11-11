@@ -33,6 +33,8 @@ jest.mock('@nextsparkjs/core/components/devtools/DevtoolsSidebar', () => ({ Devt
 jest.mock('@nextsparkjs/core/components/devtools/DevtoolsMobileHeader', () => ({ DevtoolsMobileHeader: () => null }))
 jest.mock('@nextsparkjs/core/lib/plugins/nav-items', () => ({ getAllPluginNavItems: () => [] }))
 jest.mock('@nextsparkjs/core/providers/static-intl-provider', () => ({ StaticIntlProvider: ({ children }: { children: React.ReactNode }) => children }))
+// expanded by calling the components, so a provider that uses hooks renders its children here
+jest.mock('@nextsparkjs/core/providers/area-messages-check', () => ({ AreaMessagesCheck: ({ children }: { children: React.ReactNode }) => children }))
 
 import {
   canEnterArea,

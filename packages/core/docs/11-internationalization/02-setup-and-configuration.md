@@ -552,8 +552,10 @@ It is logged in development (the terminal and the browser console) and on the
 server in production. A page `next build` prerenders (the `(auth)` and `(public)`
 pages without `requestLocale`) prints it in the build output, so the problem shows
 up before deploying; a page rendered per request logs it on its first request. A
-key missing inside a namespace the area has is next-intl's own `MISSING_MESSAGE`
-error.
+key missing inside a namespace the area has (a catalog without it, or a project
+layout that extends the group with a namespace that lacks it) logs a warning that
+says the key, not the namespace, is missing, and in which locale. The browser of a
+production build does not warn.
 
 `getPageNamespaces(pathname)` remains available for code that needs the
 route-to-group lookup, but layouts do not inspect headers or a pathname to

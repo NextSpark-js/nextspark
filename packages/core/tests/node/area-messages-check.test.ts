@@ -48,8 +48,25 @@ test('a namespace the area carries renders its texts and warns nothing', () => {
   assert.deepEqual(warnings, [])
 })
 
-test('a key missing inside a namespace the area carries is not reported as a missing namespace', () => {
+test('a key missing inside a namespace the area carries is reported as a missing key, not a missing namespace', () => {
   const { html, warnings } = render('public', { landingKeys: { hero: 'Hola' } }, 'landingKeys', ['cta'])
   assert.match(html, /landingKeys\.cta/)
-  assert.deepEqual(warnings, [])
+  assert.equal(warnings.length, 1)
+  assert.match(warnings[0], /"landingKeys\.cta" renders as its key in the public area: the "landingKeys" namespace is there, but this key is missing from it in the "es" messages/)
+  assert.doesNotMatch(warnings[0], /clientNamespaces/)
+})
+
+test('in production the browser does not warn, while the server does (next build) (#427)', () => {
+  const env = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+  try {
+    assert.equal(render('auth', {}, 'prodServerNs', ['title']).warnings.length, 1, 'the server warns in production')
+    Object.assign(globalThis, { window: {} })
+    const { html, warnings } = render('auth', {}, 'prodClientNs', ['title'])
+    assert.match(html, /prodClientNs\.title/)
+    assert.deepEqual(warnings, [], 'the browser stays quiet in production')
+  } finally {
+    delete (globalThis as { window?: unknown }).window
+    process.env.NODE_ENV = env
+  }
 })
