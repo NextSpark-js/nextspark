@@ -275,6 +275,10 @@ routes, so setting it with billing off stops `prepare` (`NS_HOST_BILLING_OFF_WEB
 components and hooks that call the routes left out answer with a 404 if the project uses them on its own pages:
 `ManageBillingButton` (the portal), `useInvoices` and `useInvoice` (the team invoices API).
 
+If the project ran `next dev` before the flag was turned off, delete `.next/dev` before `next build`: Next keeps
+the type declarations of the routes it served there, and the build's type check fails on the ones that are now left
+out.
+
 `create-nextspark-app` writes `features: { billing: false }` to `nextspark.config.ts` when billing is left unchecked
 (the default preset), and no flag when it is checked. A page or route the
 project provides itself at one of those paths (`templates/dashboard/settings/billing/page.tsx`) is served as the
