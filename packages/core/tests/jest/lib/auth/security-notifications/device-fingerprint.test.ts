@@ -102,13 +102,19 @@ describe('computeDeviceFingerprint', () => {
 })
 
 describe('extractClientIp', () => {
-  test('prefers cf-connecting-ip above everything', () => {
+  test('reads cf-connecting-ip only with NEXTSPARK_CLIENT_IP_SOURCE=cloudflare (#438)', () => {
     const headers = new Headers({
       'cf-connecting-ip': '1.1.1.1',
       'x-forwarded-for': '2.2.2.2, 3.3.3.3',
       'x-real-ip': '4.4.4.4',
     })
-    expect(extractClientIp(headers)).toBe('1.1.1.1')
+    expect(extractClientIp(headers)).toBe('3.3.3.3')
+    process.env.NEXTSPARK_CLIENT_IP_SOURCE = 'cloudflare'
+    try {
+      expect(extractClientIp(headers)).toBe('1.1.1.1')
+    } finally {
+      delete process.env.NEXTSPARK_CLIENT_IP_SOURCE
+    }
   })
 
   test('uses the RIGHTMOST x-forwarded-for entry (last trusted proxy)', () => {
