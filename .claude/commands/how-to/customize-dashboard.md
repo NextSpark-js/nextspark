@@ -495,7 +495,7 @@ export const dashboardConfig: DashboardConfig = {
     showName: true,
     showRole: true,
     items: [
-      { label: 'Profile', href: '/dashboard/profile', icon: 'User' },
+      { label: 'Profile', href: '/dashboard/settings/profile', icon: 'User' },
       { label: 'Settings', href: '/dashboard/settings', icon: 'Settings' },
       { type: 'divider' },
       { label: 'Sign Out', action: 'signout', icon: 'LogOut' },
