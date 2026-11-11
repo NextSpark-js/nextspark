@@ -35,8 +35,10 @@ export const metadata: Metadata = defaultMetadata
 export function withPublicMessages<P extends { children: React.ReactNode }>(PublicLayout: ComponentType<P>) {
   return async function PublicLayoutWithMessages(props: P) {
     const messages = await getMessages()
+    // the namespaces the project lists for the area in i18n.clientNamespaces (#427)
+    const configuredNamespaces = getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED })
     return (
-      <NextIntlClientProvider messages={selectMessages(messages, 'public', getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED }).public)}>
+      <NextIntlClientProvider messages={selectMessages(messages, 'public', configuredNamespaces.public)}>
         <AreaMessagesCheck area="public">
           <PublicLayout {...props} />
         </AreaMessagesCheck>

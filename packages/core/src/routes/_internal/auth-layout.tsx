@@ -37,8 +37,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export function withAuthMessages<P extends { children: React.ReactNode }>(AuthLayout: ComponentType<P>) {
   return async function AuthLayoutWithMessages(props: P) {
     const messages = await getMessages()
+    // the namespaces the project lists for the area in i18n.clientNamespaces (#427)
+    const configuredNamespaces = getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED })
     return (
-      <NextIntlClientProvider messages={selectMessages(messages, 'auth', getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED }).auth)}>
+      <NextIntlClientProvider messages={selectMessages(messages, 'auth', configuredNamespaces.auth)}>
         <AreaMessagesCheck area="auth">
           <GroupToaster>
             <AuthLayout {...props} />

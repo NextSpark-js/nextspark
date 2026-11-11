@@ -89,8 +89,10 @@ export function withDevtoolsMessages<P extends DevLayoutProps>(ResolvedDevLayout
   return async function DevLayoutWithMessages(props: P) {
     await requireAreaAccess('devtools')
     const messages = await getMessages()
+    // the namespaces the project lists for the area in i18n.clientNamespaces (#427)
+    const configuredNamespaces = getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED })
     return (
-      <NextIntlClientProvider messages={selectMessages(messages, 'devtools', getConfiguredClientNamespaces({ appConfig: APP_CONFIG_MERGED }).devtools)}>
+      <NextIntlClientProvider messages={selectMessages(messages, 'devtools', configuredNamespaces.devtools)}>
         <AreaMessagesCheck area="devtools">
           <ResolvedDevLayout {...props} />
         </AreaMessagesCheck>
