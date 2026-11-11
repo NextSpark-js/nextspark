@@ -138,6 +138,7 @@
       "actionCompleted": "Aktion erfolgreich abgeschlossen",
       "deleteFailed": "Löschen fehlgeschlagen",
       "rateLimited": "Zu viele Anfragen. Versuchen Sie es in {minutes, plural, one {# Minute} other {# Minuten}} erneut.",
+      "lastSuperadmin": "Der letzte Superadmin kann nicht herabgestuft, gesperrt oder gelöscht werden. Machen Sie zuerst einen anderen Benutzer zum Superadmin.",
       "deleted": "Benutzer gelöscht",
       "deletedDescription": "Der Benutzer wurde erfolgreich gelöscht"
     }

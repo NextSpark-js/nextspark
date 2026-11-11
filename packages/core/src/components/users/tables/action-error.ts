@@ -11,12 +11,14 @@ export function rateLimitedMessage(response: Response, t: Translate): string | n
 }
 
 /**
- * The toast text for a failed action of the users and superadmins tables: the wait of a 429; the fallback for a body
- * that is not JSON (a proxy's error page) instead of a JSON parse error; anything else keeps the route's `error`.
+ * The toast text for a failed action of the users and superadmins tables: the wait of a 429; the catalog's text for a
+ * refusal to remove the last superadmin; the fallback for a body that is not JSON (a proxy's error page) instead of a
+ * JSON parse error; anything else keeps the route's `error`.
  */
 export async function actionErrorMessage(response: Response, t: Translate, fallback: string): Promise<string> {
   const limited = rateLimitedMessage(response, t)
   if (limited) return limited
-  const body = (await response.json().catch(() => null)) as { error?: unknown } | null
+  const body = (await response.json().catch(() => null)) as { error?: unknown; code?: unknown } | null
+  if (body?.code === 'LAST_SUPERADMIN') return t('toast.lastSuperadmin')
   return typeof body?.error === 'string' && body.error ? body.error : fallback
 }

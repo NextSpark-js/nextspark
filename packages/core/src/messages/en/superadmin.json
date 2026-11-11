@@ -138,6 +138,7 @@
       "actionCompleted": "Action completed successfully",
       "deleteFailed": "Delete failed",
       "rateLimited": "Too many requests. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+      "lastSuperadmin": "The last superadmin cannot be demoted, suspended or deleted. Make another user a superadmin first.",
       "deleted": "User Deleted",
       "deletedDescription": "User has been deleted successfully"
     }

@@ -3,6 +3,7 @@ import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { suspendUser, unsuspendUser } from '@nextsparkjs/core/lib/auth/suspension';
 import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
+import { LAST_SUPERADMIN, guardLastSuperadmin } from '@nextsparkjs/core/lib/auth/last-superadmin';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
@@ -35,6 +36,10 @@ interface UserMetaResult {
   createdAt: string;
   updatedAt: string;
 }
+
+// The last superadmin is never demoted, suspended or deleted (guardLastSuperadmin)
+const lastSuperadminError = () =>
+  createApiError('Cannot demote, suspend or delete the last superadmin. Make another user a superadmin first', 409, undefined, 'LAST_SUPERADMIN');
 
 interface RouteParams {
   params: Promise<{ userId: string }>;
@@ -309,7 +314,8 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
         break;
 
       case 'suspend': {
-        const suspended = await suspendUser(userId, session.user.id);
+        const suspended = await guardLastSuperadmin(userId, session.user.id, () => suspendUser(userId, session.user.id));
+        if (suspended === LAST_SUPERADMIN) return lastSuperadminError();
         if (!suspended) {
           return createApiError('Failed to update user', 500, undefined, 'INTERNAL_ERROR');
         }
@@ -350,7 +356,9 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     }
 
     // Execute update
-    const result = await queryWithRLS(updateQuery, updateParams, session.user.id, { service: true }) as { id: string }[];
+    const write = () => queryWithRLS(updateQuery, updateParams, session.user.id, { service: true }) as Promise<{ id: string }[]>;
+    const result = action === 'change-role' ? await guardLastSuperadmin(userId, session.user.id, write) : await write();
+    if (result === LAST_SUPERADMIN) return lastSuperadminError();
 
     if (!result || result.length === 0) {
       return createApiError('Failed to update user', 500, undefined, 'INTERNAL_ERROR');
@@ -431,53 +439,58 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
       return createApiError('Forbidden - Only a developer can delete a developer or superadmin account', 403, undefined, 'FORBIDDEN');
     }
 
-    // Delete in order to respect foreign key constraints:
-    // 1. Delete user's team memberships
-    await queryWithRLS(
-      `DELETE FROM "team_members" WHERE "userId" = $1`,
-      [userId],
-      session.user.id,
-      { service: true }
-    );
+    // In one transaction, and never the last superadmin (guardLastSuperadmin)
+    const deleted = await guardLastSuperadmin(userId, session.user.id, async () => {
+      // Delete in order to respect foreign key constraints:
+      // 1. Delete user's team memberships
+      await queryWithRLS(
+        `DELETE FROM "team_members" WHERE "userId" = $1`,
+        [userId],
+        session.user.id,
+        { service: true }
+      );
 
-    // 2. Delete user's owned teams (and their members)
-    // For simplicity, we'll delete all teams owned by this user (in production, you'd want to transfer ownership)
-    await queryWithRLS(
-      `DELETE FROM "team_members" WHERE "teamId" IN (SELECT id FROM "teams" WHERE "ownerId" = $1)`,
-      [userId],
-      session.user.id,
-      { service: true }
-    );
-    await queryWithRLS(
-      `DELETE FROM "teams" WHERE "ownerId" = $1`,
-      [userId],
-      session.user.id,
-      { service: true }
-    );
+      // 2. Delete user's owned teams (and their members)
+      // For simplicity, we'll delete all teams owned by this user (in production, you'd want to transfer ownership)
+      await queryWithRLS(
+        `DELETE FROM "team_members" WHERE "teamId" IN (SELECT id FROM "teams" WHERE "ownerId" = $1)`,
+        [userId],
+        session.user.id,
+        { service: true }
+      );
+      await queryWithRLS(
+        `DELETE FROM "teams" WHERE "ownerId" = $1`,
+        [userId],
+        session.user.id,
+        { service: true }
+      );
 
-    // 4. Delete user sessions
-    await queryWithRLS(
-      `DELETE FROM "session" WHERE "userId" = $1`,
-      [userId],
-      session.user.id,
-      { service: true }
-    );
+      // 4. Delete user sessions
+      await queryWithRLS(
+        `DELETE FROM "session" WHERE "userId" = $1`,
+        [userId],
+        session.user.id,
+        { service: true }
+      );
 
-    // 5. Delete user accounts (OAuth)
-    await queryWithRLS(
-      `DELETE FROM "account" WHERE "userId" = $1`,
-      [userId],
-      session.user.id,
-      { service: true }
-    );
+      // 5. Delete user accounts (OAuth)
+      await queryWithRLS(
+        `DELETE FROM "account" WHERE "userId" = $1`,
+        [userId],
+        session.user.id,
+        { service: true }
+      );
 
-    // 6. Delete the user
-    await queryWithRLS(
-      `DELETE FROM "users" WHERE id = $1`,
-      [userId],
-      session.user.id,
-      { service: true }
-    );
+      // 6. Delete the user
+      await queryWithRLS(
+        `DELETE FROM "users" WHERE id = $1`,
+        [userId],
+        session.user.id,
+        { service: true }
+      );
+      return true;
+    });
+    if (deleted === LAST_SUPERADMIN) return lastSuperadminError();
 
     return NextResponse.json({
       success: true,

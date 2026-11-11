@@ -138,6 +138,7 @@
       "actionCompleted": "Action terminée avec succès",
       "deleteFailed": "Échec de la suppression",
       "rateLimited": "Trop de requêtes. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
+      "lastSuperadmin": "Le dernier super admin ne peut pas être rétrogradé, suspendu ni supprimé. Faites d’abord d’un autre utilisateur un super admin.",
       "deleted": "Utilisateur supprimé",
       "deletedDescription": "L’utilisateur a été supprimé avec succès"
     }

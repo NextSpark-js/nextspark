@@ -10,7 +10,11 @@ const session = jest.fn()
 jest.mock('@nextsparkjs/core/lib/auth/authorization-session', () => ({ getAuthorizationSession: () => session() }))
 jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({ withRateLimitTier: (handler: unknown) => handler }))
 const queryWithRLS = jest.fn()
-jest.mock('@nextsparkjs/core/lib/db', () => ({ queryWithRLS: (...args: unknown[]) => queryWithRLS(...args) }))
+const withServiceTransaction = jest.fn(async (fn: () => Promise<unknown>) => fn())
+jest.mock('@nextsparkjs/core/lib/db', () => ({
+  queryWithRLS: (...args: unknown[]) => queryWithRLS(...args),
+  withServiceTransaction: (fn: () => Promise<unknown>) => withServiceTransaction(fn),
+}))
 const invalidateApiKeyCache = jest.fn()
 jest.mock('@nextsparkjs/core/lib/api/auth', () => ({ invalidateApiKeyCache: (hash: string) => invalidateApiKeyCache(hash) }))
 
@@ -28,6 +32,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, 'error').mockImplementation(() => {})
   queryWithRLS.mockImplementation(async (sql: string, params: string[]) => {
+    if (sql.includes(`WHERE role = 'superadmin' FOR UPDATE`)) return Object.keys(USERS).filter((id) => USERS[id] === 'superadmin').map((id) => ({ id }))
     if (sql.includes('SELECT id, role, email FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]], email: `${params[0]}@x` }] : []
     if (sql.includes('SELECT id, role FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]] }] : []
     if (sql.includes('WITH suspended AS')) return [{ suspended: 1, sessions: 2, keyHashes: ['h1', 'h2'] }]
@@ -212,5 +217,37 @@ describe('developer targets', () => {
     expect((await patch('dev-1', { action: 'change-role', role: 'member' })).status).toBe(200)
     expect((await patch('dev-1', { action: 'suspend' })).status).toBe(200)
     expect((await del('dev-1')).status).toBe(200)
+  })
+})
+
+describe('the last superadmin (#433)', () => {
+  const del = (target: string) =>
+    DELETE(new NextRequest(`http://localhost/api/superadmin/users/${target}`, { method: 'DELETE' }), { params: Promise.resolve({ userId: target }) } as never)
+  const writes = () => queryWithRLS.mock.calls.filter(([s]: [string]) => /^\s*(UPDATE|DELETE)|WITH suspended/.test(s))
+
+  afterEach(() => { USERS['sa-2'] = 'superadmin' })
+
+  it('is neither demoted, suspended nor deleted: 409 LAST_SUPERADMIN, and nothing is written', async () => {
+    USERS['sa-2'] = 'member'
+    as('dev-1')
+    for (const response of [await patch('sa-1', { action: 'change-role', role: 'member' }), await patch('sa-1', { action: 'suspend' }), await del('sa-1')]) {
+      expect(response.status).toBe(409)
+      expect(await response.json()).toMatchObject({ code: 'LAST_SUPERADMIN' })
+    }
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('checks and writes in one transaction, after locking the superadmin rows', async () => {
+    as('dev-1')
+    expect((await patch('sa-1', { action: 'change-role', role: 'member' })).status).toBe(200)
+    expect(withServiceTransaction).toHaveBeenCalledTimes(1)
+    const sqls = queryWithRLS.mock.calls.map(([s]: [string]) => s)
+    expect(sqls.findIndex((s: string) => s.includes('FOR UPDATE'))).toBeLessThan(sqls.findIndex((s: string) => /^\s*UPDATE "users"/.test(s)))
+  })
+
+  it('a verify-email of the last superadmin still goes through', async () => {
+    USERS['sa-2'] = 'member'
+    as('dev-1')
+    expect((await patch('sa-1', { action: 'verify-email' })).status).toBe(200)
   })
 })

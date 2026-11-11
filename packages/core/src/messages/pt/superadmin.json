@@ -138,6 +138,7 @@
       "actionCompleted": "Ação concluída com sucesso",
       "deleteFailed": "Falha ao excluir",
       "rateLimited": "Muitas solicitações. Tente novamente em {minutes, plural, one {# minuto} other {# minutos}}.",
+      "lastSuperadmin": "O último superadmin não pode ser rebaixado, suspenso nem excluído. Torne outro usuário superadmin primeiro.",
       "deleted": "Usuário excluído",
       "deletedDescription": "O usuário foi excluído com sucesso"
     }

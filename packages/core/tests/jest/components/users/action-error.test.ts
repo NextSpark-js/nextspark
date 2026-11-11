@@ -26,6 +26,11 @@ test('the pages read the same wait for a 429, and nothing for another status', (
   expect(rateLimitedMessage(json(500, {}), t)).toBeNull()
 })
 
+test('the refusal to remove the last superadmin reads the catalog (#433)', async () => {
+  const response = json(409, { error: 'Cannot demote, suspend or delete the last superadmin', code: 'LAST_SUPERADMIN' })
+  expect(await actionErrorMessage(response, t, 'Action failed')).toBe('The last superadmin cannot be demoted, suspended or deleted. Make another user a superadmin first.')
+})
+
 test('a refusal keeps the route text', async () => {
   const response = json(403, { error: 'Forbidden - Only a developer can grant the developer role' })
   expect(await actionErrorMessage(response, t, 'Action failed')).toBe('Forbidden - Only a developer can grant the developer role')
