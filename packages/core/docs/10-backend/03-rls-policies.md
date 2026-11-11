@@ -307,6 +307,44 @@ WHERE schemaname = 'public'
 
 `ALTER POLICY` takes an `ACCESS EXCLUSIVE` lock on each table, and the migration keeps the locks it has taken until its transaction ends, while it waits for the next table. On a quiet database that is milliseconds. Behind a long-running transaction on one of the tables, reads of the tables it already holds queue until that transaction ends, and a transaction that touches those tables in a different order can deadlock with it. Run it in a quiet window, or set a limit first: with `SET lock_timeout = '5s'` (or a deadlock, or a role without the privilege to alter the policies) the file fails as a whole, nothing changes, it is not recorded as run, and the next `pnpm db:migrate` starts it over.
 
+### Your own helper functions
+
+Migration 043 rewrites only the calls to core's four helpers. A function of your project that a policy calls, for example one that returns the ids the user can read, keeps its bare call and can be evaluated for every row the policy checks. 043 does not make such a policy slower: it only takes core's calls out of the per-row work. Measured on PostgreSQL 15 as `nextspark_app`, a `count(*)` over a 50,000-row table guarded by `is_superadmin() OR "teamId" = ANY (get_user_team_ids()) OR id = ANY (project_accessible_ids())` took about 3.5 s, about 2.2 s after 043, and about 0.22 s with the project's call wrapped too. The plan was a sequential scan at all three stages, and the same rows were visible.
+
+Wrap your own calls the same way, whenever their arguments do not read the row (no arguments, constants, or core's helpers), with the same cast in front of an array:
+
+```sql
+USING (
+  (SELECT public.is_superadmin())
+  OR id = ANY ((SELECT public.project_accessible_ids())::text[])
+  OR id = ANY ((SELECT public.project_ids_for((SELECT public.get_auth_user_id())))::text[])
+)
+```
+
+A function that takes a column of the row (`public.can_read(id)`) cannot be wrapped: its answer depends on the row. Make it return the whole set once instead, and compare the column with that set, as above.
+
+Inside the function, compare with `(SELECT public.get_auth_user_id())` as well. `get_auth_user_id()` is `VOLATILE`, so a bare call in a `WHERE` is evaluated for every row of the table the function reads, and no index on that column can be used. Measured on a 20,300-row table of grants, one call of such a function took about 28 ms with the bare call and about 0.05 ms with the sub-select; a policy that calls it for every row multiplies that by the rows it checks.
+
+```sql
+CREATE OR REPLACE FUNCTION public.project_accessible_ids()
+RETURNS text[] LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT coalesce(array_agg("itemId"), ARRAY[]::text[])
+  FROM public."item_grants"
+  WHERE "userId" = (SELECT public.get_auth_user_id())
+$$;
+```
+
+A call with no arguments never depends on the row, so every bare one in a policy can be wrapped. To list them (a call inside a sub-select already runs once, and `get_user_team_ids(get_auth_user_id())` is left out for that reason):
+
+```sql
+SELECT tablename, policyname, regexp_matches(coalesce(qual, '') || ' ' || coalesce(with_check, ''),
+       '(?<!SELECT )(?<![.\w])(?<!get_user_team_ids\()\m(\w+)\(\)', 'g') AS bare_call
+FROM pg_policies
+WHERE schemaname = 'public';
+```
+
+Run it with `public` on the `search_path` (the default), so the policies print their calls without the schema.
+
 ---
 
 ## RLS Policy Operations

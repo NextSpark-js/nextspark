@@ -119,6 +119,11 @@ REFERENCES public."Parent"(id) ON DELETE CASCADE
 > - **`team_role` is `TEXT`** (not an ENUM): `role TEXT NOT NULL DEFAULT 'member'`. Never
 >   `ALTER TYPE team_role`.
 > - For the runtime model (service pool, `nextspark_app`, cutover) see the **rls-enforcement** skill.
+> - **Your own helper functions go in a sub-select too:** `id = ANY ((SELECT public.my_ids())::text[])`, not
+>   `id = ANY (public.my_ids())`, which runs once per row (migration 043 rewrites only core's four helpers). Inside the
+>   function, compare with `(SELECT public.get_auth_user_id())`: the bare call is `VOLATILE` and keeps the index unused.
+>   A function that takes a column of the row cannot be wrapped: return the whole set once instead. See "Your own helper
+>   functions" in `docs/10-backend/03-rls-policies.md`.
 
 ### Case 1: Private to Owner
 ```sql
