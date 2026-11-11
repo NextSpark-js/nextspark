@@ -168,6 +168,20 @@ describe('proxy path boundaries and redirect targets', () => {
     mockedAppConfig.mockReturnValue(undefined)
   })
 
+  // #433: the profile lives under settings
+  test.each(['/dashboard/profile', '/dashboard/profile/', '/dashboard/profile?tab=x'])('%s redirects to /dashboard/settings/profile', async (path) => {
+    const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+    expect(response.type).toBe('redirect')
+    expect(new URL(response.redirectUrl!).pathname).toBe('/dashboard/settings/profile')
+    expect(new URL(response.redirectUrl!).search).toBe(path.includes('?') ? '?tab=x' : '')
+  })
+
+  test('a longer path under it is not redirected', async () => {
+    mockedGetSession.mockResolvedValue(null)
+    const response = (await proxy(makeRequest('/dashboard/profiles'))) as unknown as PassThrough
+    expect(response.redirectUrl ?? '').not.toContain('/dashboard/settings/profile')
+  })
+
   test.each(['/administrator', '/dashboard-guide', '/settings-icon.svg', '/profile-photo.jpg', '/update-password-help.png'])(
     '%s only starts like a protected area and passes without a session check',
     async path => {
