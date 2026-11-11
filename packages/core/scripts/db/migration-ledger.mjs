@@ -77,15 +77,10 @@ const RUNTIME_ROLES = ['nextspark_app', 'authenticated', 'anon'];
  * this is the same statement for the ones the runner creates after it (_content_migrations and _entity_migrations
  * come after the core migrations, and every table after 022's default privileges). A table that is already so is
  * left alone, without taking a lock; one the role does not own is reported, not an error.
- * Returns the warnings the server raised.
  */
 export async function lockdownLedgers(client) {
   const list = values => `ARRAY[${values.map(escapeLiteral).join(', ')}]`;
-  const warnings = [];
-  const onNotice = notice => { if (notice.severity === 'WARNING') warnings.push(notice.message); };
-  client.on('notice', onNotice);
-  try {
-    await client.query(`
+  await client.query(`
       DO $$
       DECLARE
         ledger text;
@@ -111,15 +106,28 @@ export async function lockdownLedgers(client) {
               END IF;
             END LOOP;
           EXCEPTION WHEN insufficient_privilege THEN
-            RAISE WARNING 'Ledger lockdown: could not restrict % (%).', ledger, SQLERRM;
+            RAISE WARNING 'Ledger lockdown: could not restrict % (%). Ask its owner to run: ALTER TABLE % ENABLE ROW LEVEL SECURITY; REVOKE ALL ON % FROM nextspark_app, authenticated, anon;', ledger, SQLERRM, ledger, ledger;
           END;
         END LOOP;
       END $$;
     `);
-  } finally {
-    client.off('notice', onNotice);
+}
+
+/**
+ * The ledgers are for their owner: a role that is subject to the row-level security they have (one with grants on
+ * them but not the owner) reads none of their rows, which would pass for an empty ledger. Throws saying so.
+ */
+export async function requireLedgerOwner(client) {
+  const { rows } = await client.query(
+    `SELECT t.name FROM unnest($1::text[]) AS t(name) WHERE to_regclass(quote_ident(t.name)) IS NOT NULL AND row_security_active(to_regclass(quote_ident(t.name)))`,
+    [LEDGERS.map(({ table }) => table)]
+  );
+  if (rows.length > 0) {
+    throw new Error(
+      `The migration bookkeeping tables (${rows.map(row => row.name).join(', ')}) belong to their owner: this role is subject to their row-level security and would see none of their rows. ` +
+      'Set MIGRATE_DATABASE_URL to the connection of the role that owns them (the one that ran the migrations).'
+    );
   }
-  return warnings;
 }
 
 /** Whether a ledger table exists, and has the hash column. */
@@ -188,6 +196,7 @@ export async function fillHashes(client, ledger, unhashed) {
  * that have the column; and the ones that could not get it.
  */
 export async function ledgerFindings(client, files, { write }) {
+  await requireLedgerOwner(client);
   const { hashed, failures } = write ? await ensureHashColumns(client) : { hashed: new Set(), failures: [] };
   const found = { edited: [], renamed: [], hashed, failures };
   for (const ledger of LEDGERS) {

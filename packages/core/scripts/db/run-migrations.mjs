@@ -145,8 +145,14 @@ function useHashColumns({ hashed, failures }) {
   }
 }
 // The ledgers the runner creates are born restricted to the migration role (see lockdownLedgers)
-async function lockLedgers(client) {
-  for (const warning of await lockdownLedgers(client)) console.log(`⚠️  ${scrub(warning)}`);
+// Its warnings reach ledgerNotice, the handler of the client, like the ones migration 045 raises
+const lockLedgers = lockdownLedgers;
+// 045 and lockdownLedgers: a bookkeeping table the migration role does not own stays as it was
+const saidLockdown = new Set();
+function ledgerNotice(notice) {
+  if (notice.severity !== 'WARNING' || !notice.message?.startsWith('Ledger lockdown:') || saidLockdown.has(notice.message)) return;
+  saidLockdown.add(notice.message);
+  console.log(`⚠️  ${scrub(notice.message)}`);
 }
 /** The row that records `sql` as run in `table`: the hash goes along where the ledger has the column. */
 const withHash = (table, row, sql) => (hashedLedgers.has(table) ? { ...row, [HASH_COLUMN]: migrationHash(sql) } : row);
@@ -218,8 +224,7 @@ async function runMigrations() {
         // the comment on the role is only a description: nothing to repeat
         if (!notice.message.includes('only a description')) roleSetupWarnings.push(notice.message);
       }
-      // 045: a bookkeeping table the migration role does not own stays as it was
-      else if (notice.severity === 'WARNING' && notice.message?.startsWith('Ledger lockdown:')) console.log(`⚠️  ${notice.message}`);
+      else ledgerNotice(notice);
     });
     
     // Create migrations tracking table
@@ -531,6 +536,7 @@ async function runEntityMigrations() {
       if (rows[0].no_entity) missingLedgers.add('_entity_migrations');
       if (rows[0].old_theme) dryRunNotes.push('"_theme_migrations" exists: a real run first moves its rows into "_content_migrations", so some project or plugin migration listed here may already be applied.');
     } else {
+      client.on('notice', ledgerNotice);
       // Create tracking tables
       await client.query(`
         CREATE TABLE IF NOT EXISTS "_entity_migrations" (

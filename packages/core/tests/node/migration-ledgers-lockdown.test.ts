@@ -163,7 +163,7 @@ test('db:migrate creates the ledgers locked to the migration role, which keeps r
   assert.equal(JSON.parse(checked.out).edited[0].file, '001_project.sql')
   const asApp = run(CHECK, root, { DATABASE_URL: url('app_login', db.name) })
   assert.equal(asApp.status, 2, asApp.out)
-  assert.match(asApp.out, /permission denied for table _migrations.*MIGRATE_DATABASE_URL/)
+  assert.match(asApp.out, /belong to their owner.*MIGRATE_DATABASE_URL/)
 })
 
 test('045 restricts the ledgers a database already has, leaves other tables alone, and can run again', { skip, timeout: 120000 }, async () => {
@@ -222,4 +222,38 @@ test('045 leaves a ledger its role does not own as it was, with a WARNING, and g
   assert.match(warnings[0], /^Ledger lockdown: could not restrict _migrations/)
   assert.equal((await access(db.inspect, '_migrations')).rls, false)
   assert.deepEqual(await access(db.inspect, '_content_migrations'), LOCKED)
+})
+
+test('the lockdown warning for a ledger the role does not own is said once, scrubbed', { skip, timeout: 300000 }, async () => {
+  const db = await database()
+  const { root } = project()
+  await db.inspect.query('GRANT CREATE ON SCHEMA public TO stranger')
+  const stranger = await connect(url('stranger', db.name))
+  await stranger.query('CREATE TABLE "_migrations" (id SERIAL PRIMARY KEY, filename TEXT UNIQUE NOT NULL, executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
+  await stranger.query('GRANT ALL ON "_migrations" TO migrator; GRANT ALL ON SEQUENCE "_migrations_id_seq" TO migrator')
+  const result = run(RUNNER, root, { DATABASE_URL: url('migrator', db.name), MIGRATE_DATABASE_URL: url('migrator', db.name) }, ['--no-env-file'])
+  assert.equal(result.status, 0, result.out)
+  const said = result.out.split('\n').filter(line => line.includes('Ledger lockdown: could not restrict _migrations'))
+  assert.equal(said.length, 1, result.out)
+})
+
+test('a role that only has grants on ledgers with row-level security is stopped with a message, by the run, the dry run and doctor', { skip, timeout: 300000 }, async () => {
+  const db = await database()
+  const { root } = project()
+  const env = { DATABASE_URL: url('migrator', db.name), MIGRATE_DATABASE_URL: url('migrator', db.name) }
+  assert.equal(run(RUNNER, root, env, ['--no-env-file']).status, 0)
+  await db.inspect.query('CREATE ROLE granted_only LOGIN')
+  await db.inspect.query('GRANT ALL ON ALL TABLES IN SCHEMA public TO granted_only')
+  const asGranted = { DATABASE_URL: url('granted_only', db.name), MIGRATE_DATABASE_URL: url('granted_only', db.name) }
+  for (const args of [['--no-env-file'], ['--no-env-file', '--dry-run']]) {
+    const stopped = run(RUNNER, root, asGranted, args)
+    assert.equal(stopped.status, 1, stopped.out)
+    assert.match(stopped.out, /belong to their owner.*would see none of their rows.*MIGRATE_DATABASE_URL/)
+    assert.doesNotMatch(stopped.out, /Pending migrations/)
+  }
+  const doctor = run(CHECK, root, asGranted)
+  assert.equal(doctor.status, 2, doctor.out)
+  assert.match(doctor.out, /belong to their owner/)
+  // the owner is not stopped
+  assert.equal(run(RUNNER, root, env, ['--no-env-file', '--dry-run']).status, 0)
 })
