@@ -88,7 +88,11 @@ export const APP_CONFIG_OVERRIDES = {
 }
 ```
 
-With it, `register()` waits for the seed (the server answers no request until it ends) and, when the seed fails, logs `[Instrumentation] Failed to seed recurring actions: <message>. scheduledActions.requireRecurringSeed is set: the server will not start.` and exits with code 1, so the platform's restart policy and alerts see it. `next build` is never held or stopped by it. The option is read by the facade (`export { register } from '@nextsparkjs/core/instrumentation'`): a project does not need its own `instrumentation.ts` to await the seed.
+With it, `register()` waits for the seed (the server answers no request until it ends) and, when the seed fails, logs `[Instrumentation] Failed to seed recurring actions: <message>. scheduledActions.requireRecurringSeed is set: the server will not start.` and exits with code 1, so the platform's restart policy and alerts see it. `next build` is never held or stopped by it.
+
+> **Serverless:** every instance runs `register()` when it starts, so with this option every cold start waits for the seed, and a database that is down when an instance starts takes that instance down. Leave it off where instances start often and the database may be unreachable for a moment.
+
+The option is read by the facade (`export { register } from '@nextsparkjs/core/instrumentation'`): a project does not need its own `instrumentation.ts` to await the seed.
 
 ### Deduplication Settings
 
