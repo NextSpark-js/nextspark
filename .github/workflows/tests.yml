@@ -16,13 +16,15 @@ concurrency:
 
 jobs:
   test:
-    name: test (node ${{ matrix.node }})
+    name: test (node ${{ matrix.node }}, ${{ matrix.suite }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         node: [22.14.0, '24']
+        # The suites run as separate jobs so none comes near the timeout on the slower Node 22 runs.
+        suite: [core, cli, scripts]
     env:
       # Node 22.14 intermittently fails the test runner's own IPC ("Unable to deserialize cloned data", #210);
       # the plain node --test steps run one file at a time there. Node 24 keeps the default parallelism.
@@ -43,6 +45,7 @@ jobs:
           pnpm --filter @nextsparkjs/core build:js
 
       - name: Test CLI
+        if: matrix.suite == 'cli'
         run: pnpm --filter @nextsparkjs/cli test
         env:
           # dependency-engines.test.ts deliberately queries registry.npmjs.org;
@@ -51,6 +54,7 @@ jobs:
           npm_config_registry: http://127.0.0.1:9
 
       - name: Test core Node tests
+        if: matrix.suite == 'core'
         # initdb and pg_ctl are not on the PATH of ubuntu-24.04; the tests that start a throwaway cluster skip
         # themselves without them, so the step fails if the image no longer has them.
         run: |
@@ -60,11 +64,13 @@ jobs:
           npm_config_registry: http://127.0.0.1:9
 
       - name: Test registry build scripts
+        if: matrix.suite == 'scripts'
         run: node --test $NODE_TEST_FLAGS $(find packages/core/scripts/build/registry -type f -name '*.test.mjs' -print)
         env:
           npm_config_registry: http://127.0.0.1:9
 
       - name: Test package, performance, and security scripts
+        if: matrix.suite == 'scripts'
         run: node --test $NODE_TEST_FLAGS scripts/packages/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs scripts/accessibility/*.test.mjs scripts/auth/*.test.mjs scripts/consent/*.test.mjs scripts/seo/*.test.mjs
         env:
           npm_config_registry: http://127.0.0.1:9
