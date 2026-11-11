@@ -89,6 +89,15 @@ describe('register() and the recurring-actions seed (#398)', () => {
       expect(exit).toHaveBeenCalledWith(1)
     })
 
+    test('handlers that fail to register stop the server with their own message, not the seed one', async () => {
+      initializeScheduledActions.mockImplementation(() => { throw new Error('bad handler') })
+      await register()
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('Failed to initialize scheduled actions: bad handler'))
+      expect(error).not.toHaveBeenCalledWith(expect.stringContaining('Failed to seed recurring actions'))
+      expect(initializeRecurringActions).not.toHaveBeenCalled()
+      expect(exit).toHaveBeenCalledWith(1)
+    })
+
     test('next build neither waits for the seed nor stops on its failure', async () => {
       env.NEXT_PHASE = 'phase-production-build'
       initializeRecurringActions.mockRejectedValue(new Error('connection refused'))

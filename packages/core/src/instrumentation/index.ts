@@ -64,6 +64,7 @@ export async function register(): Promise<void> {
     // A project whose work depends on the recurring actions sets scheduledActions.requireRecurringSeed: the server
     // waits for the seed and does not start without it (#435). Never during next build, which runs register() too.
     let requireSeed = false
+    let seeding = false
     try {
       const { APP_CONFIG_MERGED } = await import('../lib/config/config-sync')
       requireSeed = Boolean(APP_CONFIG_MERGED.scheduledActions?.requireRecurringSeed) && process.env.NEXT_PHASE !== 'phase-production-build'
@@ -77,6 +78,7 @@ export async function register(): Promise<void> {
       initializeScheduledActions()
 
       if (requireSeed) {
+        seeding = true
         await initializeRecurringActions()
         console.log('[Instrumentation] ✅ Scheduled action handlers initialized; recurring actions seeded')
       } else {
@@ -92,7 +94,9 @@ export async function register(): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : error
       if (requireSeed) {
-        console.error(`[Instrumentation] Failed to seed recurring actions: ${message}. scheduledActions.requireRecurringSeed is set: the server will not start.`)
+        // the seed itself, or the handlers and the module before it: each says which
+        const what = seeding ? 'Failed to seed recurring actions' : 'Failed to initialize scheduled actions'
+        console.error(`[Instrumentation] ${what}: ${message}. scheduledActions.requireRecurringSeed is set: the server will not start.`)
         process.exit(1)
       }
       console.warn(`[Instrumentation] ⚠️ Failed to initialize scheduled actions: ${message}`)
