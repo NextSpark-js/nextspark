@@ -274,7 +274,8 @@ instrumentation.ts::register()
     |       +-- registerTokenRefreshHandler()
     |       +-- registerContentHooks()
     |
-    +-- initializeRecurringActions()   (started, not awaited: register() does not wait for it)
+    +-- initializeRecurringActions()   (started, not awaited: register() does not wait for it,
+        |                                unless scheduledActions.requireRecurringSeed is set; see Configuration)
         |
         +-- Guard: Skip if already initialized
         |

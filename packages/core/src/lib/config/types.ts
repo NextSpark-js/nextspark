@@ -361,6 +361,13 @@ export interface ScheduledActionsConfig {
   defaultTimeout: number
 
   /**
+   * Wait at server start for the recurring actions to be seeded, and stop the server when that fails.
+   * Default: false (the seed runs in the background and a failure is logged as a warning).
+   * Set it when the project depends on its recurring actions (token refresh, cleanup jobs). Not applied during `next build`.
+   */
+  requireRecurringSeed?: boolean
+
+  /**
    * Maximum number of actions to execute in parallel.
    * Actions are executed concurrently up to this limit.
    * Default: 1 (sequential execution for backward compatibility)

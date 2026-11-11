@@ -57,12 +57,16 @@ throw error
 `)
   fs.writeFileSync(path.join(core, 'lib/auth/readiness.js'), 'export function sessionSecretProblem() { return null }\n')
   fs.writeFileSync(path.join(core, 'lib/scheduled-actions/index.js'), "export function initializeScheduledActions() { console.log('SCHEDULED_ACTIONS_INITIALIZED') }\nexport async function initializeRecurringActions() {}\n")
+  // register() reads scheduledActions.requireRecurringSeed from the merged config (#435)
+  fs.mkdirSync(path.join(core, 'lib/config'), { recursive: true })
+  fs.writeFileSync(path.join(core, 'lib/config/config-sync.js'), 'export const APP_CONFIG_MERGED = { scheduledActions: {} }\n')
   const coreInstrumentation = ts.transpileModule(fs.readFileSync(path.join(REPO_ROOT, 'packages/core/src/instrumentation/index.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText
     .replace("'../lib/auth/runtime-readiness'", "'../lib/auth/runtime-readiness.js'")
     .replace("'../lib/auth/readiness'", "'../lib/auth/readiness.js'")
     .replace("'../lib/scheduled-actions'", "'../lib/scheduled-actions/index.js'")
+    .replace("'../lib/config/config-sync'", "'../lib/config/config-sync.js'")
   fs.mkdirSync(path.join(core, 'instrumentation'), { recursive: true })
   fs.writeFileSync(path.join(core, 'instrumentation/index.js'), coreInstrumentation)
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ type: 'module' }))

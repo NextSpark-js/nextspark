@@ -61,7 +61,12 @@ export async function register(): Promise<void> {
 
     console.log('[Instrumentation] Initializing scheduled actions system...')
 
+    // A project whose work depends on the recurring actions sets scheduledActions.requireRecurringSeed: the server
+    // waits for the seed and does not start without it (#435). Never during next build, which runs register() too.
+    let requireSeed = false
     try {
+      const { APP_CONFIG_MERGED } = await import('../lib/config/config-sync')
+      requireSeed = Boolean(APP_CONFIG_MERGED.scheduledActions?.requireRecurringSeed) && process.env.NEXT_PHASE !== 'phase-production-build'
       const {
         initializeScheduledActions,
         initializeRecurringActions,
@@ -71,17 +76,26 @@ export async function register(): Promise<void> {
       // This registers hooks like 'entity.contents.updated' that create scheduled actions
       initializeScheduledActions()
 
-      // Seed the recurring scheduled actions (token refresh, cleanup jobs, etc.) without holding register():
-      // Next.js serves nothing until it resolves, and after the first boot the seed only finds its rows already
-      // there. Safe to run late or twice: scheduleRecurringAction is idempotent under an advisory lock, and the
-      // cron only needs the handlers above. A failure is logged here and the next boot seeds again.
-      void initializeRecurringActions().catch((error) => {
-        console.warn(`[Instrumentation] ⚠️ Failed to seed recurring actions: ${error instanceof Error ? error.message : error}`)
-      })
-
-      console.log('[Instrumentation] ✅ Scheduled action handlers initialized; recurring actions seeding in the background')
+      if (requireSeed) {
+        await initializeRecurringActions()
+        console.log('[Instrumentation] ✅ Scheduled action handlers initialized; recurring actions seeded')
+      } else {
+        // Seed the recurring scheduled actions (token refresh, cleanup jobs, etc.) without holding register():
+        // Next.js serves nothing until it resolves, and after the first boot the seed only finds its rows already
+        // there. Safe to run late or twice: scheduleRecurringAction is idempotent under an advisory lock, and the
+        // cron only needs the handlers above. A failure is logged here and the next boot seeds again.
+        void initializeRecurringActions().catch((error) => {
+          console.warn(`[Instrumentation] ⚠️ Failed to seed recurring actions: ${error instanceof Error ? error.message : error}`)
+        })
+        console.log('[Instrumentation] ✅ Scheduled action handlers initialized; recurring actions seeding in the background')
+      }
     } catch (error) {
-      console.warn(`[Instrumentation] ⚠️ Failed to initialize scheduled actions: ${error instanceof Error ? error.message : error}`)
+      const message = error instanceof Error ? error.message : error
+      if (requireSeed) {
+        console.error(`[Instrumentation] Failed to seed recurring actions: ${message}. scheduledActions.requireRecurringSeed is set: the server will not start.`)
+        process.exit(1)
+      }
+      console.warn(`[Instrumentation] ⚠️ Failed to initialize scheduled actions: ${message}`)
       console.warn('[Instrumentation] Server will continue without recurring actions')
     }
   }

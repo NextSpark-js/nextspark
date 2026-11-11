@@ -73,6 +73,22 @@ export const APP_CONFIG_OVERRIDES = {
 | `batchSize` | `number` | `10` | Maximum actions processed per cron invocation |
 | `defaultTimeout` | `number` | `30000` | Timeout per action in milliseconds |
 | `concurrencyLimit` | `number` | `1` | Max parallel action executions (1 = sequential) |
+| `requireRecurringSeed` | `boolean` | `false` | Wait at server start for the recurring actions to be seeded, and stop the server when that fails (see below) |
+
+### Requiring the Recurring Actions at Startup
+
+By default the server starts without waiting for the recurring actions to be seeded: `register()` starts the seed in the background, a failure is logged as `[Instrumentation] ⚠️ Failed to seed recurring actions: <message>`, and the next start seeds again. A project whose work depends on those actions (a token refresh, a cleanup job) can make that failure stop the start instead:
+
+```typescript
+// config/app.config.ts
+export const APP_CONFIG_OVERRIDES = {
+  scheduledActions: {
+    requireRecurringSeed: true,
+  },
+}
+```
+
+With it, `register()` waits for the seed (the server answers no request until it ends) and, when the seed fails, logs `[Instrumentation] Failed to seed recurring actions: <message>. scheduledActions.requireRecurringSeed is set: the server will not start.` and exits with code 1, so the platform's restart policy and alerts see it. `next build` is never held or stopped by it. The option is read by the facade (`export { register } from '@nextsparkjs/core/instrumentation'`): a project does not need its own `instrumentation.ts` to await the seed.
 
 ### Deduplication Settings
 
@@ -164,6 +180,7 @@ export interface ScheduledActionsConfig {
   batchSize: number
   defaultTimeout: number
   concurrencyLimit: number
+  requireRecurringSeed?: boolean
   webhookUrl?: string  // @deprecated - use webhooks.endpoints
   webhooks?: WebhooksConfig
   deduplication?: {

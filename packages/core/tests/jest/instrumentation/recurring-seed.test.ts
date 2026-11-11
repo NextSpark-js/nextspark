@@ -4,6 +4,8 @@ const initializeScheduledActions = jest.fn()
 const initializeRecurringActions = jest.fn<() => Promise<void>>()
 jest.mock('@/core/lib/auth/runtime-readiness', () => ({ logAuthReadinessAtStartup: jest.fn() }))
 jest.mock('@/core/lib/media/storage', () => ({ logStorageAtStartup: jest.fn() }))
+const scheduledActionsConfig: { requireRecurringSeed?: boolean } = {}
+jest.mock('@/core/lib/config/config-sync', () => ({ APP_CONFIG_MERGED: { scheduledActions: scheduledActionsConfig } }))
 jest.mock('@/core/lib/scheduled-actions', () => ({
   initializeScheduledActions: () => initializeScheduledActions(),
   initializeRecurringActions: () => initializeRecurringActions(),
@@ -12,7 +14,7 @@ jest.mock('@/core/lib/scheduled-actions', () => ({
 import { register } from '@/core/instrumentation'
 
 const env = process.env as Record<string, string | undefined>
-const saved = { NEXT_RUNTIME: env.NEXT_RUNTIME, NODE_ENV: env.NODE_ENV }
+const saved = { NEXT_RUNTIME: env.NEXT_RUNTIME, NODE_ENV: env.NODE_ENV, NEXT_PHASE: env.NEXT_PHASE }
 
 describe('register() and the recurring-actions seed (#398)', () => {
   let warn: jest.SpiedFunction<typeof console.warn>
@@ -22,6 +24,8 @@ describe('register() and the recurring-actions seed (#398)', () => {
     env.NODE_ENV = 'development'
     initializeScheduledActions.mockReset()
     initializeRecurringActions.mockReset()
+    delete scheduledActionsConfig.requireRecurringSeed
+    delete env.NEXT_PHASE
     warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
     jest.spyOn(console, 'log').mockImplementation(() => {})
   })
@@ -54,5 +58,44 @@ describe('register() and the recurring-actions seed (#398)', () => {
     initializeRecurringActions.mockImplementation(async () => void order.push('seed'))
     await register()
     expect(order).toEqual(['handlers', 'seed'])
+  })
+
+  describe('with scheduledActions.requireRecurringSeed (#435)', () => {
+    let exit: jest.SpiedFunction<typeof process.exit>
+    let error: jest.SpiedFunction<typeof console.error>
+    beforeEach(() => {
+      scheduledActionsConfig.requireRecurringSeed = true
+      exit = jest.spyOn(process, 'exit').mockImplementation((() => undefined) as never)
+      error = jest.spyOn(console, 'error').mockImplementation(() => {})
+    })
+
+    test('register() resolves only once the seed has', async () => {
+      let finishSeed = () => {}
+      initializeRecurringActions.mockReturnValue(new Promise<void>((resolve) => { finishSeed = resolve }))
+      let resolved = false
+      const registering = register().then(() => { resolved = true })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(resolved).toBe(false)
+      finishSeed()
+      await registering
+      expect(exit).not.toHaveBeenCalled()
+    })
+
+    test('a seed that fails stops the server with an error that names the option', async () => {
+      initializeRecurringActions.mockRejectedValue(new Error('connection refused'))
+      await register()
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('Failed to seed recurring actions: connection refused'))
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('scheduledActions.requireRecurringSeed'))
+      expect(exit).toHaveBeenCalledWith(1)
+    })
+
+    test('next build neither waits for the seed nor stops on its failure', async () => {
+      env.NEXT_PHASE = 'phase-production-build'
+      initializeRecurringActions.mockRejectedValue(new Error('connection refused'))
+      await register()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(exit).not.toHaveBeenCalled()
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Failed to seed recurring actions: connection refused'))
+    })
   })
 })
