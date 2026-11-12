@@ -60,9 +60,12 @@ The entity is shared within the team: whoever may list sees every member's rows,
 
 **Rows written before `teamId` existed:** migration `004` gives each one the team of its user when the user belongs
 to exactly one team. A row of a user in several teams keeps `teamId` NULL, so no team sees it through the API (a
-superadmin does); assign it by hand when you know its team:
+superadmin does); assign it by hand when you know its team, on the migration connection (`MIGRATE_DATABASE_URL`,
+the table's owner). On the app's connection row-level security allows no update: the statement changes 0 rows and
+reports no error.
 
 ```sql
+-- psql "$MIGRATE_DATABASE_URL"
 UPDATE "social_audit_logs" SET "teamId" = '<team id>' WHERE id = '<row id>';
 ```
 
