@@ -13,7 +13,9 @@
  * - Only `.next/dev` is deleted, and never through a symlink (of `.next` or `.next/dev`).
  * - Not while a dev server holds `.next/dev/lock` (a live pid, or a lock that names none): its cache is in use.
  *   `nextspark dev` prepares before it starts Next, so that is where the clearing happens; a route removed while it
- *   runs is reported, left unrecorded, and cleared by the next prepare after the server stops.
+ *   runs is reported and cleared by the next prepare after the server stops. The watcher records the routes it sees
+ *   added (the union with the record, so a route that left stays recorded as missing): a route tried during a
+ *   session and removed afterwards is then found missing by the prepare of `build`.
  *
  * @module core/scripts/build/registry/host/next-dev-cache
  */
@@ -69,17 +71,19 @@ export function devServerRunning(projectRoot, { alive = pid => { try { process.k
  * @param {object} input
  * @param {string} input.projectRoot
  * @param {object[]} [input.files] - the generated files (`[{ path }]`) of the preparation
- * @param {boolean} [input.watching] - a long-lived `nextspark dev` watcher: never clear, never record
+ * @param {boolean} [input.watching] - a long-lived `nextspark dev` watcher: never clears, and records only the union of the record and the routes
  * @param {object} [input.fs] - test seam: `projectFiles(projectRoot)`
  * @returns {{ action: 'unchanged'|'recorded'|'cleared'|'kept', line?: string }}
  */
 export function syncDevCache({ projectRoot, files, watching = false, running = devServerRunning, fs = projectFiles(projectRoot) }) {
   const routes = routePaths(files)
   const previous = readState(projectRoot)
-  const record = () => {
+  const record = (list = routes) => {
     fs.mkdirSync(join(projectRoot, '.nextspark'), { recursive: true })
-    fs.writeFileSync(join(projectRoot, ROUTES_STATE_FILE), `${JSON.stringify({ routes })}\n`)
+    fs.writeFileSync(join(projectRoot, ROUTES_STATE_FILE), `${JSON.stringify({ routes: list })}\n`)
   }
+  // The watcher adds what is new and never drops what left, so the prepare after the server stops still sees it missing
+  const recordForWatcher = () => record([...new Set([...(previous ?? []), ...routes])].sort())
   if (previous && previous.length === routes.length && previous.every((path, index) => path === routes[index])) return { action: 'unchanged' }
   const now = new Set(routes)
   const gone = previous?.filter(path => !now.has(path)) ?? []
@@ -88,7 +92,8 @@ export function syncDevCache({ projectRoot, files, watching = false, running = d
   const stat = gone.length > 0 ? lstatOrNull(dev) : null
   if (!stat) {
     // A first record, only routes added, or nothing of Next's to clear
-    if (!watching) record()
+    if (watching) recordForWatcher()
+    else record()
     return { action: 'recorded' }
   }
   const changed = `${gone.length} generated route file${gone.length === 1 ? '' : 's'} left src/app (${gone.slice(0, 3).join(', ')}${gone.length > 3 ? ', ...' : ''})`
@@ -96,6 +101,7 @@ export function syncDevCache({ projectRoot, files, watching = false, running = d
   const byHand = 'delete .next/dev by hand before next build'
   if (next?.isSymbolicLink() || stat.isSymbolicLink()) return kept('is (or sits in) a symlink, which prepare does not follow', byHand)
   if (!stat.isDirectory()) return kept('is not a directory', byHand)
+  if (watching) recordForWatcher()
   if (watching || running(projectRoot)) return kept('is in use by a running dev server', 'stop it; the next prepare clears .next/dev before next build')
   fs.rmSync(dev, { recursive: true, force: true })
   record()

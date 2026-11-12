@@ -121,12 +121,26 @@ test('a running dev server keeps its cache, and the routes stay unrecorded so th
   assert.equal(existsSync(dev(root)), false)
 })
 
-test('the watcher never deletes or records', () => {
+test('the watcher never deletes or drops a recorded route', () => {
   const root = project()
   syncDevCache({ projectRoot: root, files: BASE, running: idle })
   assert.equal(syncDevCache({ projectRoot: root, files: LESS, watching: true, running: idle }).action, 'kept')
   assert.equal(existsSync(dev(root)), true)
   assert.deepEqual(state(root), BASE.map(f => f.path))
+})
+
+test('a route the watcher sees added is recorded, so the prepare after the server stops finds it missing (#453)', () => {
+  const root = project()
+  syncDevCache({ projectRoot: root, files: BASE, running: idle })
+  assert.equal(syncDevCache({ projectRoot: root, files: MORE, watching: true, running: idle }).action, 'recorded')
+  assert.equal(existsSync(dev(root)), true)
+  assert.deepEqual(state(root), MORE.map(f => f.path).sort())
+  // Added and removed again during the same session: the watcher keeps the union
+  syncDevCache({ projectRoot: root, files: BASE, watching: true, running: idle })
+  assert.deepEqual(state(root), MORE.map(f => f.path).sort())
+  const result = syncDevCache({ projectRoot: root, files: BASE, running: idle })
+  assert.equal(result.action, 'cleared')
+  assert.equal(existsSync(dev(root)), false)
 })
 
 test('devServerRunning reads the lock of Next: a live pid, a dead pid, a lock without one, no lock', () => {
