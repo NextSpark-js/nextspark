@@ -821,3 +821,30 @@ test('defaultValue: keys of Object.prototype, a value nested past 8 levels and a
     clean(root)
   }
 })
+
+test('every entity config of the plugins in plugins/ is readable by the contracts generation, and a missing slug says so (#454)', async () => {
+  const repo = join(CORE_ROOT, '../..')
+  const plugins = join(repo, 'plugins')
+  const sources = new Sources(ts, repo)
+  const configs = readdirSync(plugins).flatMap(plugin => {
+    const dir = join(plugins, plugin, 'entities')
+    return existsSync(dir) ? readdirSync(dir).flatMap(entity => readdirSync(join(dir, entity)).filter(name => name.endsWith('.config.ts')).map(name => join(dir, entity, name))) : []
+  })
+  assert.ok(configs.length >= 2, 'the plugins of the repo have entity configs')
+  for (const file of configs) {
+    const exportName = /export const (\w+EntityConfig)\b/.exec(readFileSync(file, 'utf8'))?.[1]
+    assert.ok(exportName, `${file} exports its config`)
+    const read = await readEntityContract({ file, exportName, projectRoot: repo, sources })
+    assert.equal(read.error, undefined, `${file}: ${read.error}`)
+  }
+  // The same config without its slug (the mutation): the message names what is missing
+  const root = temp()
+  try {
+    const audit = configs.find(file => file.endsWith('audit-logs.config.ts'))
+    write(root, 'a.config.ts', readFileSync(audit, 'utf8').replace(/^\s*slug:.*\n/m, ''))
+    const read = await readEntityContract({ file: join(root, 'a.config.ts'), exportName: 'auditLogsEntityConfig', projectRoot: root })
+    assert.match(read.error, /has no `slug`: add `slug:/)
+  } finally {
+    clean(root)
+  }
+})

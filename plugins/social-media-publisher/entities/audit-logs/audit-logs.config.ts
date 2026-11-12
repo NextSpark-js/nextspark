@@ -9,6 +9,7 @@ import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
 export const auditLogsEntityConfig = {
   name: 'audit-logs',
+  slug: 'audit-logs',
   label: {
     en: 'Social Media Audit Logs',
     es: 'Registros de Auditoría de Redes Sociales'

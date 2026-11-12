@@ -397,7 +397,8 @@ export async function readEntityContract({ file, exportName, projectRoot, source
 
   const warnings = []
   const slug = read(object, configFile, ['slug'], sources)
-  if (slug.state !== 'value' || typeof slug.value !== 'string') return { error: 'has no literal `slug`' }
+  if (slug.state === 'absent') return { error: 'has no `slug`: add `slug: \'<url-name>\'` to the config (it is required by EntityConfig)' }
+  if (slug.state !== 'value' || typeof slug.value !== 'string') return { error: 'has no literal `slug`: write it as a string, not an expression' }
   const warn = message => warnings.push(message)
 
   const enabled = read(object, configFile, ['enabled'], sources)
