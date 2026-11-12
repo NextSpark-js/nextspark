@@ -27,7 +27,7 @@ export default defineConfig({
 - `plugins` contains local directory names under `plugins/` or scoped package
   names declared by the project, such as `@nextsparkjs/plugin-langchain`.
 - `features` controls build-time inclusion.
-- `template` records scaffold provenance only.
+- `template` records scaffold provenance only: `template.version` is the version the project was created with, `update-core` leaves it as it is, and the version installed is the one of `@nextsparkjs/core` in `package.json`.
 - `database`, `auth`, and `app` are accepted for runtime/tooling metadata.
 
 Selector fields such as `theme`, `project.root`, and `activeProject` are not

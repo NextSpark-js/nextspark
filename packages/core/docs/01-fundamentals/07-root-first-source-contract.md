@@ -213,7 +213,7 @@ Everything else is source or host configuration. The compiler must not overwrite
 
 ## Install-once templates
 
-`create-nextspark-app --theme <name>` extracts a template into the root-first source tree once. The extracted files immediately become project source. Upgrading NextSpark does not compare, merge, or restore them from the original template. `template.name` and `template.version` are provenance for documentation and upgrade guidance only.
+`create-nextspark-app --theme <name>` extracts a template into the root-first source tree once. The extracted files immediately become project source. Upgrading NextSpark does not compare, merge, or restore them from the original template. `template.name` and `template.version` are provenance for documentation and upgrade guidance only: `template.version` is the version the project was created with, `update-core` does not change it, and the installed version is the one of `@nextsparkjs/core` in `package.json`.
 
 The repository's `blog`, `crm`, and `productivity` trees move from runnable workspace themes to the core-owned catalog at `packages/core/templates/projects/<name>/`. They are payloads, not compiler inputs or independently selected projects.
 

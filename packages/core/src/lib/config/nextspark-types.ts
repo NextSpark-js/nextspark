@@ -24,7 +24,10 @@ export interface NextSparkTemplateOrigin {
   /** Install-once template name, retained only as upgrade-guide metadata. */
   name: string
 
-  /** Framework/template version that originally scaffolded the project. */
+  /**
+   * Framework/template version that originally scaffolded the project. `update-core` does not change it and nothing
+   * reads it: the installed version is the one of `@nextsparkjs/core` in `package.json`.
+   */
   version: string
 }
 

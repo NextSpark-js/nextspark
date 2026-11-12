@@ -135,6 +135,9 @@ const PUBLISHED_LAYOUTS = {
   b30d6deaa1b42900: { template: 'productivity', shared: 'ProductivityDashboardLayout.tsx' },
 }
 
+/** Every file the 0.1.0-beta.202 migration can create or replace; its upgrade note in the CHANGELOG names each one */
+export const ENTITY_REGISTRY_FILES = [MAIN_LAYOUT, ...new Set(Object.values(PUBLISHED_LAYOUTS).map((entry) => path.join('templates', 'shared', entry.shared)))]
+
 /** Line endings, a BOM, indentation, runs of spaces between words and empty lines do not tell two texts apart; what is inside a line does */
 const normalize = (text) => text.replace(/^﻿/, '').replace(/\r/g, '').split('\n').map((line) => line.trim().replace(/\s+/g, ' ')).filter(Boolean).join('\n')
 const digest = (text) => crypto.createHash('sha256').update(normalize(text)).digest('hex').slice(0, 16)
@@ -185,11 +188,14 @@ export const CODE_MIGRATIONS = [
     version: '0.1.0-beta.200',
     title: `useTheme and ThemeProvider from next-themes -> ${THEME_PROVIDER}`,
     run: nextThemesImports,
+    writes: null,
   },
   {
     version: '0.1.0-beta.202',
     title: 'the dashboard layout of a crm or productivity project fills the client entity registry',
     run: entityRegistryLayout,
+    /** The files it can create or replace (`null`: not fixed, as in the 0.1.0-beta.200 one, which rewrites any file that imports next-themes) */
+    writes: ENTITY_REGISTRY_FILES,
   },
 ]
 
