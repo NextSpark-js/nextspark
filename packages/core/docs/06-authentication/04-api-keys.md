@@ -332,7 +332,7 @@ export const APP_CONFIG_OVERRIDES = {
 A plugin that ships routes with scopes of its own declares them in its `plugin.config.ts`, as a literal object
 inside `definePlugin` (the registry build reads it without running the config). They are valid when creating a key
 while the plugin is enabled, the key dialog lists them with the project's own, and `doctor` and `prepare` do not
-list them as undeclared. The name must be `resource:action` (lowercase letters, digits and hyphens) and never `*`; a name
+list them as undeclared. The name must be `resource:action` (lowercase letters, digits, hyphens and underscores) and never `*`; a name
 that is not, an `apiScopes` that is not a literal object and a computed or spread entry are not read, and `prepare` and
 `doctor` list them with the plugin and the file (`NS_PLUGIN_API_SCOPES_INVALID`). `api.scopes` of the project wins over a
 plugin's description of the same name, core's scopes win over both, and when two plugins declare the same scope the key

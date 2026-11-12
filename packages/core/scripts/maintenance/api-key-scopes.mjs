@@ -281,7 +281,7 @@ export async function findApiKeyScopeProblems({ projectRoot, routes, plugins = [
   if (sources.length === 0 && plugins.length === 0) return empty
   const compiler = ts ?? (await loadTypeScriptFor(projectRoot))
   const declared = readDeclaredApiScopes({ projectRoot, ts: compiler })
-  const fromPlugins = readPluginApiScopes(compiler, plugins)
+  const fromPlugins = readPluginApiScopes(compiler, plugins, { projectRoot })
   const known = new Set([...CORE_API_SCOPES, ...declared.scopes, ...Object.keys(fromPlugins.scopes)])
 
   const withoutScope = []

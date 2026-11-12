@@ -237,14 +237,29 @@ test('prepare: an apiScopes that is not a literal object, or has computed entrie
 
 test('prepare: a plugin scope that is not resource:action, or is the wildcard, is reported and not accepted', async () => {
   const route = { 'plugins/shop/api/orders/route.ts': REPORTS.replace('reports:read', 'reports') }
-  const bad = await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG("  apiScopes: { 'reports': 'x', '*': 'all', 'Reports:Read': 'x', 'a:b:c': 'x', 'ok:read': 'fine' },\n") })
+  const bad = await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG("  apiScopes: { 'reports': 'x', '*': 'all', 'Reports:Read': 'x', 'a:b:c': 'x', 'ok:read': 'fine', 'campaign_members:read': 'valid' },\n") })
   assert.deepEqual(bad.codes, [API_KEY_UNDECLARED_SCOPE_WARNING, API_KEY_PLUGIN_SCOPES_WARNING])
   assert.deepEqual(bad.notices[1].findings.map(finding => finding.message.match(/'([^']*)'/)[1]), ['reports', '*', 'Reports:Read', 'a:b:c'])
   assert.match(bad.notices[0].message, /requires 'reports'/)
 })
 
+test('the file of a problem is the real path relative to the project, also for a plugin installed in node_modules', async () => {
+  const root = 'node_modules/@nextsparkjs/plugin-shop'
+  const host = tempHost({ [`${root}/plugin.config.ts`]: SHOP_CONFIG('  apiScopes: SCOPES,\n') })
+  try {
+    const config = { ...host.config, plugins: [{ name: 'shop', root: join(host.source, root), importBase: '@nextsparkjs/plugin-shop' }] }
+    const { notices } = await predictHost(config)
+    const problem = notices.find(notice => notice.code === API_KEY_PLUGIN_SCOPES_WARNING)
+    assert.equal(problem.findings[0].file, `${root}/plugin.config.ts`)
+    assert.match(problem.message, /node_modules\/@nextsparkjs\/plugin-shop\/plugin\.config\.ts: /)
+  } finally {
+    host.cleanup()
+  }
+})
+
 test('the shape of a plugin scope name is the one every scope of core has, and the wildcard is not', () => {
   for (const scope of CORE_API_SCOPES.filter(scope => scope !== '*')) assert.match(scope, API_SCOPE_NAME, scope)
+  assert.match('campaign_members:read', API_SCOPE_NAME)
   for (const name of ['*', 'reports', 'reports:', ':read', 'Reports:read', 'a:b:c', 'a b:c', 'reports:*']) assert.doesNotMatch(name, API_SCOPE_NAME, name)
 })
 

@@ -167,11 +167,11 @@ export function readPluginMetadata(ts, { configFile, exportName }) {
 }
 
 /**
- * The shape of a scope name, `resource:action` (lowercase letters, digits and hyphens): every scope core declares has it
+ * The shape of a scope name, `resource:action` (lowercase letters, digits, hyphens and underscores, as the slug of an entity, whose scopes are `${slug}:read`): every scope core declares has it
  * (`users:read`, `admin:api-keys`; scripts/build/registry/host/__tests__/host-api-key-scopes.test.mjs keeps the two equal). The wildcard
  * `*` is core's alone, so a plugin cannot declare it.
  */
-export const API_SCOPE_NAME = /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/
+export const API_SCOPE_NAME = /^[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*$/
 
 /** The entries of a literal `apiScopes` object, and what could not be read (a message each). */
 function readApiScopes(ts, node) {
@@ -182,7 +182,7 @@ function readApiScopes(ts, node) {
     const name = ts.isPropertyAssignment(entry) && (ts.isIdentifier(entry.name) || ts.isStringLiteral(entry.name)) ? entry.name.text : null
     const description = name === null ? null : unwrap(ts, entry.initializer)
     if (name === null) problems.push('an entry of `apiScopes` is computed or spread, so it is not read')
-    else if (!API_SCOPE_NAME.test(name)) problems.push(`the scope '${name}' is not of the form resource:action (lowercase letters, digits and hyphens; no '*'), so it is not accepted`)
+    else if (!API_SCOPE_NAME.test(name)) problems.push(`the scope '${name}' is not of the form resource:action (lowercase letters, digits, hyphens and underscores; no '*'), so it is not accepted`)
     else if (!description || !ts.isStringLiteralLike(description)) problems.push(`the description of the scope '${name}' is not a string literal, so it is not read`)
     else scopes[name] = description.text
   }
@@ -230,9 +230,10 @@ export async function withDeclaredCapabilities(plugins, { projectRoot }) {
  *
  * @param {object} ts - the TypeScript compiler
  * @param {{ name: string, root?: string, sourceDir?: string }[]} plugins
+ * @param {{ projectRoot?: string }} [options] - the project the `file` of a problem is relative to (a plugin from node_modules says so)
  * @returns {{ scopes: Record<string, string>, problems: { plugin: string, file: string, message: string }[] }}
  */
-export function readPluginApiScopes(ts, plugins) {
+export function readPluginApiScopes(ts, plugins, { projectRoot } = {}) {
   const scopes = {}
   const problems = []
   for (const plugin of plugins) {
@@ -248,7 +249,7 @@ export function readPluginApiScopes(ts, plugins) {
     const metadata = readPluginMetadata(ts, { configFile, exportName })
     if (metadata.enabled === false) continue
     Object.assign(scopes, metadata.apiScopes)
-    for (const message of metadata.apiScopesProblems ?? []) problems.push({ plugin: plugin.name, file: `plugins/${plugin.name}/plugin.config.ts`, message })
+    for (const message of metadata.apiScopesProblems ?? []) problems.push({ plugin: plugin.name, file: projectRoot ? relative(projectRoot, configFile).split(sep).join('/') : configFile, message })
   }
   return { scopes, problems }
 }
