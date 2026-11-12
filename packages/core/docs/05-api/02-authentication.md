@@ -405,9 +405,10 @@ export const API_SCOPES = {
 }
 ```
 
-Themes and plugins can declare their own scopes under `api.scopes` in
-`app.config.ts` (for example, the starter project template adds `ai:read`, `ai:write`,
-`social:read`, `social:write`) — see [Scope Enforcement Fails
+A project declares its own scopes under `api.scopes` in `config/app.config.ts`, and a plugin
+declares the ones its routes require with `apiScopes` in its `plugin.config.ts` (the `ai`, `langchain`
+and `social-media-publisher` plugins add `ai:read`, `ai:write`, `social:read`, `social:write`
+this way, so enabling them needs nothing in the project) — see [Scope Enforcement Fails
 Closed](#scope-enforcement-fails-closed).
 
 ### Scope Categories
@@ -560,9 +561,9 @@ true by construction.
 
 New core scopes added for this: `teams:read`, `teams:write`, `teams:delete`,
 `billing:read`, `billing:write`, `admin:devtools` (see [Available
-Scopes](#scope-system) above). A theme or plugin can add its own scopes by
-declaring them in `app.config.ts` under `api.scopes` — the starter project template
-adds `ai:read`, `ai:write`, `social:read`, `social:write` this way.
+Scopes](#scope-system) above). A project can add its own scopes
+under `api.scopes` in `config/app.config.ts`, and a plugin with `apiScopes` in its `plugin.config.ts`
+(`ai:read`, `ai:write`, `social:read`, `social:write` come from the plugins that use them).
 
 ---
 

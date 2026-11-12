@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { API_CONFIG } from '../config/config-client';
+import { PLUGIN_CATALOG } from '@nextsparkjs/registries/plugin-catalog';
 
 /**
  * Gestión de API Keys para acceso externo
@@ -157,15 +158,18 @@ export type ApiScope = keyof typeof API_SCOPES;
  * `admin:api-keys` means.
  */
 export function getApiScopes(): Record<string, string> {
-  const appScopes = (API_CONFIG as { scopes?: Record<string, string> } | undefined)?.scopes ?? {};
-  return { ...appScopes, ...API_SCOPES };
+  return { ...getAppApiScopes(), ...API_SCOPES };
 }
 
-/** The scopes an app added, for a UI that wants to group them apart from core's. */
+/**
+ * The scopes added to core's, for a UI that wants to group them apart: the ones the enabled plugins declare
+ * (`apiScopes` of their config) and the ones the app declared in `api.scopes`, which wins over a plugin's.
+ */
 export function getAppApiScopes(): Record<string, string> {
   const appScopes = (API_CONFIG as { scopes?: Record<string, string> } | undefined)?.scopes ?? {};
+  const pluginScopes: Record<string, string> = Object.assign({}, ...Object.values(PLUGIN_CATALOG).filter(plugin => plugin.enabled !== false).map(plugin => plugin.apiScopes ?? {}));
   const coreNames = Object.keys(API_SCOPES);
-  return Object.fromEntries(Object.entries(appScopes).filter(([name]) => !coreNames.includes(name)));
+  return Object.fromEntries(Object.entries({ ...pluginScopes, ...appScopes }).filter(([name]) => !coreNames.includes(name)));
 }
 
 /**

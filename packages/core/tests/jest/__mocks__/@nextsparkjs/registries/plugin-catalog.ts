@@ -16,6 +16,7 @@ export interface PluginCatalogEntry {
   entities: string[]
   hasMessages: boolean
   hasAssets: boolean
+  apiScopes: Record<string, string>
 }
 
 export const PLUGIN_CATALOG: Record<string, PluginCatalogEntry> = {}

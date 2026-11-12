@@ -27,7 +27,7 @@ import { TokenEncryption } from '@/core/lib/oauth/encryption'
 import { query } from '@/core/lib/db'
 
 export async function POST(request: NextRequest) {
-  // Declares the social:write scope added by this plugin's app.config.ts —
+  // Declares the social:write scope added by this plugin (apiScopes in its plugin.config.ts) —
   // an API key without it is rejected here (fails closed, #93)
   const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {

@@ -595,6 +595,7 @@ declare module '@nextsparkjs/registries/plugin-catalog' {
     entities: string[]
     hasMessages: boolean
     hasAssets: boolean
+    apiScopes: Record<string, string>
   }
 
   export const PLUGIN_CATALOG: Record<string, PluginCatalogEntry>

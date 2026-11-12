@@ -42,6 +42,10 @@ export interface PluginConfig {
   // Write the config with definePlugin({ name, capabilities: [...] }).
   capabilities?: readonly PluginCapability[]
 
+  // API-key scopes the plugin's routes require ('name': 'what it allows'), written as a literal object.
+  // Valid when creating a key while the plugin is enabled; see Scope Enforcement in the API keys guide.
+  apiScopes?: Record<string, string>
+
   // Lifecycle hooks
   hooks?: PluginHooks
 

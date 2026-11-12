@@ -60,6 +60,11 @@ const PLUGIN_FEATURES = {
 export const socialMediaPublisherPluginConfig: PluginConfig = definePlugin({
   name: 'social-media-publisher',
   capabilities: ['server'],
+  // Scopes for API keys: the plugin's routes require them, so a key can be created with them (no setup in the project)
+  apiScopes: {
+    'social:read': 'Read connected social media accounts',
+    'social:write': 'Connect, assign and disconnect social media accounts and publish posts',
+  },
   displayName: 'Social Media Publisher',
   version: '1.0.0',
   description: 'Publish content to Instagram Business & Facebook Pages with OAuth integration',

@@ -308,8 +308,8 @@ and `nextspark prepare` (also `prepare --check` and `build`) read the project's
 Route Handlers, its templates' and its plugins' without running them, and list each call to
 `authenticateRequest` or `validateAndAuthenticateRequest` that passes neither
 option, with the file, the line and the call (`NS_API_KEY_ROUTE_WITHOUT_SCOPE`).
-They also list a route that requires a scope neither core nor `api.scopes`
-declares (`NS_API_KEY_SCOPE_NOT_DECLARED`): a key cannot be created with it, so
+They also list a route that requires a scope that neither core, `api.scopes` nor the
+`apiScopes` of an enabled plugin declares (`NS_API_KEY_SCOPE_NOT_DECLARED`): a key cannot be created with it, so
 only a wildcard key passes. They read the calls written in the route file itself, with the options
 written as an object literal; a call in a helper the route imports, or options built at runtime, are not
 seen. `prepare` prints them as warnings and never changes its exit code.
@@ -327,6 +327,22 @@ export const APP_CONFIG_OVERRIDES = {
     },
   },
 }
+```
+
+A plugin that ships routes with scopes of its own declares them in its `plugin.config.ts`, as a literal object
+inside `definePlugin` (the registry build reads it without running the config). They are valid when creating a key
+while the plugin is enabled, the key dialog lists them with the project's own, and `doctor` and `prepare` do not
+list them as undeclared. `api.scopes` of the project wins over a plugin's description of the same name, and core's
+scopes win over both:
+
+```typescript
+export const reportsPluginConfig = definePlugin({
+  name: 'reports',
+  capabilities: ['server'],
+  apiScopes: {
+    'reports:read': 'Read the reports',
+  },
+})
 ```
 
 ```typescript
@@ -351,9 +367,9 @@ export async function GET(request: NextRequest) {
 
 New core scopes added alongside this change: `teams:read`, `teams:write`,
 `teams:delete`, `billing:read`, `billing:write`, `admin:devtools`. Themes and
-plugins can add their own by declaring `api.scopes` in `app.config.ts` — the
-starter project template adds `ai:read`, `ai:write`, `social:read`, `social:write` this
-way.
+plugins can add their own: a project declares `api.scopes` in `config/app.config.ts`, a plugin
+`apiScopes` in its `plugin.config.ts` (see above) — the `ai`, `langchain` and `social-media-publisher`
+plugins add `ai:read`, `ai:write`, `social:read`, `social:write` this way.
 
 `hasRequiredScope(authResult, scope)` still exists for a second, finer check
 inside a handler — it's optional, and redundant if the scope it checks is

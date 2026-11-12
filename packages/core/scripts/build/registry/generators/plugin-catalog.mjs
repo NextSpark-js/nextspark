@@ -34,6 +34,7 @@ export function generatePluginCatalog(plugins) {
       ['entities', (plugin.entities ?? []).map(entity => entity.name)],
       ['hasMessages', Boolean(plugin.hasMessages)],
       ['hasAssets', Boolean(plugin.hasAssets)],
+      ['apiScopes', Object.fromEntries(Object.entries(metadata.apiScopes ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))],
     ]
     return `  ${literal(plugin.name)}: {\n${fields.map(([key, value]) => `    ${key}: ${literal(value)}`).join(',\n')}\n  }`
   })
@@ -64,6 +65,8 @@ export interface PluginCatalogEntry {
   entities: string[]
   hasMessages: boolean
   hasAssets: boolean
+  /** The API-key scopes the plugin adds (apiScopes of its config): name to description */
+  apiScopes: Record<string, string>
 }
 
 export const PLUGIN_CATALOG: Record<string, PluginCatalogEntry> = {

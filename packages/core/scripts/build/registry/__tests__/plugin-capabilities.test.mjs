@@ -1000,6 +1000,23 @@ test('the catalog lists every plugin with static metadata; the executable regist
   }
 })
 
+test('the catalog carries the apiScopes a plugin writes as literals, sorted, and nothing else', async () => {
+  const { root, cleanup } = project({
+    'plugins/shop/plugin.config.ts': "import { definePlugin } from '@nextsparkjs/core/types/plugin'\nconst computed = 'x'\nexport const shopPluginConfig = definePlugin({ name: 'shop', capabilities: ['server'], apiScopes: { 'shop:write': 'Change orders', 'shop:read': 'Read orders', [computed]: 'skipped', 'shop:bad': computed } })\n",
+    'plugins/shop/api/orders/route.ts': ROUTE,
+    'plugins/plain/plugin.config.ts': config('plain', "['server']"),
+    'plugins/plain/api/ping/route.ts': ROUTE,
+  })
+  try {
+    const plugins = await discoverPlugins({ projectRoot: root, outputDir: join(root, 'out'), pluginSources: ['shop', 'plain'].map(name => sourceOf(root, name)) })
+    const catalog = generatePluginCatalog(plugins)
+    assert.match(catalog, /apiScopes: \{"shop:read":"Read orders","shop:write":"Change orders"\}/)
+    assert.match(catalog, /"plain": \{[\s\S]*?apiScopes: \{\}/)
+  } finally {
+    cleanup()
+  }
+})
+
 test("package `exports` patterns are ordered as Node's PATTERN_KEY_COMPARE does, not by declaration order", () => {
   const IMPORT = new Set(['import', 'default'])
   const at = (exportsField, subpath) => exportsTarget(exportsField, subpath, IMPORT)

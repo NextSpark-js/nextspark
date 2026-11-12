@@ -27,7 +27,7 @@ import { selectModel, calculateCost, extractTokens } from '@/plugins/ai/lib/core
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
-  // Declares the ai:write scope added by the AI plugin's app.config.ts —
+  // Declares the ai:write scope added by the AI plugin (apiScopes in its plugin.config.ts) —
   // an API key without it is rejected here (fails closed, #93)
   const auth = await authenticateRequest(request, { requiredScope: 'ai:write' })
   if (!auth.success) return createAuthFailureResponse(auth)

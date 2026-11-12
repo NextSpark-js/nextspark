@@ -534,7 +534,7 @@ export async function generateClientReport(
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  // Declares the social:read scope added by this plugin's app.config.ts —
+  // Declares the social:read scope added by this plugin (apiScopes in its plugin.config.ts) —
   // an API key without it is rejected here (fails closed, #93)
   const authResult = await authenticateRequest(request, { requiredScope: 'social:read' })
   if (!authResult.success) {

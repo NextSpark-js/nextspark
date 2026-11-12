@@ -65,6 +65,13 @@ export interface PluginConfig {
   components?: Record<string, any>
   services?: Record<string, any>
   api?: Record<string, any>
+  /**
+   * API-key scopes the plugin adds to core's, as `{ 'name': 'what it allows' }`, for the routes of the plugin that
+   * pass `requiredScope`. Written as a literal object inside `definePlugin({...})`: the registry build reads it
+   * statically. A key can be created with them, and `nextspark prepare` and `doctor` do not list them as undeclared.
+   * Core's scopes win a name collision.
+   */
+  apiScopes?: Record<string, string>
   navigation?: {
     devtools?: PluginNavSection
     superadmin?: PluginNavSection

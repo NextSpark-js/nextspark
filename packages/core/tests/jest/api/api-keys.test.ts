@@ -119,6 +119,39 @@ describe('ApiKeyManager', () => {
     });
   });
 
+  describe('scopes an enabled plugin declares in apiScopes', () => {
+    const catalog = {
+      PLUGIN_CATALOG: {
+        shop: { enabled: true, apiScopes: { 'reports:read': 'Read the shop reports', 'users:read': 'Not core' } },
+        langchain: { enabled: null, apiScopes: { 'ai:read': 'Read sessions' } },
+        off: { enabled: false, apiScopes: { 'off:read': 'A plugin that is off' } },
+      },
+    };
+
+    test('a plugin scope is valid and listed apart from core; a plugin that is off adds none', () => {
+      jest.isolateModules(() => {
+        jest.doMock('@/core/lib/config/config-client', () => ({ API_CONFIG: {} }));
+        jest.doMock('@nextsparkjs/registries/plugin-catalog', () => catalog);
+        const { ApiKeyManager: Manager, getApiScopes, getAppApiScopes } = require('@/core/lib/api/keys');
+
+        expect(Manager.validateScopes(['reports:read', 'ai:read', 'users:read'])).toEqual({ valid: true, invalidScopes: [] });
+        expect(Manager.validateScopes(['off:read'])).toEqual({ valid: false, invalidScopes: ['off:read'] });
+        expect(Object.keys(getAppApiScopes()).sort()).toEqual(['ai:read', 'reports:read']);
+        expect(getApiScopes()['users:read']).toBe('Read user information');
+      });
+    });
+
+    test('the app wins over a plugin on a name, and core over both', () => {
+      jest.isolateModules(() => {
+        jest.doMock('@/core/lib/config/config-client', () => ({ API_CONFIG: { scopes: { 'reports:read': 'The app says so' } } }));
+        jest.doMock('@nextsparkjs/registries/plugin-catalog', () => catalog);
+        const { getApiScopes } = require('@/core/lib/api/keys');
+
+        expect(getApiScopes()['reports:read']).toBe('The app says so');
+      });
+    });
+  });
+
   test('should suggest appropriate key names', () => {
     expect(ApiKeyManager.suggestKeyName(['*'])).toBe('Full Access Key');
     expect(ApiKeyManager.suggestKeyName(['users:read', 'users:write'])).toBe('users Access Key');

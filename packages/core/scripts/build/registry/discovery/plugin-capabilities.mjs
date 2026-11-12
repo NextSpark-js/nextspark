@@ -127,7 +127,7 @@ export function readPluginDeclaration(ts, { plugin, configFile, exportName }) {
 }
 
 /**
- * The descriptive fields of a plugin config that are literals (`displayName`, `version`, `description`, and
+ * The descriptive fields of a plugin config that are literals (`displayName`, `version`, `description`, `apiScopes`, and
  * `enabled`: true, false, or null when computed), read statically, for the capability-neutral catalog. A string
  * field computed at run time is simply absent.
  */
@@ -149,6 +149,16 @@ export function readPluginMetadata(ts, { configFile, exportName }) {
     if (!ts.isPropertyAssignment(property) || !(ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))) continue
     const value = unwrap(ts, property.initializer)
     if (['displayName', 'version', 'description'].includes(property.name.text) && value && ts.isStringLiteralLike(value)) metadata[property.name.text] = value.text
+    // The scopes the plugin adds to API keys: only the entries written as `'name': 'description'` are read
+    if (property.name.text === 'apiScopes' && value && ts.isObjectLiteralExpression(value)) {
+      metadata.apiScopes = Object.fromEntries(
+        value.properties
+          .filter(entry => ts.isPropertyAssignment(entry) && (ts.isIdentifier(entry.name) || ts.isStringLiteral(entry.name)))
+          .map(entry => [entry.name.text, unwrap(ts, entry.initializer)])
+          .filter(([, text]) => text && ts.isStringLiteralLike(text))
+          .map(([name, text]) => [name, text.text]),
+      )
+    }
     if (property.name.text === 'enabled') {
       enabledSeen = true
       // A literal boolean is known; anything computed (an env flag) is unknown (null), never assumed true.
@@ -192,6 +202,31 @@ export async function withDeclaredCapabilities(plugins, { projectRoot }) {
     return declaration.capabilities ? { ...plugin, capabilities: declaration.capabilities } : plugin
   })
   return { plugins: resolved, diagnostics }
+}
+
+/**
+ * The API-key scopes the enabled plugins add (`apiScopes` of their config), as `{ name: description }`; a plugin whose
+ * `enabled` is the literal false adds none, like the runtime. Read from `plugin.config.ts` without running it.
+ *
+ * @param {object} ts - the TypeScript compiler
+ * @param {{ name: string, root?: string, sourceDir?: string }[]} plugins
+ */
+export function readPluginApiScopes(ts, plugins) {
+  const scopes = {}
+  for (const plugin of plugins) {
+    const configFile = join(plugin.root ?? plugin.sourceDir, 'plugin.config.ts')
+    let exportName = null
+    try {
+      const text = readFileSync(configFile, 'utf8')
+      exportName = PLUGIN_EXPORT_PATTERNS.map(pattern => text.match(pattern)?.[1]).find(Boolean) ?? null
+    } catch {
+      continue
+    }
+    if (!exportName) continue
+    const metadata = readPluginMetadata(ts, { configFile, exportName })
+    if (metadata.enabled !== false) Object.assign(scopes, metadata.apiScopes)
+  }
+  return scopes
 }
 
 function readList(ts, node, invalid, diagnostics) {

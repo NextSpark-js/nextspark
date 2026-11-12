@@ -26,6 +26,10 @@ import {
 export const aiPluginConfig: PluginConfig = definePlugin({
   name: 'ai',
   capabilities: ['server'],
+  // Scopes for API keys: the plugin's routes require them, so a key can be created with them (no setup in the project)
+  apiScopes: {
+    'ai:write': 'Generate text and embeddings with the AI plugin',
+  },
   displayName: 'AI Core Utilities',
   version: '1.0.0',
   description: 'Core AI utilities for building custom endpoints and integrations',

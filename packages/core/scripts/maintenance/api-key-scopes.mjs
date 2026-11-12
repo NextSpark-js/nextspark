@@ -3,7 +3,7 @@
  *
  * A Route Handler that authenticates API keys with `authenticateRequest` or `validateAndAuthenticateRequest` and passes
  * neither `requiredScope` nor `allowAnyScope` refuses EVERY key at runtime (403 `SCOPE_NOT_DECLARED`), request by request.
- * A route that requires a scope neither core nor `api.scopes` of config/app.config.ts declares can never be satisfied
+ * A route that requires a scope neither core, `api.scopes` of config/app.config.ts nor the `apiScopes` of an enabled plugin declares can never be satisfied
  * by the key that was meant for it: the scope cannot be minted (`INVALID_SCOPES`), so only a wildcard key passes.
  *
  * `findApiKeyScopeProblems` reads the route sources of the host plan (the project's, its templates' and its plugins')
@@ -26,6 +26,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { loadTypeScriptFor } from '../build/registry/shared/typescript-compiler.mjs'
+import { readPluginApiScopes } from '../build/registry/discovery/plugin-capabilities.mjs'
 
 export const API_KEY_NO_SCOPE_WARNING = 'NS_API_KEY_ROUTE_WITHOUT_SCOPE'
 export const API_KEY_UNDECLARED_SCOPE_WARNING = 'NS_API_KEY_SCOPE_NOT_DECLARED'
@@ -42,7 +43,7 @@ export const CORE_API_SCOPES = Object.freeze([
 ])
 
 export const NO_SCOPE_FIX = "pass { requiredScope: '<scope>' } to the call, or { allowAnyScope: true } if any valid key is acceptable"
-export const UNDECLARED_SCOPE_FIX = "declare each scope in api.scopes of APP_CONFIG_OVERRIDES in config/app.config.ts, for example api: { scopes: { 'reports:read': 'Read reports' } }"
+export const UNDECLARED_SCOPE_FIX = "declare each scope in api.scopes of APP_CONFIG_OVERRIDES in config/app.config.ts, for example api: { scopes: { 'reports:read': 'Read reports' } } (a plugin of your own declares its scopes with apiScopes in definePlugin)"
 
 /** The core entry points that enforce `requiredScope` / `allowAnyScope`, and where a project imports them from */
 const ENTRY_POINTS = new Set(['authenticateRequest', 'validateAndAuthenticateRequest'])
@@ -267,16 +268,17 @@ function routeSources(routes) {
  * @param {object} input
  * @param {string} input.projectRoot
  * @param {object[]} input.routes - the host plan's routes
+ * @param {object[]} [input.plugins] - the enabled plugins (`{ name, root }`): the scopes their config declares in `apiScopes` count as declared
  * @param {object} [input.ts] - the TypeScript compiler (the project's, by default)
  * @returns {Promise<{ withoutScope: object[], undeclared: object[] }>} each finding `{ url, source, line, method, call, scope? }`
  */
-export async function findApiKeyScopeProblems({ projectRoot, routes, ts }) {
+export async function findApiKeyScopeProblems({ projectRoot, routes, plugins = [], ts }) {
   const sources = routeSources(routes)
   const empty = { withoutScope: [], undeclared: [] }
   if (sources.length === 0) return empty
   const compiler = ts ?? (await loadTypeScriptFor(projectRoot))
   const declared = readDeclaredApiScopes({ projectRoot, ts: compiler })
-  const known = new Set([...CORE_API_SCOPES, ...declared.scopes])
+  const known = new Set([...CORE_API_SCOPES, ...declared.scopes, ...Object.keys(readPluginApiScopes(compiler, plugins))])
 
   const withoutScope = []
   const undeclared = []

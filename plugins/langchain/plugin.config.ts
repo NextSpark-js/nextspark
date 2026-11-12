@@ -149,6 +149,11 @@ export function getAvailableProviders(): LLMProvider[] {
 export const langchainPluginConfig: PluginConfig = definePlugin({
     name: 'langchain',
     capabilities: ['server', 'web'],
+    // Scopes for API keys: the plugin's routes require them, so a key can be created with them (no setup in the project)
+    apiScopes: {
+        'ai:read': 'Read LangChain sessions and observability traces and metrics',
+        'ai:write': 'Create, update and delete LangChain sessions',
+    },
     displayName: 'LangChain Agent Framework',
     version: '2.0.0',
     description: 'Create AI agents with tools, memory, and customizable behavior. Supports OpenAI, Anthropic, and Ollama.',

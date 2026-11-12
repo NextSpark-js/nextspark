@@ -10,6 +10,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 import {
@@ -181,6 +182,48 @@ test('prepare: a plugin route is looked at against the scopes of the project', a
     const found = notices.filter(notice => notice.code === API_KEY_NO_SCOPE_WARNING || notice.code === API_KEY_UNDECLARED_SCOPE_WARNING)
     assert.equal(ok, true)
     assert.deepEqual(found.map(notice => [notice.code, notice.findings[0].url]), [[API_KEY_NO_SCOPE_WARNING, '/api/plugins/shop/ping'], [API_KEY_UNDECLARED_SCOPE_WARNING, '/api/plugins/shop/orders']])
+  } finally {
+    host.cleanup()
+  }
+})
+
+const SHOP_CONFIG = (extra = '') => `import { definePlugin } from '@nextsparkjs/core/types/plugin'
+export const shopPluginConfig = definePlugin({
+  name: 'shop',
+  capabilities: ['server'],
+${extra}})
+export default shopPluginConfig
+`
+const SHOP_SCOPES = "  apiScopes: { 'reports:read': 'Read the shop reports' },\n"
+const pluginNotices = async files => {
+  const host = tempHost(files)
+  try {
+    const config = { ...host.config, plugins: [{ name: 'shop', root: join(host.source, 'plugins/shop'), importBase: '@/plugins/shop' }] }
+    const { ok, notices } = await predictHost(config)
+    return { ok, codes: notices.filter(notice => notice.code === API_KEY_NO_SCOPE_WARNING || notice.code === API_KEY_UNDECLARED_SCOPE_WARNING).map(notice => notice.code) }
+  } finally {
+    host.cleanup()
+  }
+}
+
+test('prepare: a scope the plugin declares in apiScopes is no finding; without it (or with the plugin off) the notice is back', async () => {
+  const route = { 'plugins/shop/api/orders/route.ts': REPORTS }
+  assert.deepEqual(await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG(SHOP_SCOPES) }), { ok: true, codes: [] })
+  assert.deepEqual((await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG() })).codes, [API_KEY_UNDECLARED_SCOPE_WARNING])
+  assert.deepEqual((await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG('  enabled: false,\n' + SHOP_SCOPES) })).codes, [API_KEY_UNDECLARED_SCOPE_WARNING])
+  // another scope of the plugin's routes stays undeclared
+  assert.deepEqual((await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG("  apiScopes: { 'reports:write': 'x' },\n") })).codes, [API_KEY_UNDECLARED_SCOPE_WARNING])
+})
+
+// The plugins of this repository that ship routes with scopes of their own (#447): a project that enables them lists nothing
+const REPO_PLUGINS = join(CORE_ROOT, '../../plugins')
+test('the plugins of the repository declare every scope their routes require', { skip: !existsSync(REPO_PLUGINS) }, async () => {
+  const names = ['ai', 'langchain', 'social-media-publisher']
+  const host = tempHost({})
+  try {
+    const config = { ...host.config, plugins: names.map(name => ({ name, root: join(REPO_PLUGINS, name), importBase: `@/plugins/${name}` })) }
+    const { notices } = await predictHost(config)
+    assert.deepEqual(notices.filter(notice => notice.code === API_KEY_UNDECLARED_SCOPE_WARNING).map(notice => notice.message), [])
   } finally {
     host.cleanup()
   }

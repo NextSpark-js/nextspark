@@ -144,7 +144,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
   })
   const { routes } = planned
   const queryNotice = queryHookNotice(findQueryHooksWithoutProvider({ projectRoot: config.project?.root ?? config.projectRoot, plugins: declared.plugins, routes }))
-  const apiKeyNotices = apiKeyScopeNotices(await findApiKeyScopeProblems({ projectRoot: config.project?.root ?? config.projectRoot, routes }))
+  const apiKeyNotices = apiKeyScopeNotices(await findApiKeyScopeProblems({ projectRoot: config.project?.root ?? config.projectRoot, routes, plugins: declared.plugins }))
   const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot, config.features), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : []), ...apiKeyNotices, ...vercelApiDirNotice(config, routes)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
