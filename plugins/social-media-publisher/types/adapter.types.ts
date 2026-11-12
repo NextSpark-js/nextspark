@@ -114,7 +114,11 @@ export interface EntityAccessResult {
   /** Whether the user has access to the entity */
   hasAccess: boolean
 
-  /** Team ID if applicable (for team-based permissions) */
+  /**
+   * The entity's team, if it has one: a team the user belongs to. The plugin records the action's audit row in it;
+   * a team the user is not a member of (a superadmin or developer aside) is not used, and the row goes to the
+   * request's team instead (`x-team-id`, the active team, or the user's default team).
+   */
   teamId?: string
 
   /** Reason for denial if hasAccess is false */

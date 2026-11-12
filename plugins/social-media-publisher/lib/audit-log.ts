@@ -2,9 +2,33 @@
  * The plugin's audit trail: one row of "social_audit_logs" per action, written by the plugin's routes and read
  * through core's generic entity API (the audit-logs entity), which shows a team its own rows.
  */
-import type { NextRequest } from 'next/server'
+import type { NextRequest, NextResponse } from 'next/server'
+import { resolveTeamContext, type DualAuthResult } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services/team-member.service'
+
+/** Roles row-level security lets write in any team (can_bypass_rls()). */
+const BYPASS_ROLES = ['superadmin', 'developer']
+
+/**
+ * The team an audit row is written in, resolved before the route changes anything: the team the adapter gave for
+ * the entity when the user may write there (a member of it, or a superadmin/developer), else the request's team
+ * (`x-team-id`, the active team, the default team). An adapter team the user is not in would make the insert fail
+ * row-level security after the action (a post already published), so it is not used. A NextResponse (400/403) when
+ * the request has no team the user belongs to.
+ */
+export async function auditTeamId(
+  request: NextRequest,
+  authResult: DualAuthResult,
+  entityTeamId?: string
+): Promise<string | NextResponse> {
+  const user = authResult.user!
+  if (entityTeamId && (BYPASS_ROLES.includes(user.role) || await TeamMemberService.isMember(entityTeamId, user.id))) {
+    return entityTeamId
+  }
+  return resolveTeamContext(request, authResult)
+}
 
 /** The actions the table's CHECK accepts (migration 002). */
 export type AuditAction =

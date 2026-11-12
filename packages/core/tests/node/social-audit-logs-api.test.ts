@@ -140,4 +140,21 @@ test('audit-logs: the generic API lists and reads a team its own rows only, read
   assert.equal((listAfter.body.data as Row[]).length, 3)
   assert.ok((listAfter.body.data as Row[]).some(r => r.action === 'account_disconnected' && r.accountId === account.id))
   assert.deepEqual(list(listBAfter), ['b1 team B secret'])
+
+  // 3. The team publish, assign and the OAuth callback record their row in, on the cutover: the adapter's team when
+  //    the user is in it; an adapter team the user is not in (team B for A) is not used, so the row is not refused
+  //    by row-level security after the action (a 500 with the post already published), it goes to the request's team
+  const [foreign, own, foreignNoHeader] = runSteps(appUrl, ownerUrl, [
+    { method: 'POST', path: '/audit-team', ...a, body: { entityTeamId: 'team-b' } },
+    { method: 'POST', path: '/audit-team', key: keyA, body: { entityTeamId: 'team-a' } },
+    { method: 'POST', path: '/audit-team', key: keyA, body: { entityTeamId: 'team-b' } },
+  ])
+  assert.deepEqual([foreign.status, foreign.body], [200, { teamId: 'team-a' }], JSON.stringify(foreign))
+  assert.deepEqual([own.status, own.body], [200, { teamId: 'team-a' }], JSON.stringify(own))
+  // no header: the user's default team
+  assert.deepEqual([foreignNoHeader.status, foreignNoHeader.body], [200, { teamId: 'team-a' }], JSON.stringify(foreignNoHeader))
+  const { rows: recorded } = await owner.query(`SELECT "teamId", details->>'who' AS who FROM social_audit_logs WHERE details->>'who' LIKE 'adapter %' ORDER BY "createdAt"`)
+  assert.deepEqual(recorded, [
+    { teamId: 'team-a', who: 'adapter team-b' }, { teamId: 'team-a', who: 'adapter team-a' }, { teamId: 'team-a', who: 'adapter team-b' },
+  ])
 })

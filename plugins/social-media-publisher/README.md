@@ -81,6 +81,8 @@ export class ProjectsSocialPlatformAdapter extends SocialPlatformAdapter {
 
   async checkEntityAccess(userId: string, entityId: string): Promise<EntityAccessResult> {
     // Implement: Return { hasAccess: true/false, teamId?, reason? }
+    // teamId: the entity's team, one the user belongs to. The audit row of the action is recorded in it
+    // (another team is ignored and the request's team is used).
   }
 
   async getAssignments(entityId: string, userId: string): Promise<SocialPlatformAssignment[]> {

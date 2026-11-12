@@ -15,7 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
@@ -24,7 +24,7 @@ import { InstagramAPI } from '../../../lib/providers/instagram'
 import { PublishPhotoSchema, validateImageUrl, validateCaption, platformRequiresImage } from '../../../lib/validation'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter } from '../../../lib/adapter'
-import { recordAuditLog } from '../../../lib/audit-log'
+import { auditTeamId, recordAuditLog } from '../../../lib/audit-log'
 
 const postHandler = async (request: NextRequest) => {
   try {
@@ -126,7 +126,7 @@ const postHandler = async (request: NextRequest) => {
     }
 
     // The team the audit row belongs to: the entity's, else the request's (resolved before anything is published)
-    const teamId = accessResult.teamId ?? await resolveTeamContext(request, authResult)
+    const teamId = await auditTeamId(request, authResult, accessResult.teamId)
     if (teamId instanceof NextResponse) return teamId
 
     // Get the full account data including tokens from the adapter

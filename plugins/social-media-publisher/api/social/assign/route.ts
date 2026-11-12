@@ -17,13 +17,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter } from '../../../lib/adapter'
-import { recordAuditLog } from '../../../lib/audit-log'
+import { auditTeamId, recordAuditLog } from '../../../lib/audit-log'
 
 interface AccountToAssign {
   platform: string
@@ -98,7 +98,7 @@ const postHandler = async (request: NextRequest) => {
     })
 
     // The team the audit rows belong to: the entity's, else the request's
-    const teamId = accessResult.teamId ?? await resolveTeamContext(request, authResult)
+    const teamId = await auditTeamId(request, authResult, accessResult.teamId)
     if (teamId instanceof NextResponse) return teamId
 
     // 4. Process each account

@@ -22,7 +22,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
@@ -34,7 +34,7 @@ import {
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import { getAdapter, ensureAdapter } from '../../../../lib/adapter'
-import { recordAuditLog } from '../../../../lib/audit-log'
+import { auditTeamId, recordAuditLog } from '../../../../lib/audit-log'
 
 // Type for social account data
 interface SocialAccountData {
@@ -137,7 +137,7 @@ const getHandler = async (request: NextRequest) => {
     })
 
     // The team the audit rows belong to: the entity's, else the session's
-    const teamId = accessResult.teamId ?? await resolveTeamContext(request, authResult)
+    const teamId = await auditTeamId(request, authResult, accessResult.teamId)
     if (teamId instanceof NextResponse) {
       return renderOAuthError('no_team', 'No team to record this connection in')
     }
