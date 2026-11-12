@@ -5,7 +5,7 @@
 The Social Media Publisher plugin implements a comprehensive, **immutable audit trail** that logs every significant action performed through the system. This provides complete visibility for compliance, debugging, billing, and security monitoring.
 
 **Key Characteristics:**
-- **Immutable** - Logs cannot be modified or deleted
+- **Immutable** - Logs cannot be modified (only a superadmin can delete them)
 - **Complete** - Every action logged with full context
 - **Attributed** - User, account, IP, and User-Agent tracking
 - **Timestamped** - Precise timestamp for all events
@@ -15,23 +15,55 @@ The Social Media Publisher plugin implements a comprehensive, **immutable audit 
 
 ### Database Schema
 
+The plugin's migrations create the table (`001`), rename it from `audit_logs` (`003`) and give it its team (`004`):
+
 ```sql
 CREATE TABLE "social_audit_logs" (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId" TEXT NOT NULL,                    -- Who performed the action
-  "accountId" UUID,                          -- Which social account (optional)
-  action TEXT NOT NULL,                      -- What happened
-  details JSONB DEFAULT '{}',                -- Full context
-  "ipAddress" TEXT,                          -- IP address of request
-  "userAgent" TEXT,                          -- Browser/client info
-  "createdAt" TIMESTAMPTZ DEFAULT now()      -- When it happened
+  "userId" TEXT NOT NULL REFERENCES "users"(id),  -- Who performed the action
+  "teamId" TEXT REFERENCES "teams"(id),          -- The team the action belongs to
+  "accountId" UUID,                              -- Which social account (optional)
+  action TEXT NOT NULL,                          -- What happened
+  details JSONB DEFAULT '{}',                    -- Full context
+  "ipAddress" TEXT,                              -- IP address of request
+  "userAgent" TEXT,                              -- Browser/client info
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(), -- When it happened
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()  -- Equal to createdAt: rows are not changed
 );
+```
 
--- Indexes for common queries
-CREATE INDEX "idx_audit_logs_userId" ON "social_audit_logs"("userId");
-CREATE INDEX "idx_audit_logs_accountId" ON "social_audit_logs"("accountId");
-CREATE INDEX "idx_audit_logs_action" ON "social_audit_logs"(action);
-CREATE INDEX "idx_audit_logs_createdAt" ON "social_audit_logs"("createdAt" DESC);
+Row-level security: a member of the row's team reads it; a user inserts rows of their own in one of their teams; no
+one updates a row; only a superadmin deletes.
+
+### Reading the Logs Through the API
+
+The `audit-logs` entity serves the table through core's generic entity API, read-only:
+
+- `GET /api/v1/audit-logs` lists the rows of the request's team (`x-team-id`, the active team, or the user's default
+  team), with the usual pagination, filters and sorting.
+- `GET /api/v1/audit-logs/:id` reads one row of that team.
+- `POST`, `PATCH` and `DELETE` answer `405`: the plugin's routes write the rows, and a row is not changed.
+
+An API key needs the `audit-logs:read` scope. What each team role may see is the project's
+`config/permissions.config.ts`; with no entry for `audit-logs`, no role may list them. For example:
+
+```typescript
+entities: {
+  'audit-logs': [
+    { action: 'list', label: 'List audit logs', roles: ['owner', 'admin'] },
+    { action: 'read', label: 'View audit logs', roles: ['owner', 'admin'] },
+  ],
+},
+```
+
+The entity is shared within the team: whoever may list sees every member's rows, not only their own.
+
+**Rows written before `teamId` existed:** migration `004` gives each one the team of its user when the user belongs
+to exactly one team. A row of a user in several teams keeps `teamId` NULL, so no team sees it through the API (a
+superadmin does); assign it by hand when you know its team:
+
+```sql
+UPDATE "social_audit_logs" SET "teamId" = '<team id>' WHERE id = '<row id>';
 ```
 
 ### Field Descriptions
@@ -45,6 +77,11 @@ CREATE INDEX "idx_audit_logs_createdAt" ON "social_audit_logs"("createdAt" DESC)
 - User who performed the action
 - References `users.id`
 - Never null (system user for automated actions)
+
+**teamId** (TEXT, nullable)
+- Team the action belongs to: the team of the entity the account is assigned to, else the request's team
+- References `teams.id`
+- Null only for rows written before the column whose user was in several teams
 
 **accountId** (UUID, nullable)
 - Social media account involved

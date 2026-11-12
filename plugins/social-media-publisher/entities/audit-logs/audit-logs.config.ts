@@ -1,152 +1,109 @@
 /**
  * Audit Logs Entity Configuration
  *
- * Tracks all actions performed through the social media plugin
- * For security, compliance, and debugging
+ * The actions performed through the social media plugin (accounts connected, assigned and disconnected, posts
+ * published or failed), read through core's generic entity API: GET /api/v1/audit-logs and /api/v1/audit-logs/:id.
+ *
+ * - Read-only (`access.api: { read: true }`): the plugin's own routes write the rows, and a log row is not edited,
+ *   created or deleted through the generic API, which answers 405 to POST, PATCH and DELETE.
+ * - Shared within the team (`access.shared: true`): whoever the project's permissions.config.ts grants
+ *   `audit-logs.list` / `audit-logs.read` sees the team's rows, not only their own. Without those entries no
+ *   team role may list them (a permission no config declares is denied). Suggested:
+ *     'audit-logs': [
+ *       { action: 'list', label: 'List audit logs', roles: ['owner', 'admin'] },
+ *       { action: 'read', label: 'View audit logs', roles: ['owner', 'admin'] },
+ *     ],
+ * - The fields are the table's columns (social_audit_logs, see the plugin's migrations); `userId`, `teamId`,
+ *   `createdAt` and `updatedAt` are system fields every entity has.
  */
 
+import { History } from 'lucide-react'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
-export const auditLogsEntityConfig = {
-  name: 'audit-logs',
+const readOnly = { searchable: false, sortable: false, readOnly: true }
+
+export const auditLogsEntityConfig: EntityConfig = {
   slug: 'audit-logs',
   tableName: 'social_audit_logs', // the table the plugin's migrations leave (003 renames the old audit_logs)
-  label: {
-    en: 'Social Media Audit Logs',
-    es: 'Registros de Auditoría de Redes Sociales'
+  enabled: true,
+  names: {
+    singular: 'Social Media Audit Log',
+    plural: 'Social Media Audit Logs',
   },
-  description: {
-    en: 'Security and audit trail for social media actions',
-    es: 'Pista de auditoría y seguridad para acciones de redes sociales'
+  icon: History,
+
+  access: {
+    public: false,
+    api: { read: true },
+    metadata: false,
+    shared: true,
+  },
+
+  ui: {
+    dashboard: { showInMenu: false, showInTopbar: false },
+    public: { hasArchivePage: false, hasSinglePage: false },
+    features: { searchable: false, sortable: true, filterable: true, bulkOperations: false, importExport: false },
   },
 
   fields: [
     {
-      name: 'user_id',
-      label: { en: 'User', es: 'Usuario' },
-      type: 'relation',
-      relation: {
-        entity: 'users',
-        titleField: 'email'
-      },
-      required: true,
-      index: true
-    },
-    {
-      name: 'account_id',
-      label: { en: 'Social Platform Account', es: 'Cuenta de Plataforma Social' },
-      type: 'relation',
-      relation: {
-        entity: 'social-platforms',
-        titleField: 'username'
-      },
-      required: false,
-      index: true
-    },
-    {
       name: 'action',
-      label: { en: 'Action', es: 'Acción' },
       type: 'select',
+      required: true,
       options: [
         { value: 'account_connected', label: 'Account Connected' },
+        { value: 'account_assigned', label: 'Account Assigned' },
         { value: 'account_disconnected', label: 'Account Disconnected' },
         { value: 'post_published', label: 'Post Published' },
         { value: 'post_failed', label: 'Post Failed' },
         { value: 'token_refreshed', label: 'Token Refreshed' },
-        { value: 'token_refresh_failed', label: 'Token Refresh Failed' }
       ],
-      required: true,
-      index: true
+      display: { label: 'Action', showInList: true, showInDetail: true, showInForm: false, order: 1 },
+      api: { searchable: false, sortable: true, readOnly: true },
+    },
+    {
+      name: 'accountId',
+      type: 'text',
+      required: false,
+      display: {
+        label: 'Account',
+        description: 'The social account, or its assignment to a project entity (no foreign key: kept after the account is removed)',
+        showInList: true,
+        showInDetail: true,
+        showInForm: false,
+        order: 2,
+      },
+      api: readOnly,
     },
     {
       name: 'details',
-      label: { en: 'Details', es: 'Detalles' },
       type: 'json',
-      default: {},
-      description: {
-        en: 'Action details: platform, success status, error messages, metadata',
-        es: 'Detalles de acción: plataforma, estado de éxito, mensajes de error, metadatos'
-      }
-    },
-    {
-      name: 'ip_address',
-      label: { en: 'IP Address', es: 'Dirección IP' },
-      type: 'string',
       required: false,
-      description: {
-        en: 'User IP address at time of action',
-        es: 'Dirección IP del usuario al momento de la acción'
-      }
+      display: {
+        label: 'Details',
+        description: 'Platform, success, error message and the post or account involved',
+        showInList: false,
+        showInDetail: true,
+        showInForm: false,
+        order: 3,
+      },
+      api: readOnly,
     },
     {
-      name: 'user_agent',
-      label: { en: 'User Agent', es: 'Agente de Usuario' },
-      type: 'string',
+      name: 'ipAddress',
+      type: 'text',
       required: false,
-      description: {
-        en: 'Browser/device user agent string',
-        es: 'String de agente de usuario del navegador/dispositivo'
-      }
-    }
+      display: { label: 'IP Address', showInList: false, showInDetail: true, showInForm: false, order: 4 },
+      api: readOnly,
+    },
+    {
+      name: 'userAgent',
+      type: 'text',
+      required: false,
+      display: { label: 'User Agent', showInList: false, showInDetail: true, showInForm: false, order: 5 },
+      api: readOnly,
+    },
   ],
-
-  // Database indexes for performance
-  indexes: [
-    {
-      fields: ['user_id', 'created_at'],
-      name: 'idx_audit_logs_user_created'
-    },
-    {
-      fields: ['account_id', 'action'],
-      name: 'idx_audit_logs_account_action'
-    },
-    {
-      fields: ['action', 'created_at'],
-      name: 'idx_audit_logs_action_created'
-    },
-    {
-      fields: ['created_at'],
-      name: 'idx_audit_logs_created',
-      order: 'DESC' // Most recent first
-    }
-  ],
-
-  // Row-level security
-  permissions: {
-    actions: [
-      {
-        action: 'create',
-        label: 'Create audit logs',
-        description: 'Can create audit log entries (typically system-only)',
-        defaultRoles: [], // Only system creates logs, no user role has this permission
-      },
-      {
-        action: 'read',
-        label: 'View audit logs',
-        description: 'Can view audit log entries',
-        defaultRoles: ['owner', 'admin'],
-      },
-      {
-        action: 'list',
-        label: 'List audit logs',
-        description: 'Can list audit log entries',
-        defaultRoles: ['owner', 'admin'],
-      },
-      {
-        action: 'update',
-        label: 'Edit audit logs',
-        description: 'Audit logs are immutable - no one can update',
-        defaultRoles: [], // Immutable - empty array
-      },
-      {
-        action: 'delete',
-        label: 'Delete audit logs',
-        description: 'Can delete old audit log entries',
-        defaultRoles: ['owner', 'admin'],
-        dangerous: true,
-      },
-    ],
-  }
 }
 
-export default auditLogsEntityConfig as unknown as EntityConfig
+export default auditLogsEntityConfig

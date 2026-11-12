@@ -6,9 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../lib/providers/facebook'
@@ -16,6 +15,7 @@ import { ConnectAccountSchema } from '../../../lib/validation'
 import { exchangeCodeForToken, getOAuthConfig, generateAuthorizationUrl } from '../../../lib/oauth-helper'
 import type { SocialPlatform } from '../../../types/social.types'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { recordAuditLog } from '../../../lib/audit-log'
 
 /**
  * GET - Initiate OAuth flow
@@ -113,6 +113,10 @@ const postHandler = async (request: NextRequest) => {
     if (!authResult.success) {
       return createAuthFailureResponse(authResult)
     }
+
+    // The team the audit rows belong to
+    const teamId = await resolveTeamContext(request, authResult)
+    if (teamId instanceof NextResponse) return teamId
 
     // 2. Parse and validate request body
     const body = await request.json()
@@ -277,25 +281,18 @@ const postHandler = async (request: NextRequest) => {
       savedAccounts.push(savedAccount)
 
       // Create audit log entry
-      await mutateWithRLS(
-        `INSERT INTO "social_audit_logs"
-          ("userId", "accountId", action, details, "ipAddress", "userAgent")
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          authResult.user!.id,
-          savedAccount.id,
-          'account_connected',
-          JSON.stringify({
-            platform,
-            accountName: account.username,
-            success: true,
-            connectedAt: new Date().toISOString()
-          }),
-          getRecordedClientIp(request.headers),
-          request.headers.get('user-agent') || null
-        ],
-        authResult.user!.id
-      )
+      await recordAuditLog(request, {
+        userId: authResult.user!.id,
+        teamId,
+        accountId: savedAccount.id,
+        action: 'account_connected',
+        details: {
+          platform,
+          accountName: account.username,
+          success: true,
+          connectedAt: new Date().toISOString()
+        },
+      })
 
       console.log('[social-connect] ✅ Account saved and audit log created:', {
         accountId: savedAccount.id,

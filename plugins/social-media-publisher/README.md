@@ -244,20 +244,27 @@ CREATE TABLE "clients_social_platforms" (
 
 ### `social_audit_logs` Table
 
-Immutable audit trail for compliance.
+Immutable audit trail for compliance, isolated by team.
 
 ```sql
 CREATE TABLE "social_audit_logs" (
   id          UUID PRIMARY KEY,
   "userId"    TEXT NOT NULL REFERENCES "users"(id),
-  "accountId" UUID REFERENCES "clients_social_platforms"(id),
+  "teamId"    TEXT REFERENCES "teams"(id),
+  "accountId" UUID, -- the social account or its assignment (no foreign key: kept after it is removed)
   action      TEXT NOT NULL, -- 'account_connected', 'post_published', etc.
   details     JSONB DEFAULT '{}',
   "ipAddress" TEXT,
   "userAgent" TEXT,
-  "createdAt" TIMESTAMPTZ DEFAULT now()
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
+
+The `audit-logs` entity serves it read-only through core's entity API: `GET /api/v1/audit-logs` and
+`GET /api/v1/audit-logs/:id` return the rows of the request's team (API keys need `audit-logs:read`). Declare who may
+read them in the project's `config/permissions.config.ts` (`'audit-logs': [{ action: 'list', ... }, { action: 'read', ... }]`);
+see [Audit Logging](./docs/02-core-features/04-audit-logging.md#reading-the-logs-through-the-api).
 
 ## API Endpoints
 
@@ -524,6 +531,7 @@ Every action creates an immutable audit log:
 ```typescript
 {
   userId: 'user_id',
+  teamId: 'team_id',
   accountId: 'account_id',
   action: 'post_published',
   details: {

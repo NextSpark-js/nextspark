@@ -246,14 +246,19 @@ CREATE TABLE "clients_social_platforms" (
 CREATE TABLE "social_audit_logs" (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "userId" TEXT NOT NULL,
+  "teamId" TEXT,
   "accountId" UUID,
   action TEXT NOT NULL,
   details JSONB DEFAULT '{}',
   "ipAddress" TEXT,
   "userAgent" TEXT,
-  "createdAt" TIMESTAMPTZ DEFAULT now()
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
+
+To read the logs through `GET /api/v1/audit-logs`, declare `audit-logs` permissions in `config/permissions.config.ts`
+(see [Audit Logging](../02-core-features/04-audit-logging.md#reading-the-logs-through-the-api)).
 
 ## Step 5: Configure Facebook App for Production
 

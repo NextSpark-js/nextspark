@@ -17,13 +17,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter } from '../../../lib/adapter'
+import { recordAuditLog } from '../../../lib/audit-log'
 
 interface AccountToAssign {
   platform: string
@@ -96,6 +96,10 @@ const postHandler = async (request: NextRequest) => {
       entitySlug: adapter.getEntitySlug(),
       teamId: accessResult.teamId
     })
+
+    // The team the audit rows belong to: the entity's, else the request's
+    const teamId = accessResult.teamId ?? await resolveTeamContext(request, authResult)
+    if (teamId instanceof NextResponse) return teamId
 
     // 4. Process each account
     const results: Array<{
@@ -197,28 +201,21 @@ const postHandler = async (request: NextRequest) => {
         console.log(`[assign-accounts] ✅ Linked to entity: ${account.username} (${assignmentResult.isNew ? 'new' : 'updated'})`)
 
         // Create audit log (plugin-owned)
-        await mutateWithRLS(
-          `INSERT INTO "social_audit_logs"
-            ("userId", "accountId", action, details, "ipAddress", "userAgent")
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            userId,
-            socialAccountId,
-            'account_assigned',
-            JSON.stringify({
-              entityId,
-              entitySlug: adapter.getEntitySlug(),
-              platform: account.platform,
-              accountName: account.username,
-              success: true,
-              isNewAssignment: assignmentResult.isNew,
-              assignedAt: new Date().toISOString()
-            }),
-            getRecordedClientIp(request.headers),
-            request.headers.get('user-agent') || null
-          ],
-          userId
-        )
+        await recordAuditLog(request, {
+          userId,
+          teamId,
+          accountId: socialAccountId,
+          action: 'account_assigned',
+          details: {
+            entityId,
+            entitySlug: adapter.getEntitySlug(),
+            platform: account.platform,
+            accountName: account.username,
+            success: true,
+            isNewAssignment: assignmentResult.isNew,
+            assignedAt: new Date().toISOString()
+          },
+        })
 
         results.push({
           platformAccountId: account.platformAccountId,

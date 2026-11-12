@@ -22,9 +22,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../../lib/providers/facebook'
@@ -35,6 +34,7 @@ import {
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import { getAdapter, ensureAdapter } from '../../../../lib/adapter'
+import { recordAuditLog } from '../../../../lib/audit-log'
 
 // Type for social account data
 interface SocialAccountData {
@@ -135,6 +135,12 @@ const getHandler = async (request: NextRequest) => {
       entitySlug: adapter.getEntitySlug(),
       teamId: accessResult.teamId
     })
+
+    // The team the audit rows belong to: the entity's, else the session's
+    const teamId = accessResult.teamId ?? await resolveTeamContext(request, authResult)
+    if (teamId instanceof NextResponse) {
+      return renderOAuthError('no_team', 'No team to record this connection in')
+    }
 
     // 6. Exchange authorization code for access token
     const oauthConfig = getOAuthConfig()
@@ -302,27 +308,20 @@ const getHandler = async (request: NextRequest) => {
       }
 
       // Create audit log (plugin-owned)
-      await mutateWithRLS(
-        `INSERT INTO "social_audit_logs"
-          ("userId", "accountId", action, details, "ipAddress", "userAgent")
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          userId,
-          socialAccountId,
-          'account_connected',
-          JSON.stringify({
-            entityId,
-            entitySlug: adapter.getEntitySlug(),
-            platform: account.platform,
-            accountName: account.username,
-            success: true,
-            connectedAt: new Date().toISOString()
-          }),
-          getRecordedClientIp(request.headers),
-          request.headers.get('user-agent') || null
-        ],
-        userId
-      )
+      await recordAuditLog(request, {
+        userId,
+        teamId,
+        accountId: socialAccountId,
+        action: 'account_connected',
+        details: {
+          entityId,
+          entitySlug: adapter.getEntitySlug(),
+          platform: account.platform,
+          accountName: account.username,
+          success: true,
+          connectedAt: new Date().toISOString()
+        },
+      })
     }
 
     // 10. Return appropriate response based on mode

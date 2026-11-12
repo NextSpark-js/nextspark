@@ -15,9 +15,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { getRecordedClientIp } from '@nextsparkjs/core/lib/api/client-ip'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../lib/providers/facebook'
@@ -25,6 +24,7 @@ import { InstagramAPI } from '../../../lib/providers/instagram'
 import { PublishPhotoSchema, validateImageUrl, validateCaption, platformRequiresImage } from '../../../lib/validation'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter } from '../../../lib/adapter'
+import { recordAuditLog } from '../../../lib/audit-log'
 
 const postHandler = async (request: NextRequest) => {
   try {
@@ -124,6 +124,10 @@ const postHandler = async (request: NextRequest) => {
         { status: 403 }
       )
     }
+
+    // The team the audit row belongs to: the entity's, else the request's (resolved before anything is published)
+    const teamId = accessResult.teamId ?? await resolveTeamContext(request, authResult)
+    if (teamId instanceof NextResponse) return teamId
 
     // Get the full account data including tokens from the adapter
     const assignments = await adapter.getAssignments(parentEntityId, userId)
@@ -251,33 +255,26 @@ const postHandler = async (request: NextRequest) => {
     const auditAction = publishResult.success ? 'post_published' : 'post_failed'
     const publishedAt = new Date().toISOString()
 
-    await mutateWithRLS(
-      `INSERT INTO "social_audit_logs"
-        ("userId", "accountId", action, details, "ipAddress", "userAgent")
-       VALUES ($1, $2::uuid, $3, $4, $5, $6)`,
-      [
-        userId,
-        accountId, // Entity assignment ID cast to UUID for social_audit_logs compatibility
-        auditAction,
-        JSON.stringify({
-          platform,
-          entitySlug: adapter.getEntitySlug(),
-          entityId,
-          accountName: account.username,
-          success: publishResult.success,
-          postId: publishResult.postId,
-          error: publishResult.error,
-          postType: isCarousel ? 'carousel' : (allImageUrls.length > 0 ? 'photo' : 'text'),
-          imageCount: allImageUrls.length,
-          imageUrls: allImageUrls,
-          caption: caption || '',
-          publishedAt
-        }),
-        getRecordedClientIp(request.headers),
-        request.headers.get('user-agent') || null
-      ],
-      userId
-    )
+    await recordAuditLog(request, {
+      userId,
+      teamId,
+      accountId, // the entity assignment's id
+      action: auditAction,
+      details: {
+        platform,
+        entitySlug: adapter.getEntitySlug(),
+        entityId,
+        accountName: account.username,
+        success: publishResult.success,
+        postId: publishResult.postId,
+        error: publishResult.error,
+        postType: isCarousel ? 'carousel' : (allImageUrls.length > 0 ? 'photo' : 'text'),
+        imageCount: allImageUrls.length,
+        imageUrls: allImageUrls,
+        caption: caption || '',
+        publishedAt
+      },
+    })
 
     // 9. Update content entity with publish reference (if successful and entityId provided)
     if (publishResult.success && entityId) {
