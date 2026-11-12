@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `nextspark doctor` warns when `DATABASE_URL` connects as a role that RLS applies to (such as `nextspark_app`) and `DATABASE_SERVICE_URL` is not set in the environment, `.env.local` or `.env`: without it sign-in fails with 401 `User not found`. (#440)
+
 ## [0.1.0-beta.202] - 2026-11-11
 
 ### Upgrading from 0.1.0-beta.201

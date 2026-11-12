@@ -3,6 +3,7 @@
  *
  * Runs core's scripts/db/check-rls-runtime.mjs against DATABASE_URL: RLS is skipped when the application connects as a
  * superuser, a BYPASSRLS role or the owner of the tables, which is the default until the nextspark_app cutover.
+ * When RLS does apply, the auth lookups need DATABASE_SERVICE_URL: without it sign-in fails with 401 User not found.
  */
 
 import { spawnSync } from 'node:child_process'
@@ -10,7 +11,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { getCoreDir } from '../../utils/paths.js'
 import type { HealthCheckResult } from '../index.js'
-import { resolveDatabaseUrl } from './database.js'
+import { readProjectEnv, resolveDatabaseUrl } from './database.js'
 
 export async function checkRlsRuntime(coreDir = getCoreDir()): Promise<HealthCheckResult> {
   const name = 'Row-level security'
@@ -30,7 +31,19 @@ export async function checkRlsRuntime(coreDir = getCoreDir()): Promise<HealthChe
   })
   // one line: the doctor prints each result on its own line
   const output = (run.stdout || '').trim().replace(/\s*\n\s*/g, ' ')
-  if (run.status === 0) return { name, status: 'pass', message: output }
+  if (run.status === 0) {
+    // same precedence as DATABASE_URL: an exported variable, then .env.local and .env
+    const serviceUrl = process.env.DATABASE_SERVICE_URL || (await readProjectEnv())['DATABASE_SERVICE_URL']
+    if (!serviceUrl) {
+      return {
+        name,
+        status: 'warn',
+        message: `${output} but DATABASE_SERVICE_URL is not set: sign-in fails with 401 User not found`,
+        fix: 'Set DATABASE_SERVICE_URL to a role that skips RLS (the owner): see docs/10-backend/03-rls-policies.md (Runtime role + cutover)',
+      }
+    }
+    return { name, status: 'pass', message: output }
+  }
   if (run.status === 1) {
     return {
       name,
