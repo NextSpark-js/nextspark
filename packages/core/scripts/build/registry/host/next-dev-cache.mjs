@@ -1,16 +1,18 @@
 /**
- * Next's development cache follows the `features` flags (#445)
+ * Next's development cache follows the routes `prepare` generates (#445, #453)
  *
- * Next keeps the type declarations of every route `next dev` served under `.next/dev`. When
- * `features.billing` or `features.superadmin` is turned off, `nextspark prepare` leaves those routes out of
- * `src/app`, but the declarations stay and the type check of `next build` fails on them. `prepare` remembers the
- * flags it last ran with (`.nextspark/features-state.json`, inside the directory the template already ignores) and,
- * when they change, deletes `.next/dev` and says so.
+ * Next keeps the type declarations of every route `next dev` served under `.next/dev`. When a route leaves
+ * `src/app` (a `features` flag turned off, a plugin or an entity removed), the declarations stay and the type check
+ * of `next build` fails on them. `prepare` remembers the route files it last generated
+ * (`.nextspark/routes-state.json`, inside the directory the template already ignores) and, when one of them is gone,
+ * deletes `.next/dev` and says so. Only leaving a route breaks the check: routes that are added are recorded and
+ * delete nothing, so adding a plugin does not cost a cold dev cache.
  *
- * - No record (a first prepare, or `.nextspark` deleted): nothing is deleted, the flags are recorded.
+ * - No record (a first prepare, `.nextspark` deleted, or a project that only has the `features-state.json` of
+ *   #445, which is ignored): nothing is deleted, the routes are recorded.
  * - Only `.next/dev` is deleted, and never through a symlink (of `.next` or `.next/dev`).
  * - Not while a dev server holds `.next/dev/lock` (a live pid, or a lock that names none): its cache is in use.
- *   `nextspark dev` prepares before it starts Next, so that is where the clearing happens; a flag edited while it
+ *   `nextspark dev` prepares before it starts Next, so that is where the clearing happens; a route removed while it
  *   runs is reported, left unrecorded, and cleared by the next prepare after the server stops.
  *
  * @module core/scripts/build/registry/host/next-dev-cache
@@ -21,17 +23,17 @@ import { join } from 'node:path'
 
 import { projectFiles } from '../../safe-fs.mjs'
 
-export const FEATURES_STATE_FILE = '.nextspark/features-state.json'
-/** The flags that decide which core routes `src/app` has (features.mjs). */
-const TRACKED = ['billing', 'superadmin']
+export const ROUTES_STATE_FILE = '.nextspark/routes-state.json'
+/** The generated files Next's route types refer to. */
+const ROUTE_FILE = /^src\/app\/(?:.*\/)?(?:page|route|layout|default)\.[cm]?[jt]sx?$/
 
-/** `{ billing: boolean, superadmin: boolean }`: a flag counts as on unless it is `false`. */
-export const trackedFlags = (features = {}) => Object.fromEntries(TRACKED.map(flag => [flag, features?.[flag] !== false]))
+/** The sorted paths of the route files among the generated `files` (`[{ path }]`). */
+export const routePaths = (files = []) => [...new Set(files.map(file => file.path).filter(path => ROUTE_FILE.test(path)))].sort()
 
 function readState(projectRoot) {
   try {
-    const state = JSON.parse(readFileSync(join(projectRoot, FEATURES_STATE_FILE), 'utf8'))
-    return state && typeof state === 'object' && TRACKED.every(flag => typeof state[flag] === 'boolean') ? state : null
+    const state = JSON.parse(readFileSync(join(projectRoot, ROUTES_STATE_FILE), 'utf8'))
+    return Array.isArray(state?.routes) && state.routes.every(path => typeof path === 'string') ? state.routes : null
   } catch {
     return null
   }
@@ -62,41 +64,40 @@ export function devServerRunning(projectRoot, { alive = pid => { try { process.k
 }
 
 /**
- * Compare the flags with the ones recorded, clear `.next/dev` when they changed and record them.
+ * Compare the route files with the ones recorded, clear `.next/dev` when one is gone and record them.
  *
  * @param {object} input
  * @param {string} input.projectRoot
- * @param {object} [input.features] - `nextspark.config.ts` `features`
+ * @param {object[]} [input.files] - the generated files (`[{ path }]`) of the preparation
  * @param {boolean} [input.watching] - a long-lived `nextspark dev` watcher: never clear, never record
  * @param {object} [input.fs] - test seam: `projectFiles(projectRoot)`
  * @returns {{ action: 'unchanged'|'recorded'|'cleared'|'kept', line?: string }}
  */
-export function syncDevCache({ projectRoot, features, watching = false, running = devServerRunning, fs = projectFiles(projectRoot) }) {
-  const flags = trackedFlags(features)
+export function syncDevCache({ projectRoot, files, watching = false, running = devServerRunning, fs = projectFiles(projectRoot) }) {
+  const routes = routePaths(files)
   const previous = readState(projectRoot)
   const record = () => {
     fs.mkdirSync(join(projectRoot, '.nextspark'), { recursive: true })
-    fs.writeFileSync(join(projectRoot, FEATURES_STATE_FILE), `${JSON.stringify(flags)}\n`)
+    fs.writeFileSync(join(projectRoot, ROUTES_STATE_FILE), `${JSON.stringify({ routes })}\n`)
   }
-  if (previous && TRACKED.every(flag => previous[flag] === flags[flag])) return { action: 'unchanged' }
-  if (!previous) {
-    if (!watching) record()
-    return { action: 'recorded' }
-  }
-  const changed = TRACKED.filter(flag => previous[flag] !== flags[flag]).map(flag => `features.${flag}`).join(' and ')
+  if (previous && previous.length === routes.length && previous.every((path, index) => path === routes[index])) return { action: 'unchanged' }
+  const now = new Set(routes)
+  const gone = previous?.filter(path => !now.has(path)) ?? []
   const dev = join(projectRoot, '.next', 'dev')
   const next = lstatOrNull(join(projectRoot, '.next'))
-  const stat = lstatOrNull(dev)
+  const stat = gone.length > 0 ? lstatOrNull(dev) : null
   if (!stat) {
+    // A first record, only routes added, or nothing of Next's to clear
     if (!watching) record()
     return { action: 'recorded' }
   }
-  const kept = (reason, advice) => ({ action: 'kept', line: `${changed} changed, and .next/dev ${reason}: ${advice}, or Next's type check fails on the routes that are now left out.` })
+  const changed = `${gone.length} generated route file${gone.length === 1 ? '' : 's'} left src/app (${gone.slice(0, 3).join(', ')}${gone.length > 3 ? ', ...' : ''})`
+  const kept = (reason, advice) => ({ action: 'kept', line: `${changed}, and .next/dev ${reason}: ${advice}, or Next's type check fails on the routes that are now left out.` })
   const byHand = 'delete .next/dev by hand before next build'
   if (next?.isSymbolicLink() || stat.isSymbolicLink()) return kept('is (or sits in) a symlink, which prepare does not follow', byHand)
   if (!stat.isDirectory()) return kept('is not a directory', byHand)
   if (watching || running(projectRoot)) return kept('is in use by a running dev server', 'stop it; the next prepare clears .next/dev before next build')
   fs.rmSync(dev, { recursive: true, force: true })
   record()
-  return { action: 'cleared', line: `${changed} changed: deleted .next/dev, where Next keeps the types of the routes it served.` }
+  return { action: 'cleared', line: `${changed}: deleted .next/dev, where Next keeps the types of the routes it served.` }
 }

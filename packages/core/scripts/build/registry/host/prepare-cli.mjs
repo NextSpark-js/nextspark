@@ -98,11 +98,11 @@ function contractsLines(result) {
 }
 
 /** syncDevCache that never fails a preparation that has already generated: a problem with .next/dev is one line. */
-function syncCache(options) {
+function syncCache(options, files) {
   try {
-    return syncDevCache({ projectRoot: options.config.projectRoot, features: options.config.features, watching: options.watching })
+    return syncDevCache({ projectRoot: options.config.projectRoot, files, watching: options.watching })
   } catch (error) {
-    return { action: 'kept', line: `could not compare .next/dev with the features flags (${error instanceof Error ? error.message : String(error)}): delete .next/dev by hand if you turned features.billing or features.superadmin off.` }
+    return { action: 'kept', line: `could not compare .next/dev with the generated routes (${error instanceof Error ? error.message : String(error)}): delete .next/dev by hand if you removed a route (a plugin, an entity, a feature).` }
   }
 }
 
@@ -172,8 +172,8 @@ async function main() {
       for (const line of noticeLines(result)) console.log(line)
       printedNotices = noticeLines(result).join('\n')
       for (const line of contractsLines(result)) console.log(line)
-      // After the generation is out: .next/dev follows the features flags this run used
-      const cache = syncCache({ config })
+      // After the generation is out: .next/dev follows the routes this run generated
+      const cache = syncCache({ config }, result.files)
       if (cache.line) console.log(`${cache.action === 'kept' ? 'Warning' : 'Info'}: ${cache.line}`)
     } catch (error) {
       if (!(error instanceof PrepareError)) throw error
@@ -192,8 +192,8 @@ async function main() {
       if (notices !== printedNotices && notices) for (const line of notices.split('\n')) console.log(`[prepare] ${line}`)
       printedNotices = notices
       for (const line of contractsLines(result)) console.log(`[prepare] ${line}`)
-      // A flag edited while the dev server runs: never delete its cache from under it, say so once
-      const cache = syncCache({ config, watching: true })
+      // A route removed while the dev server runs: never delete its cache from under it, say so once
+      const cache = syncCache({ config, watching: true }, result.files)
       if (cache.line && cache.line !== printedCacheNotice) console.log(`[prepare] Warning: ${cache.line}`)
       printedCacheNotice = cache.line ?? null
     },

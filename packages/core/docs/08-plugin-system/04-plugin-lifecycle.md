@@ -142,6 +142,8 @@ export const analyticsPluginConfig: PluginConfig = {
 
 ---
 
+> **Removing a plugin that has routes:** `nextspark prepare` (so `build` and `dev`) deletes `.next/dev` when a route file it generated is gone from `src/app`, so the type check of `next build` does not fail on the plugin's old routes. It does not do it while `next dev` runs: stop the server first. See [Restricted zones](../19-restricted-zones/01-overview.md).
+
 ### `onDeactivate` - Deactivation Hook
 
 **When**: Plugin disabled (enabled: false in config)
