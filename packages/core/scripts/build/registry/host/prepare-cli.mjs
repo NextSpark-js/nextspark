@@ -29,6 +29,7 @@ import '../../../utils/console-guard.mjs'
 
 import { NoCoreRouteManifestError, PrepareError, checkContractsOnly, checkHost, diagnosticLines, prepareContractsOnly, prepareHost, projectHostConfig, watchHost } from './prepare.mjs'
 import { LEGACY_APP_MESSAGE, resolveHostMode } from './mode.mjs'
+import { syncDevCache } from './next-dev-cache.mjs'
 import { unsafeWritePlaces, unsafeWritePlacesLines } from '../write-places.mjs'
 import { API_KEY_NO_SCOPE_WARNING, API_KEY_UNDECLARED_SCOPE_WARNING } from '../../../maintenance/api-key-scopes.mjs'
 
@@ -154,6 +155,7 @@ async function main() {
   const devStatus = flag('dev') && mode === 'development'
 
   let printedNotices = null
+  let printedCacheNotice = null
   if (!flag('watch') || !flag('no-initial')) {
     try {
       const result = await prepareHost(config, { mode, devStatus })
@@ -161,6 +163,9 @@ async function main() {
       for (const line of noticeLines(result)) console.log(line)
       printedNotices = noticeLines(result).join('\n')
       for (const line of contractsLines(result)) console.log(line)
+      // After the generation is out: .next/dev follows the features flags this run used
+      const cache = syncDevCache({ projectRoot: config.projectRoot, features: config.features })
+      if (cache.line) console.log(`${cache.action === 'kept' ? 'Warning' : 'Info'}: ${cache.line}`)
     } catch (error) {
       if (!(error instanceof PrepareError)) throw error
       printFailure(error)
@@ -178,6 +183,10 @@ async function main() {
       if (notices !== printedNotices && notices) for (const line of notices.split('\n')) console.log(`[prepare] ${line}`)
       printedNotices = notices
       for (const line of contractsLines(result)) console.log(`[prepare] ${line}`)
+      // A flag edited while the dev server runs: never delete its cache from under it, say so once
+      const cache = syncDevCache({ projectRoot: config.projectRoot, features: config.features, watching: true })
+      if (cache.line && cache.line !== printedCacheNotice) console.log(`[prepare] Warning: ${cache.line}`)
+      printedCacheNotice = cache.line ?? null
     },
     onFailure: ({ error, lines, statusWritten }) => {
       console.error('[prepare] Regeneration failed; the last valid src/app stays in place.')

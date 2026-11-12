@@ -74,9 +74,12 @@ The area's role check is part of its layout, so a page, layout or Route Handler 
 move it out of `/superadmin`, remove it, or turn the area back on. A plugin that contributes a superadmin page (its
 navigation entries in the area included) cannot be enabled together with the flag.
 
-If the project ran `next dev` before the flag was turned off, delete `.next/dev` before `next build`: Next keeps
-the type declarations of the routes it served there, and the build's type check fails on the ones that are now left
-out.
+Next keeps the type declarations of the routes it served under `.next/dev`, and the build's type check fails on the
+ones that are now left out. `nextspark prepare` (so `build` and `dev` too) remembers the `features` flags it last ran
+with in `.nextspark/features-state.json` and, when ``features.superadmin`` changes, deletes `.next/dev` and prints a line saying so;
+nothing else of `.next` is touched. Nothing is deleted on the first run or when the flags are the same. It does not
+delete `.next/dev` while `next dev` is running (it says so, and the next `prepare` after the server stops clears it),
+nor when `.next` or `.next/dev` is a symlink: delete it by hand then.
 
 DevTools is not affected: `/devtools` keeps its layout, its pages and its role check. The `superadmin` and `developer`
 roles stay as they are (permissions, RLS, the API); only the area is gone.
