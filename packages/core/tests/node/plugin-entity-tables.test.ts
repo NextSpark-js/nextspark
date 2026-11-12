@@ -27,7 +27,7 @@ function walk(dir: string, keep: (file: string) => boolean): string[] {
   })
 }
 
-const IDENT = String.raw`(?:public\.)?"?([A-Za-z_][A-Za-z0-9_]*)"?`
+const IDENT = String.raw`(?:"?public"?\.)?"?([A-Za-z_][A-Za-z0-9_]*)"?`
 
 /** The tables a plugin's migrations leave: created, then renamed, file by file in name order (comments dropped). */
 function pluginTables(pluginDir: string): Set<string> {
@@ -65,6 +65,17 @@ test('every table the migrations of a plugin in plugins/ leave is prefixed with 
   assert.ok(checked >= 10, `the plugins of the repo create tables (${checked} read)`)
 })
 
+test('no two plugins in plugins/ leave the same table (#455)', () => {
+  const owner = new Map<string, string>()
+  for (const plugin of plugins()) {
+    for (const table of pluginTables(path.join(PLUGINS, plugin))) {
+      assert.ok(!owner.has(table), `"${table}" is left by both ${owner.get(table)} and ${plugin}`)
+      owner.set(table, plugin)
+    }
+  }
+  assert.ok(owner.size >= 10, `the plugins of the repo create tables (${owner.size} read)`)
+})
+
 test("the table resolved for each entity of the plugins in plugins/ is one that plugin's migrations leave (#455)", () => {
   let checked = 0
   for (const plugin of plugins()) {
@@ -84,9 +95,9 @@ test('the tables a plugin leaves follow a rename; the prefix is the first segmen
   const root = fs.mkdtempSync(path.join(fs.realpathSync(process.env.TMPDIR || '/tmp'), 'plugin-tables-'))
   try {
     fs.mkdirSync(path.join(root, 'migrations'))
-    fs.writeFileSync(path.join(root, 'migrations/001_a.sql'), 'CREATE TABLE IF NOT EXISTS "audit_logs" (id TEXT);\nCREATE TABLE public."x_keep" (id TEXT);\n-- CREATE TABLE ignored (id TEXT);')
+    fs.writeFileSync(path.join(root, 'migrations/001_a.sql'), 'CREATE TABLE IF NOT EXISTS "audit_logs" (id TEXT);\nCREATE TABLE public."x_keep" (id TEXT);\nCREATE TABLE IF NOT EXISTS "public"."x_quoted" (id TEXT);\n-- CREATE TABLE ignored (id TEXT);')
     fs.writeFileSync(path.join(root, 'migrations/002_b.sql'), 'DO $$ BEGIN ALTER TABLE public."audit_logs" RENAME TO "x_audit_logs"; END $$;')
-    assert.deepEqual([...pluginTables(root)].sort(), ['x_audit_logs', 'x_keep'])
+    assert.deepEqual([...pluginTables(root)].sort(), ['x_audit_logs', 'x_keep', 'x_quoted'])
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
