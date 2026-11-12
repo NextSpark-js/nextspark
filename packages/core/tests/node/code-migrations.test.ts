@@ -251,7 +251,8 @@ test('the 0.1.0-beta.202 migration does not write over a client file the project
 test('the upgrade note of each migration in the CHANGELOG names every file the migration can create or replace (#441)', () => {
   const changelog = fs.readFileSync(path.join(HERE, '..', '..', 'CHANGELOG.md'), 'utf8')
   for (const migration of CODE_MIGRATIONS as Array<{ version: string; writes?: string[] | null }>) {
-    assert.notEqual(migration.writes, undefined, `${migration.version} must declare writes (null when its files are not fixed)`)
+    assert.notEqual(migration.writes, undefined, `${migration.version} must declare writes`)
+    assert.ok(migration.writes !== null || migration.version === '0.1.0-beta.200', `${migration.version} declares writes: null; only 0.1.0-beta.200 (any file that imports next-themes) may`)
     const start = changelog.indexOf(`## [${migration.version}]`)
     assert.notEqual(start, -1, `${migration.version} has a section in the CHANGELOG`)
     const next = changelog.indexOf('\n## [', start + 1)
@@ -263,8 +264,13 @@ test('the upgrade note of each migration in the CHANGELOG names every file the m
 test('what the 0.1.0-beta.202 migration writes is within what it declares (#441)', (t) => {
   for (const [name, shared] of [['crm-1', 'CRMDashboardLayout.tsx'], ['productivity-1', 'ProductivityDashboardLayout.tsx']]) {
     const root = project(t, { [MAIN_LAYOUT]: oldLayout(name) })
+    const snapshot = () => new Map(fs.readdirSync(root, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).map((e) => { const f = path.join(e.parentPath, e.name); return [path.relative(root, f), fs.readFileSync(f, 'utf8')] as const }))
+    const before = snapshot()
     const { changed } = entityRegistryMigration().run(root, {})
     assert.ok(changed.includes(path.join('templates', 'shared', shared)), name)
     for (const file of changed) assert.ok(entityRegistryMigration().writes.includes(file), file)
+    for (const [file, content] of snapshot()) {
+      if (before.get(file) !== content) assert.ok(entityRegistryMigration().writes.includes(file), `${file} was written and is not in writes`)
+    }
   }
 })

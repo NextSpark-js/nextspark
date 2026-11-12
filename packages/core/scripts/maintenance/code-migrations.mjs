@@ -136,7 +136,7 @@ const PUBLISHED_LAYOUTS = {
 }
 
 /** Every file the 0.1.0-beta.202 migration can create or replace; its upgrade note in the CHANGELOG names each one */
-export const ENTITY_REGISTRY_FILES = [MAIN_LAYOUT, ...new Set(Object.values(PUBLISHED_LAYOUTS).map((entry) => path.join('templates', 'shared', entry.shared)))]
+const ENTITY_REGISTRY_LAYOUT_WRITES = [MAIN_LAYOUT, ...new Set(Object.values(PUBLISHED_LAYOUTS).map((entry) => path.join('templates', 'shared', entry.shared)))]
 
 /** Line endings, a BOM, indentation, runs of spaces between words and empty lines do not tell two texts apart; what is inside a line does */
 const normalize = (text) => text.replace(/^﻿/, '').replace(/\r/g, '').split('\n').map((line) => line.trim().replace(/\s+/g, ' ')).filter(Boolean).join('\n')
@@ -195,7 +195,7 @@ export const CODE_MIGRATIONS = [
     title: 'the dashboard layout of a crm or productivity project fills the client entity registry',
     run: entityRegistryLayout,
     /** The files it can create or replace (`null`: not fixed, as in the 0.1.0-beta.200 one, which rewrites any file that imports next-themes) */
-    writes: ENTITY_REGISTRY_FILES,
+    writes: ENTITY_REGISTRY_LAYOUT_WRITES,
   },
 ]
 
