@@ -161,7 +161,7 @@ if (minutesUntilExpiry < 10) {
   
   // Create audit log
   await query(`
-    INSERT INTO "audit_logs" ("userId", "accountId", action, details)
+    INSERT INTO "social_audit_logs" ("userId", "accountId", action, details)
     VALUES ($1, $2, 'token_refreshed', $3)
   `, [userId, accountId, { oldExpiry: expiresAt, newExpiry: newExpiresAt }])
   
@@ -394,7 +394,7 @@ const REFRESH_THRESHOLD_MINUTES = 1
 2. **Create Audit Log:**
    ```typescript
    await query(`
-     INSERT INTO "audit_logs" 
+     INSERT INTO "social_audit_logs" 
      ("userId", "accountId", action, details)
      VALUES ($1, $2, 'token_refresh_failed', $3)
    `, [userId, accountId, { error: refreshError }])
@@ -615,7 +615,7 @@ SELECT
     NULLIF(COUNT(*), 0) * 100, 
     2
   ) as success_rate
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action IN ('token_refreshed', 'token_refresh_failed')
 AND "createdAt" > NOW() - INTERVAL '30 days';
 ```
@@ -638,7 +638,7 @@ GROUP BY status;
 **3. Failed Publish Attempts Due to Token Issues:**
 ```sql
 SELECT DATE("createdAt") as date, COUNT(*) as failures
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action = 'post_failed'
 AND details->>'error' LIKE '%token%'
 GROUP BY DATE("createdAt")

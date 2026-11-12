@@ -385,7 +385,7 @@ Never logged or stored in plain text
 **Tables:**
 - `clients` - Parent entity
 - `clients_social_platforms` - Child entity (social accounts)
-- `audit_logs` - Immutable audit trail
+- `social_audit_logs` - Immutable audit trail
 
 ## Getting Started
 

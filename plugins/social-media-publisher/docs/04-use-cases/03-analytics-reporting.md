@@ -249,7 +249,7 @@ export async function getPostPerformance(clientId: string, days: number = 30) {
       al.details->>'caption' as caption,
       al.details->>'imageUrl' as "imageUrl",
       al."accountId"
-    FROM "audit_logs" al
+    FROM "social_audit_logs" al
     JOIN "clients_social_platforms" csp ON csp.id = al."accountId"
     WHERE csp."parentId" = $1
     AND al.action = 'post_published'
@@ -424,7 +424,7 @@ export async function generateMonthlyReport(
       al.details->>'platform' as platform,
       COUNT(*) FILTER (WHERE al.action = 'post_published') as successful,
       COUNT(*) FILTER (WHERE al.action = 'post_failed') as failed
-    FROM "audit_logs" al
+    FROM "social_audit_logs" al
     WHERE al."accountId" = ANY($1)
     AND al."createdAt" BETWEEN $2 AND $3
     GROUP BY al.details->>'platform'

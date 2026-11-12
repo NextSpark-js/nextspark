@@ -198,7 +198,7 @@ const postHandler = async (request: NextRequest) => {
 
         // Create audit log (plugin-owned)
         await mutateWithRLS(
-          `INSERT INTO "audit_logs"
+          `INSERT INTO "social_audit_logs"
             ("userId", "accountId", action, details, "ipAddress", "userAgent")
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [

@@ -807,7 +807,8 @@ public/
 
 ### `migrations/` Directory ⚠️ OPTIONAL
 
-**Purpose**: Database migration scripts for plugin tables.
+**Purpose**: Database migration scripts for plugin tables. `pnpm db:migrate` applies them with core's and the
+project's, in the order of the number each file name starts with.
 
 **Structure**:
 ```text
@@ -817,28 +818,43 @@ migrations/
 └── 003_create_indexes.sql
 ```
 
+**Table names**: every table of a plugin is named `<prefix>_<table>`, the prefix being the first segment of the
+plugin's name followed by an underscore: `my-plugin` creates `my_records`, `social-media-publisher` creates
+`social_accounts` and `social_audit_logs`, `ai` creates `ai_history`. A plugin then cannot take a table name the
+project or another plugin uses. An entity of the plugin declares that name as its `tableName` (the default, its
+slug, has hyphens). A core test reads the migrations of the plugins in `plugins/` and fails on a table without its
+plugin's prefix, and on a plugin entity whose table no migration of its plugin leaves.
+
+**Applied migrations are not edited**: the migration ledger records each file's hash, and a published plugin's
+migrations have run in projects. To change a table (rename it, add a column), add a new file. Renaming a table
+also renames its indexes, constraints and policies, and is written so that running it twice does nothing the
+second time (see `social-media-publisher`'s `003_rename_audit_logs_to_social_audit_logs.sql`).
+
 **Example Migration:**
 ```sql
--- migrations/001_create_my_records.sql
-CREATE TABLE IF NOT EXISTS my_records (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
-  status VARCHAR(50) DEFAULT 'active',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+-- migrations/001_create_my_records.sql (plugin "my-plugin": prefix my_)
+CREATE TABLE IF NOT EXISTS public."my_records" (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "userId"    TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
+  "teamId"    TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
+  title       TEXT NOT NULL,
+  status      TEXT DEFAULT 'active',
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Row-level security
-ALTER TABLE my_records ENABLE ROW LEVEL SECURITY;
+-- Row-level security: members of the row's team (a superadmin bypasses)
+ALTER TABLE public."my_records" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY my_records_user_isolation ON my_records
-  FOR ALL
-  USING (user_id = current_setting('app.current_user_id')::uuid);
+DROP POLICY IF EXISTS "my_records_team" ON public."my_records";
+CREATE POLICY "my_records_team" ON public."my_records"
+  FOR ALL TO authenticated
+  USING ((SELECT public.is_superadmin()) OR "teamId" = ANY ((SELECT public.get_user_team_ids())::text[]))
+  WITH CHECK ((SELECT public.is_superadmin()) OR "teamId" = ANY ((SELECT public.get_user_team_ids())::text[]));
 
 -- Indexes
-CREATE INDEX idx_my_records_user_id ON my_records(user_id);
-CREATE INDEX idx_my_records_status ON my_records(status);
+CREATE INDEX IF NOT EXISTS idx_my_records_team_id ON public."my_records"("teamId");
+CREATE INDEX IF NOT EXISTS idx_my_records_status ON public."my_records"(status);
 ```
 
 **Naming**: `[number]_[description].sql`

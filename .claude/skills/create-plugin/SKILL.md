@@ -142,7 +142,7 @@ plugins/<plugin-name>/              # Monorepo location
 │       ├── [entity].types.ts
 │       ├── [entity].service.ts
 │       └── messages/
-├── migrations/             # (if complexity: full)
+├── migrations/             # (if complexity: full) tables named <prefix>_<table>, prefix = first segment of the plugin name
 │   └── README.md
 ├── messages/
 │   ├── en.json             # English translations

@@ -242,12 +242,12 @@ CREATE TABLE "clients_social_platforms" (
 - ✅ JSONB metadata for flexibility
 - ✅ Unique constraint per client to prevent duplicate connections
 
-### `audit_logs` Table
+### `social_audit_logs` Table
 
 Immutable audit trail for compliance.
 
 ```sql
-CREATE TABLE "audit_logs" (
+CREATE TABLE "social_audit_logs" (
   id          UUID PRIMARY KEY,
   "userId"    TEXT NOT NULL REFERENCES "users"(id),
   "accountId" UUID REFERENCES "clients_social_platforms"(id),
@@ -539,7 +539,7 @@ Every action creates an immutable audit log:
 
 ## Database Setup
 
-The `clients_social_platforms` table is created as part of the social-platforms child entity migration in the theme. The `audit_logs` table is created as part of the plugin's entity configuration.
+The `clients_social_platforms` table is created as part of the social-platforms child entity migration in the theme. The `social_accounts` and `social_audit_logs` tables are created by the plugin's migrations (`plugins/social-media-publisher/migrations/`), which `pnpm db:migrate` applies. A database that has the table under its old name, `audit_logs`, gets it renamed by `003_rename_audit_logs_to_social_audit_logs.sql`.
 
 ## Dependencies
 

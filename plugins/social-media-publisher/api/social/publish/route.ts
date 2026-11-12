@@ -252,12 +252,12 @@ const postHandler = async (request: NextRequest) => {
     const publishedAt = new Date().toISOString()
 
     await mutateWithRLS(
-      `INSERT INTO "audit_logs"
+      `INSERT INTO "social_audit_logs"
         ("userId", "accountId", action, details, "ipAddress", "userAgent")
        VALUES ($1, $2::uuid, $3, $4, $5, $6)`,
       [
         userId,
-        accountId, // Entity assignment ID cast to UUID for audit_logs compatibility
+        accountId, // Entity assignment ID cast to UUID for social_audit_logs compatibility
         auditAction,
         JSON.stringify({
           platform,

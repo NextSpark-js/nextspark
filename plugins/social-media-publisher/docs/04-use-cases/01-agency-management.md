@@ -207,7 +207,7 @@ export async function getAgencyDashboard() {
   // Get today's posts
   const postsToday = await query(`
     SELECT COUNT(*) as count
-    FROM "audit_logs"
+    FROM "social_audit_logs"
     WHERE "userId" = $1
     AND action = 'post_published'
     AND "createdAt"::date = CURRENT_DATE
@@ -408,7 +408,7 @@ async function getClientAnalytics(clientId: string) {
     SELECT 
       al."accountId",
       COUNT(*) as post_count
-    FROM "audit_logs" al
+    FROM "social_audit_logs" al
     WHERE al."accountId" = ANY($1)
     AND al.action = 'post_published'
     AND al."createdAt" > NOW() - INTERVAL '30 days'
@@ -552,7 +552,7 @@ export async function GET(request: NextRequest) {
       al.*,
       csp."platformAccountName",
       c.name as "clientName"
-    FROM "audit_logs" al
+    FROM "social_audit_logs" al
     JOIN "clients_social_platforms" csp ON csp.id = al."accountId"
     JOIN "clients" c ON c.id = csp."parentId"
     WHERE c.id = $1

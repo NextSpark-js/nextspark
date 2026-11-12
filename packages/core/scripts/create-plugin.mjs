@@ -321,6 +321,8 @@ function main() {
   const currentDate = new Date().toISOString().split('T')[0]
   const replacements = {
     PLUGIN_SLUG: slug,
+    // A plugin's tables are named <prefix>_<table>, the prefix being the first segment of its name (#455)
+    PLUGIN_TABLE_PREFIX: slug.split('-')[0].replace(/[^a-z0-9]/g, '_'),
     PLUGIN_DISPLAY_NAME: finalDisplayName,
     PLUGIN_VAR_NAME: varName,
     PLUGIN_PASCAL_NAME: pascalName,

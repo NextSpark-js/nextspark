@@ -338,17 +338,17 @@ WHERE tablename = 'clients_social_platforms';
 **Recommended Retention Policy:**
 ```sql
 -- Archive logs older than 1 year
-CREATE TABLE "audit_logs_archive" (
-  LIKE "audit_logs" INCLUDING ALL
+CREATE TABLE "social_audit_logs_archive" (
+  LIKE "social_audit_logs" INCLUDING ALL
 );
 
 -- Move old logs
-INSERT INTO "audit_logs_archive"
-SELECT * FROM "audit_logs"
+INSERT INTO "social_audit_logs_archive"
+SELECT * FROM "social_audit_logs"
 WHERE "createdAt" < NOW() - INTERVAL '1 year';
 
 -- Optionally delete from main table
-DELETE FROM "audit_logs"
+DELETE FROM "social_audit_logs"
 WHERE "createdAt" < NOW() - INTERVAL '1 year';
 ```
 

@@ -16,7 +16,7 @@ The Social Media Publisher plugin implements a comprehensive, **immutable audit 
 ### Database Schema
 
 ```sql
-CREATE TABLE "audit_logs" (
+CREATE TABLE "social_audit_logs" (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "userId" TEXT NOT NULL,                    -- Who performed the action
   "accountId" UUID,                          -- Which social account (optional)
@@ -28,10 +28,10 @@ CREATE TABLE "audit_logs" (
 );
 
 -- Indexes for common queries
-CREATE INDEX "idx_audit_logs_userId" ON "audit_logs"("userId");
-CREATE INDEX "idx_audit_logs_accountId" ON "audit_logs"("accountId");
-CREATE INDEX "idx_audit_logs_action" ON "audit_logs"(action);
-CREATE INDEX "idx_audit_logs_createdAt" ON "audit_logs"("createdAt" DESC);
+CREATE INDEX "idx_audit_logs_userId" ON "social_audit_logs"("userId");
+CREATE INDEX "idx_audit_logs_accountId" ON "social_audit_logs"("accountId");
+CREATE INDEX "idx_audit_logs_action" ON "social_audit_logs"(action);
+CREATE INDEX "idx_audit_logs_createdAt" ON "social_audit_logs"("createdAt" DESC);
 ```
 
 ### Field Descriptions
@@ -99,7 +99,7 @@ CREATE INDEX "idx_audit_logs_createdAt" ON "audit_logs"("createdAt" DESC);
 **Example:**
 ```typescript
 await query(`
-  INSERT INTO "audit_logs" (
+  INSERT INTO "social_audit_logs" (
     "userId", "accountId", action, details, "ipAddress", "userAgent"
   ) VALUES ($1, $2, $3, $4, $5, $6)
 `, [
@@ -154,7 +154,7 @@ await query(`
 **Example:**
 ```typescript
 await query(`
-  INSERT INTO "audit_logs" (
+  INSERT INTO "social_audit_logs" (
     "userId", "accountId", action, details, "ipAddress", "userAgent"
   ) VALUES ($1, $2::uuid, $3, $4, $5, $6)
 `, [
@@ -218,7 +218,7 @@ await query(`
 **Example:**
 ```typescript
 await query(`
-  INSERT INTO "audit_logs" (
+  INSERT INTO "social_audit_logs" (
     "userId", "accountId", action, details
   ) VALUES ($1, $2, $3, $4)
 `, [
@@ -262,7 +262,7 @@ async function getUserActivity(
   limit: number = 50
 ): Promise<AuditLog[]> {
   const result = await query(`
-    SELECT * FROM "audit_logs"
+    SELECT * FROM "social_audit_logs"
     WHERE "userId" = $1
     ORDER BY "createdAt" DESC
     LIMIT $2
@@ -279,7 +279,7 @@ async function getAccountActivity(
   accountId: string
 ): Promise<AuditLog[]> {
   const result = await query(`
-    SELECT * FROM "audit_logs"
+    SELECT * FROM "social_audit_logs"
     WHERE "accountId" = $1
     ORDER BY "createdAt" DESC
   `, [accountId])
@@ -296,7 +296,7 @@ async function getFailedPublishAttempts(
   days: number = 30
 ): Promise<AuditLog[]> {
   const result = await query(`
-    SELECT * FROM "audit_logs"
+    SELECT * FROM "social_audit_logs"
     WHERE "userId" = $1
     AND action = 'post_failed'
     AND "createdAt" > NOW() - INTERVAL '${days} days'
@@ -314,7 +314,7 @@ async function getTokenRefreshHistory(
   accountId: string
 ): Promise<AuditLog[]> {
   const result = await query(`
-    SELECT * FROM "audit_logs"
+    SELECT * FROM "social_audit_logs"
     WHERE "accountId" = $1
     AND action IN ('token_refreshed', 'token_refresh_failed')
     ORDER BY "createdAt" DESC
@@ -334,7 +334,7 @@ async function getActivityByAction(
   endDate: Date
 ): Promise<AuditLog[]> {
   const result = await query(`
-    SELECT * FROM "audit_logs"
+    SELECT * FROM "social_audit_logs"
     WHERE "userId" = $1
     AND action = $2
     AND "createdAt" BETWEEN $3 AND $4
@@ -359,7 +359,7 @@ SELECT
     NULLIF(COUNT(*), 0) * 100, 
     2
   ) as success_rate
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action IN ('post_published', 'post_failed')
 AND "createdAt" > NOW() - INTERVAL '30 days'
 GROUP BY DATE("createdAt")
@@ -374,7 +374,7 @@ SELECT
   COUNT(*) FILTER (WHERE action = 'post_published') as posts_published,
   COUNT(*) FILTER (WHERE action = 'account_connected') as accounts_connected,
   COUNT(*) as total_actions
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE "createdAt" > NOW() - INTERVAL '30 days'
 GROUP BY "userId"
 ORDER BY total_actions DESC
@@ -387,7 +387,7 @@ LIMIT 10;
 SELECT 
   details->>'platform' as platform,
   COUNT(*) as publish_count
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action = 'post_published'
 AND "createdAt" > NOW() - INTERVAL '30 days'
 GROUP BY details->>'platform'
@@ -402,7 +402,7 @@ SELECT
   details->>'platform' as platform,
   COUNT(*) as occurrence_count,
   MAX("createdAt") as last_occurred
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action = 'post_failed'
 AND "createdAt" > NOW() - INTERVAL '7 days'
 GROUP BY details->>'error', details->>'platform'
@@ -417,7 +417,7 @@ ORDER BY occurrence_count DESC;
 ```typescript
 async function exportUserAuditLogs(userId: string): Promise<AuditLog[]> {
   const result = await query(`
-    SELECT * FROM "audit_logs"
+    SELECT * FROM "social_audit_logs"
     WHERE "userId" = $1
     ORDER BY "createdAt" DESC
   `, [userId])
@@ -431,7 +431,7 @@ async function exportUserAuditLogs(userId: string): Promise<AuditLog[]> {
 async function anonymizeUserAuditLogs(userId: string): Promise<void> {
   // Anonymize personal data while keeping audit trail
   await query(`
-    UPDATE "audit_logs"
+    UPDATE "social_audit_logs"
     SET "userId" = 'anonymized',
         "ipAddress" = NULL,
         "userAgent" = NULL,
@@ -455,17 +455,17 @@ async function anonymizeUserAuditLogs(userId: string): Promise<void> {
 **Archive Implementation:**
 ```sql
 -- Create archive table
-CREATE TABLE "audit_logs_archive" (
-  LIKE "audit_logs" INCLUDING ALL
+CREATE TABLE "social_audit_logs_archive" (
+  LIKE "social_audit_logs" INCLUDING ALL
 );
 
 -- Move old logs to archive
-INSERT INTO "audit_logs_archive"
-SELECT * FROM "audit_logs"
+INSERT INTO "social_audit_logs_archive"
+SELECT * FROM "social_audit_logs"
 WHERE "createdAt" < NOW() - INTERVAL '1 year';
 
 -- Delete from main table
-DELETE FROM "audit_logs"
+DELETE FROM "social_audit_logs"
 WHERE "createdAt" < NOW() - INTERVAL '1 year';
 ```
 
@@ -475,20 +475,20 @@ WHERE "createdAt" < NOW() - INTERVAL '1 year';
 async function enforceRetentionPolicy(): Promise<void> {
   // Archive logs older than 1 year
   await query(`
-    INSERT INTO "audit_logs_archive"
-    SELECT * FROM "audit_logs"
+    INSERT INTO "social_audit_logs_archive"
+    SELECT * FROM "social_audit_logs"
     WHERE "createdAt" < NOW() - INTERVAL '1 year'
   `)
   
   // Delete archived logs
   await query(`
-    DELETE FROM "audit_logs"
+    DELETE FROM "social_audit_logs"
     WHERE "createdAt" < NOW() - INTERVAL '1 year'
   `)
   
   // Delete archive logs older than 7 years
   await query(`
-    DELETE FROM "audit_logs_archive"
+    DELETE FROM "social_audit_logs_archive"
     WHERE "createdAt" < NOW() - INTERVAL '7 years'
   `)
 }
@@ -506,7 +506,7 @@ SELECT
     NULLIF(COUNT(*), 0) * 100, 
     2
   ) as failed_rate
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action IN ('post_published', 'post_failed')
 AND "createdAt" > NOW() - INTERVAL '1 hour';
 ```
@@ -516,7 +516,7 @@ AND "createdAt" > NOW() - INTERVAL '1 hour';
 **2. Token Refresh Failures:**
 ```sql
 SELECT COUNT(*) as failures
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action = 'token_refresh_failed'
 AND "createdAt" > NOW() - INTERVAL '1 day';
 ```
@@ -529,7 +529,7 @@ AND "createdAt" > NOW() - INTERVAL '1 day';
 SELECT 
   "accountId",
   COUNT(*) as publish_count
-FROM "audit_logs"
+FROM "social_audit_logs"
 WHERE action = 'post_published'
 AND "createdAt" > NOW() - INTERVAL '1 hour'
 GROUP BY "accountId"
@@ -618,7 +618,7 @@ details: { tokenRefreshed: true }
 **2. Don't Allow Log Deletion:**
 ```sql
 -- ❌ Bad: DELETE operations allowed
-DELETE FROM "audit_logs" WHERE id = $1;
+DELETE FROM "social_audit_logs" WHERE id = $1;
 
 -- ✅ Good: No DELETE, only INSERT
 -- Enforce via database permissions

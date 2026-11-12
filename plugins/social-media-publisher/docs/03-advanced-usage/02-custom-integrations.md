@@ -496,7 +496,7 @@ export async function GET(request: NextRequest) {
       COUNT(*) FILTER (WHERE al.action = 'post_published') as successful,
       COUNT(*) FILTER (WHERE al.action = 'post_failed') as failed,
       array_agg(DISTINCT al."accountId") as account_ids
-    FROM "audit_logs" al
+    FROM "social_audit_logs" al
     WHERE al."userId" = $1
     AND al.action IN ('post_published', 'post_failed')
     AND al."createdAt" > NOW() - INTERVAL '${days} days'

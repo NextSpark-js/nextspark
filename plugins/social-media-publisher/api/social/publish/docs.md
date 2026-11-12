@@ -136,7 +136,7 @@ The endpoint automatically handles token refresh:
 
 ## Audit Logging
 
-All publish attempts are logged to `audit_logs` table:
+All publish attempts are logged to `social_audit_logs` table:
 
 ```json
 {

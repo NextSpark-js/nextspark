@@ -286,7 +286,7 @@ error_description: Human-readable error
 6. **Create Audit Log:**
    ```typescript
    await query(`
-     INSERT INTO "audit_logs" (
+     INSERT INTO "social_audit_logs" (
        "userId", "accountId", action, details
      ) VALUES ($1, $2, 'account_connected', $3)
    `, [userId, accountId, { platform, accountName }])

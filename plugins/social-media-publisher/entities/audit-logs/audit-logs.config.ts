@@ -10,7 +10,7 @@ import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 export const auditLogsEntityConfig = {
   name: 'audit-logs',
   slug: 'audit-logs',
-  tableName: 'audit_logs', // the table the plugin's migrations create (underscores, not the slug's hyphen)
+  tableName: 'social_audit_logs', // the table the plugin's migrations leave (003 renames the old audit_logs)
   label: {
     en: 'Social Media Audit Logs',
     es: 'Registros de Auditoría de Redes Sociales'

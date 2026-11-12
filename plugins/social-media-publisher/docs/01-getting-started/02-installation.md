@@ -202,12 +202,11 @@ pnpm dev
 The plugin includes migrations for the required tables:
 
 ```bash
-# Apply all pending migrations
+# Apply all pending migrations (core, the project and its plugins, in order)
 pnpm db:migrate
-
-# Or specifically for social media publisher:
-psql $DATABASE_URL -f plugins/social-media-publisher/migrations/001_social_media_tables.sql
 ```
+
+Run the plugin's migrations through `db:migrate`, not one file by hand: later files change what earlier ones created (`003` renames the old `audit_logs` table to `social_audit_logs`).
 
 ### 4.2 Verify Tables Created
 
@@ -215,11 +214,11 @@ psql $DATABASE_URL -f plugins/social-media-publisher/migrations/001_social_media
 -- Check if tables exist
 SELECT table_name 
 FROM information_schema.tables 
-WHERE table_name IN ('clients_social_platforms', 'audit_logs');
+WHERE table_name IN ('clients_social_platforms', 'social_audit_logs');
 
 -- Should return:
 -- clients_social_platforms
--- audit_logs
+-- social_audit_logs
 ```
 
 ### 4.3 Database Schema Overview
@@ -242,9 +241,9 @@ CREATE TABLE "clients_social_platforms" (
 );
 ```
 
-**audit_logs (Plugin Entity):**
+**social_audit_logs (Plugin Entity):**
 ```sql
-CREATE TABLE "audit_logs" (
+CREATE TABLE "social_audit_logs" (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "userId" TEXT NOT NULL,
   "accountId" UUID,
