@@ -167,13 +167,9 @@ export interface PublishResult {
 // AUDIT LOG TYPES
 // ============================================
 
-export type AuditAction =
-  | 'account_connected'
-  | 'account_disconnected'
-  | 'post_published'
-  | 'post_failed'
-  | 'token_refreshed'
-  | 'token_refresh_failed'
+/** The actions the audit table accepts: one definition, in lib/audit-log.ts */
+export type { AuditAction } from '../lib/audit-log'
+import type { AuditAction } from '../lib/audit-log'
 
 export interface AuditLog {
   id: string

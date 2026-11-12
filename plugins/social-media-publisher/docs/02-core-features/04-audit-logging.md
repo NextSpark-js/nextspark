@@ -268,21 +268,8 @@ await recordAuditLog(request, {
 })
 ```
 
-#### `token_refresh_failed`
-
-**When:** Token refresh attempt fails
-
-**Details Structure:**
-```json
-{
-  "platform": "facebook_page",
-  "accountName": "My Business Page",
-  "error": "Invalid OAuth 2.0 Access Token",
-  "tokenExpiresAt": "2024-01-15T10:30:00Z",
-  "minutesBeforeExpiry": 5,
-  "requiresReconnection": true
-}
-```
+A failed refresh is recorded as `token_refreshed` too, with `"success": false` and the `error` in `details`: the
+table's CHECK accepts only the actions listed on this page.
 
 ## Querying Audit Logs
 
@@ -348,7 +335,7 @@ async function getTokenRefreshHistory(
   const result = await query(`
     SELECT * FROM "social_audit_logs"
     WHERE "accountId" = $1
-    AND action IN ('token_refreshed', 'token_refresh_failed')
+    AND action = 'token_refreshed'  -- failures included: details->>'success' = 'false'
     ORDER BY "createdAt" DESC
   `, [accountId])
   
@@ -549,7 +536,7 @@ AND "createdAt" > NOW() - INTERVAL '1 hour';
 ```sql
 SELECT COUNT(*) as failures
 FROM "social_audit_logs"
-WHERE action = 'token_refresh_failed'
+WHERE action = 'token_refreshed' AND details->>'success' = 'false'
 AND "createdAt" > NOW() - INTERVAL '1 day';
 ```
 

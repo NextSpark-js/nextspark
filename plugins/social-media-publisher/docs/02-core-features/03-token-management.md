@@ -396,7 +396,7 @@ const REFRESH_THRESHOLD_MINUTES = 1
 
 2. **Create Audit Log:**
    ```typescript
-   // The table's CHECK accepts token_refreshed, not token_refresh_failed: record the failure in details
+   // The table's CHECK has no action for a failed refresh: record it as token_refreshed, success false
    await recordAuditLog(request, {
      userId, teamId, accountId, action: 'token_refreshed', details: { success: false, error: refreshError }
    })
@@ -610,15 +610,15 @@ const token = await decrypt(dbToken)
 **1. Token Refresh Success Rate:**
 ```sql
 SELECT 
-  COUNT(*) FILTER (WHERE action = 'token_refreshed') as successful,
-  COUNT(*) FILTER (WHERE action = 'token_refresh_failed') as failed,
+  COUNT(*) FILTER (WHERE details->>'success' IS DISTINCT FROM 'false') as successful,
+  COUNT(*) FILTER (WHERE details->>'success' = 'false') as failed,
   ROUND(
-    COUNT(*) FILTER (WHERE action = 'token_refreshed')::decimal / 
-    NULLIF(COUNT(*), 0) * 100, 
+    COUNT(*) FILTER (WHERE details->>'success' IS DISTINCT FROM 'false')::decimal /
+    NULLIF(COUNT(*), 0) * 100,
     2
   ) as success_rate
 FROM "social_audit_logs"
-WHERE action IN ('token_refreshed', 'token_refresh_failed')
+WHERE action = 'token_refreshed'
 AND "createdAt" > NOW() - INTERVAL '30 days';
 ```
 
