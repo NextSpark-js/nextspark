@@ -25,8 +25,10 @@ export interface ApiKeyScopeFindings {
   reason?: string
   withoutScope: ApiKeyScopeFinding[]
   undeclared: ApiKeyScopeFinding[]
+  /** What an enabled plugin's apiScopes left unread (absent: the core predates the check) */
+  pluginScopes?: { plugin: string; file: string; message: string }[]
   describe: (finding: ApiKeyScopeFinding) => string
-  fixes: { withoutScope: string; undeclared: string }
+  fixes: { withoutScope: string; undeclared: string; pluginScopes?: string }
 }
 
 /** The findings for the project at `root`, or null when the core in `coreDir` predates the search (it cannot say, so nothing is claimed). */
@@ -38,8 +40,9 @@ export async function findApiKeyScopeProblems(root: string, coreDir: string): Pr
     describeApiKeyFinding: ApiKeyScopeFindings['describe']
     NO_SCOPE_FIX: string
     UNDECLARED_SCOPE_FIX: string
+    PLUGIN_SCOPES_FIX?: string
   }
   const found = await search.findApiKeyScopeProblemsInProject?.(root)
   if (!found) return null
-  return { ...found, describe: search.describeApiKeyFinding, fixes: { withoutScope: search.NO_SCOPE_FIX, undeclared: search.UNDECLARED_SCOPE_FIX } }
+  return { ...found, describe: search.describeApiKeyFinding, fixes: { withoutScope: search.NO_SCOPE_FIX, undeclared: search.UNDECLARED_SCOPE_FIX, pluginScopes: search.PLUGIN_SCOPES_FIX } }
 }

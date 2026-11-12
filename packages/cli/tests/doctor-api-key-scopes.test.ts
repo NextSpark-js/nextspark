@@ -74,3 +74,13 @@ test('a core without the search is not checked, and says so', async () => {
   assert.equal(result.status, 'pass')
   assert.match(result.message, /^Not checked/)
 })
+
+test('an apiScopes of an enabled plugin that is not a literal is reported, naming the plugin and the file', async () => {
+  const config = "export default { plugins: ['shop'], template: { name: 'starter', version: '0.0.0' } }\n"
+  const plugin = "import { definePlugin } from '@nextsparkjs/core/types/plugin'\nexport const shopPluginConfig = definePlugin({ name: 'shop', capabilities: ['server'], apiScopes: SCOPES })\nexport default shopPluginConfig\n"
+  const result = await inProject({ 'nextspark.config.ts': config, 'plugins/shop/plugin.config.ts': plugin, 'plugins/shop/api/ping/route.ts': 'export async function GET() { return Response.json({}) }\n' }, 'real', checkApiKeyScopes)
+  assert.equal(result.status, 'warn')
+  assert.equal(result.code, 'NS_PLUGIN_API_SCOPES_INVALID')
+  assert.match(result.message, /apiScopes of shop \(plugins\/shop\/plugin\.config\.ts: .*literal object/)
+  assert.match(result.fix ?? '', /^Write apiScopes in the plugin's plugin\.config\.ts/)
+})

@@ -15,11 +15,13 @@ import { dirname, join } from 'node:path'
 
 import {
   API_KEY_NO_SCOPE_WARNING,
+  API_KEY_PLUGIN_SCOPES_WARNING,
   API_KEY_UNDECLARED_SCOPE_WARNING,
   CORE_API_SCOPES,
   readDeclaredApiScopes,
   scanApiKeyCalls,
 } from '../../../../maintenance/api-key-scopes.mjs'
+import { API_SCOPE_NAME } from '../../discovery/plugin-capabilities.mjs'
 import { loadTypeScriptFor } from '../../shared/typescript-compiler.mjs'
 import { checkHost, predictHost, prepareHost } from '../prepare.mjs'
 import { CORE_ROOT, tempHost } from './host-helpers.mjs'
@@ -200,7 +202,8 @@ const pluginNotices = async files => {
   try {
     const config = { ...host.config, plugins: [{ name: 'shop', root: join(host.source, 'plugins/shop'), importBase: '@/plugins/shop' }] }
     const { ok, notices } = await predictHost(config)
-    return { ok, codes: notices.filter(notice => notice.code === API_KEY_NO_SCOPE_WARNING || notice.code === API_KEY_UNDECLARED_SCOPE_WARNING).map(notice => notice.code) }
+    const found = notices.filter(notice => [API_KEY_NO_SCOPE_WARNING, API_KEY_UNDECLARED_SCOPE_WARNING, API_KEY_PLUGIN_SCOPES_WARNING].includes(notice.code))
+    return { ok, codes: found.map(notice => notice.code), notices: found }
   } finally {
     host.cleanup()
   }
@@ -208,11 +211,41 @@ const pluginNotices = async files => {
 
 test('prepare: a scope the plugin declares in apiScopes is no finding; without it (or with the plugin off) the notice is back', async () => {
   const route = { 'plugins/shop/api/orders/route.ts': REPORTS }
-  assert.deepEqual(await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG(SHOP_SCOPES) }), { ok: true, codes: [] })
+  assert.deepEqual((({ ok, codes }) => ({ ok, codes }))(await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG(SHOP_SCOPES) })), { ok: true, codes: [] })
   assert.deepEqual((await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG() })).codes, [API_KEY_UNDECLARED_SCOPE_WARNING])
   assert.deepEqual((await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG('  enabled: false,\n' + SHOP_SCOPES) })).codes, [API_KEY_UNDECLARED_SCOPE_WARNING])
   // another scope of the plugin's routes stays undeclared
   assert.deepEqual((await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG("  apiScopes: { 'reports:write': 'x' },\n") })).codes, [API_KEY_UNDECLARED_SCOPE_WARNING])
+})
+
+test('prepare: an apiScopes that is not a literal object, or has computed entries, is reported with the plugin and the file, and what is not read does not count', async () => {
+  const route = { 'plugins/shop/api/orders/route.ts': REPORTS }
+  const computed = await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG("  apiScopes: { [KEY]: 'x', ...OTHER, 'reports:read': DESCRIPTION },\n") })
+  assert.deepEqual(computed.codes, [API_KEY_UNDECLARED_SCOPE_WARNING, API_KEY_PLUGIN_SCOPES_WARNING])
+  const problem = computed.notices[1]
+  assert.deepEqual(problem.findings.map(finding => [finding.plugin, finding.file]), [['shop', 'plugins/shop/plugin.config.ts'], ['shop', 'plugins/shop/plugin.config.ts'], ['shop', 'plugins/shop/plugin.config.ts']])
+  assert.match(problem.message, /apiScopes of shop \(plugins\/shop\/plugin\.config\.ts: an entry of `apiScopes` is computed or spread/)
+  assert.match(problem.message, /description of the scope 'reports:read' is not a string literal/)
+  const whole = await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG('  apiScopes: SCOPES,\n') })
+  assert.deepEqual(whole.codes, [API_KEY_UNDECLARED_SCOPE_WARNING, API_KEY_PLUGIN_SCOPES_WARNING])
+  assert.match(whole.notices[1].message, /must be a literal object/)
+  // a plugin that is off says nothing, and the fix the undeclared notice gives names the plugin's apiScopes
+  assert.deepEqual((await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG('  enabled: false,\n  apiScopes: SCOPES,\n') })).codes, [API_KEY_UNDECLARED_SCOPE_WARNING])
+  assert.match(whole.notices[0].message, /apiScopes of an enabled plugin/)
+  assert.match(whole.notices[0].message, /apiScopes of its plugin\.config\.ts/)
+})
+
+test('prepare: a plugin scope that is not resource:action, or is the wildcard, is reported and not accepted', async () => {
+  const route = { 'plugins/shop/api/orders/route.ts': REPORTS.replace('reports:read', 'reports') }
+  const bad = await pluginNotices({ ...route, 'plugins/shop/plugin.config.ts': SHOP_CONFIG("  apiScopes: { 'reports': 'x', '*': 'all', 'Reports:Read': 'x', 'a:b:c': 'x', 'ok:read': 'fine' },\n") })
+  assert.deepEqual(bad.codes, [API_KEY_UNDECLARED_SCOPE_WARNING, API_KEY_PLUGIN_SCOPES_WARNING])
+  assert.deepEqual(bad.notices[1].findings.map(finding => finding.message.match(/'([^']*)'/)[1]), ['reports', '*', 'Reports:Read', 'a:b:c'])
+  assert.match(bad.notices[0].message, /requires 'reports'/)
+})
+
+test('the shape of a plugin scope name is the one every scope of core has, and the wildcard is not', () => {
+  for (const scope of CORE_API_SCOPES.filter(scope => scope !== '*')) assert.match(scope, API_SCOPE_NAME, scope)
+  for (const name of ['*', 'reports', 'reports:', ':read', 'Reports:read', 'a:b:c', 'a b:c', 'reports:*']) assert.doesNotMatch(name, API_SCOPE_NAME, name)
 })
 
 // The plugins of this repository that ship routes with scopes of their own (#447): a project that enables them lists nothing

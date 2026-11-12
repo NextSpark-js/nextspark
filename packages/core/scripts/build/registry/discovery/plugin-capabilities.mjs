@@ -149,15 +149,11 @@ export function readPluginMetadata(ts, { configFile, exportName }) {
     if (!ts.isPropertyAssignment(property) || !(ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))) continue
     const value = unwrap(ts, property.initializer)
     if (['displayName', 'version', 'description'].includes(property.name.text) && value && ts.isStringLiteralLike(value)) metadata[property.name.text] = value.text
-    // The scopes the plugin adds to API keys: only the entries written as `'name': 'description'` are read
-    if (property.name.text === 'apiScopes' && value && ts.isObjectLiteralExpression(value)) {
-      metadata.apiScopes = Object.fromEntries(
-        value.properties
-          .filter(entry => ts.isPropertyAssignment(entry) && (ts.isIdentifier(entry.name) || ts.isStringLiteral(entry.name)))
-          .map(entry => [entry.name.text, unwrap(ts, entry.initializer)])
-          .filter(([, text]) => text && ts.isStringLiteralLike(text))
-          .map(([name, text]) => [name, text.text]),
-      )
+    // The scopes the plugin adds to API keys: `'name': 'description'` entries with a valid name are read; the rest is reported
+    if (property.name.text === 'apiScopes') {
+      const { scopes, problems } = readApiScopes(ts, value)
+      metadata.apiScopes = scopes
+      if (problems.length > 0) metadata.apiScopesProblems = problems
     }
     if (property.name.text === 'enabled') {
       enabledSeen = true
@@ -168,6 +164,29 @@ export function readPluginMetadata(ts, { configFile, exportName }) {
   // definePlugin defaults `enabled` to true.
   if (!enabledSeen && viaDefinePlugin) metadata.enabled = true
   return metadata
+}
+
+/**
+ * The shape of a scope name, `resource:action` (lowercase letters, digits and hyphens): every scope core declares has it
+ * (`users:read`, `admin:api-keys`; scripts/build/registry/host/__tests__/host-api-key-scopes.test.mjs keeps the two equal). The wildcard
+ * `*` is core's alone, so a plugin cannot declare it.
+ */
+export const API_SCOPE_NAME = /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/
+
+/** The entries of a literal `apiScopes` object, and what could not be read (a message each). */
+function readApiScopes(ts, node) {
+  const scopes = {}
+  const problems = []
+  if (!node || !ts.isObjectLiteralExpression(node)) return { scopes, problems: ['`apiScopes` must be a literal object of `\'name\': \'description\'` entries (it is read without running the config), so none of its scopes count'] }
+  for (const entry of node.properties) {
+    const name = ts.isPropertyAssignment(entry) && (ts.isIdentifier(entry.name) || ts.isStringLiteral(entry.name)) ? entry.name.text : null
+    const description = name === null ? null : unwrap(ts, entry.initializer)
+    if (name === null) problems.push('an entry of `apiScopes` is computed or spread, so it is not read')
+    else if (!API_SCOPE_NAME.test(name)) problems.push(`the scope '${name}' is not of the form resource:action (lowercase letters, digits and hyphens; no '*'), so it is not accepted`)
+    else if (!description || !ts.isStringLiteralLike(description)) problems.push(`the description of the scope '${name}' is not a string literal, so it is not read`)
+    else scopes[name] = description.text
+  }
+  return { scopes, problems }
 }
 
 /** How a plugin config exports its config object (`export const fooPlugin = ...`, `export default fooPluginConfig`). */
@@ -206,13 +225,16 @@ export async function withDeclaredCapabilities(plugins, { projectRoot }) {
 
 /**
  * The API-key scopes the enabled plugins add (`apiScopes` of their config), as `{ name: description }`; a plugin whose
- * `enabled` is the literal false adds none, like the runtime. Read from `plugin.config.ts` without running it.
+ * `enabled` is the literal false adds none, like the runtime. Read from `plugin.config.ts` without running it. `problems` lists
+ * what was left out (a non-literal object, a computed entry, a name that is not `resource:action`), each with the plugin and file.
  *
  * @param {object} ts - the TypeScript compiler
  * @param {{ name: string, root?: string, sourceDir?: string }[]} plugins
+ * @returns {{ scopes: Record<string, string>, problems: { plugin: string, file: string, message: string }[] }}
  */
 export function readPluginApiScopes(ts, plugins) {
   const scopes = {}
+  const problems = []
   for (const plugin of plugins) {
     const configFile = join(plugin.root ?? plugin.sourceDir, 'plugin.config.ts')
     let exportName = null
@@ -224,9 +246,11 @@ export function readPluginApiScopes(ts, plugins) {
     }
     if (!exportName) continue
     const metadata = readPluginMetadata(ts, { configFile, exportName })
-    if (metadata.enabled !== false) Object.assign(scopes, metadata.apiScopes)
+    if (metadata.enabled === false) continue
+    Object.assign(scopes, metadata.apiScopes)
+    for (const message of metadata.apiScopesProblems ?? []) problems.push({ plugin: plugin.name, file: `plugins/${plugin.name}/plugin.config.ts`, message })
   }
-  return scopes
+  return { scopes, problems }
 }
 
 function readList(ts, node, invalid, diagnostics) {

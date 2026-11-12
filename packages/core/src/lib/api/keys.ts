@@ -167,7 +167,14 @@ export function getApiScopes(): Record<string, string> {
  */
 export function getAppApiScopes(): Record<string, string> {
   const appScopes = (API_CONFIG as { scopes?: Record<string, string> } | undefined)?.scopes ?? {};
-  const pluginScopes: Record<string, string> = Object.assign({}, ...Object.values(PLUGIN_CATALOG).filter(plugin => plugin.enabled !== false).map(plugin => plugin.apiScopes ?? {}));
+  // Two plugins may declare the same scope (ai:write): the label lists each distinct description, since the scope grants all of them
+  const described: Record<string, string[]> = {};
+  for (const plugin of Object.values(PLUGIN_CATALOG).filter(plugin => plugin.enabled !== false)) {
+    for (const [name, description] of Object.entries(plugin.apiScopes ?? {})) {
+      if (!(described[name] ??= []).includes(description)) described[name].push(description);
+    }
+  }
+  const pluginScopes = Object.fromEntries(Object.entries(described).map(([name, descriptions]) => [name, descriptions.join('; ')]));
   const coreNames = Object.keys(API_SCOPES);
   return Object.fromEntries(Object.entries({ ...pluginScopes, ...appScopes }).filter(([name]) => !coreNames.includes(name)));
 }

@@ -141,6 +141,23 @@ describe('ApiKeyManager', () => {
       });
     });
 
+    test('a scope two plugins declare lists each distinct description once', () => {
+      jest.isolateModules(() => {
+        jest.doMock('@/core/lib/config/config-client', () => ({ API_CONFIG: {} }));
+        jest.doMock('@nextsparkjs/registries/plugin-catalog', () => ({
+          PLUGIN_CATALOG: {
+            ai: { enabled: true, apiScopes: { 'ai:write': 'Generate text and embeddings' } },
+            langchain: { enabled: null, apiScopes: { 'ai:write': 'Change LangChain sessions' } },
+            twin: { enabled: true, apiScopes: { 'ai:write': 'Generate text and embeddings' } },
+            off: { enabled: false, apiScopes: { 'ai:write': 'Not enabled' } },
+          },
+        }));
+        const { getApiScopes } = require('@/core/lib/api/keys');
+
+        expect(getApiScopes()['ai:write']).toBe('Generate text and embeddings; Change LangChain sessions');
+      });
+    });
+
     test('the app wins over a plugin on a name, and core over both', () => {
       jest.isolateModules(() => {
         jest.doMock('@/core/lib/config/config-client', () => ({ API_CONFIG: { scopes: { 'reports:read': 'The app says so' } } }));

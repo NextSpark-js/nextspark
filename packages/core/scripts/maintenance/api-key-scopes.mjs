@@ -30,6 +30,7 @@ import { readPluginApiScopes } from '../build/registry/discovery/plugin-capabili
 
 export const API_KEY_NO_SCOPE_WARNING = 'NS_API_KEY_ROUTE_WITHOUT_SCOPE'
 export const API_KEY_UNDECLARED_SCOPE_WARNING = 'NS_API_KEY_SCOPE_NOT_DECLARED'
+export const API_KEY_PLUGIN_SCOPES_WARNING = 'NS_PLUGIN_API_SCOPES_INVALID'
 
 /** The scopes core enforces (`API_SCOPES` of src/lib/api/keys.ts; scripts/build/registry/host/__tests__/host-api-key-scopes.test.mjs keeps the two equal). */
 export const CORE_API_SCOPES = Object.freeze([
@@ -43,7 +44,8 @@ export const CORE_API_SCOPES = Object.freeze([
 ])
 
 export const NO_SCOPE_FIX = "pass { requiredScope: '<scope>' } to the call, or { allowAnyScope: true } if any valid key is acceptable"
-export const UNDECLARED_SCOPE_FIX = "declare each scope in api.scopes of APP_CONFIG_OVERRIDES in config/app.config.ts, for example api: { scopes: { 'reports:read': 'Read reports' } } (a plugin of your own declares its scopes with apiScopes in definePlugin)"
+export const PLUGIN_SCOPES_FIX = "write apiScopes in the plugin's plugin.config.ts as a literal object of 'resource:action': 'description' entries"
+export const UNDECLARED_SCOPE_FIX = "declare each scope in api.scopes of APP_CONFIG_OVERRIDES in config/app.config.ts, for example api: { scopes: { 'reports:read': 'Read reports' } }, or, for a route of a plugin, in apiScopes of its plugin.config.ts (definePlugin({ ..., apiScopes: { 'reports:read': 'Read reports' } }))"
 
 /** The core entry points that enforce `requiredScope` / `allowAnyScope`, and where a project imports them from */
 const ENTRY_POINTS = new Set(['authenticateRequest', 'validateAndAuthenticateRequest'])
@@ -270,15 +272,17 @@ function routeSources(routes) {
  * @param {object[]} input.routes - the host plan's routes
  * @param {object[]} [input.plugins] - the enabled plugins (`{ name, root }`): the scopes their config declares in `apiScopes` count as declared
  * @param {object} [input.ts] - the TypeScript compiler (the project's, by default)
- * @returns {Promise<{ withoutScope: object[], undeclared: object[] }>} each finding `{ url, source, line, method, call, scope? }`
+ * @returns {Promise<{ withoutScope: object[], undeclared: object[], pluginScopes: object[] }>} each finding `{ url, source, line, method, call, scope? }`;
+ *   `pluginScopes` is what an enabled plugin's `apiScopes` left unread, `{ plugin, file, message }`
  */
 export async function findApiKeyScopeProblems({ projectRoot, routes, plugins = [], ts }) {
   const sources = routeSources(routes)
-  const empty = { withoutScope: [], undeclared: [] }
-  if (sources.length === 0) return empty
+  const empty = { withoutScope: [], undeclared: [], pluginScopes: [] }
+  if (sources.length === 0 && plugins.length === 0) return empty
   const compiler = ts ?? (await loadTypeScriptFor(projectRoot))
   const declared = readDeclaredApiScopes({ projectRoot, ts: compiler })
-  const known = new Set([...CORE_API_SCOPES, ...declared.scopes, ...Object.keys(readPluginApiScopes(compiler, plugins))])
+  const fromPlugins = readPluginApiScopes(compiler, plugins)
+  const known = new Set([...CORE_API_SCOPES, ...declared.scopes, ...Object.keys(fromPlugins.scopes)])
 
   const withoutScope = []
   const undeclared = []
@@ -296,7 +300,7 @@ export async function findApiKeyScopeProblems({ projectRoot, routes, plugins = [
     }
   }
   const order = (a, b) => (a.source < b.source ? -1 : a.source > b.source ? 1 : a.line - b.line)
-  return { withoutScope: withoutScope.sort(order), undeclared: undeclared.sort(order) }
+  return { withoutScope: withoutScope.sort(order), undeclared: undeclared.sort(order), pluginScopes: fromPlugins.problems }
 }
 
 /** `source:line METHOD call`, for a notice and the doctor message */
@@ -309,7 +313,7 @@ const listOf = findings => {
 const files = findings => new Set(findings.map(finding => finding.source)).size
 
 /** The plan notices: one per kind of problem that has findings (none when there is nothing to say). */
-export function apiKeyScopeNotices({ withoutScope, undeclared }) {
+export function apiKeyScopeNotices({ withoutScope, undeclared, pluginScopes = [] }) {
   const notices = []
   if (withoutScope.length > 0) {
     notices.push({
@@ -328,8 +332,17 @@ export function apiKeyScopeNotices({ withoutScope, undeclared }) {
       target: undeclared[0].source,
       findings: undeclared,
       message:
-        `${undeclared.length} route call${undeclared.length === 1 ? '' : 's'} require${undeclared.length === 1 ? 's' : ''} ${scopes.length === 1 ? 'a scope' : 'scopes'} (${scopes.map(scope => `'${scope}'`).join(', ')}) that neither core nor api.scopes declares, ` +
+        `${undeclared.length} route call${undeclared.length === 1 ? '' : 's'} require${undeclared.length === 1 ? 's' : ''} ${scopes.length === 1 ? 'a scope' : 'scopes'} (${scopes.map(scope => `'${scope}'`).join(', ')}) that neither core, api.scopes nor the apiScopes of an enabled plugin declares, ` +
         `so no key can be created with ${scopes.length === 1 ? 'it' : 'them'} (INVALID_SCOPES) and only a wildcard key passes: ${listOf(undeclared)}. Fix: ${UNDECLARED_SCOPE_FIX}.`,
+    })
+  }
+  if (pluginScopes.length > 0) {
+    const shown = pluginScopes.slice(0, 10).map(problem => `${problem.file}: ${problem.message}`)
+    notices.push({
+      code: API_KEY_PLUGIN_SCOPES_WARNING,
+      target: pluginScopes[0].file,
+      findings: pluginScopes,
+      message: `${pluginScopes.length} problem${pluginScopes.length === 1 ? '' : 's'} in the apiScopes of ${[...new Set(pluginScopes.map(problem => problem.plugin))].join(', ')} (${shown.join('; ')}${pluginScopes.length > 10 ? `; +${pluginScopes.length - 10} more` : ''}). Fix: ${PLUGIN_SCOPES_FIX}.`,
     })
   }
   return notices
@@ -345,13 +358,14 @@ export async function findApiKeyScopeProblemsInProject(projectRoot) {
   const { resolveHostMode } = await import('../build/registry/host/mode.mjs')
   const config = projectHostConfig({ projectRoot })
   const { mode, reason } = resolveHostMode({ coreRoot: config.coreRoot, projectRoot })
-  if (mode !== 'host') return { checked: false, reason: `${reason}; run nextspark migrate or upgrade @nextsparkjs/core first`, withoutScope: [], undeclared: [] }
+  if (mode !== 'host') return { checked: false, reason: `${reason}; run nextspark migrate or upgrade @nextsparkjs/core first`, withoutScope: [], undeclared: [], pluginScopes: [] }
   const predicted = await predictHost(config)
-  const notices = predicted.notices.filter(notice => notice.code === API_KEY_NO_SCOPE_WARNING || notice.code === API_KEY_UNDECLARED_SCOPE_WARNING)
+  const notices = predicted.notices.filter(notice => [API_KEY_NO_SCOPE_WARNING, API_KEY_UNDECLARED_SCOPE_WARNING, API_KEY_PLUGIN_SCOPES_WARNING].includes(notice.code))
   const withoutScope = notices.find(notice => notice.code === API_KEY_NO_SCOPE_WARNING)?.findings ?? []
   const undeclared = notices.find(notice => notice.code === API_KEY_UNDECLARED_SCOPE_WARNING)?.findings ?? []
+  const pluginScopes = notices.find(notice => notice.code === API_KEY_PLUGIN_SCOPES_WARNING)?.findings ?? []
   if (notices.length === 0 && predicted.checks.plan !== 'passed') {
-    return { checked: false, reason: `the host plan has errors (${predicted.diagnostics[0]?.code ?? 'see nextspark prepare'}); fix them first`, withoutScope, undeclared }
+    return { checked: false, reason: `the host plan has errors (${predicted.diagnostics[0]?.code ?? 'see nextspark prepare'}); fix them first`, withoutScope, undeclared, pluginScopes }
   }
-  return { checked: true, withoutScope, undeclared }
+  return { checked: true, withoutScope, undeclared, pluginScopes }
 }

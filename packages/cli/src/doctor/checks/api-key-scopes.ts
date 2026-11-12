@@ -25,19 +25,23 @@ export async function checkApiKeyScopes(): Promise<HealthCheckResult> {
   if (!result) return { name, status: 'pass', message: 'Not checked: this @nextsparkjs/core has no check for it' }
   if (!result.checked) return { name, status: 'pass', message: `Not checked: ${result.reason}` }
   const { withoutScope, undeclared, describe, fixes } = result
-  if (withoutScope.length === 0 && undeclared.length === 0) return { name, status: 'pass', message: 'Every route that authenticates API keys declares a scope that exists' }
+  const pluginScopes = result.pluginScopes ?? []
+  if (withoutScope.length === 0 && undeclared.length === 0 && pluginScopes.length === 0) return { name, status: 'pass', message: 'Every route that authenticates API keys declares a scope that exists' }
   // The routes that refuse every key come first: they are the ones that fail today
   const first = withoutScope.length > 0
-  const code = first ? 'NS_API_KEY_ROUTE_WITHOUT_SCOPE' : 'NS_API_KEY_SCOPE_NOT_DECLARED'
+  const code = first ? 'NS_API_KEY_ROUTE_WITHOUT_SCOPE' : undeclared.length > 0 ? 'NS_API_KEY_SCOPE_NOT_DECLARED' : 'NS_PLUGIN_API_SCOPES_INVALID'
   const parts = [
     withoutScope.length > 0 ? `${withoutScope.length} call${withoutScope.length === 1 ? '' : 's'} declare${withoutScope.length === 1 ? 's' : ''} neither requiredScope nor allowAnyScope, so every API key is refused there with 403 SCOPE_NOT_DECLARED (${shown(withoutScope, describe)})` : null,
-    undeclared.length > 0 ? `${undeclared.length} call${undeclared.length === 1 ? '' : 's'} require${undeclared.length === 1 ? 's' : ''} a scope that core and api.scopes do not declare (${shown(undeclared, describe)})` : null,
+    undeclared.length > 0 ? `${undeclared.length} call${undeclared.length === 1 ? '' : 's'} require${undeclared.length === 1 ? 's' : ''} a scope that neither core, api.scopes nor an enabled plugin's apiScopes declare (${shown(undeclared, describe)})` : null,
+    pluginScopes.length > 0 ? `${pluginScopes.length} problem${pluginScopes.length === 1 ? '' : 's'} in the apiScopes of ${[...new Set(pluginScopes.map(problem => problem.plugin))].join(', ')} (${pluginScopes.slice(0, 3).map(problem => `${problem.file}: ${problem.message}`).join('; ')}${pluginScopes.length > 3 ? `; +${pluginScopes.length - 3} more` : ''})` : null,
   ].filter(Boolean)
   return {
     name,
     status: 'warn',
     code,
     message: `${code}: ${parts.join('; ')}`,
-    fix: first ? `${fixes.withoutScope.replace(/^pass/, 'Pass')}${undeclared.length > 0 ? `; then ${fixes.undeclared}` : ''}` : fixes.undeclared.replace(/^declare/, 'Declare'),
+    fix: first
+      ? `${fixes.withoutScope.replace(/^pass/, 'Pass')}${undeclared.length > 0 ? `; then ${fixes.undeclared}` : ''}`
+      : undeclared.length > 0 ? fixes.undeclared.replace(/^declare/, 'Declare') : (fixes.pluginScopes ?? '').replace(/^write/, 'Write'),
   }
 }
