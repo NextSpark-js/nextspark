@@ -135,22 +135,20 @@ UPDATE "social_audit_logs" SET "teamId" = '<team id>' WHERE id = '<row id>';
 
 **Example:**
 ```typescript
-await query(`
-  INSERT INTO "social_audit_logs" (
-    "userId", "accountId", action, details, "ipAddress", "userAgent"
-  ) VALUES ($1, $2, $3, $4, $5, $6)
-`, [
+// lib/audit-log.ts: the team is resolved before the action, the IP address and user agent come from the request
+const teamId = await auditTeamId(request, authResult, accessResult.teamId)
+if (teamId instanceof NextResponse) return teamId
+await recordAuditLog(request, {
   userId,
+  teamId,
   accountId,
-  'account_connected',
-  JSON.stringify({
+  action: 'account_connected',
+  details: {
     platform: 'instagram_business',
     accountName: '@brandname',
     clientId: clientId
-  }),
-  getRecordedClientIp(request.headers),
-  request.headers.get('user-agent')
-])
+  }
+})
 ```
 
 #### `account_disconnected`
@@ -190,15 +188,12 @@ await query(`
 
 **Example:**
 ```typescript
-await query(`
-  INSERT INTO "social_audit_logs" (
-    "userId", "accountId", action, details, "ipAddress", "userAgent"
-  ) VALUES ($1, $2::uuid, $3, $4, $5, $6)
-`, [
+await recordAuditLog(request, {
   userId,
+  teamId, // resolved with auditTeamId before publishing
   accountId,
-  'post_published',
-  JSON.stringify({
+  action: 'post_published',
+  details: {
     platform: 'instagram_business',
     accountName: account.platformAccountName,
     postId: result.postId,
@@ -207,10 +202,8 @@ await query(`
     caption: caption || '',
     publishedAt: new Date().toISOString(),
     success: true
-  }),
-  getRecordedClientIp(request.headers),
-  request.headers.get('user-agent')
-])
+  }
+})
 ```
 
 #### `post_failed`
@@ -254,23 +247,22 @@ await query(`
 
 **Example:**
 ```typescript
-await query(`
-  INSERT INTO "social_audit_logs" (
-    "userId", "accountId", action, details
-  ) VALUES ($1, $2, $3, $4)
-`, [
-  'system',  // Automated action
+// An automated refresh is recorded for the account's owner, in a team of theirs ("userId" references users and
+// row-level security checks the team)
+await recordAuditLog(request, {
+  userId: account.userId,
+  teamId,
   accountId,
-  'token_refreshed',
-  JSON.stringify({
+  action: 'token_refreshed',
+  details: {
     platform: account.platform,
     accountName: account.platformAccountName,
     oldTokenExpiresAt: oldExpiresAt,
     newTokenExpiresAt: newExpiresAt,
     minutesBeforeExpiry: minutesLeft,
     refreshMethod: 'automatic'
-  })
-])
+  }
+})
 ```
 
 #### `token_refresh_failed`

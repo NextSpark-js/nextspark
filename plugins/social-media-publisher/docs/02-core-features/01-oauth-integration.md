@@ -285,11 +285,12 @@ error_description: Human-readable error
 
 6. **Create Audit Log:**
    ```typescript
-   await query(`
-     INSERT INTO "social_audit_logs" (
-       "userId", "accountId", action, details
-     ) VALUES ($1, $2, 'account_connected', $3)
-   `, [userId, accountId, { platform, accountName }])
+   // teamId: the adapter's team for the entity when the user is in it, else the request's team
+   const teamId = await auditTeamId(request, authResult, accessResult.teamId)
+   if (teamId instanceof NextResponse) return teamId
+   await recordAuditLog(request, {
+     userId, teamId, accountId, action: 'account_connected', details: { platform, accountName }
+   })
    ```
 
 7. **Return Success HTML:**

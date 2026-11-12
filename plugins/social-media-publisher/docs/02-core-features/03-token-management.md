@@ -160,10 +160,13 @@ if (minutesUntilExpiry < 10) {
   `, [newEncryptedToken, newExpiresAt, accountId])
   
   // Create audit log
-  await query(`
-    INSERT INTO "social_audit_logs" ("userId", "accountId", action, details)
-    VALUES ($1, $2, 'token_refreshed', $3)
-  `, [userId, accountId, { oldExpiry: expiresAt, newExpiry: newExpiresAt }])
+  await recordAuditLog(request, {
+    userId,
+    teamId, // a team of the user (see auditTeamId in lib/audit-log.ts)
+    accountId,
+    action: 'token_refreshed',
+    details: { oldExpiry: expiresAt, newExpiry: newExpiresAt }
+  })
   
   console.log('✅ Token refreshed successfully')
 }
@@ -393,11 +396,10 @@ const REFRESH_THRESHOLD_MINUTES = 1
 
 2. **Create Audit Log:**
    ```typescript
-   await query(`
-     INSERT INTO "social_audit_logs" 
-     ("userId", "accountId", action, details)
-     VALUES ($1, $2, 'token_refresh_failed', $3)
-   `, [userId, accountId, { error: refreshError }])
+   // The table's CHECK accepts token_refreshed, not token_refresh_failed: record the failure in details
+   await recordAuditLog(request, {
+     userId, teamId, accountId, action: 'token_refreshed', details: { success: false, error: refreshError }
+   })
    ```
 
 3. **Optional: Deactivate Account:**
