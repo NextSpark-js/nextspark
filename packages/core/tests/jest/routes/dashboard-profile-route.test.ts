@@ -17,4 +17,16 @@ describe('/dashboard/profile route', () => {
       expect(response.headers.get('location')).toBe(location)
     }
   })
+
+  test('under a basePath the Location carries it', () => {
+    const previous = process.env.__NEXT_ROUTER_BASEPATH
+    process.env.__NEXT_ROUTER_BASEPATH = '/base'
+    try {
+      const response = GET(new Request('https://app.test/base/dashboard/profile?x=1'))
+      expect(response.headers.get('location')).toBe('/base/dashboard/settings/profile?x=1')
+    } finally {
+      if (previous === undefined) delete process.env.__NEXT_ROUTER_BASEPATH
+      else process.env.__NEXT_ROUTER_BASEPATH = previous
+    }
+  })
 })

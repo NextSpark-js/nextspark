@@ -458,7 +458,9 @@ export function planHost({ coreRoutes: manifestRoutes, entityRoutes = [], entity
     const route = routes[index]
     if (route.layer !== 'core' || !route.yieldsToUrl) continue
     const url = servedUrlSegments(route.target).join('/')
-    if (routes.some(other => other.layer !== 'core' && (other.kind === 'page' || other.kind === 'route') && !other.mode && servedUrlSegments(other.target).join('/') === url)) routes.splice(index, 1)
+    // A parallel-route slot or an intercepting route renders beside or over the page, never instead of it: a hard load of the URL would be a 404
+    const replaces = other => !posix.dirname(other.target).split('/').some(part => part.startsWith('@') || /^\(\.{1,3}\)/.test(part))
+    if (routes.some(other => other.layer !== 'core' && (other.kind === 'page' || other.kind === 'route') && !other.mode && replaces(other) && servedUrlSegments(other.target).join('/') === url)) routes.splice(index, 1)
   }
 
   // Next.js refuses a page and a Route Handler for the same path.

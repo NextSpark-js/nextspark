@@ -374,6 +374,12 @@ test('a core route that yieldsToUrl is planned alone, and gives way to a project
   assert.deepEqual(targets({ 'templates/dashboard/profile/page.tsx': PAGE }), [['dashboard/layout.tsx', 'dashboard/profile/page.tsx'], []])
   assert.deepEqual(targets({ 'templates/dashboard/profile/route.ts': ROUTE }), [['dashboard/layout.tsx', 'dashboard/profile/route.ts'], []])
   assert.deepEqual(targets({ 'templates/dashboard/profiles/page.tsx': PAGE }), [['dashboard/layout.tsx', 'dashboard/profile/route.ts', 'dashboard/profiles/page.tsx'], []])
+  // A slot or an intercepting route is not the page of the URL: core's route stays
+  const kept = ['dashboard/layout.tsx', 'dashboard/profile/route.ts']
+  for (const path of ['templates/dashboard/@panel/profile/page.tsx', 'templates/dashboard/@modal/(.)profile/page.tsx']) {
+    const [planned] = targets({ [path]: PAGE })
+    assert.ok(kept.every(target => planned.includes(target)), path)
+  }
   // A core route without the flag still collides with a page in another group
   const { root, cleanup } = project({ 'templates/dashboard/(staff)/profile/page.tsx': PAGE })
   try {
