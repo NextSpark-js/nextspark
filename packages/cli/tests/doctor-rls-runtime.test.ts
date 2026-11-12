@@ -9,7 +9,7 @@ import { checkRlsRuntime } from '../src/doctor/checks/rls-runtime.js'
 const URL_ENV = 'DATABASE_URL=postgresql://u@127.0.0.1:5432/db\n'
 const SERVICE_ENV = 'DATABASE_SERVICE_URL=postgresql://o@127.0.0.1:5432/db\n'
 
-async function doctor(code: number | null, env = URL_ENV + SERVICE_ENV) {
+async function doctor(code: number | null, env = URL_ENV + SERVICE_ENV, exportedService?: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-doctor-rls-'))
   const core = path.join(dir, 'core')
   if (code !== null) {
@@ -23,12 +23,14 @@ async function doctor(code: number | null, env = URL_ENV + SERVICE_ENV) {
   const previousService = process.env.DATABASE_SERVICE_URL
   delete process.env.DATABASE_URL
   delete process.env.DATABASE_SERVICE_URL
+  if (exportedService !== undefined) process.env.DATABASE_SERVICE_URL = exportedService
   process.chdir(dir)
   try {
     return await checkRlsRuntime(core)
   } finally {
     process.chdir(previous)
     if (previousUrl !== undefined) process.env.DATABASE_URL = previousUrl
+    delete process.env.DATABASE_SERVICE_URL
     if (previousService !== undefined) process.env.DATABASE_SERVICE_URL = previousService
     fs.rmSync(dir, { recursive: true, force: true })
   }
@@ -55,6 +57,8 @@ test('doctor warns when the runtime role applies RLS and DATABASE_SERVICE_URL is
   assert.equal(missing.status, 'warn')
   assert.match(missing.message, /DATABASE_SERVICE_URL is not set/)
   assert.match(missing.fix ?? '', /03-rls-policies\.md/)
+  // an exported DATABASE_SERVICE_URL counts, with none in the .env files
+  assert.equal((await doctor(0, URL_ENV, 'postgresql://o@127.0.0.1:5432/db')).status, 'pass')
   // both variables set: no warning
   assert.equal((await doctor(0)).status, 'pass')
   // the owner role (RLS skipped) needs no service URL: the existing warning stays, without the new one

@@ -1058,7 +1058,9 @@ rely on it (for example, which related records a user can see) let everything th
 
 **Checking which role you have.** `nextspark doctor` runs the "Row-level security"
 check against `DATABASE_URL`: it prints the role, `superuser`, `bypassrls` and how many
-tables with RLS the role owns, and warns when RLS is not applied. The same query runs
+tables with RLS the role owns, and warns when RLS is not applied. It also warns when RLS
+applies and `DATABASE_SERVICE_URL` is not set (in the environment, `.env.local` or `.env`):
+sign-in fails with 401 `User not found`. The same query runs
 once when a production server starts (not in development, not during `next build`) and
 logs one `[rls]` warning if the role skips RLS, nothing otherwise. The warning does not
 stop or delay the start, and it is silent when the database is unreachable or the role
