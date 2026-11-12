@@ -304,7 +304,7 @@ CREATE POLICY "clients_social_platforms_select_own"
   USING (
     "parentId" IN (
       SELECT id FROM "clients"
-      WHERE "userId" = current_setting('app.current_user_id', true)
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 
@@ -314,7 +314,7 @@ CREATE POLICY "clients_social_platforms_insert_own"
   WITH CHECK (
     "parentId" IN (
       SELECT id FROM "clients"
-      WHERE "userId" = current_setting('app.current_user_id', true)
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 

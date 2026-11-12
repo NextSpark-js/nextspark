@@ -146,3 +146,44 @@ test('social-media-publisher 004 adds teamId and updatedAt, backfills teamId, an
   assert.deepEqual(await objects(owner, 'social_audit_logs'), after)
   assert.deepEqual(await seen('ua'), ['a'])
 })
+
+test('social-media-publisher 005: on the cutover a user reads and changes their own social accounts only; it runs twice (#456)', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 240000 }, async t => {
+  const { owner, app } = await cutoverDatabase(t)
+  await owner.query(`
+    INSERT INTO users (id, email, name, role, "emailVerified") VALUES
+      ('ua', 'a@example.test', 'A', 'member', true),
+      ('ub', 'b@example.test', 'B', 'member', true),
+      ('super', 's@example.test', 'S', 'superadmin', true);
+  `)
+  for (const prefix of ['001_', '002_', '003_', '004_', '005_']) await owner.query(migration(prefix))
+  await owner.query(`
+    INSERT INTO social_accounts ("userId", platform, "platformAccountId", username, "accessToken", "tokenExpiresAt") VALUES
+      ('ua', 'facebook_page', 'page-a', 'Page A', 'x', now() + interval '1 day'),
+      ('ub', 'facebook_page', 'page-b', 'Page B', 'x', now() + interval '1 day');
+  `)
+  const as = asUser(app)
+  const insert = (userId: string, handle: string) => as('ua',
+    `INSERT INTO social_accounts ("userId", platform, "platformAccountId", username, "accessToken", "tokenExpiresAt") VALUES ($1, 'twitter', $2, $2, 'x', now())`,
+    [userId, handle])
+  const check = async () => {
+    const seen = async (who: string) => (await as(who, `SELECT username FROM social_accounts ORDER BY 1`)).rows.map(r => r.username)
+    assert.deepEqual(await seen('ua'), ['Page A'])
+    assert.deepEqual(await seen('ub'), ['Page B'])
+    assert.deepEqual(await seen('super'), ['Page A', 'Page B'])
+    assert.deepEqual(await seen('nobody'), [])
+    // changes: their own account only
+    assert.equal((await as('ua', `UPDATE social_accounts SET "isActive" = "isActive" WHERE username = 'Page A'`)).rowCount, 1)
+    assert.equal((await as('ua', `UPDATE social_accounts SET "isActive" = false WHERE username = 'Page B'`)).rowCount, 0)
+    // no WHERE, so only the UPDATE policy's WITH CHECK (not the SELECT policy) judges the new row: A's rows only
+    await assert.rejects(as('ua', `UPDATE social_accounts SET "userId" = 'ub'`), /row-level security/)
+    assert.equal((await as('ua', `DELETE FROM social_accounts WHERE username = 'Page B'`)).rowCount, 0)
+    await assert.rejects(insert('ub', 'tw-b'), /row-level security/)
+    assert.equal((await insert('ua', 'tw-a')).rowCount, 1)
+    assert.equal((await as('ua', `DELETE FROM social_accounts WHERE username = 'tw-a'`)).rowCount, 1)
+    assert.equal((await owner.query(`SELECT count(*)::int AS n FROM social_accounts WHERE "isActive"`)).rows[0].n, 2)
+  }
+  await check()
+  // twice: nothing changes
+  await owner.query(migration('005_'))
+  await check()
+})

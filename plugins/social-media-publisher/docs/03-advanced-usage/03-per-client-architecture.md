@@ -114,22 +114,22 @@ ALTER TABLE "clients" ENABLE ROW LEVEL SECURITY;
 -- Users can only see their own clients
 CREATE POLICY "clients_select_own"
   ON "clients" FOR SELECT
-  USING ("userId" = current_setting('app.current_user_id', true));
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can only insert clients for themselves
 CREATE POLICY "clients_insert_own"
   ON "clients" FOR INSERT
-  WITH CHECK ("userId" = current_setting('app.current_user_id', true));
+  WITH CHECK ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can only update their own clients
 CREATE POLICY "clients_update_own"
   ON "clients" FOR UPDATE
-  USING ("userId" = current_setting('app.current_user_id', true));
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 
 -- Users can only delete their own clients
 CREATE POLICY "clients_delete_own"
   ON "clients" FOR DELETE
-  USING ("userId" = current_setting('app.current_user_id', true));
+  USING ("userId" = (SELECT public.get_auth_user_id()));
 ```
 
 **clients_social_platforms Table Policies:**
@@ -143,7 +143,7 @@ CREATE POLICY "social_platforms_select_own"
   USING (
     "parentId" IN (
       SELECT id FROM "clients"
-      WHERE "userId" = current_setting('app.current_user_id', true)
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 
@@ -153,7 +153,7 @@ CREATE POLICY "social_platforms_insert_own"
   WITH CHECK (
     "parentId" IN (
       SELECT id FROM "clients"
-      WHERE "userId" = current_setting('app.current_user_id', true)
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 
@@ -163,7 +163,7 @@ CREATE POLICY "social_platforms_update_own"
   USING (
     "parentId" IN (
       SELECT id FROM "clients"
-      WHERE "userId" = current_setting('app.current_user_id', true)
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 
@@ -173,7 +173,7 @@ CREATE POLICY "social_platforms_delete_own"
   USING (
     "parentId" IN (
       SELECT id FROM "clients"
-      WHERE "userId" = current_setting('app.current_user_id', true)
+      WHERE "userId" = (SELECT public.get_auth_user_id())
     )
   );
 ```
@@ -182,21 +182,11 @@ CREATE POLICY "social_platforms_delete_own"
 
 **Setting User Context:**
 ```typescript
-import { query } from '@/core/lib/db'
+// Core's helpers run the query in a transaction with the user's id in app.user_id, the setting
+// public.get_auth_user_id() reads in the policies above
+import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
 
-async function queryWithRLS<T>(
-  sql: string,
-  params: any[],
-  userId: string
-): Promise<T> {
-  // Set user context for RLS
-  await query(`SET LOCAL app.current_user_id = $1`, [userId])
-  
-  // Execute query (RLS automatically enforced)
-  const result = await query(sql, params)
-  
-  return result.rows as T
-}
+const clients = await queryWithRLS(`SELECT * FROM "clients"`, [], userId)
 ```
 
 **Example Usage:**
@@ -511,8 +501,8 @@ ALTER TABLE "clients_social_platforms" DROP COLUMN "userId";
 
 **1. Always Use RLS:**
 ```typescript
-// Set user context for all queries
-await query(`SET LOCAL app.current_user_id = $1`, [userId])
+// Run every query with the user's context (core sets app.user_id)
+await queryWithRLS(sql, params, userId)
 ```
 
 **2. Validate Client Ownership:**
@@ -563,9 +553,8 @@ WHERE csp.id = $1 AND c."userId" = $2
 // ❌ Bad: Raw query without user context
 await query(`SELECT * FROM "clients_social_platforms"`)
 
-// ✅ Good: Set user context first
-await query(`SET LOCAL app.current_user_id = $1`, [userId])
-await query(`SELECT * FROM "clients_social_platforms"`)
+// ✅ Good: with the user's context
+await queryWithRLS(`SELECT * FROM "clients_social_platforms"`, [], userId)
 ```
 
 ## Next Steps

@@ -548,7 +548,7 @@ const token = await decrypt(account.accessToken)  // Might fail
 CREATE POLICY "rls_social_platforms"
 ON "clients_social_platforms"
 USING ("parentId" IN (
-  SELECT id FROM "clients" WHERE "userId" = current_user_id()
+  SELECT id FROM "clients" WHERE "userId" = (SELECT public.get_auth_user_id())
 ));
 ```
 

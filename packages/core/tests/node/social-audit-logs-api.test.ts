@@ -124,13 +124,16 @@ test('audit-logs: the generic API lists and reads a team its own rows only, read
   for (const write of [create, update, remove]) assert.equal(write.status, 405, JSON.stringify(write))
   assert.equal((await owner.query(`SELECT count(*)::int AS n FROM social_audit_logs`)).rows[0].n, 3)
 
-  // 2. The plugin's disconnect route records the action in the request's team. It runs on the owner role: the
-  //    plugin's social_accounts policies (001) read a setting the app never sets, so on the cutover the route does
-  //    not find the account.
-  const [disconnect] = runSteps(ownerUrl, ownerUrl, [
+  // 2. The plugin's disconnect route, on the cutover: another user does not find A's account (#456); A disconnects it
+  //    and the action is recorded in the request's team
+  const keyBWrite = await apiKey(owner, 'ub', ['social:write'])
+  const [otherUser, disconnect] = runSteps(appUrl, ownerUrl, [
+    { method: 'POST', path: '/api/plugins/social-media-publisher/social/disconnect', key: keyBWrite, team: 'team-b', body: { accountId: account.id } },
     { method: 'POST', path: '/api/plugins/social-media-publisher/social/disconnect', ...a, body: { accountId: account.id } },
   ])
+  assert.equal(otherUser.status, 404, JSON.stringify(otherUser))
   assert.equal(disconnect.status, 200, JSON.stringify(disconnect))
+  assert.equal((await owner.query(`SELECT "isActive" FROM social_accounts WHERE id = $1`, [account.id])).rows[0].isActive, false)
   const { rows: written } = await owner.query(`SELECT "userId", "teamId", "accountId", action, "userAgent" FROM social_audit_logs WHERE action = 'account_disconnected'`)
   assert.deepEqual(written, [{ userId: 'ua', teamId: 'team-a', accountId: account.id, action: 'account_disconnected', userAgent: 'audit-logs-test' }])
   const [listAfter, listBAfter] = runSteps(appUrl, ownerUrl, [
