@@ -169,12 +169,12 @@ describe('proxy path boundaries and redirect targets', () => {
     mockedAppConfig.mockReturnValue(undefined)
   })
 
-  // #433: the profile lives under settings
-  test.each(['/dashboard/profile', '/dashboard/profile/', '/dashboard/profile?tab=x'])('%s redirects to /dashboard/settings/profile', async (path) => {
+  // #433, #452: the proxy does not redirect /dashboard/profile (it cannot see a project's page there); core's route does
+  test.each(['/dashboard/profile', '/dashboard/profile/', '/dashboard/profile?tab=x'])('%s is not redirected by the proxy', async (path) => {
+    mockedGetSession.mockResolvedValue(null)
     const response = (await proxy(makeRequest(path))) as unknown as PassThrough
-    expect(response.type).toBe('redirect')
-    expect(new URL(response.redirectUrl!).pathname).toBe('/dashboard/settings/profile')
-    expect(new URL(response.redirectUrl!).search).toBe(path.includes('?') ? '?tab=x' : '')
+    expect(response.redirectUrl).toContain('/login')
+    expect(response.redirectUrl).not.toContain('/dashboard/settings/profile')
   })
 
   test('a longer path under it is not redirected', async () => {

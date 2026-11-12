@@ -452,6 +452,15 @@ export function planHost({ coreRoutes: manifestRoutes, entityRoutes = [], entity
     routes.push(chosen)
   }
 
+  // A core page or Route Handler that `yieldsToUrl` gives way to any project or plugin page or Route Handler at its URL,
+  // whatever the route group: the same file replaces it above, but a page in another group would be a second route for the URL (#452).
+  for (let index = routes.length - 1; index >= 0; index--) {
+    const route = routes[index]
+    if (route.layer !== 'core' || !route.yieldsToUrl) continue
+    const url = servedUrlSegments(route.target).join('/')
+    if (routes.some(other => other.layer !== 'core' && (other.kind === 'page' || other.kind === 'route') && !other.mode && servedUrlSegments(other.target).join('/') === url)) routes.splice(index, 1)
+  }
+
   // Next.js refuses a page and a Route Handler for the same path.
   const byDirectory = new Map()
   for (const route of routes) {

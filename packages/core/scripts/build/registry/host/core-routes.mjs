@@ -6,7 +6,8 @@
  * `src/routes/manifest.json` in a source checkout): an array of
  * `{ kind, target, specifier }` - the facade emitter's route kind, the path under `src/app`, and
  * the core subpath that implements it. A layout may also carry `compose: { wrapper, specifier }`:
- * a project layout that overrides it is composed with that wrapper (see plan.mjs, render.mjs). The layout of
+ * a project layout that overrides it is composed with that wrapper (see plan.mjs, render.mjs). A page or Route Handler
+ * with `yieldsToUrl: true` is left out when a project or plugin route serves its URL from another route group (plan.mjs). The layout of
  * a role-gated area may carry `access: { wrapper, metadata?, handler?, specifier }`: every other page and layout
  * under its URL is composed with `wrapper` (its `generateMetadata` with `metadata`), and every Route Handler's
  * methods with `handler`, whoever provides them (plan.mjs).
@@ -184,6 +185,7 @@ function validateEntries(entries) {
     }
     if (typeof entry.specifier !== 'string' || entry.specifier === '') problems.push(`${at}: specifier must be a non-empty string`)
     if ('protected' in entry && typeof entry.protected !== 'boolean') problems.push(`${at}: protected must be a boolean`)
+    if ('yieldsToUrl' in entry && typeof entry.yieldsToUrl !== 'boolean') problems.push(`${at}: yieldsToUrl must be a boolean`)
     for (const key of ['compose', 'access']) {
       if (!(key in entry)) continue
       const wrapping = entry[key]
@@ -297,6 +299,7 @@ export async function loadCoreRouteManifest({ coreRoot, entries, manifestPath, r
       ...(entry.protected === true || protectedTarget(entry.target)
         ? { protectionLevel: entry.protected === true ? 'protected_all' : protectedTarget.level?.(entry.target) ?? 'protected_all' }
         : {}),
+      ...(entry.yieldsToUrl === true ? { yieldsToUrl: true } : {}),
       ...(entry.compose ? { compose: { ...entry.compose, file: composeFile } } : {}),
       ...(entry.access ? { access: { ...entry.access, file: accessFile } } : {}),
     })

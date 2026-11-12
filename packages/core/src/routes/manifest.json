@@ -548,6 +548,12 @@
     "specifier": "@nextsparkjs/core/routes/dashboard/permission-denied/page"
   },
   {
+    "kind": "route",
+    "target": "dashboard/profile/route.ts",
+    "specifier": "@nextsparkjs/core/routes/dashboard/profile/route",
+    "yieldsToUrl": true
+  },
+  {
     "kind": "loading",
     "target": "dashboard/settings/api-keys/loading.tsx",
     "specifier": "@nextsparkjs/core/routes/dashboard/settings/api-keys/loading"

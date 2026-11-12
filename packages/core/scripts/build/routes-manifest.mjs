@@ -98,6 +98,12 @@ export const ACCESS_ROUTES = Object.freeze({
   'devtools/layout.tsx': { wrapper: 'withDevtoolsAccess', metadata: 'withDevtoolsMetadata', handler: 'withDevtoolsRouteAccess', specifier: `${ROUTES_SUBPATH}/_internal/area-access` },
 })
 
+/**
+ * Pages and Route Handlers that give way to a project's or plugin's route at the same URL in any route group
+ * (`yieldsToUrl`, see registry/host/plan.mjs): the generated host leaves them out instead of reporting two routes for one URL (#452).
+ */
+export const YIELDING_ROUTES = new Set(['dashboard/profile/route.ts'])
+
 /** The composition of a variant, when it differs from its base route's. */
 export const VARIANT_COMPOSE = Object.freeze({
   'layout.ppr.tsx': { wrapper: 'withRootLayout', specifier: `${ROUTES_SUBPATH}/_internal/root-layout.ppr` },
@@ -168,7 +174,7 @@ export function buildRoutesManifest(routesDir = ROUTES_DIR) {
     seenTargets.set(routeKey, file)
     const compose = COMPOSED_ROUTES[file]
     const access = ACCESS_ROUTES[file]
-    manifest.push({ kind, target: file, specifier: specifierForRouteFile(file), ...(compose ? { compose } : {}), ...(access ? { access } : {}) })
+    manifest.push({ kind, target: file, specifier: specifierForRouteFile(file), ...(YIELDING_ROUTES.has(file) ? { yieldsToUrl: true } : {}), ...(compose ? { compose } : {}), ...(access ? { access } : {}) })
   }
   manifest.sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0))
 

@@ -632,14 +632,6 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
     return finishCoreResponse(NextResponse.redirect(newUrl, 301))
   }
 
-  // The profile lives under settings: /dashboard/profile, which a guessed or hand-written link points at, answered 404
-  // (#433). The sign-in check applies at the destination.
-  if (pathname === '/dashboard/profile' || pathname === '/dashboard/profile/') {
-    const profileUrl = appUrl(request, '/dashboard/settings/profile')
-    profileUrl.search = target.search
-    return finishCoreResponse(NextResponse.redirect(profileUrl, 301))
-  }
-
   // Documentation access control: docs.publicAccess, or the older
   // docs.public boolean it replaced (see lib/docs/access)
   if (isUnder(pathname, '/docs')) {

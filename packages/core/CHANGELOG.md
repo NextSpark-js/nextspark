@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A project page at `/dashboard/profile` is served again, and the redirect from that path to `/dashboard/settings/profile` is temporary.** `0.1.0-beta.202` redirected `/dashboard/profile` in core's proxy, before the request reached the app, with a 301: a project with its own page there (in any route group) lost it on upgrade, and browsers kept the redirect. The redirect is now a core Route Handler (`dashboard/profile/route`, a 307 that keeps the query string) that `nextspark prepare` leaves out when the project or a plugin serves that URL, so a project page renders and nothing else changes for the others; the sign-in check of `/dashboard` runs before it, as before. **Upgrading:** a project with a page at `/dashboard/profile` gets it back when it updates core and runs `nextspark prepare` (or `build`). A browser that visited `/dashboard/profile` on `0.1.0-beta.202` may have cached the 301 and keeps going to `/dashboard/settings/profile` until its cache is cleared (or the entry is removed for that URL); a new visitor is not affected. (#452)
+
 - `nextspark doctor` warns when `DATABASE_URL` connects as a role that RLS applies to (such as `nextspark_app`) and `DATABASE_SERVICE_URL` is not set in the environment, `.env.local` or `.env`: without it sign-in fails with 401 `User not found`. (#440)
 
 ## [0.1.0-beta.202] - 2026-11-11

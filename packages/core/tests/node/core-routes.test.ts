@@ -69,7 +69,7 @@ test('entries have the shape of the conformance fixture: kind, target, specifier
   const shape = Object.keys(FIXTURE_ROUTES[0]).sort()
   assert.deepEqual(shape, ['kind', 'specifier', 'target'])
   for (const entry of [...manifest, ...Object.values(variants).flat()]) {
-    assert.deepEqual(Object.keys(entry).filter(key => key !== 'compose' && key !== 'access').sort(), shape, JSON.stringify(entry))
+    assert.deepEqual(Object.keys(entry).filter(key => key !== 'compose' && key !== 'access' && key !== 'yieldsToUrl').sort(), shape, JSON.stringify(entry))
     assert.ok(ROUTE_KINDS.includes(entry.kind), `${entry.target}: unknown kind ${entry.kind}`)
     assert.match(entry.specifier, /^@nextsparkjs\/core\/routes\//)
     sourceOf(entry.specifier)

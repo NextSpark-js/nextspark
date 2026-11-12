@@ -356,6 +356,41 @@ test('core\'s routes carry their protection level, so a composed layout can be t
   for (const target of ['layout.tsx', 'dashboard/layout.tsx']) assert.equal(ccLevel(target).protectionLevel, level(target).protectionLevel, target)
 })
 
+test('a core route that yieldsToUrl is planned alone, and gives way to a project page at its URL in any route group (#452)', () => {
+  const profile = core('dashboard/profile/route.ts', 'route', { yieldsToUrl: true })
+  const layout = core('dashboard/layout.tsx', 'layout')
+  const targets = files => {
+    const { root, cleanup } = project(files)
+    try {
+      const { routes, diagnostics } = planHost({ coreRoutes: [layout, profile], project: { root } })
+      return [routes.map(route => route.target), diagnostics]
+    } finally {
+      cleanup()
+    }
+  }
+  assert.deepEqual(targets({}), [['dashboard/layout.tsx', 'dashboard/profile/route.ts'], []])
+  // Another route group, the same directory, a Route Handler, and a page elsewhere
+  assert.deepEqual(targets({ 'templates/dashboard/(staff)/profile/page.tsx': PAGE }), [['dashboard/(staff)/profile/page.tsx', 'dashboard/layout.tsx'], []])
+  assert.deepEqual(targets({ 'templates/dashboard/profile/page.tsx': PAGE }), [['dashboard/layout.tsx', 'dashboard/profile/page.tsx'], []])
+  assert.deepEqual(targets({ 'templates/dashboard/profile/route.ts': ROUTE }), [['dashboard/layout.tsx', 'dashboard/profile/route.ts'], []])
+  assert.deepEqual(targets({ 'templates/dashboard/profiles/page.tsx': PAGE }), [['dashboard/layout.tsx', 'dashboard/profile/route.ts', 'dashboard/profiles/page.tsx'], []])
+  // A core route without the flag still collides with a page in another group
+  const { root, cleanup } = project({ 'templates/dashboard/(staff)/profile/page.tsx': PAGE })
+  try {
+    const { diagnostics } = planHost({ coreRoutes: [layout, core('dashboard/profile/route.ts', 'route')], project: { root } })
+    assert.ok(diagnostics.some(diagnostic => diagnostic.code === PLAN_DIAGNOSTICS.PAGE_ROUTE_CONFLICT || diagnostic.code === PLAN_DIAGNOSTICS.URL_CONFLICT))
+  } finally {
+    cleanup()
+  }
+})
+
+test('the core manifest ships dashboard/profile as a route that yields to a project page (#452)', async () => {
+  const manifest = await loadCoreRouteManifest({ coreRoot: new URL('../../../../..', import.meta.url).pathname })
+  const profile = manifest.routes.find(route => route.target === 'dashboard/profile/route.ts')
+  assert.equal(profile?.kind, 'route')
+  assert.equal(profile?.yieldsToUrl, true)
+})
+
 test('planHost without a project (or a project without a root) plans core and the plugins only, without throwing', () => {
   const routes = [core('layout.tsx', 'layout'), core('about/page.tsx')]
   const only = ({ routes: planned, diagnostics }) => [planned.map(route => route.target), diagnostics]
