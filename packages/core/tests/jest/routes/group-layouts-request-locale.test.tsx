@@ -13,6 +13,8 @@ jest.mock('next-intl/server', () => ({ getMessages: () => getMessages(), getLoca
 jest.mock('next-intl', () => ({ NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children }))
 const selectMessages = jest.fn(() => ({}))
 jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: (...args: unknown[]) => (selectMessages as (...a: unknown[]) => unknown)(...args), getConfiguredClientNamespaces: () => ({ superadmin: ['plugin-s'], dashboard: ['entity-d'], auth: ['project-a'], public: ['project-p'], devtools: [] }) }))
+let htmlLangs = 0
+jest.mock('@nextsparkjs/core/providers/html-lang', () => ({ HtmlLang: () => { htmlLangs++; return null } }))
 jest.mock('@nextsparkjs/core/providers/area-messages-check', () => ({ AreaMessagesCheck: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({ get APP_CONFIG_MERGED() { return { i18n } } }))
 jest.mock('@nextsparkjs/core/providers/static-intl-provider', () => ({ StaticIntlProvider: ({ children }: { children: React.ReactNode }) => children }))
@@ -36,6 +38,7 @@ function load() {
 /** Whether the wrapper reads the request's messages, and the `lang` it marks. */
 async function render(wrapper: Wrapper) {
   getMessages.mockClear()
+  htmlLangs = 0
   const Layout = ({ children }: { children: React.ReactNode }) => <>{children}</>
   let lang: string | undefined
   const walk = async (value: unknown): Promise<void> => {
@@ -50,7 +53,7 @@ async function render(wrapper: Wrapper) {
     return walk(props.children)
   }
   await walk(wrapper(Layout)({ children: 'page' }))
-  return { requested: getMessages.mock.calls.length > 0, lang }
+  return { requested: getMessages.mock.calls.length > 0, lang, htmlLang: htmlLangs > 0 }
 }
 
 let warn: jest.SpyInstance
@@ -88,6 +91,18 @@ describe('extra namespaces of the wrappers (#414, #427)', () => {
   })
 })
 
+describe('<html lang> of the request-locale groups (#442)', () => {
+  it('sets <html lang> from the request locale in (public) and (auth), not in the static wrappers or the other areas', async () => {
+    flags = { auth: true, public: true }
+    i18n = { ...MULTI, requestLocale: { auth: true, public: true } }
+    const layouts = load()
+    expect((await render(layouts.withPublicMessages)).htmlLang).toBe(true)
+    expect((await render(layouts.withAuthMessages)).htmlLang).toBe(true)
+    expect((await render(layouts.withDashboardMessages)).htmlLang).toBe(false)
+    expect((await render(layouts.withDevtoolsMessages)).htmlLang).toBe(false)
+  })
+})
+
 describe('devtools wrapper (#414)', () => {
   it('reads the request messages whatever the setting, so its client components follow the user language', async () => {
     const layouts = load()
@@ -100,32 +115,32 @@ describe('devtools wrapper (#414)', () => {
 describe('group wrappers with i18n.requestLocale', () => {
   it('keeps both groups static when the setting is off', async () => {
     const layouts = load()
-    expect(await render(layouts.withAuthMessages)).toEqual({ requested: false, lang: undefined })
-    expect(await render(layouts.withPublicMessages)).toEqual({ requested: false, lang: undefined })
+    expect(await render(layouts.withAuthMessages)).toEqual({ requested: false, lang: undefined, htmlLang: false })
+    expect(await render(layouts.withPublicMessages)).toEqual({ requested: false, lang: undefined, htmlLang: false })
   })
 
   it('turns only the auth group to the request, and marks its language', async () => {
     flags = { auth: true, public: false }
     i18n = { ...MULTI, requestLocale: { auth: true } }
     const layouts = load()
-    expect(await render(layouts.withAuthMessages)).toEqual({ requested: true, lang: 'fr' })
-    expect(await render(layouts.withPublicMessages)).toEqual({ requested: false, lang: undefined })
+    expect(await render(layouts.withAuthMessages)).toEqual({ requested: true, lang: 'fr', htmlLang: true })
+    expect(await render(layouts.withPublicMessages)).toEqual({ requested: false, lang: undefined, htmlLang: false })
   })
 
   it('turns only the public group to the request', async () => {
     flags = { auth: false, public: true }
     i18n = { ...MULTI, requestLocale: { public: true } }
     const layouts = load()
-    expect(await render(layouts.withAuthMessages)).toEqual({ requested: false, lang: undefined })
-    expect(await render(layouts.withPublicMessages)).toEqual({ requested: true, lang: 'fr' })
+    expect(await render(layouts.withAuthMessages)).toEqual({ requested: false, lang: undefined, htmlLang: false })
+    expect(await render(layouts.withPublicMessages)).toEqual({ requested: true, lang: 'fr', htmlLang: true })
   })
 
   it('has no effect when the locale is fixed, and says so', async () => {
     flags = { auth: true, public: true }
     i18n = { ...MULTI, detectionStrategy: ['default'], requestLocale: { auth: true, public: true } }
     const layouts = load()
-    expect(await render(layouts.withAuthMessages)).toEqual({ requested: false, lang: undefined })
-    expect(await render(layouts.withPublicMessages)).toEqual({ requested: false, lang: undefined })
+    expect(await render(layouts.withAuthMessages)).toEqual({ requested: false, lang: undefined, htmlLang: false })
+    expect(await render(layouts.withPublicMessages)).toEqual({ requested: false, lang: undefined, htmlLang: false })
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('requestLocale.auth has no effect'))
   })
 

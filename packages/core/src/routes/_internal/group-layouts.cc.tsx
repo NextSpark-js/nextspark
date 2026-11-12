@@ -5,6 +5,7 @@ import { getLocale, getMessages } from 'next-intl/server'
 import { connection } from 'next/server'
 import { StaticIntlProvider } from '@nextsparkjs/core/providers/static-intl-provider'
 import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
+import { HtmlLang } from '@nextsparkjs/core/providers/html-lang'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-client'
 import { checkRequestLocale, isLocaleFixedFor } from '@nextsparkjs/core/lib/config/locale-detection'
 import { getConfiguredClientNamespaces, selectMessages, type ClientNamespaceArea } from '@nextsparkjs/core/lib/i18n/client-messages'
@@ -29,7 +30,7 @@ import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/transla
  *
  * `i18n.requestLocale` turns `(auth)` and `(public)` to the second shape (the registry holds the setting as a literal,
  * so a project that leaves it off keeps the static wrappers and their prerender): the group's messages are those of the
- * request's locale, and its content sits in a `<div lang>` of that locale, since `<html lang>` stays the default's. The
+ * request's locale, and its content sits in a `<div lang>` of that locale, and HtmlLang sets `<html lang>` to it once the page hydrates (the prerendered root layout writes the default's, #442). The
  * setting has no effect when the app's locale is fixed.
  *
  * The static wrappers also put the group's pages behind a Suspense boundary, inside the layout: a page that
@@ -83,6 +84,7 @@ async function RequestMessages({ group, markLanguage, children }: LayoutProps & 
   const messages = await getMessages()
   const provider = (
     <NextIntlClientProvider messages={selectMessages(messages, group, configuredNamespaces()[group])}>
+      {markLanguage && <HtmlLang />}
       <AreaMessagesCheck area={group}>{children}</AreaMessagesCheck>
     </NextIntlClientProvider>
   )
