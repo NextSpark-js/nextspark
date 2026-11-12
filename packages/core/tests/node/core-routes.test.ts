@@ -305,7 +305,7 @@ test('the starter home page asks for its messages with getPublicTranslations, so
 /**
  * A project that overrides the public or auth layout is composed with these modules (and gets its fallback metadata from
  * them): every client component they reach, even one the override never renders, ships on every route of the group. So they
- * import no component, provider (but the messages one, which the root layout ships anyway, HtmlLang, which sets `<html lang>` from the messages provider's locale (#442) and imports nothing but next-intl, and GroupToaster, which the auth
+ * import no component, provider (but the messages one, which the root layout ships anyway, HtmlLang, which sets `<html lang>` from the messages provider's locale (#442) and imports nothing but react and next-intl, and GroupToaster, which the auth
  * layout needs when `providers.scope` is 'groups' and which renders only its children under the default root; #341) or other group's layout (#192).
  */
 test('the composition modules of the public and auth layouts reach no client component', () => {
