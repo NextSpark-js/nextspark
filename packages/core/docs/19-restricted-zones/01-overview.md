@@ -76,7 +76,7 @@ navigation entries in the area included) cannot be enabled together with the fla
 
 Next keeps the type declarations of the routes it served under `.next/dev`, and the build's type check fails on the
 ones that are now left out. `nextspark prepare` (so `build` and `dev` too) remembers the `features` flags it last ran
-with in `.nextspark/features-state.json` and, when ``features.superadmin`` changes, deletes `.next/dev` and prints a line saying so;
+with in `.nextspark/features-state.json` and, when `features.superadmin` changes, deletes `.next/dev` and prints a line saying so;
 nothing else of `.next` is touched. Nothing is deleted on the first run or when the flags are the same. It does not
 delete `.next/dev` while `next dev` is running (it says so, and the next `prepare` after the server stops clears it),
 nor when `.next` or `.next/dev` is a symlink: delete it by hand then.

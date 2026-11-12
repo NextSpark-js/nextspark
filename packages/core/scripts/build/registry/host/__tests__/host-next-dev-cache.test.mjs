@@ -6,12 +6,20 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { test } from 'node:test'
+import { after, test } from 'node:test'
 
 import { FEATURES_STATE_FILE, devServerRunning, syncDevCache } from '../next-dev-cache.mjs'
 
+const made = []
+after(() => made.forEach(dir => rmSync(dir, { recursive: true, force: true })))
+const temp = prefix => {
+  const dir = mkdtempSync(join(tmpdir(), prefix))
+  made.push(dir)
+  return dir
+}
+
 function project() {
-  const root = mkdtempSync(join(tmpdir(), 'nextspark-devcache-'))
+  const root = temp('nextspark-devcache-')
   mkdirSync(join(root, '.next', 'dev', 'types'), { recursive: true })
   writeFileSync(join(root, '.next', 'dev', 'types', 'routes.d.ts'), 'stale')
   writeFileSync(join(root, '.next', 'BUILD_ID'), 'keep')
@@ -49,7 +57,7 @@ test('without a record nothing is deleted, and the flags are recorded', () => {
 
 test('a symlinked .next/dev is not followed or deleted', () => {
   const root = project()
-  const target = mkdtempSync(join(tmpdir(), 'nextspark-devcache-target-'))
+  const target = temp('nextspark-devcache-target-')
   writeFileSync(join(target, 'keep.txt'), 'keep')
   syncDevCache({ projectRoot: root, features: {}, running: idle })
   rmSync(dev(root), { recursive: true })
@@ -64,12 +72,20 @@ test('a symlinked .next/dev is not followed or deleted', () => {
 test('a symlinked .next is not followed either', () => {
   const root = project()
   syncDevCache({ projectRoot: root, features: {}, running: idle })
-  const real = mkdtempSync(join(tmpdir(), 'nextspark-devcache-real-'))
+  const real = temp('nextspark-devcache-real-')
   mkdirSync(join(real, 'dev'))
   rmSync(join(root, '.next'), { recursive: true })
   symlinkSync(real, join(root, '.next'))
   assert.equal(syncDevCache({ projectRoot: root, features: { billing: false }, running: idle }).action, 'kept')
   assert.equal(existsSync(join(real, 'dev')), true)
+})
+
+test('the warning with a live server says to stop it, not to delete by hand; a symlink says to delete by hand', () => {
+  const root = project()
+  syncDevCache({ projectRoot: root, features: {}, running: idle })
+  const live = syncDevCache({ projectRoot: root, features: { billing: false }, running: () => true }).line
+  assert.match(live, /stop it; the next prepare clears/)
+  assert.doesNotMatch(live, /by hand/)
 })
 
 test('a running dev server keeps its cache, and the flags stay unrecorded so the next prepare clears it', () => {
@@ -102,7 +118,7 @@ test('devServerRunning reads the lock of Next: a live pid, a dead pid, a lock wi
 })
 
 test('prepare (the CLI): a flag turned off deletes .next/dev and prints the line; the same flags leave it', { timeout: 300_000 }, () => {
-  const root = mkdtempSync(join(tmpdir(), 'nextspark-devcache-cli-'))
+  const root = temp('nextspark-devcache-cli-')
   try {
     const put = (path, content) => {
       mkdirSync(join(root, path, '..'), { recursive: true })
@@ -126,6 +142,13 @@ test('prepare (the CLI): a flag turned off deletes .next/dev and prints the line
     assert.match(changed.stdout, /Info: features\.billing changed: deleted \.next\/dev/)
     assert.equal(existsSync(dev(root)), false)
     assert.equal(state(root).billing, false)
+    // A record that cannot be written (a directory where the file goes) is one line, not a stack after the generation
+    rmSync(join(root, FEATURES_STATE_FILE))
+    mkdirSync(join(root, FEATURES_STATE_FILE))
+    const broken = prepare()
+    assert.equal(broken.status, 0, broken.stderr)
+    assert.match(broken.stdout, /Warning: could not compare \.next\/dev with the features flags/)
+    assert.doesNotMatch(broken.stderr, /at \w/)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

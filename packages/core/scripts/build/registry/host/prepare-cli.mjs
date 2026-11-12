@@ -97,6 +97,15 @@ function contractsLines(result) {
   ]
 }
 
+/** syncDevCache that never fails a preparation that has already generated: a problem with .next/dev is one line. */
+function syncCache(options) {
+  try {
+    return syncDevCache({ projectRoot: options.config.projectRoot, features: options.config.features, watching: options.watching })
+  } catch (error) {
+    return { action: 'kept', line: `could not compare .next/dev with the features flags (${error instanceof Error ? error.message : String(error)}): delete .next/dev by hand if you turned features.billing or features.superadmin off.` }
+  }
+}
+
 async function main() {
   if (flag('contracts-only')) {
     if (flag('watch') || flag('dev')) {
@@ -164,7 +173,7 @@ async function main() {
       printedNotices = noticeLines(result).join('\n')
       for (const line of contractsLines(result)) console.log(line)
       // After the generation is out: .next/dev follows the features flags this run used
-      const cache = syncDevCache({ projectRoot: config.projectRoot, features: config.features })
+      const cache = syncCache({ config })
       if (cache.line) console.log(`${cache.action === 'kept' ? 'Warning' : 'Info'}: ${cache.line}`)
     } catch (error) {
       if (!(error instanceof PrepareError)) throw error
@@ -184,7 +193,7 @@ async function main() {
       printedNotices = notices
       for (const line of contractsLines(result)) console.log(`[prepare] ${line}`)
       // A flag edited while the dev server runs: never delete its cache from under it, say so once
-      const cache = syncDevCache({ projectRoot: config.projectRoot, features: config.features, watching: true })
+      const cache = syncCache({ config, watching: true })
       if (cache.line && cache.line !== printedCacheNotice) console.log(`[prepare] Warning: ${cache.line}`)
       printedCacheNotice = cache.line ?? null
     },

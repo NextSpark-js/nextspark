@@ -91,10 +91,11 @@ export function syncDevCache({ projectRoot, features, watching = false, running 
     if (!watching) record()
     return { action: 'recorded' }
   }
-  const kept = reason => ({ action: 'kept', line: `${changed} changed, and .next/dev ${reason}: delete .next/dev by hand before next build, or Next's type check fails on the routes that are now left out.` })
-  if (next?.isSymbolicLink() || stat.isSymbolicLink()) return kept('is (or sits in) a symlink, which prepare does not follow')
-  if (!stat.isDirectory()) return kept('is not a directory')
-  if (watching || running(projectRoot)) return kept('is in use by a running dev server (stop it first; the next prepare clears it)')
+  const kept = (reason, advice) => ({ action: 'kept', line: `${changed} changed, and .next/dev ${reason}: ${advice}, or Next's type check fails on the routes that are now left out.` })
+  const byHand = 'delete .next/dev by hand before next build'
+  if (next?.isSymbolicLink() || stat.isSymbolicLink()) return kept('is (or sits in) a symlink, which prepare does not follow', byHand)
+  if (!stat.isDirectory()) return kept('is not a directory', byHand)
+  if (watching || running(projectRoot)) return kept('is in use by a running dev server', 'stop it; the next prepare clears .next/dev before next build')
   fs.rmSync(dev, { recursive: true, force: true })
   record()
   return { action: 'cleared', line: `${changed} changed: deleted .next/dev, where Next keeps the types of the routes it served.` }
