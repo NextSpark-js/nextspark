@@ -410,11 +410,8 @@ await TeamMemberService.transferOwnership(
 const isMember = await TeamMemberService.isMember(teamId, userId)
 const isOwner = await TeamMemberService.isOwner(teamId, userId)
 const isAdmin = await TeamMemberService.isAdminOrOwner(teamId, userId)
-const hasPermission = await TeamMemberService.hasPermission(
-  userId,
-  teamId,
-  ['owner', 'admin']
-)
+// A team permission (teams.appRoleBypass included): checkPermission from lib/permissions/check
+const canInvite = await checkPermission(userId, teamId, 'team.members.invite')
 
 // Filtering queries
 const byRole = await TeamMemberService.listByRole(teamId, 'admin', requestingUserId)

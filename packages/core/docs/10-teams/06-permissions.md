@@ -289,12 +289,13 @@ Skipping applies only in a team the user belongs to, and grants every permission
 These server checks (`checkPermission`, `getUserPermissions`, `checkTeamPermission`, `MembershipService`,
 `SubscriptionService.canPerformAction`) and UI hooks (`usePermission`, `useOptionalPermission`, `usePermissions`,
 `useAllPermissions`, and `<PermissionGate>` on them) decide through the same function, `hasTeamPermission()` in
-`lib/permissions/app-role-bypass`, so they agree with each other. Known exceptions that do not follow the setting yet:
-the checks against a fixed list of team roles (`TeamMembersList` and `TeamPendingInvitations` for `owner`/`admin`, the
-team name and description on the teams settings page for `owner`, the server actions in `lib/actions/team.actions.ts`
-(`verifyTeamPermission`, `updateMemberRole`), `checkTeamPermission(userId, teamId, roles)` in `lib/teams/actions.ts`),
-and
-`GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team as an admin-area
+`lib/permissions/app-role-bypass`, so they agree with each other. Managing the team follows it on every path (#458):
+the members list, the pending invitations, the team name and description on the teams settings page, the server actions
+in `lib/actions/team.actions.ts` and the team and member routes check the same permission (`team.edit`,
+`team.members.invite`, `team.members.remove`, `team.members.update_role`), then the role hierarchy, where a user whose
+app role skips team permissions ranks as the owner (`hierarchyRoleFor()`): they manage every role below the owner, never
+the owner. Transferring ownership stays with the owner. Known exception: `GET /api/v1/teams/:teamId/members`, where a
+superadmin or a developer sees the roster of any team as an admin-area
 capability. A wrong value fails the build (the registry build validates a string literal); at runtime the check throws,
 so the request or the page fails. The full rule is in
 [Permissions and Roles](../06-authentication/06-permissions-and-roles.md#app-roles-inside-a-team-teamsapprolebypass).

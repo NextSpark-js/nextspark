@@ -37,7 +37,7 @@ This guide helps migrate from legacy permission patterns to the new unified `Mem
 | `TeamMemberService.isOwner(teamId, userId)` | `membership.hasRole('owner')` |
 | `TeamMemberService.isAdminOrOwner(teamId, userId)` | `membership.hasMinHierarchy(50)` |
 | `TeamMemberService.isMember(teamId, userId)` | `membership.role !== null` |
-| `TeamMemberService.hasPermission(teamId, userId, roles)` | `membership.hasAnyRole(roles)` |
+| `TeamMemberService.hasPermission(userId, teamId, roles)` (removed, #458) | `membership.canPerformAction(permission)` (follows `teams.appRoleBypass`; a role list does not) |
 
 ### SubscriptionService Methods
 

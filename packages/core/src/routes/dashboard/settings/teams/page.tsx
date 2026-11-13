@@ -16,6 +16,8 @@ import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamD
 import { InlineEditableField } from '@nextsparkjs/core/components/teams/InlineEditableField'
 import { sel } from '@nextsparkjs/core/lib/selectors'
 import { TeamRole } from '@nextsparkjs/core/lib/teams/types'
+import { hasTeamPermission } from '@nextsparkjs/core/lib/permissions/app-role-bypass'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
 // Role icons map - core roles only, custom roles use fallback
 const roleIconsMap: Record<string, typeof Crown | null> = {
@@ -40,7 +42,7 @@ const getRoleColor = (role: TeamRole) => roleColorsMap[role] ?? 'outline'
 function TeamsSettingsPage() {
   const t = useTranslations('settings')
   const tTeams = useTranslations('teams')
-  const { userTeams, currentTeam, isLoading } = useTeamContext()
+  const { userTeams, currentTeam, isLoading, appRole } = useTeamContext()
   const { mode, canCreate, canSwitch } = useTeamsConfig()
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -53,6 +55,8 @@ function TeamsSettingsPage() {
   const selectedMembership = selectedTeamId
     ? userTeams.find(m => m.team.id === selectedTeamId)
     : null
+  // Name and description: team.edit, the permission PATCH /api/v1/teams/:teamId checks, by the usePermission rule (#458)
+  const canEditSelectedTeam = hasTeamPermission(appRole, selectedMembership?.role, 'team.edit' as Permission)
 
   if (isLoading) {
     return (
@@ -209,7 +213,7 @@ function TeamsSettingsPage() {
                     fieldType="name"
                     teamId={selectedMembership.team.id}
                     placeholder={tTeams('createTeam.namePlaceholder')}
-                    disabled={selectedMembership.role !== 'owner'}
+                    disabled={!canEditSelectedTeam}
                   />
                 </CardTitle>
               </div>
@@ -220,7 +224,7 @@ function TeamsSettingsPage() {
                   teamId={selectedMembership.team.id}
                   placeholder={tTeams('createTeam.descriptionPlaceholder')}
                   multiline={true}
-                  disabled={selectedMembership.role !== 'owner'}
+                  disabled={!canEditSelectedTeam}
                 />
               </CardDescription>
             </CardHeader>

@@ -29,6 +29,9 @@ import type { TeamInvitation, TeamRole } from '../../lib/teams/types'
 import { useTeamMembers } from '../../hooks/useTeamMembers'
 import { useAuth } from '../../hooks/useAuth'
 import { withBasePath } from '../../lib/base-path'
+import { useOptionalTeamContext } from '../../contexts/TeamContext'
+import { hasTeamPermission } from '../../lib/permissions/app-role-bypass'
+import type { Permission } from '../../lib/permissions/types'
 
 // Role icons map - core roles only, custom roles use fallback
 const roleIconsMap: Record<string, typeof Crown | null> = {
@@ -67,9 +70,11 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
   const { members } = useTeamMembers({ teamId })
   const [cancellingId, setCancellingId] = useState<string | null>(null)
 
-  // Check if current user can manage invitations
+  // Cancelling an invitation takes team.members.invite on the invitations route; the same rule as usePermission
+  // (#458), with this team's role (it may not be the current team)
+  const appRole = useOptionalTeamContext()?.appRole
   const currentUserMember = members.find((m: any) => m.userId === user?.id || m.user_id === user?.id)
-  const canManageInvitations = currentUserMember && ['owner', 'admin'].includes(currentUserMember.role)
+  const canManageInvitations = hasTeamPermission(appRole, currentUserMember?.role, 'team.members.invite' as Permission)
 
   // Fetch pending invitations
   const { data: invitations = [], isLoading } = useQuery<InvitationWithInviter[]>({

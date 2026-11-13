@@ -33,13 +33,17 @@ teams: {
   layouts), `checkTeamPermission`, `MembershipService` (team and billing routes), `SubscriptionService.canPerformAction`,
   and the UI hooks `usePermission`, `useOptionalPermission`, `usePermissions`, `useAllPermissions` (with
   `<PermissionGate>` and the menus built on them).
-- Known exceptions, which do not follow the setting yet:
-  - checks against a fixed list of team roles: managing members in `TeamMembersList` and pending invitations in
-    `TeamPendingInvitations` (`owner` or `admin`), editing the team's name and description on the teams settings page
-    (`owner`), the server actions in `lib/actions/team.actions.ts` (`verifyTeamPermission`, `updateMemberRole`) and
-    `checkTeamPermission(userId, teamId, roles)` in `lib/teams/actions.ts`;
-  - `GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team, as an admin-area
-    capability.
+- Managing a team follows it on every path (#458): the members list (`TeamMembersList`), the pending invitations
+  (`TeamPendingInvitations`), the team's name and description on the teams settings page, the server actions in
+  `lib/actions/team.actions.ts` and the team and member routes check the same registered permission (`team.edit`,
+  `team.members.invite`, `team.members.remove`, `team.members.update_role`), so the UI shows a control only when the
+  server allows it.
+- Inviting, removing and changing a role also go through the role hierarchy (`canManageRole`, `canInviteToRole`,
+  `validateRoleTransition`): only a role below your own. A user whose app role skips team permissions ranks as the
+  owner there (`hierarchyRoleFor()` in `lib/teams/permissions`): they manage every role below the owner and, like the
+  owner, cannot remove the owner or change the owner's role. Transferring ownership stays with the team's owner.
+- Known exception: `GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team,
+  as an admin-area capability.
 - A wrong value fails the build: the registry build validates `teams.appRoleBypass` when it is a string literal, with
   `teams.appRoleBypass in config/app.config.ts must be one of 'none', 'developer', 'developer-and-superadmin'`. At
   runtime (a value the build could not read, such as a variable) the check throws, so the request or the page fails.

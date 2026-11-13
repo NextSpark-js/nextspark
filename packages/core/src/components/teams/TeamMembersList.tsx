@@ -38,7 +38,10 @@ import { useAuth } from '../../hooks/useAuth'
 import { InviteMemberDialog } from './InviteMemberDialog'
 import { TeamRole } from '../../lib/teams/types'
 import { APP_CONFIG_MERGED } from '../../lib/config/config-client'
-import { canManageRole } from '../../lib/teams/permissions'
+import { canManageRole, hierarchyRoleFor, validateRoleTransition } from '../../lib/teams/permissions'
+import { hasTeamPermission } from '../../lib/permissions/app-role-bypass'
+import { useTeamContext } from '../../contexts/TeamContext'
+import type { Permission } from '../../lib/permissions/types'
 
 // Role icons map - core roles only, custom roles use fallback
 const roleIconsMap: Record<string, typeof Crown | null> = {
@@ -78,6 +81,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
   const locale = useLocale()
   const { user } = useAuth()
   const { team } = useTeam()
+  const { appRole } = useTeamContext()
   // Use prop teamId if provided, otherwise fall back to context
   const { members, isLoading, updateMemberRole, removeMember, transferOwnershipAsync, isTransferringOwnership } = useTeamMembers({ teamId: propTeamId })
   const [showInviteDialog, setShowInviteDialog] = useState(false)
@@ -108,9 +112,16 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
   }
 
   const currentUserMember = members.find((m: any) => m.userId === user?.id || m.user_id === user?.id)
-  const currentUserRole = currentUserMember?.role || 'viewer'
-  // In readOnly mode, no one can manage members
-  const canManageMembers = !readOnly && currentUserMember && ['owner', 'admin'].includes(currentUserMember.role)
+  const currentUserRole: string | null = currentUserMember?.role ?? null
+  // The checks the member routes make (#458): the permission, by the same rule as usePermission (this list may show a
+  // team other than the current one, so it reads this team's role), then the role hierarchy, where an app role that
+  // teams.appRoleBypass lets skip team permissions ranks as the owner. In readOnly mode, no one can manage members.
+  const can = (permission: string) => !readOnly && hasTeamPermission(appRole, currentUserRole, permission as Permission)
+  const canInvite = can('team.members.invite')
+  const canUpdateRole = can('team.members.update_role')
+  const canRemove = can('team.members.remove')
+  const hierarchyRole = hierarchyRoleFor(appRole, currentUserRole) ?? ''
+  const canManageMembers = canUpdateRole || canRemove
 
   return (
     <div className="space-y-4">
@@ -118,7 +129,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
         <h3 className="text-lg font-semibold">
           {t('entity.plural')} ({members.length})
         </h3>
-        {canManageMembers && (
+        {canInvite && (
           <Button
             onClick={() => setShowInviteDialog(true)}
             data-cy="invite-member-button"
@@ -144,6 +155,14 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
               const RoleIcon = getRoleIcon(memberRole)
               const isOwner = memberRole === 'owner'
               const isCurrentUser = member.userId === user?.id || member.user_id === user?.id
+              // Roles this member can be given (the route's validateRoleTransition), and whether they can be removed
+              const assignableRoles = canUpdateRole
+                ? APP_CONFIG_MERGED.teams.roles.availableTeamRoles.filter((role: string) =>
+                    role !== memberRole && validateRoleTransition(memberRole, role, hierarchyRole).allowed
+                  )
+                : []
+              const canRemoveMember = canRemove && !isOwner && canManageRole(hierarchyRole, memberRole)
+              const canTransfer = currentUserRole === 'owner'
 
               return (
                 <TableRow key={member.id} data-cy={`member-row-${member.userId || member.user_id}`}>
@@ -179,7 +198,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
 
                   {canManageMembers && (
                     <TableCell>
-                      {!isOwner && !isCurrentUser && (
+                      {!isOwner && !isCurrentUser && (assignableRoles.length > 0 || canRemoveMember || canTransfer) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" data-cy={`member-actions-${member.id}`}>
@@ -188,12 +207,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {/* Dynamic role options from merged config */}
-                            {APP_CONFIG_MERGED.teams.roles.availableTeamRoles
-                              .filter((role: string) =>
-                                role !== 'owner' && // Cannot assign owner role
-                                role !== memberRole && // Don't show current role
-                                canManageRole(currentUserRole, role) // Only roles user can manage
-                              )
+                            {assignableRoles
                               .map((role: string) => {
                                 // Get role label with fallback to capitalized role name
                                 const roleLabel = t(`roles.${role}`, { defaultValue: role.charAt(0).toUpperCase() + role.slice(1) })
@@ -211,7 +225,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
                                 )
                               })
                             }
-                            {currentUserRole === 'owner' && (
+                            {canTransfer && (
                               <DropdownMenuItem
                                 onClick={() => setTransferTarget({
                                   userId: member.userId || member.user_id,
@@ -223,14 +237,16 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
                                 {t('actions.transferOwnership')}
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem
-                              onClick={() => removeMember(member.id)}
-                              className="text-destructive"
-                              data-cy="remove-member-action"
-                            >
-                              <UserMinus className="h-4 w-4 mr-2" aria-hidden="true" />
-                              {t('actions.removeMember')}
-                            </DropdownMenuItem>
+                            {canRemoveMember && (
+                              <DropdownMenuItem
+                                onClick={() => removeMember(member.id)}
+                                className="text-destructive"
+                                data-cy="remove-member-action"
+                              >
+                                <UserMinus className="h-4 w-4 mr-2" aria-hidden="true" />
+                                {t('actions.removeMember')}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -271,7 +287,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
           open={showInviteDialog}
           onOpenChange={setShowInviteDialog}
           teamId={propTeamId}
-          currentUserRole={currentUserRole}
+          currentUserRole={hierarchyRole as TeamRole}
         />
       )}
     </div>

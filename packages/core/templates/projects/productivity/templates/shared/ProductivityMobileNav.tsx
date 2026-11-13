@@ -10,6 +10,8 @@ import { usePathname, useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import {
@@ -78,12 +80,8 @@ export function ProductivityMobileNav() {
 
     const currentBoardId = params?.id as string
 
-    // Get current user's role in the active team
-    const currentMembership = userTeams.find(m => m.team.id === currentTeam?.id)
-    const userRole = currentMembership?.role || 'member'
-
-    // Only owners and admins can create boards
-    const canCreateBoard = userRole === 'owner' || userRole === 'admin'
+    // boards.create from permissions.config.ts, by the core permission rule (teams.appRoleBypass included)
+    const canCreateBoard = usePermission('boards.create' as Permission)
 
     // Fetch boards
     const fetchBoards = useCallback(async () => {
