@@ -302,6 +302,18 @@ test('the starter home page asks for its messages with getPublicTranslations, so
   assert.equal([...home.matchAll(/getPublicTranslations\('home'\)/g)].length, 2, 'the metadata and the page')
 })
 
+test('the starter support page reads its texts from the public messages of every locale, with no literal text (#442)', () => {
+  const starter = path.join(ROUTES, '../../templates/projects/starter')
+  const page = fs.readFileSync(path.join(starter, 'templates/(public)/support/page.tsx'), 'utf8')
+  assert.equal([...page.matchAll(/getPublicTranslations\('public\.support'\)/g)].length, 2, 'the metadata and the page')
+  assert.doesNotMatch(page, />\s*[A-Za-z][^<>{}]*</, 'text between tags')
+  assert.doesNotMatch(page, /\b(title|description):\s*['"]/, 'a literal title or description')
+  for (const locale of ['de', 'en', 'es', 'fr', 'it', 'pt']) {
+    const { support } = JSON.parse(fs.readFileSync(path.join(starter, 'messages', locale, 'public.json'), 'utf8'))
+    assert.ok(support?.title && support?.description, `${locale} defines public.support.title and description`)
+  }
+})
+
 /**
  * A project that overrides the public or auth layout is composed with these modules (and gets its fallback metadata from
  * them): every client component they reach, even one the override never renders, ships on every route of the group. So they

@@ -14,5 +14,9 @@
     "copyright": "Tutti i diritti riservati.",
     "privacyPolicy": "Informativa sulla privacy",
     "termsOfService": "Termini di servizio"
+  },
+  "support": {
+    "title": "Supporto",
+    "description": "Ricevi assistenza con il tema Starter."
   }
 }
