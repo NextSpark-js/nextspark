@@ -169,6 +169,15 @@ function credentialState(value: string | undefined, pattern: RegExp, minimumLeng
 }
 
 /**
+ * What a demo is judged against, at build and at runtime: only the sample accounts' password login, and as in
+ * development, because a demo has no email provider on purpose (and so no recovery).
+ */
+export const DEMO_AUTH_READINESS = {
+  authConfig: { methods: ['email-password'] } satisfies Pick<AuthConfig, 'methods'>,
+  environment: 'development' as const,
+}
+
+/**
  * A session-signing secret copied from a template, or too short to resist
  * guessing. In production it is an error that takes every method out of
  * service; elsewhere it is only a warning.

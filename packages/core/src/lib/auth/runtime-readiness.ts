@@ -8,6 +8,7 @@ import { warnClientIpSourceAtStartup } from '../api/client-ip'
 import { warnSampleAccountsAtStartup } from './sample-accounts'
 import { isAppleSigningKey } from './apple-key'
 import {
+  DEMO_AUTH_READINESS,
   authReadinessConfigurationFromEnv,
   evaluateAuthReadiness,
   type AuthReadinessDiagnostic,
@@ -52,16 +53,13 @@ export interface PublicAuthReadiness {
   demoAccounts?: DemoAccount[]
 }
 
-/** A demo signs in only with the sample accounts, whatever login methods the project has. */
-const DEMO_AUTH_CONFIG = { methods: ['email-password'] } satisfies Pick<AuthConfig, 'methods'>
-
 function runtimeInput(options: RuntimeAuthReadinessOptions = {}) {
   const env = options.env ?? process.env
   return {
     profile: 'web-local-auth' as const,
     stage: 'runtime' as const,
     environment: env.NODE_ENV === 'production' ? 'production' as const : 'development' as const,
-    authConfig: isDemoMode(env) ? DEMO_AUTH_CONFIG : options.authConfig === undefined ? AUTH_CONFIG : options.authConfig,
+    authConfig: isDemoMode(env) ? DEMO_AUTH_READINESS.authConfig : options.authConfig === undefined ? AUTH_CONFIG : options.authConfig,
     configuration: withAppleKeyCheck(authReadinessConfigurationFromEnv(env), env),
   }
 }
@@ -77,7 +75,7 @@ export function getRuntimeAuthReadiness(options: RuntimeAuthReadinessOptions = {
   const input = runtimeInput(options)
   // Passwords need a real email provider in production, for recovery. A demo has none on purpose, and no recovery:
   // the operations that send email still go through evaluateProvider, as production
-  return evaluateAuthReadiness(isDemoMode(options.env ?? process.env) ? { ...input, environment: 'development' } : input)
+  return evaluateAuthReadiness(isDemoMode(options.env ?? process.env) ? { ...input, environment: DEMO_AUTH_READINESS.environment } : input)
 }
 
 /**

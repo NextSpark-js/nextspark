@@ -175,7 +175,7 @@ async function main() {
   let evaluator
   try {
     evaluator = await import(pathToFileURL(join(coreDir, 'dist/lib/auth/readiness.js')).href)
-    if (typeof evaluator.evaluateAuthReadiness !== 'function' || typeof evaluator.authReadinessConfigurationFromEnv !== 'function') {
+    if (typeof evaluator.evaluateAuthReadiness !== 'function' || typeof evaluator.authReadinessConfigurationFromEnv !== 'function' || !evaluator.DEMO_AUTH_READINESS) {
       throw new Error('incomplete evaluator')
     }
   } catch {
@@ -187,8 +187,8 @@ async function main() {
   // The runtime gate's own rule (lib/auth/runtime-readiness): a demo signs in only by password with its sample accounts,
   // whatever the project's methods, and has no email provider on purpose. Exactly NEXTSPARK_DEMO_MODE=true, as core's isDemoMode
   const demo = env.NEXTSPARK_DEMO_MODE === 'true'
-  const authConfig = demo ? { methods: ['email-password'] } : await projectAuthConfig()
-  if (demo) console.log('ℹ️ NEXTSPARK_DEMO_MODE=true: checking the sample-account password login a demo serves, not the real login providers.')
+  const authConfig = demo ? evaluator.DEMO_AUTH_READINESS.authConfig : await projectAuthConfig()
+  if (demo) console.log('⚠️ NEXTSPARK_DEMO_MODE=true: this build checks only the sample-account password login a demo serves, not the real login providers. The server must also run with NEXTSPARK_DEMO_MODE=true; without it the runtime gates apply to the project\'s own login methods.')
   const configuration = evaluator.authReadinessConfigurationFromEnv(env)
   configuration.email.runtimeOnly = runtimeOnly.has('email')
   for (const id of SOCIAL_PROVIDERS) configuration[id].runtimeOnly = runtimeOnly.has(id)
@@ -201,7 +201,7 @@ async function main() {
   const result = evaluator.evaluateAuthReadiness({
     profile: 'web-local-auth',
     stage: 'build',
-    environment: demo ? 'development' : 'production',
+    environment: demo ? evaluator.DEMO_AUTH_READINESS.environment : 'production',
     authConfig,
     configuration,
   })

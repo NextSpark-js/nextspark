@@ -414,10 +414,11 @@ test('EMAIL_PROVIDER=smtp without nodemailer installed warns at build; with it i
 })
 
 test('demo mode: the production check passes without a provider or the bypass; the same project without it still fails', async () => {
-  const project = await fixture(methods(['email-otp', 'google']))
+  const project = await fixture(methods(['google']))
   try {
     const demo = run(project.root, ['prepare', '--production'], { NEXTSPARK_DEMO_MODE: 'true' })
     assert.equal(demo.status, 0, demo.output)
+    assert.match(demo.output, /NEXTSPARK_DEMO_MODE=true/)
     assert.doesNotMatch(demo.output, /NEXTSPARK_AUTH_PREFLIGHT/)
 
     const normal = run(project.root, ['prepare', '--production'])
