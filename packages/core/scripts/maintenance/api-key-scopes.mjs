@@ -273,11 +273,12 @@ function routeSources(routes) {
  * @param {object[]} [input.plugins] - the enabled plugins (`{ name, root }`): the scopes their config declares in `apiScopes` count as declared
  * @param {object} [input.ts] - the TypeScript compiler (the project's, by default)
  * @returns {Promise<{ withoutScope: object[], undeclared: object[], pluginScopes: object[] }>} each finding `{ url, source, line, method, call, scope? }`;
- *   `pluginScopes` is what an enabled plugin's `apiScopes` left unread, `{ plugin, file, message }`
+ *   `pluginScopes` is what an enabled plugin's `apiScopes` left unread, `{ plugin, file, message }`;
+ *   `anyScope` lists the calls that declare `allowAnyScope: true` (not a problem: `nextspark doctor` lists them as a 0.x compatibility shim, #439)
  */
 export async function findApiKeyScopeProblems({ projectRoot, routes, plugins = [], ts }) {
   const sources = routeSources(routes)
-  const empty = { withoutScope: [], undeclared: [], pluginScopes: [] }
+  const empty = { withoutScope: [], undeclared: [], pluginScopes: [], anyScope: [] }
   if (sources.length === 0 && plugins.length === 0) return empty
   const compiler = ts ?? (await loadTypeScriptFor(projectRoot))
   const declared = readDeclaredApiScopes({ projectRoot, ts: compiler })
@@ -286,6 +287,7 @@ export async function findApiKeyScopeProblems({ projectRoot, routes, plugins = [
 
   const withoutScope = []
   const undeclared = []
+  const anyScope = []
   for (const { file, source, url } of sources) {
     let text
     try {
@@ -296,11 +298,12 @@ export async function findApiKeyScopeProblems({ projectRoot, routes, plugins = [
     for (const call of scanApiKeyCalls({ source: text, file, ts: compiler })) {
       const where = { url, source, line: call.line, method: call.method, call: call.call }
       if (call.declared === 'none') withoutScope.push(where)
+      else if (call.declared === 'any') anyScope.push(where)
       else if (call.declared === 'scopes' && declared.complete) for (const scope of call.scopes) if (!known.has(scope)) undeclared.push({ ...where, scope })
     }
   }
   const order = (a, b) => (a.source < b.source ? -1 : a.source > b.source ? 1 : a.line - b.line)
-  return { withoutScope: withoutScope.sort(order), undeclared: undeclared.sort(order), pluginScopes: fromPlugins.problems }
+  return { withoutScope: withoutScope.sort(order), undeclared: undeclared.sort(order), pluginScopes: fromPlugins.problems, anyScope: anyScope.sort(order) }
 }
 
 /** `source:line METHOD call`, for a notice and the doctor message */
@@ -367,5 +370,7 @@ export async function findApiKeyScopeProblemsInProject(projectRoot) {
   if (notices.length === 0 && predicted.checks.plan !== 'passed') {
     return { checked: false, reason: `the host plan has errors (${predicted.diagnostics[0]?.code ?? 'see nextspark prepare'}); fix them first`, withoutScope, undeclared, pluginScopes }
   }
-  return { checked: true, withoutScope, undeclared, pluginScopes }
+  // The calls that accept any valid key (a second, read-only pass over the same route sources)
+  const anyScope = (await findApiKeyScopeProblems({ projectRoot, routes: predicted.routes ?? [] })).anyScope
+  return { checked: true, withoutScope, undeclared, pluginScopes, anyScope }
 }

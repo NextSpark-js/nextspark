@@ -27,6 +27,8 @@ export interface ApiKeyScopeFindings {
   undeclared: ApiKeyScopeFinding[]
   /** What an enabled plugin's apiScopes left unread (absent: the core predates the check) */
   pluginScopes?: { plugin: string; file: string; message: string }[]
+  /** The calls that declare allowAnyScope: true (absent: the core predates the list) */
+  anyScope?: ApiKeyScopeFinding[]
   describe: (finding: ApiKeyScopeFinding) => string
   fixes: { withoutScope: string; undeclared: string; pluginScopes?: string }
 }

@@ -90,6 +90,18 @@ A project that is already on the root-first layout can still carry copies of the
 | `patched-dependency` | `patchedDependencies` (`pnpm` in `package.json`, or `pnpm-workspace.yaml`) that target an `@nextsparkjs/*` package | Drop the patch and test without it: the release you are on may already carry the fix |
 | `dependency-override` | `overrides` or `resolutions` (`package.json`, `pnpm.overrides`, `pnpm-workspace.yaml`) that name an `@nextsparkjs/*` package with a value that is not a reference (`$name`, `catalog:`, `workspace:`), a `file:` or `link:` path, or the range the project declares itself | Remove it unless it is deliberate: it pins resolution away from the version the project declares. The ones that are references or equal the declared range are listed under `notes`, not as findings |
 
+## Compatibility shims
+
+`nextspark migrate` keeps a migrated project working the way it did in 0.x, and some of that stays in the project. None of it is broken, and each piece can go on its own once nothing needs it. `pnpm exec nextspark doctor` lists the ones that are still there (the **Compat** lines), each with where it is, why it exists and how to remove it; a project created by the wizard shows none. Work through the list one line at a time, run `doctor` again, and the line is gone.
+
+| Code | What it is | What may still depend on it | Remove it |
+| --- | --- | --- | --- |
+| `NS_COMPAT_API_REWRITE` | The `nextspark-compat-rewrites` block at the end of `next.config`: `/api/v1/theme/<theme>/*` to `/api/*` and `/api/v1/plugin/<name>/*` to `/api/plugins/<name>/*` | Installed mobile apps, integrations and stored URLs that still call the old paths. `doctor` cannot see them: check the requests your server still gets on those paths | Delete the block and put the config back as the default export (rename `__nextspark_user_config` back to `export default`) |
+| `NS_COMPAT_ALLOW_ANY_SCOPE` | A call to `authenticateRequest` or `validateAndAuthenticateRequest` with `allowAnyScope: true`: any valid API key passes, whatever its scopes, as in 0.x | The integrations that call the route with a key. A route that accepts any key on purpose is fine; `doctor` cannot tell which ones are | Pass `{ requiredScope: '<scope>' }` (declare your own scope in `api.scopes` of `config/app.config.ts`), after giving those keys the scope |
+| `NS_COMPAT_THEME_LEFTOVER` | `NEXT_PUBLIC_ACTIVE_THEME` or `ROOT_FIRST_PROJECT` in a `.env*` file or a `package.json` script | Nothing: a root-first project is its own theme and nothing reads either | Delete the line (and the variable in the deployment's environment); in a script keep the command and drop the assignment. Reads in code are listed in the migrate report (see [The theme variable](#the-theme-variable)), not by `doctor` |
+
+`doctor` only reads files: no database and no running app. It reports the rewrites by the marker migrate writes, or by their source paths when you merged them by hand (and says so); the routes need the generated host, so on a project still converting it says they were not checked and why. The findings are warnings and never change the exit code. `nextspark migrate` points to this list in its report.
+
 ## What migrate does to the app tree
 
 It looks at `app/` (before the `src/` layout) or `src/app/`, and decides file by file. Both at once is refused.

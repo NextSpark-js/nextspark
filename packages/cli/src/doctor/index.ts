@@ -25,6 +25,7 @@ import { checkQueryHooksWithoutProvider } from './checks/query-hooks.js'
 import { checkHoisting } from './checks/hoisting.js'
 import { checkApiKeyScopes } from './checks/api-key-scopes.js'
 import { checkClientIp } from './checks/client-ip.js'
+import { checkCompatShims } from './checks/compat-shims.js'
 
 /**
  * Result of a health check
@@ -128,13 +129,14 @@ export async function runHealthCheck(): Promise<HealthCheckResult[]> {
     { name: 'React Query providers', fn: checkQueryHooksWithoutProvider },
     { name: 'API key scopes', fn: checkApiKeyScopes },
     { name: 'Client address', fn: () => checkClientIp() },
+    { name: 'Compat shims', fn: () => checkCompatShims() },
     { name: 'Hoisting', fn: () => checkHoisting() },
   ]
 
   for (const check of checks) {
     try {
       const result = await check.fn()
-      results.push(result)
+      results.push(...(Array.isArray(result) ? result : [result]))
     } catch (error) {
       results.push({
         name: check.name,

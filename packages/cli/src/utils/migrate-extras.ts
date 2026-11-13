@@ -81,7 +81,7 @@ export function addCompatRewrites(source: string, file: string, entries: readonl
 }
 
 /** Text the report shows next to the rewrites. */
-export const COMPAT_NOTE = 'These rewrites exist for already-installed clients (mobile apps in the stores, integrations). They can be removed later, once those callers use the new URLs.';
+export const COMPAT_NOTE = 'These rewrites exist for already-installed clients (mobile apps in the stores, integrations). They can be removed later, once those callers use the new URLs; `nextspark doctor` lists this and the other compatibility shims a migrated project keeps, each with how to remove it.';
 
 // ---------------------------------------------------------------------------------------------
 // F11: the Next.js range
