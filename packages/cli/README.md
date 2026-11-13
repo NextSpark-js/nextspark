@@ -25,6 +25,7 @@ npx nextspark init              # Interactive wizard
 npx nextspark init --preset saas    # Use SaaS preset
 npx nextspark init --preset blog    # Use Blog preset
 npx nextspark init --preset crm     # Use CRM preset
+npx nextspark init --yes --locales en,es   # Languages without prompts (--default-locale picks the default)
 npx nextspark init --theme blog     # Pre-select a template: starter (stable); blog, crm, productivity (experimental)
 
 > **Experimental:** the blog, crm and productivity templates, the first-party plugins (`--plugins`), and billing are not part of the stable 1.0 surface and may change without a deprecation period.

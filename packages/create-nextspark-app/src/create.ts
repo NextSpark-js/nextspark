@@ -288,6 +288,8 @@ export interface ProjectOptions {
   description?: string
   theme?: string
   plugins?: string
+  locales?: string
+  defaultLocale?: string
   yes?: boolean
   /** false (--no-git) skips the git repository and first commit. Default true. */
   git?: boolean
@@ -557,6 +559,12 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   }
   if (options.plugins) {
     initArgs.push('--plugins', options.plugins)
+  }
+  if (options.locales !== undefined) {
+    initArgs.push('--locales', options.locales)
+  }
+  if (options.defaultLocale !== undefined) {
+    initArgs.push('--default-locale', options.defaultLocale)
   }
   if (options.yes) {
     initArgs.push('--yes')

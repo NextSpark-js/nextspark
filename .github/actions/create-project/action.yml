@@ -10,6 +10,9 @@ inputs:
   preset:
     description: create-nextspark-app preset
     required: true
+  locales:
+    description: Languages of the project (create-nextspark-app --locales), comma-separated. Empty keeps the default, en.
+    default: ''
   pnpm:
     description: >-
       Exact pnpm version the generated project installs and builds with, through Corepack. Empty keeps the pnpm the
@@ -52,7 +55,7 @@ runs:
     - name: Create the ${{ inputs.theme }} project from the tarballs
       shell: bash
       working-directory: ${{ runner.temp }}/project
-      run: node "$GITHUB_WORKSPACE/packages/create-nextspark-app/dist/index.js" app --preset ${{ inputs.preset }} --theme ${{ inputs.theme }} --type web --name app --slug app --description "Template build" -y < /dev/null
+      run: node "$GITHUB_WORKSPACE/packages/create-nextspark-app/dist/index.js" app --preset ${{ inputs.preset }} --theme ${{ inputs.theme }} --type web --name app --slug app --description "Template build" ${{ inputs.locales != '' && format('--locales {0}', inputs.locales) || '' }} -y < /dev/null
       env:
         CYPRESS_INSTALL_BINARY: '0'
 

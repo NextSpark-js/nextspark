@@ -3,6 +3,7 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import { readFileSync } from 'fs'
 import { createProject } from './create.js'
+import { LOCALES, checkLocales } from './utils/locales.js'
 import { getProjectOptions } from './utils/prompts.js'
 
 // Read version from package.json dynamically
@@ -22,15 +23,19 @@ program
   .option('--description <desc>', 'Project description (non-interactive mode)')
   .option('--theme <theme>', 'Theme to use (starter, blog, crm, productivity, none); blog, crm and productivity are experimental')
   .option('--plugins <plugins>', 'Plugins to install (comma-separated; all but starter are experimental)')
+  .option('--locales <list>', `Languages of the project, comma-separated (${LOCALES.join(', ')}); applies to --yes and --preset runs, the prompts ask otherwise (default: en)`)
+  .option('--default-locale <locale>', 'Default language, one of --locales (default: en when selected, else the first)')
   .option('--no-git', 'Do not initialize a git repository or make a first commit')
   .option('-y, --yes', 'Skip prompts and use defaults', false)
-  .action(async (projectName: string | undefined, options: { preset?: string; type?: string; name?: string; slug?: string; description?: string; theme?: string; plugins?: string; yes: boolean; git: boolean }) => {
+  .action(async (projectName: string | undefined, options: { preset?: string; type?: string; name?: string; slug?: string; description?: string; theme?: string; plugins?: string; locales?: string; defaultLocale?: string; yes: boolean; git: boolean }) => {
     console.log()
     console.log(chalk.bold.cyan('  NextSpark'))
     console.log(chalk.dim('  Create a new SaaS project'))
     console.log()
 
     try {
+      // Before the install, which takes minutes: a typo should not cost one
+      checkLocales(options.locales, options.defaultLocale)
       const projectOptions = await getProjectOptions(projectName, options.yes)
 
       await createProject({
@@ -42,6 +47,8 @@ program
         description: options.description,
         theme: options.theme,
         plugins: options.plugins,
+        locales: options.locales,
+        defaultLocale: options.defaultLocale,
         yes: options.yes,
         git: options.git,
       })

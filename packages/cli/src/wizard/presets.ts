@@ -17,6 +17,7 @@ import type {
   DashboardConfig,
   DevConfig,
 } from './types.js'
+import { AVAILABLE_LOCALES } from './types.js'
 
 /**
  * Partial preset configuration (projectName, projectSlug, projectDescription
@@ -230,15 +231,46 @@ export function getAvailablePresets(): PresetName[] {
   return Object.keys(PRESETS) as PresetName[]
 }
 
+/** The languages of a project: what the i18n prompt returns. */
+export type LocaleSelection = Pick<WizardConfig, 'defaultLocale' | 'supportedLocales'>
+
+/**
+ * The languages `--locales` (and `--default-locale`) select, as the i18n prompt would return them: the supported
+ * locales in the catalog's order whatever the order given, each once, and the default one the prompt offers first
+ * (`en` when selected, else the first). An unknown locale, an empty list, or a default that is not in the list throws.
+ */
+export function parseLocales(locales: string, defaultLocale?: string): LocaleSelection {
+  const valid = Object.keys(AVAILABLE_LOCALES)
+  const requested = locales.split(',').map(l => l.trim().toLowerCase()).filter(Boolean)
+  if (requested.length === 0) {
+    throw new Error(`--locales needs at least one language. Valid locales: ${valid.join(', ')}.`)
+  }
+  const unknown = requested.filter(l => !valid.includes(l))
+  if (unknown.length > 0) {
+    throw new Error(`Unknown locale${unknown.length > 1 ? 's' : ''} "${unknown.join('", "')}" in --locales. Valid locales: ${valid.join(', ')}.`)
+  }
+  const supportedLocales = valid.filter(l => requested.includes(l))
+  const chosen = defaultLocale?.trim().toLowerCase()
+  if (chosen !== undefined && !supportedLocales.includes(chosen)) {
+    throw new Error(`--default-locale "${defaultLocale}" is not one of the selected locales (${supportedLocales.join(', ')}).`)
+  }
+  return {
+    supportedLocales,
+    defaultLocale: chosen ?? (supportedLocales.includes('en') ? 'en' : supportedLocales[0]),
+  }
+}
+
 /**
  * Apply preset to partial config
  * (merges project info with preset defaults)
  * Optional typeOverride allows CLI to specify project type
+ * Optional locales replaces the preset's languages (--locales)
  */
 export function applyPreset(
   projectInfo: Pick<WizardConfig, 'projectName' | 'projectSlug' | 'projectDescription'>,
   presetName: PresetName,
-  typeOverride?: ProjectType
+  typeOverride?: ProjectType,
+  locales?: LocaleSelection
 ): WizardConfig {
   const preset = getPreset(presetName)
   return {
@@ -246,6 +278,7 @@ export function applyPreset(
     ...preset,
     // Apply type override if provided
     ...(typeOverride && { projectType: typeOverride }),
+    ...locales,
   }
 }
 

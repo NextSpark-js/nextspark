@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { runWizard } from '../wizard/index.js';
+import { parseLocales } from '../wizard/presets.js';
 import type { CLIOptions, WizardMode, PresetName, ThemeOption, PluginOption, ProjectType } from '../wizard/types.js';
 
 interface InitOptions {
@@ -19,6 +20,8 @@ interface InitOptions {
   slug?: string;
   description?: string;
   type?: string;
+  locales?: string;
+  defaultLocale?: string;
 }
 
 /**
@@ -229,6 +232,17 @@ export async function initCommand(options: InitOptions): Promise<void> {
     return;
   }
 
+  let locales: CLIOptions['locales'];
+  try {
+    if (options.defaultLocale !== undefined && options.locales === undefined) {
+      throw new Error('--default-locale needs --locales.');
+    }
+    locales = options.locales !== undefined ? parseLocales(options.locales, options.defaultLocale) : undefined;
+  } catch (error) {
+    console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
+    process.exit(1);
+  }
+
   // Run the full wizard
   const wizardOptions: CLIOptions = {
     mode: getWizardMode(options),
@@ -240,6 +254,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     slug: options.slug,
     description: options.description,
     type: options.type as ProjectType | undefined,
+    locales,
   };
 
   await runWizard(wizardOptions);

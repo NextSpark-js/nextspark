@@ -16,7 +16,8 @@ function advertisedThemeNames(): string[] {
   })
   assert.equal(result.status, 0, result.stderr)
 
-  const match = result.stdout.match(/Theme to use \(([^)]+)\)/)
+  // commander wraps long descriptions, at a column that depends on the longest option name
+  const match = result.stdout.replace(/\s+/g, ' ').match(/Theme to use \(([^)]+)\)/)
   assert.ok(match, `could not find the --theme help text:\n${result.stdout}`)
   return match[1].split(', ')
 }

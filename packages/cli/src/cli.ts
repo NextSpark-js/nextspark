@@ -25,6 +25,7 @@ import { checkMobileCommand } from './commands/check-mobile.js';
 import { registryBuildCommand, registryWatchCommand } from './commands/registry.js';
 import { initCommand } from './commands/init.js';
 import { PROJECT_TEMPLATE_OPTIONS } from './wizard/generators/theme-plugins-installer.js';
+import { AVAILABLE_LOCALES } from './wizard/types.js';
 import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
 import { addMobileCommand } from './commands/add-mobile.js';
@@ -138,6 +139,7 @@ program
   .action(registryWatchCommand);
 
 // Init command
+const LOCALES_HELP = `Languages of the project, comma-separated (${Object.keys(AVAILABLE_LOCALES).join(', ')}); applies to --yes and --preset runs, the prompts ask otherwise (default: en)`;
 program
   .command('init')
   .description('Initialize NextSpark project')
@@ -154,6 +156,8 @@ program
   .option('--slug <slug>', 'Project slug (non-interactive mode)')
   .option('--description <desc>', 'Project description (non-interactive mode)')
   .option('--type <type>', 'Project type: web or web-mobile (non-interactive mode)')
+  .option('--locales <list>', LOCALES_HELP)
+  .option('--default-locale <locale>', 'Default language, one of --locales (default: en when selected, else the first)')
   .action(initCommand);
 
 // Add plugin command

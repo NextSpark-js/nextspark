@@ -117,6 +117,8 @@ export interface CLIOptions {
   slug?: string
   description?: string
   type?: ProjectType // Project type override for non-interactive mode
+  // Languages from --locales/--default-locale (already validated); used when a preset is in effect
+  locales?: Pick<WizardConfig, 'defaultLocale' | 'supportedLocales'>
 }
 
 /**

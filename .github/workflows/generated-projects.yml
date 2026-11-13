@@ -75,7 +75,7 @@ jobs:
   # its per-route client JavaScript checked against scripts/performance/starter-route-js-budget.json (the 0.1.0-beta.193
   # starter + 5%; signed-out routes free of dashboard code) and the security probes.
   template-build:
-    name: template-build (${{ matrix.theme }}, node ${{ matrix.node }})
+    name: template-build (${{ matrix.theme }}, node ${{ matrix.node }}${{ matrix.locales && format(', {0}', matrix.locales) || '' }})
     needs: pack
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -88,6 +88,8 @@ jobs:
           - { theme: crm, preset: crm, page: /dashboard, node: 22.14.0 }
           - { theme: productivity, preset: saas, page: /dashboard, node: 22.14.0 }
           - { theme: starter, preset: saas, page: /, node: '24' }
+          # Two languages through --locales (#443): the same build, plus the check below
+          - { theme: starter, preset: saas, page: /, node: '24', locales: 'en,es' }
     services:
       postgres:
         image: postgres:15
@@ -116,6 +118,17 @@ jobs:
         with:
           theme: ${{ matrix.theme }}
           preset: ${{ matrix.preset }}
+          locales: ${{ matrix.locales }}
+
+      # --locales en,es must give what choosing both in the prompts gives: the es catalogs next to the en ones, both
+      # in supportedLocales, en the default. The build below then runs with the two languages.
+      - name: Check the languages of the project
+        if: matrix.locales
+        working-directory: ${{ runner.temp }}/project/app
+        run: |
+          test -d messages/en && test -d messages/es
+          grep -E "supportedLocales: \[ ?'en', 'es' ?\]" config/app.config.ts
+          grep -E "defaultLocale: 'en'" config/app.config.ts
 
       - name: Migrate, build and serve the project
         uses: ./.github/actions/build-project

@@ -31,9 +31,16 @@ npx create-nextspark-app my-app --theme starter
 # Skip all prompts (use defaults)
 npx create-nextspark-app my-app -y
 
+# Choose the languages without prompts (en, es, fr, de, it, pt; default language: en when selected,
+# else the first; --default-locale picks another). Same result as choosing them in the prompts.
+npx create-nextspark-app my-app -y --locales en,es
+npx create-nextspark-app my-app -y --locales en,es --default-locale es
+
 # Do not create a git repository
 npx create-nextspark-app my-app --no-git
 ```
+
+`--locales` applies to `--yes` and `--preset` runs, where the prompts do not ask for languages; in a fully interactive run it is ignored with a warning, and you choose the languages in the prompts. A locale outside the six, an empty list, or a `--default-locale` that is not in the list stops the command before anything is installed. The list may come in any order and repeat a locale: it is read in the catalog's order, once each.
 
 After the dependencies are installed the project gets a git repository with a first commit (lockfile included, `node_modules` and `.env` ignored), because `nextspark update-core` starts only from a clean git tree. Nothing is created when `git` is not installed or the project sits inside an existing repository; if the commit fails (for example, no `user.name`/`user.email`), the repository is left initialized and the CLI says how to commit.
 

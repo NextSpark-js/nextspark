@@ -156,6 +156,10 @@ export async function runWizard(
     // overriding individual choices.
     const preset = options.preset ?? (options.yes ? DEFAULT_PRESET : undefined)
 
+    if (options.locales && !preset) {
+      showWarning('--locales applies to --yes and --preset runs; choose the languages in the prompts instead. Ignoring it.')
+    }
+
     if (preset) {
       // Preset mode: get project info then apply preset
       if (!options.preset) {
@@ -425,7 +429,7 @@ async function runPresetMode(presetName: CLIOptions['preset'], options: CLIOptio
   }
 
   // Apply preset to project info (with optional type override from CLI)
-  const config = applyPreset(projectInfo, presetName, options.type)
+  const config = applyPreset(projectInfo, presetName, options.type, options.locales)
 
   return config
 }

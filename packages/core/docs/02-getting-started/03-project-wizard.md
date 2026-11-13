@@ -23,6 +23,9 @@ pnpm exec nextspark init --expert
 pnpm exec nextspark init --preset saas
 pnpm exec nextspark init --preset blog
 pnpm exec nextspark init --preset crm
+
+# Choose the languages without prompts (with --yes or a preset)
+pnpm exec nextspark init --yes --locales en,es
 ```
 
 ## Wizard Steps (10 Steps)
@@ -43,6 +46,8 @@ pnpm exec nextspark init --preset crm
 ### Step 4: Internationalization
 - **Default Locale**: Primary language (en, es, fr, de, it, pt)
 - **Supported Locales**: Additional languages
+
+A non-interactive run (`--yes` or a preset) takes the languages from `--locales en,es` (and `--default-locale es`), with the same result as choosing them here: the default is `en` when selected, else the first, and the list is read in the catalog's order, once each. An unknown locale, an empty list or a default outside the list is an error that lists the valid values. In a fully interactive run `--locales` is ignored with a warning. With `create-nextspark-app` the flags are checked before the install.
 
 ### Step 5: Billing Configuration
 - **Billing Model**: `free` (default) | `freemium` | `paid`. `freemium` and `paid` are experimental and print a notice; `free` has no billing, no notice and no plan limits.
