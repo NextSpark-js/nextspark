@@ -20,7 +20,7 @@
  */
 
 import { SettingsPOM } from '../../../src/features/SettingsPOM'
-import { loginAsDefaultDeveloper } from '../../../src/session-helpers'
+import { loginAsDefaultDeveloper, loginAsDefaultSuperadmin } from '../../../src/session-helpers'
 
 describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
@@ -104,7 +104,12 @@ describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors', '@set
       cy.get(settings.selectors.sidebarNavItem('api-keys')).should('exist')
     })
 
+    // The entry needs the team permission settings.billing, which core gives the team owner only. The developer
+    // account is an admin of the sample team, so the check signs in as the superadmin account, the team's owner.
     it('should find billing nav item', () => {
+      loginAsDefaultSuperadmin()
+      settings.visitSettings()
+      settings.waitForSettings()
       cy.get(settings.selectors.sidebarNavItem('billing')).should('exist')
     })
 
