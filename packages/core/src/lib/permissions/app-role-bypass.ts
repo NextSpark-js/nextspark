@@ -21,8 +21,9 @@ import { TEAMS_CONFIG } from '../config/config-client'
 import { PermissionService } from '../services/permission.service'
 import type { Permission } from './types'
 
-export const APP_ROLE_BYPASS_VALUES = ['none', 'developer', 'developer-and-superadmin'] as const
-export type AppRoleBypass = (typeof APP_ROLE_BYPASS_VALUES)[number]
+import { APP_ROLE_BYPASS_VALUES, type AppRoleBypass } from './app-role-bypass-values'
+
+export { APP_ROLE_BYPASS_VALUES, type AppRoleBypass }
 export const DEFAULT_APP_ROLE_BYPASS: AppRoleBypass = 'developer'
 
 const SKIPPING_ROLES: Record<AppRoleBypass, readonly string[]> = {

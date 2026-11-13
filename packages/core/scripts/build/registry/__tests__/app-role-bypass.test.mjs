@@ -42,10 +42,10 @@ function withProject(appConfig, fn) {
 
 const config = value => `export const APP_CONFIG_OVERRIDES = {\n  teams: {\n    mode: 'multi-tenant' as const,\n    options: { allowCreateTeams: true },\n    appRoleBypass: ${value},\n  },\n}\n`
 
-test('the build accepts exactly the values the runtime accepts (APP_ROLE_BYPASS_VALUES of app-role-bypass.ts)', () => {
-  const source = readFileSync(join(CORE_DIR, 'src', 'lib', 'permissions', 'app-role-bypass.ts'), 'utf8')
+test('the build accepts exactly the values the runtime accepts (APP_ROLE_BYPASS_VALUES of app-role-bypass-values.ts)', () => {
+  const source = readFileSync(join(CORE_DIR, 'src', 'lib', 'permissions', 'app-role-bypass-values.ts'), 'utf8')
   const list = source.match(/export const APP_ROLE_BYPASS_VALUES = \[([^\]]*)\]/)
-  assert.ok(list, 'APP_ROLE_BYPASS_VALUES not found in app-role-bypass.ts')
+  assert.ok(list, 'APP_ROLE_BYPASS_VALUES not found in app-role-bypass-values.ts')
   const runtime = [...list[1].matchAll(/'([^']*)'/g)].map(match => match[1])
   assert.deepEqual(APP_ROLE_BYPASS_VALUES, runtime)
 })

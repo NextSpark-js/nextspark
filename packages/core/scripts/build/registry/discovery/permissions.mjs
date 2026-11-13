@@ -295,7 +295,7 @@ function extractObjectBlock(content, key) {
   return null
 }
 
-// Keep in step with APP_ROLE_BYPASS_VALUES in src/lib/permissions/app-role-bypass.ts (#457)
+// Keep in step with APP_ROLE_BYPASS_VALUES in src/lib/permissions/app-role-bypass-values.ts (#457)
 export const APP_ROLE_BYPASS_VALUES = ['none', 'developer', 'developer-and-superadmin']
 
 /**

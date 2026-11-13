@@ -8,7 +8,7 @@
 // Import icon names type (will be created in next step)
 import type { IconName } from './icon-map'
 import type { JobsConfig } from '../jobs/types'
-import type { AppRoleBypass } from '../permissions/app-role-bypass'
+import type { AppRoleBypass } from '../permissions/app-role-bypass-values'
 
 /** A source `i18n.detectionStrategy` can turn on. */
 export type LocaleDetectionSource = 'user_database' | 'cookie' | 'header' | 'default'
