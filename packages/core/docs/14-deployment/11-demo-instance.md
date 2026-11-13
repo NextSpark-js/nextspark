@@ -56,8 +56,9 @@ Every visitor signs in with the same few accounts, so a demo has no per-account 
 Create the project from a released version of the CLI, then, from its directory on the host:
 
 ```bash
-# 1. The build's login check expects a real email provider, which a demo must not have
-NEXTSPARK_AUTH_PREFLIGHT=off pnpm build
+# 1. With NEXTSPARK_DEMO_MODE=true in the build environment, the login check expects only the
+#    password login of the sample accounts, so it needs no email provider and no bypass
+pnpm build
 
 # 2. Load the sample data. Run this instead of db:migrate: a database with tables
 #    that this command did not create is refused

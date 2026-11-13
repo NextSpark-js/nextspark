@@ -413,6 +413,23 @@ test('EMAIL_PROVIDER=smtp without nodemailer installed warns at build; with it i
   }
 })
 
+test('demo mode: the production check passes without a provider or the bypass; the same project without it still fails', async () => {
+  const project = await fixture(methods(['email-otp', 'google']))
+  try {
+    const demo = run(project.root, ['prepare', '--production'], { NEXTSPARK_DEMO_MODE: 'true' })
+    assert.equal(demo.status, 0, demo.output)
+    assert.doesNotMatch(demo.output, /NEXTSPARK_AUTH_PREFLIGHT/)
+
+    const normal = run(project.root, ['prepare', '--production'])
+    assert.equal(normal.status, 1, normal.output)
+    // Only the exact value counts
+    const loose = run(project.root, ['prepare', '--production'], { NEXTSPARK_DEMO_MODE: 'TRUE' })
+    assert.equal(loose.status, 1, loose.output)
+  } finally {
+    await project.cleanup()
+  }
+})
+
 test('a core whose dist lacks the evaluator, or its exports, fails closed', async () => {
   const project = await fixture(methods(['google']))
   const evaluator = join(project.root, 'node_modules/@nextsparkjs/core/dist/lib/auth/readiness.js')

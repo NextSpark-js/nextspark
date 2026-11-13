@@ -14,6 +14,8 @@
  * - NEXTSPARK_AUTH_RUNTIME_ONLY: comma list of `email`, `google`, `github`,
  *   `microsoft` and/or `apple` whose credentials are injected only at runtime. Missing values of a declared
  *   provider are deferred to the runtime check; concrete invalid ones still fail.
+ * - NEXTSPARK_DEMO_MODE=true: checks what a demo serves (password login with the sample accounts) instead of
+ *   the project's methods, as the runtime gate does; no email provider is required.
  * - NEXTSPARK_AUTH_PREFLIGHT=off: the one bypass. Skips this check with a
  *   warning; the runtime gates and the startup check still apply.
  *
@@ -182,7 +184,11 @@ async function main() {
     ])
   }
 
-  const authConfig = await projectAuthConfig()
+  // The runtime gate's own rule (lib/auth/runtime-readiness): a demo signs in only by password with its sample accounts,
+  // whatever the project's methods, and has no email provider on purpose. Exactly NEXTSPARK_DEMO_MODE=true, as core's isDemoMode
+  const demo = env.NEXTSPARK_DEMO_MODE === 'true'
+  const authConfig = demo ? { methods: ['email-password'] } : await projectAuthConfig()
+  if (demo) console.log('ℹ️ NEXTSPARK_DEMO_MODE=true: checking the sample-account password login a demo serves, not the real login providers.')
   const configuration = evaluator.authReadinessConfigurationFromEnv(env)
   configuration.email.runtimeOnly = runtimeOnly.has('email')
   for (const id of SOCIAL_PROVIDERS) configuration[id].runtimeOnly = runtimeOnly.has(id)
@@ -195,7 +201,7 @@ async function main() {
   const result = evaluator.evaluateAuthReadiness({
     profile: 'web-local-auth',
     stage: 'build',
-    environment: 'production',
+    environment: demo ? 'development' : 'production',
     authConfig,
     configuration,
   })
