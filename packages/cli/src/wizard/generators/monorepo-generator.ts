@@ -162,8 +162,9 @@ export const VERSIONS = {
   TYPES_JEST: '30.0.0',
   JEST_EXPO: '~58.0.11',
   RN_JEST_PRESET: '^0.88.0',
-  TESTING_LIBRARY_JEST_NATIVE: '^5.4.3',
-  TESTING_LIBRARY_RN: '^13.3.3',
+  TESTING_LIBRARY_RN: '^14.1.0',
+  // jest-expo 58 peers 1.3.0 exactly; RNTL 14 renders through it instead of react-test-renderer
+  TEST_RENDERER: '1.3.0',
 } as const
 
 // ============================================================================
@@ -517,7 +518,6 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
     },
     devDependencies: {
       '@babel/core': VERSIONS.BABEL_CORE,
-      '@testing-library/jest-native': VERSIONS.TESTING_LIBRARY_JEST_NATIVE,
       '@testing-library/react-native': VERSIONS.TESTING_LIBRARY_RN,
       '@types/jest': VERSIONS.TYPES_JEST,
       '@types/node': '^22.10.7',
@@ -525,7 +525,7 @@ export async function createMobilePackageJson(mobileDir: string, config: WizardC
       'jest': VERSIONS.JEST,
       '@react-native/jest-preset': VERSIONS.RN_JEST_PRESET,
       'jest-expo': VERSIONS.JEST_EXPO,
-      'react-test-renderer': VERSIONS.REACT,
+      'test-renderer': VERSIONS.TEST_RENDERER,
       'typescript': VERSIONS.TYPESCRIPT_MOBILE
     }
   }

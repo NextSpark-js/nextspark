@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet } from 'react-native'
+import { StyleSheet, Text } from 'react-native'
 import { render } from '@testing-library/react-native'
 import { Button } from '../../../../../packages/ui/src/components/Button.native'
 import { Input } from '../../../../../packages/ui/src/components/Input.native'
@@ -25,22 +25,22 @@ describe('native controls grow with the text', () => {
     ['sm', 36],
     ['lg', 48],
     ['icon', 40],
-  ] as const)('Button %s has minHeight %i and no fixed height', (size, min) => {
-    const { getByTestId } = render(<Button testID="b" size={size}>Go</Button>)
+  ] as const)('Button %s has minHeight %i and no fixed height', async (size, min) => {
+    const { getByTestId } = await render(<Button testID="b" size={size}>Go</Button>)
     const style = flat(getByTestId('b').props.style)
     expect(style.minHeight).toBe(min)
     expect(style.height).toBeUndefined()
   })
 
-  it('Input has minHeight 44 and no fixed height', () => {
-    const { getByTestId } = render(<Input testID="i" />)
+  it('Input has minHeight 44 and no fixed height', async () => {
+    const { getByTestId } = await render(<Input testID="i" />)
     const style = flat(getByTestId('i').props.style)
     expect(style.minHeight).toBe(44)
     expect(style.height).toBeUndefined()
   })
 
-  it('Select trigger has minHeight 44 and no fixed height', () => {
-    const { getByText } = render(<Select options={[]} placeholder="Pick" />)
+  it('Select trigger has minHeight 44 and no fixed height', async () => {
+    const { getByText } = await render(<Select options={[]} placeholder="Pick" />)
     // climb from the label to the trigger: the first ancestor that carries a minHeight
     let node = getByText('Pick').parent
     while (node && flat(node.props.style).minHeight === undefined) node = node.parent
@@ -57,21 +57,21 @@ describe('Card className', () => {
   })
   afterEach(() => warn.mockRestore())
 
-  it('warns in development when className is passed to a part, and stays silent without it', () => {
-    render(<Card><CardContent>x</CardContent></Card>)
+  it('warns in development when className is passed to a part, and stays silent without it', async () => {
+    await render(<Card><CardContent><Text>x</Text></CardContent></Card>)
     expect(warn).not.toHaveBeenCalled()
-    render(<CardContent className="p-4">x</CardContent>)
+    await render(<CardContent className="p-4"><Text>x</Text></CardContent>)
     expect(warn).toHaveBeenCalledTimes(1)
     expect(warn.mock.calls[0][0]).toContain('CardContent')
     expect(warn.mock.calls[0][0]).toContain('style')
   })
 
-  it('is silent outside development', () => {
+  it('is silent outside development', async () => {
     const g = globalThis as unknown as { __DEV__: boolean }
     const previous = g.__DEV__
     g.__DEV__ = false
     try {
-      render(<CardFooter className="p-4" />)
+      await render(<CardFooter className="p-4" />)
     } finally {
       g.__DEV__ = previous
     }
@@ -83,15 +83,15 @@ describe('Card className', () => {
     ['CardTitle', CardTitle],
     ['CardDescription', CardDescription],
     ['CardFooter', CardFooter],
-  ] as const)('warns for %s', (name, Part) => {
-    render(<Part className="p-4" />)
+  ] as const)('warns for %s', async (name, Part) => {
+    await render(<Part className="p-4" />)
     expect(warn).toHaveBeenCalledTimes(1)
     expect(warn.mock.calls[0][0]).toContain(`${name}:`)
   })
 
-  it('warns for Card and PressableCard', () => {
-    render(<Card className="m-2" />)
-    render(<PressableCard className="m-2" />)
+  it('warns for Card and PressableCard', async () => {
+    await render(<Card className="m-2" />)
+    await render(<PressableCard className="m-2" />)
     expect(warn.mock.calls.map((c) => c[0]).join('\n')).toMatch(/Card:.*\n.*PressableCard:/)
   })
 })

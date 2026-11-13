@@ -70,7 +70,7 @@ describe('Customer queries', () => {
       }
       mockCustomersApi.list.mockResolvedValueOnce(response)
 
-      const { result } = renderHook(() => useCustomers(), {
+      const { result } = await renderHook(() => useCustomers(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -90,7 +90,7 @@ describe('Customer queries', () => {
       }
       mockCustomersApi.list.mockResolvedValueOnce(response)
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () => useCustomers({ page: 2, limit: 10 }),
         { wrapper: createQueryWrapper() }
       )
@@ -114,7 +114,7 @@ describe('Customer queries', () => {
       }
       mockCustomersApi.list.mockResolvedValueOnce(response)
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () => useCustomers({ search: 'test search' }),
         { wrapper: createQueryWrapper() }
       )
@@ -129,7 +129,7 @@ describe('Customer queries', () => {
     })
 
     it('should not fetch when disabled', async () => {
-      renderHook(
+      await renderHook(
         () => useCustomers({ enabled: false }),
         { wrapper: createQueryWrapper() }
       )
@@ -144,7 +144,7 @@ describe('Customer queries', () => {
       const error = new Error('Failed to fetch customers')
       mockCustomersApi.list.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useCustomers(), {
+      const { result } = await renderHook(() => useCustomers(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -161,7 +161,7 @@ describe('Customer queries', () => {
       // createEntityApi's get() resolves with the entity itself
       mockCustomersApi.get.mockResolvedValueOnce(testCustomers[0])
 
-      const { result } = renderHook(() => useCustomer('cust-1'), {
+      const { result } = await renderHook(() => useCustomer('cust-1'), {
         wrapper: createQueryWrapper(),
       })
 
@@ -175,7 +175,7 @@ describe('Customer queries', () => {
     })
 
     it('should not fetch if id is undefined', async () => {
-      renderHook(() => useCustomer(undefined), {
+      await renderHook(() => useCustomer(undefined), {
         wrapper: createQueryWrapper(),
       })
 
@@ -189,7 +189,7 @@ describe('Customer queries', () => {
       const error = new Error('Customer not found')
       mockCustomersApi.get.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useCustomer('non-existent'), {
+      const { result } = await renderHook(() => useCustomer('non-existent'), {
         wrapper: createQueryWrapper(),
       })
 

@@ -16,25 +16,25 @@ import { mockUseAuth } from '../__mocks__/nextsparkjs-mobile'
 import LoginScreen from '../../../app/login'
 
 async function goToCodeStep() {
-  render(<LoginScreen />)
-  fireEvent.changeText(screen.getByTestId('login-otp-email'), 'user@example.com')
-  fireEvent.press(screen.getByTestId('login-otp-send'))
+  await render(<LoginScreen />)
+  await fireEvent.changeText(screen.getByTestId('login-otp-email'), 'user@example.com')
+  await fireEvent.press(screen.getByTestId('login-otp-send'))
   await waitFor(() => expect(screen.getByTestId('login-otp-code')).toBeTruthy())
 }
 
 describe('LoginScreen — one-time code', () => {
   it('sends the code request with the trimmed email', async () => {
-    render(<LoginScreen />)
-    fireEvent.changeText(screen.getByTestId('login-otp-email'), '  user@example.com  ')
-    fireEvent.press(screen.getByTestId('login-otp-send'))
+    await render(<LoginScreen />)
+    await fireEvent.changeText(screen.getByTestId('login-otp-email'), '  user@example.com  ')
+    await fireEvent.press(screen.getByTestId('login-otp-send'))
 
     await waitFor(() => expect(mockUseAuth.requestOtp).toHaveBeenCalledWith('user@example.com'))
   })
 
   it('rejects an invalid email before requesting a code', async () => {
-    render(<LoginScreen />)
-    fireEvent.changeText(screen.getByTestId('login-otp-email'), 'not-an-email')
-    fireEvent.press(screen.getByTestId('login-otp-send'))
+    await render(<LoginScreen />)
+    await fireEvent.changeText(screen.getByTestId('login-otp-email'), 'not-an-email')
+    await fireEvent.press(screen.getByTestId('login-otp-send'))
 
     expect(mockUseAuth.requestOtp).not.toHaveBeenCalled()
     expect(screen.getByText('Ingresa un email válido')).toBeTruthy()
@@ -44,15 +44,15 @@ describe('LoginScreen — one-time code', () => {
     await goToCodeStep()
     const codeInput = screen.getByTestId('login-otp-code')
 
-    fireEvent.changeText(codeInput, '12a3-4b56789999')
+    await fireEvent.changeText(codeInput, '12a3-4b56789999')
 
     expect(codeInput.props.value).toBe('123456789999'.slice(0, 10))
   })
 
   it('rejects a code shorter than the minimum without calling loginWithOtp', async () => {
     await goToCodeStep()
-    fireEvent.changeText(screen.getByTestId('login-otp-code'), '123')
-    fireEvent.press(screen.getByTestId('login-otp-submit'))
+    await fireEvent.changeText(screen.getByTestId('login-otp-code'), '123')
+    await fireEvent.press(screen.getByTestId('login-otp-submit'))
 
     expect(mockUseAuth.loginWithOtp).not.toHaveBeenCalled()
     expect(screen.getByText('Ingresa el código que te enviamos por email')).toBeTruthy()
@@ -62,8 +62,8 @@ describe('LoginScreen — one-time code', () => {
     mockUseAuth.loginWithOtp.mockResolvedValueOnce(undefined)
     await goToCodeStep()
 
-    fireEvent.changeText(screen.getByTestId('login-otp-code'), '123456')
-    fireEvent.press(screen.getByTestId('login-otp-submit'))
+    await fireEvent.changeText(screen.getByTestId('login-otp-code'), '123456')
+    await fireEvent.press(screen.getByTestId('login-otp-submit'))
 
     await waitFor(() =>
       expect(mockUseAuth.loginWithOtp).toHaveBeenCalledWith('user@example.com', '123456')
@@ -75,8 +75,8 @@ describe('LoginScreen — one-time code', () => {
     mockUseAuth.loginWithOtp.mockRejectedValueOnce(new Error('Código inválido o vencido.'))
     await goToCodeStep()
 
-    fireEvent.changeText(screen.getByTestId('login-otp-code'), '123456')
-    fireEvent.press(screen.getByTestId('login-otp-submit'))
+    await fireEvent.changeText(screen.getByTestId('login-otp-code'), '123456')
+    await fireEvent.press(screen.getByTestId('login-otp-submit'))
 
     await waitFor(() => expect(screen.getByText('Código inválido o vencido.')).toBeTruthy())
     expect(router.replace).not.toHaveBeenCalled()

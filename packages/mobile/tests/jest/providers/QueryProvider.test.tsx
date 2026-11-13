@@ -13,16 +13,16 @@ function capture() {
 }
 
 describe('QueryProvider', () => {
-  it('provides an injected client', () => {
+  it('provides an injected client', async () => {
     const injected = new QueryClient()
     const { Probe, get } = capture()
-    render(<QueryProvider client={injected}><Probe /></QueryProvider>)
+    await render(<QueryProvider client={injected}><Probe /></QueryProvider>)
     expect(get()).toBe(injected)
   })
 
-  it('merges defaultOptions over the defaults when no client is injected', () => {
+  it('merges defaultOptions over the defaults when no client is injected', async () => {
     const { Probe, get } = capture()
-    render(
+    await render(
       <QueryProvider defaultOptions={{ queries: { retry: 3 }, mutations: { retry: 2 } }}>
         <Probe />
       </QueryProvider>,
@@ -33,23 +33,23 @@ describe('QueryProvider', () => {
     expect(defaults.mutations).toEqual({ retry: 2 })
   })
 
-  it('keeps the same client across re-renders, ignoring changed props', () => {
+  it('keeps the same client across re-renders, ignoring changed props', async () => {
     const { Probe, get } = capture()
     const ui = (retry: number) => (
       <QueryProvider defaultOptions={{ queries: { retry } }}>
         <Probe />
       </QueryProvider>
     )
-    const { rerender } = render(ui(3))
+    const { rerender } = await render(ui(3))
     const first = get()
-    rerender(ui(5))
+    await rerender(ui(5))
     expect(get()).toBe(first)
     expect(get().getDefaultOptions().queries?.retry).toBe(3)
   })
 
-  it('without props provides the shared client with the current defaults', () => {
+  it('without props provides the shared client with the current defaults', async () => {
     const { Probe, get } = capture()
-    render(<QueryProvider><Probe /></QueryProvider>)
+    await render(<QueryProvider><Probe /></QueryProvider>)
     expect(get()).toBe(queryClient)
     expect(get().getDefaultOptions()).toEqual({
       queries: { staleTime: 300000, retry: 1, refetchOnWindowFocus: false },

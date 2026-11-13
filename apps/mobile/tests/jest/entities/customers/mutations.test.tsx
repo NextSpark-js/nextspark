@@ -63,7 +63,7 @@ describe('Customer mutations', () => {
     it('should call customersApi.create with data', async () => {
       mockCustomersApi.create.mockResolvedValueOnce({ ...testCustomer, ...createInput, id: 'cust-new' })
 
-      const { result } = renderHook(() => useCreateCustomer(), {
+      const { result } = await renderHook(() => useCreateCustomer(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -83,7 +83,7 @@ describe('Customer mutations', () => {
       }
       mockCustomersApi.create.mockResolvedValueOnce(createdCustomer)
 
-      const { result } = renderHook(() => useCreateCustomer(), {
+      const { result } = await renderHook(() => useCreateCustomer(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -100,7 +100,7 @@ describe('Customer mutations', () => {
       const error = new Error('Create failed')
       mockCustomersApi.create.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useCreateCustomer(), {
+      const { result } = await renderHook(() => useCreateCustomer(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -116,7 +116,7 @@ describe('Customer mutations', () => {
     it('should call customersApi.update with id and data', async () => {
       mockCustomersApi.update.mockResolvedValueOnce({ ...testCustomer, ...updateInput })
 
-      const { result } = renderHook(() => useUpdateCustomer(), {
+      const { result } = await renderHook(() => useUpdateCustomer(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -135,7 +135,7 @@ describe('Customer mutations', () => {
       }
       mockCustomersApi.update.mockResolvedValueOnce(updatedCustomer)
 
-      const { result } = renderHook(() => useUpdateCustomer(), {
+      const { result } = await renderHook(() => useUpdateCustomer(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -153,7 +153,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.update.mockResolvedValueOnce(updatedCustomer)
       const queryClient = createTestQueryClient()
 
-      const { result } = renderHook(() => useUpdateCustomer(), {
+      const { result } = await renderHook(() => useUpdateCustomer(), {
         wrapper: createQueryWrapper(queryClient),
       })
 
@@ -169,7 +169,7 @@ describe('Customer mutations', () => {
     it('should call customersApi.delete with id', async () => {
       mockCustomersApi.delete.mockResolvedValueOnce(undefined)
 
-      const { result } = renderHook(() => useDeleteCustomer(), {
+      const { result } = await renderHook(() => useDeleteCustomer(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -183,7 +183,7 @@ describe('Customer mutations', () => {
     it('should handle delete success', async () => {
       mockCustomersApi.delete.mockResolvedValueOnce(undefined)
 
-      const { result } = renderHook(() => useDeleteCustomer(), {
+      const { result } = await renderHook(() => useDeleteCustomer(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -200,7 +200,7 @@ describe('Customer mutations', () => {
       const error = new Error('Delete failed')
       mockCustomersApi.delete.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useDeleteCustomer(), {
+      const { result } = await renderHook(() => useDeleteCustomer(), {
         wrapper: createQueryWrapper(),
       })
 

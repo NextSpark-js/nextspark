@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The mobile template, `create-nextspark-app` and the development app test with `@testing-library/react-native` `^14.1.0`, which expo-router 58 asks for as a peer. Version 14 renders through `test-renderer` (pinned to `1.3.0`, the line jest-expo 58 asks for) instead of `react-test-renderer`, makes `render`, `renderHook`, `fireEvent` and `act` async, and ships the `toBeOnTheScreen`, `toHaveTextContent` and the other matchers itself, so `@testing-library/jest-native` and its `setupFilesAfterEnv` entry are gone from the template's `jest.config.js`. To upgrade an existing project (Node `^22.13.0 || >=24`, React 19): `pnpm remove @testing-library/jest-native react-test-renderer @types/react-test-renderer`, `pnpm add -D @testing-library/react-native@^14.1.0 test-renderer@1.3.0`, delete `setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect']` from `jest.config.js`, and `await` every `render`, `renderHook`, `fireEvent.*` and `act` in your tests (the `rntl-v14-async-functions` codemod does most of it). Strings rendered outside a `<Text>` now throw in tests, as they do on a device. (#449)
+
 ## [0.1.0-beta.202] - 2026-11-11
 
 ### Fixed

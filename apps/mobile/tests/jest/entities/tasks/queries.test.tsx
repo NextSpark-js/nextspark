@@ -66,7 +66,7 @@ describe('Task queries', () => {
       }
       mockTasksApi.list.mockResolvedValueOnce(response)
 
-      const { result } = renderHook(() => useTasks(), {
+      const { result } = await renderHook(() => useTasks(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -86,7 +86,7 @@ describe('Task queries', () => {
       }
       mockTasksApi.list.mockResolvedValueOnce(response)
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () => useTasks({ page: 2, limit: 10, status: 'todo', priority: 'high' }),
         { wrapper: createQueryWrapper() }
       )
@@ -112,7 +112,7 @@ describe('Task queries', () => {
       }
       mockTasksApi.list.mockResolvedValueOnce(response)
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () => useTasks({ search: 'test query' }),
         { wrapper: createQueryWrapper() }
       )
@@ -127,7 +127,7 @@ describe('Task queries', () => {
     })
 
     it('should not fetch when disabled', async () => {
-      renderHook(
+      await renderHook(
         () => useTasks({ enabled: false }),
         { wrapper: createQueryWrapper() }
       )
@@ -142,7 +142,7 @@ describe('Task queries', () => {
       const error = new Error('Failed to fetch')
       mockTasksApi.list.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useTasks(), {
+      const { result } = await renderHook(() => useTasks(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -159,7 +159,7 @@ describe('Task queries', () => {
       // createEntityApi's get() resolves with the entity itself
       mockTasksApi.get.mockResolvedValueOnce(testTasks[0])
 
-      const { result } = renderHook(() => useTask('task-1'), {
+      const { result } = await renderHook(() => useTask('task-1'), {
         wrapper: createQueryWrapper(),
       })
 
@@ -172,7 +172,7 @@ describe('Task queries', () => {
     })
 
     it('should not fetch if id is undefined', async () => {
-      renderHook(() => useTask(undefined), {
+      await renderHook(() => useTask(undefined), {
         wrapper: createQueryWrapper(),
       })
 
@@ -186,7 +186,7 @@ describe('Task queries', () => {
       const error = new Error('Task not found')
       mockTasksApi.get.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useTask('non-existent'), {
+      const { result } = await renderHook(() => useTask('non-existent'), {
         wrapper: createQueryWrapper(),
       })
 

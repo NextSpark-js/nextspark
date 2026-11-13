@@ -57,7 +57,7 @@ describe('AuthProvider', () => {
   }
 
   it('provides auth context', async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -75,7 +75,7 @@ describe('AuthProvider', () => {
     ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [mockTeam] })
     ;(teamsApi.switchTeam as jest.Mock).mockResolvedValue({})
 
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -98,7 +98,7 @@ describe('AuthProvider', () => {
     ;(authApi.loginWithOtp as jest.Mock).mockResolvedValue({ user: mockUser, token: 'tok' })
     ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [mockTeam] })
 
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -124,7 +124,7 @@ describe('AuthProvider', () => {
   it('handles logout', async () => {
     ;(authApi.logout as jest.Mock).mockResolvedValue({})
 
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -151,7 +151,7 @@ describe('AuthProvider', () => {
       .mockResolvedValueOnce({ data: [teamA] })
       .mockResolvedValueOnce({ data: [teamB] })
 
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     await act(async () => {
@@ -180,7 +180,7 @@ describe('AuthProvider', () => {
     ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [mockTeam] })
     ;(authApi.logout as jest.Mock).mockRejectedValue(new Error('SecureStore unavailable'))
 
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -217,7 +217,7 @@ describe('AuthProvider', () => {
       ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [storedTeam] })
       ;(apiClient.getTeamId as jest.Mock).mockReturnValue('team-1')
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       expect(result.current.user).toEqual(freshUser)
@@ -233,7 +233,7 @@ describe('AuthProvider', () => {
       ;(apiClient.getTeamId as jest.Mock).mockReturnValue('team-gone')
       queryClient.setQueryData(['tasks'], [{ id: 'gone-team-task' }])
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       expect(result.current.team).toEqual(otherTeam)
@@ -244,7 +244,7 @@ describe('AuthProvider', () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValue(new TypeError('Network request failed'))
       expectOfflineInitWarning()
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       expect(result.current.user).toEqual(storedUser)
@@ -259,7 +259,7 @@ describe('AuthProvider', () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValue(new TypeError('Network request failed'))
       expectOfflineInitWarning()
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       expect(result.current.user).toEqual(storedUser)
@@ -272,7 +272,7 @@ describe('AuthProvider', () => {
       ;(authApi.getSession as jest.Mock).mockResolvedValue(null)
       ;(apiClient.clearAuth as jest.Mock).mockResolvedValue(undefined)
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       expect(queryClient.getQueryCache().getAll()).toHaveLength(0)
@@ -287,7 +287,7 @@ describe('AuthProvider', () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValue(new ApiError('Unauthorized', 401))
       ;(apiClient.clearAuth as jest.Mock).mockResolvedValue(undefined)
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       expect(queryClient.getQueryCache().getAll()).toHaveLength(0)
@@ -301,7 +301,7 @@ describe('AuthProvider', () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'))
       expectOfflineInitWarning()
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
       expect(result.current.isAuthenticated).toBe(true)
 
@@ -323,7 +323,7 @@ describe('AuthProvider', () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'))
       expectOfflineInitWarning()
 
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isAuthenticated).toBe(true))
 
       ;(authApi.getSession as jest.Mock).mockResolvedValue({ user: storedUser })
@@ -340,7 +340,7 @@ describe('AuthProvider', () => {
 
   it('persists the selected team as a full record', async () => {
     const newTeam = { id: 'team-9', name: 'Nine', role: 'owner' }
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     await act(async () => {
@@ -353,7 +353,7 @@ describe('AuthProvider', () => {
 
   it('drops the previous team\'s cached queries when the team changes', async () => {
     const newTeam = { id: 'team-9', name: 'Nine', role: 'owner' }
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = await renderHook(() => useAuth(), { wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     queryClient.setQueryData(['tasks'], [{ id: 'old-team-task' }])
 
@@ -370,7 +370,7 @@ describe('AuthProvider', () => {
     ;(apiClient.setTeam as jest.Mock).mockImplementation(async (t: { id: string }) => { current = t.id })
     ;(apiClient.getTeamId as jest.Mock).mockImplementation(() => current)
     const seen: string[] = []
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => {
         useQuery({ queryKey: ['tasks'], queryFn: async () => { seen.push(apiClient.getTeamId() as string); return [] } })
         return useAuth()
@@ -406,7 +406,7 @@ describe('AuthProvider', () => {
 
     it('never renders the new user paired with the previous team', async () => {
       const renders: Array<{ user: string | undefined; team: string | undefined }> = []
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () => {
           const auth = useAuth()
           renders.push({ user: auth.user?.id, team: auth.team?.id })
@@ -429,7 +429,7 @@ describe('AuthProvider', () => {
     })
 
     it('leaves the previous session untouched when the login fails', async () => {
-      const { result } = renderHook(() => useAuth(), { wrapper })
+      const { result } = await renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isAuthenticated).toBe(true))
 
       ;(authApi.login as jest.Mock).mockResolvedValue({ user: userB })

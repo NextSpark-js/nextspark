@@ -61,7 +61,7 @@ describe('Task mutations', () => {
     it('should call tasksApi.create with data', async () => {
       mockTasksApi.create.mockResolvedValueOnce({ ...testTask, ...createInput })
 
-      const { result } = renderHook(() => useCreateTask(), {
+      const { result } = await renderHook(() => useCreateTask(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -76,7 +76,7 @@ describe('Task mutations', () => {
       const createdTask: Task = { ...testTask, id: 'task-new', title: 'New Task' }
       mockTasksApi.create.mockResolvedValueOnce(createdTask)
 
-      const { result } = renderHook(() => useCreateTask(), {
+      const { result } = await renderHook(() => useCreateTask(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -92,7 +92,7 @@ describe('Task mutations', () => {
       const error = new Error('Create failed')
       mockTasksApi.create.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useCreateTask(), {
+      const { result } = await renderHook(() => useCreateTask(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -108,7 +108,7 @@ describe('Task mutations', () => {
     it('should call tasksApi.update with id and data', async () => {
       mockTasksApi.update.mockResolvedValueOnce({ ...testTask, ...updateInput })
 
-      const { result } = renderHook(() => useUpdateTask(), {
+      const { result } = await renderHook(() => useUpdateTask(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -123,7 +123,7 @@ describe('Task mutations', () => {
       const updatedTask: Task = { ...testTask, title: 'Updated Task' }
       mockTasksApi.update.mockResolvedValueOnce(updatedTask)
 
-      const { result } = renderHook(() => useUpdateTask(), {
+      const { result } = await renderHook(() => useUpdateTask(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -140,7 +140,7 @@ describe('Task mutations', () => {
       mockTasksApi.update.mockResolvedValueOnce(updatedTask)
       const queryClient = createTestQueryClient()
 
-      const { result } = renderHook(() => useUpdateTask(), {
+      const { result } = await renderHook(() => useUpdateTask(), {
         wrapper: createQueryWrapper(queryClient),
       })
 
@@ -156,7 +156,7 @@ describe('Task mutations', () => {
     it('should call tasksApi.delete with id', async () => {
       mockTasksApi.delete.mockResolvedValueOnce(undefined)
 
-      const { result } = renderHook(() => useDeleteTask(), {
+      const { result } = await renderHook(() => useDeleteTask(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -170,7 +170,7 @@ describe('Task mutations', () => {
     it('should handle delete success', async () => {
       mockTasksApi.delete.mockResolvedValueOnce(undefined)
 
-      const { result } = renderHook(() => useDeleteTask(), {
+      const { result } = await renderHook(() => useDeleteTask(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -188,7 +188,7 @@ describe('Task mutations', () => {
     it('should call tasksApi.update with id and status', async () => {
       mockTasksApi.update.mockResolvedValueOnce({ ...testTask, status: 'done' })
 
-      const { result } = renderHook(() => useUpdateTaskStatus(), {
+      const { result } = await renderHook(() => useUpdateTaskStatus(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -202,7 +202,7 @@ describe('Task mutations', () => {
     it('should handle optimistic update', async () => {
       mockTasksApi.update.mockResolvedValueOnce({ ...testTask, status: 'in-progress' })
 
-      const { result } = renderHook(() => useUpdateTaskStatus(), {
+      const { result } = await renderHook(() => useUpdateTaskStatus(), {
         wrapper: createQueryWrapper(),
       })
 
@@ -222,7 +222,7 @@ describe('Task mutations', () => {
       const error = new Error('Update failed')
       mockTasksApi.update.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useUpdateTaskStatus(), {
+      const { result } = await renderHook(() => useUpdateTaskStatus(), {
         wrapper: createQueryWrapper(),
       })
 
