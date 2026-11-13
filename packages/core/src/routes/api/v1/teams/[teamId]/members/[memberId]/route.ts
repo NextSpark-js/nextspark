@@ -116,15 +116,17 @@ export const PATCH = withRateLimitTier(withApiLogging(
       const result = await mutateWithRLS(
         `UPDATE "team_members"
          SET role = $1, "updatedAt" = CURRENT_TIMESTAMP
-         WHERE id = $2 AND "teamId" = $3
+         WHERE id = $2 AND "teamId" = $3 AND role = $4
          RETURNING *`,
-        [validatedData.role, memberId, teamId],
+        // only while the member still has the role the checks above judged (a change since then, say to owner, writes nothing)
+        [validatedData.role, memberId, teamId, targetMember.role],
         authResult.user!.id,
         { service: true }
       )
 
       if (result.rows.length === 0) {
-        const response = createApiError('Member not found', 404, null, 'MEMBER_NOT_FOUND')
+        // gone, or their role changed since the checks (#458): the neighbours' 404, nothing written
+        const response = createApiError('Member not found, or their role changed', 404, null, 'MEMBER_NOT_FOUND')
         return addCorsHeaders(response, req)
       }
 
@@ -251,14 +253,16 @@ export const DELETE = withRateLimitTier(withApiLogging(
       // (auth_can_manage_member) knows team roles only, so it would refuse a user whose app role teams.appRoleBypass
       // lets skip team permissions and those checks allowed (#458)
       const result = await mutateWithRLS(
-        'DELETE FROM "team_members" WHERE id = $1 AND "teamId" = $2 RETURNING id',
-        [memberId, teamId],
+        'DELETE FROM "team_members" WHERE id = $1 AND "teamId" = $2 AND role = $3 RETURNING id',
+        // only while the member still has the role the checks above judged
+        [memberId, teamId, targetMember.role],
         authResult.user!.id,
         { service: true }
       )
 
       if (result.rows.length === 0) {
-        const response = createApiError('Member not found', 404, null, 'MEMBER_NOT_FOUND')
+        // gone, or their role changed since the checks (#458): the neighbours' 404, nothing written
+        const response = createApiError('Member not found, or their role changed', 404, null, 'MEMBER_NOT_FOUND')
         return addCorsHeaders(response, req)
       }
 

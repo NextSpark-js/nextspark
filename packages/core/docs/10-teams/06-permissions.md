@@ -296,7 +296,9 @@ in `lib/actions/team.actions.ts` and the team and member routes check the same p
 app role skips team permissions ranks as the owner (`hierarchyRoleFor()`): they manage every role below the owner, never
 the owner. The member being managed is judged by their team role, so two users who both skip, neither of them the
 owner, can manage each other. Transferring ownership stays with the owner. The RLS policies of `team_members` and
-`team_invitations` know team roles only, so those writes run on the service connection after these checks. Known exception: `GET /api/v1/teams/:teamId/members`, where a
+`team_invitations` know team roles only, so those writes run on the service connection after these checks, and only
+while the member still has the role they judged. Cancelling an invitation checks `team.members.invite` and no
+hierarchy: any role holding it cancels any pending invitation of the team. Known exception: `GET /api/v1/teams/:teamId/members`, where a
 superadmin or a developer sees the roster of any team as an admin-area
 capability. A wrong value fails the build (the registry build validates a string literal); at runtime the check throws,
 so the request or the page fails. The full rule is in

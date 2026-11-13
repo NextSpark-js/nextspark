@@ -297,3 +297,31 @@ describe.each(Object.keys(EXPECTED))('teams.appRoleBypass = %s', setting => {
     })
   })
 })
+
+describe('the member routes write only while the member still has the role their checks judged', () => {
+  // The lookup sees a member; by the write the row is the owner's. The stand-in database applies the role guard of
+  // the statement: with it nothing matches, without it the row would be written.
+  beforeEach(() => {
+    setSetting('(not set)')
+    mockActor = 'owner'
+    mocks.authenticateRequest.mockResolvedValue(sessionAs({ id: 'owner', email: 'owner@test.com', role: 'member' }))
+    mocks.queryOneWithRLS.mockImplementation(async (sql: string, params: string[]) =>
+      sql.includes('FROM "team_members" WHERE id = $1') ? { id: params[0], teamId: TEAM_ID, role: 'member' } : null
+    )
+    mocks.mutateWithRLS.mockImplementation(async (sql: string, params: string[]) => {
+      const guarded = /AND role = \$(\d)/.exec(sql)
+      const nowOwner = guarded ? params[Number(guarded[1]) - 1] === 'owner' : true
+      return nowOwner ? { rows: [{ id: 't-member' }], rowCount: 1 } : { rows: [], rowCount: 0 }
+    })
+  })
+
+  test('PATCH answers 404 and writes nothing', async () => {
+    const response = await patchMember(makeReq('PATCH', `/api/v1/teams/${TEAM_ID}/members/t-member`, asJson({ role: 'viewer' })), idParams({ teamId: TEAM_ID, memberId: 't-member' }))
+    expect(response.status).toBe(404)
+  })
+
+  test('DELETE answers 404 and removes nothing', async () => {
+    const response = await deleteMember(makeReq('DELETE', `/api/v1/teams/${TEAM_ID}/members/t-member`), idParams({ teamId: TEAM_ID, memberId: 't-member' }))
+    expect(response.status).toBe(404)
+  })
+})

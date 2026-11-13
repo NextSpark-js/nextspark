@@ -21,7 +21,7 @@ const FIXTURE = path.join(CORE, 'tests/node/fixtures/team-members')
 
 type Step =
   | { method: 'PATCH' | 'DELETE'; path: string; key: string; body?: unknown }
-  | { method: 'CALL'; path: 'remove' | 'updateRole'; args: string[]; service: boolean }
+  | { method: 'CALL'; path: 'remove' | 'updateRole'; args: string[]; service: boolean; expectedRole?: string }
 type Result = { method: string; path: string; status: number; body: { data?: unknown; code?: string; error?: string } }
 
 function runSteps(appUrl: string, ownerUrl: string, steps: Step[]): Result[] {
@@ -142,11 +142,66 @@ test('#458 cutover: TeamMemberService.remove and updateRole (the actions\' write
     { method: 'CALL', path: 'updateRole', args: ['team-1', 'ta', 'member', 'ud'], service: true },
   ])
   // RLS (team roles only) refuses the member developer: zero rows is an error, not a silent success
-  assert.deepEqual([rlsRemove.status, rlsRemove.body.error], [500, 'Team member not found'])
-  assert.deepEqual([rlsUpdate.status, rlsUpdate.body.error], [500, 'Team member not found'])
+  assert.deepEqual([rlsRemove.status, rlsRemove.body.error], [500, 'Team member not found, or their role changed'])
+  assert.deepEqual([rlsUpdate.status, rlsUpdate.body.error], [500, 'Team member not found, or their role changed'])
   // After the actions' checks, on the service connection: one row each
   assert.equal(serviceRemove.status, 200, JSON.stringify(serviceRemove))
   assert.equal(serviceUpdate.status, 200, JSON.stringify(serviceUpdate))
   assert.equal(await roleOf('m-tr'), null)
   assert.equal(await roleOf('m-ta'), 'member')
+})
+
+test('#458 cutover: the service-connection writes stay inside the team named in the request', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 300000 }, async t => {
+  const { owner, appUrl, ownerUrl } = await cutoverDatabase(t)
+  await owner.query(`
+    INSERT INTO users (id, email, name, role, "emailVerified") VALUES
+      ('uo', 'o@example.test', 'Owner 1', 'member', true),
+      ('u2', 'o2@example.test', 'Owner 2', 'member', true),
+      ('ud', 'd@example.test', 'Developer', 'developer', true),
+      ('vx', 'vx@example.test', 'In both teams', 'member', true);
+    INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-1', 'Team 1', 'team-1', 'uo'), ('team-2', 'Team 2', 'team-2', 'u2');
+    INSERT INTO team_members (id, "teamId", "userId", role) VALUES
+      ('m-uo', 'team-1', 'uo', 'owner'), ('m-ud', 'team-1', 'ud', 'member'), ('m-vx1', 'team-1', 'vx', 'member'),
+      ('m-u2', 'team-2', 'u2', 'owner'), ('m-vx2', 'team-2', 'vx', 'member');
+    INSERT INTO team_invitations (id, "teamId", email, role, "invitedBy") VALUES ('inv-x', 'team-2', 'x@example.test', 'member', 'u2');
+  `)
+  const developer = await apiKey(owner, 'ud')
+  const rows = async (sql: string) => (await owner.query(sql)).rowCount
+
+  // The developer manages team-1 only: team-2's invitation and membership are out of reach through team-1
+  const [cancel, patch, remove, actionRemove] = runSteps(appUrl, ownerUrl, [
+    { method: 'DELETE', path: '/api/v1/teams/team-1/invitations?id=inv-x', key: developer },
+    { method: 'PATCH', path: '/api/v1/teams/team-1/members/m-vx2', key: developer, body: { role: 'viewer' } },
+    { method: 'DELETE', path: '/api/v1/teams/team-1/members/m-vx2', key: developer },
+    // what removeMember calls after its checks: vx leaves team-1, not team-2
+    { method: 'CALL', path: 'remove', args: ['team-1', 'vx', 'ud'], service: true, expectedRole: 'member' },
+  ])
+  assert.equal(cancel.status, 404, JSON.stringify(cancel))
+  assert.equal(patch.status, 404, JSON.stringify(patch))
+  assert.equal(remove.status, 404, JSON.stringify(remove))
+  assert.equal(actionRemove.status, 200, JSON.stringify(actionRemove))
+  assert.equal(await rows(`SELECT 1 FROM team_invitations WHERE id = 'inv-x'`), 1)
+  assert.equal(await rows(`SELECT 1 FROM team_members WHERE id = 'm-vx2' AND role = 'member'`), 1)
+  assert.equal(await rows(`SELECT 1 FROM team_members WHERE id = 'm-vx1'`), 0)
+})
+
+test('#458 cutover: a member write fails when the role changed after the caller checked it', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 300000 }, async t => {
+  const { owner, appUrl, ownerUrl } = await cutoverDatabase(t)
+  await owner.query(`
+    INSERT INTO users (id, email, name, role, "emailVerified") VALUES
+      ('uo', 'o@example.test', 'Owner', 'member', true),
+      ('ud', 'd@example.test', 'Developer', 'developer', true),
+      ('tz', 'tz@example.test', 'Promoted meanwhile', 'member', true);
+    INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-1', 'Team', 'team-1', 'uo');
+    INSERT INTO team_members (id, "teamId", "userId", role) VALUES
+      ('m-uo', 'team-1', 'uo', 'owner'), ('m-ud', 'team-1', 'ud', 'member'), ('m-tz', 'team-1', 'tz', 'admin');
+  `)
+  // The actions checked tz as a member; tz is an admin by the time of the write
+  const [remove, update] = runSteps(appUrl, ownerUrl, [
+    { method: 'CALL', path: 'remove', args: ['team-1', 'tz', 'ud'], service: true, expectedRole: 'member' },
+    { method: 'CALL', path: 'updateRole', args: ['team-1', 'tz', 'viewer', 'ud'], service: true, expectedRole: 'member' },
+  ])
+  assert.deepEqual([remove.status, remove.body.error], [500, 'Team member not found, or their role changed'])
+  assert.deepEqual([update.status, update.body.error], [500, 'Team member not found, or their role changed'])
+  assert.equal((await owner.query(`SELECT role FROM team_members WHERE id = 'm-tz'`)).rows[0].role, 'admin')
 })

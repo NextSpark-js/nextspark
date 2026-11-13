@@ -45,7 +45,10 @@ teams: {
   The member being managed is judged by their team role, so two users who both skip, neither of them the owner,
   can manage each other.
 - The row-level security policies of `team_members` and `team_invitations` know team roles only, so those writes run
-  on the service connection, and only after the permission and hierarchy checks above.
+  on the service connection, and only after the permission and hierarchy checks above, on the row of the team in the
+  request and only while the member still has the role those checks judged.
+- Cancelling an invitation checks `team.members.invite` and no hierarchy: any role holding it cancels any pending
+  invitation of the team, whatever role the invitation offers.
 - Known exception: `GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team,
   as an admin-area capability.
 - A wrong value fails the build: the registry build validates `teams.appRoleBypass` when it is a string literal, with

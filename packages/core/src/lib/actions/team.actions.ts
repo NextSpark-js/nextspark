@@ -377,7 +377,7 @@ export async function removeMember(
 
     // 7. Remove member. Service connection, only after the permission and hierarchy checks above: the RLS policy knows
     // team roles only, not teams.appRoleBypass (#458)
-    await TeamMemberService.remove(teamId, targetUserId, userId, { service: true })
+    await TeamMemberService.remove(teamId, targetUserId, userId, { service: true, expectedRole: targetRole })
 
     // 8. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')
@@ -475,7 +475,7 @@ export async function updateMemberRole(
     // 6. Update role
     // Service connection, only after the permission and hierarchy checks above: the RLS policy knows team roles only,
     // not teams.appRoleBypass (#458)
-    const updatedMember = await TeamMemberService.updateRole(teamId, targetUserId, role, userId, { service: true })
+    const updatedMember = await TeamMemberService.updateRole(teamId, targetUserId, role, userId, { service: true, expectedRole: currentRole })
 
     // 7. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')

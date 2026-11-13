@@ -30,6 +30,13 @@ export interface AddMemberOptions {
 // SERVICE
 // ===========================================
 
+/**
+ * Options of the member writes (#458): the connection, and the role the caller validated the change against. The write
+ * only touches the row while it still has that role (the role read here when not given), so a role changed between the
+ * caller's check and the write (say, to owner) makes it fail instead of acting on a role nobody checked.
+ */
+export type TeamMemberWriteOptions = RLSOptions & { expectedRole?: string }
+
 export class TeamMemberService {
   // ===========================================
   // QUERIES
@@ -328,13 +335,14 @@ export class TeamMemberService {
    * @param userId - User ID to remove
    * @param actorId - User removing them (RLS context): the team's owner or admin, or `userId` leaving on their own
    * @param options - `{ service: true }` only after the caller checked the permission and the role hierarchy
-   *   (removeMember does): the RLS policy knows team roles only, not teams.appRoleBypass (#458)
-   * @throws When no row was removed (not a member, or RLS refused it)
+   *   (removeMember does): the RLS policy knows team roles only, not teams.appRoleBypass (#458). `expectedRole`: the
+   *   role the caller checked
+   * @throws When no row was removed (not a member, their role changed, or RLS refused it)
    *
    * @example
    * await TeamMemberService.remove('team-123', 'user-456', 'owner-id')
    */
-  static async remove(teamId: string, userId: string, actorId: string, options?: RLSOptions): Promise<void> {
+  static async remove(teamId: string, userId: string, actorId: string, options?: TeamMemberWriteOptions): Promise<void> {
     if (!teamId || teamId.trim() === '') {
       throw new Error('Team ID is required')
     }
@@ -353,16 +361,17 @@ export class TeamMemberService {
       throw new Error('Cannot remove team owner. Transfer ownership first.')
     }
 
+    const { expectedRole, ...rlsOptions } = options ?? {}
     const result = await mutateWithRLS(
-      'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-      [teamId, userId],
+      'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2 AND role = $3',
+      [teamId, userId, expectedRole ?? userRole],
       actorId,
-      options
+      rlsOptions
     )
 
     // Zero rows is not a success: the caller must not report a removal that did not happen (#458)
     if (result.rowCount === 0) {
-      throw new Error('Team member not found')
+      throw new Error('Team member not found, or their role changed')
     }
   }
 
@@ -374,7 +383,8 @@ export class TeamMemberService {
    * @param role - New role
    * @param actorId - User changing the role (RLS context): the team's owner, or an admin for roles below admin
    * @param options - `{ service: true }` only after the caller checked the permission and the role hierarchy
-   *   (updateMemberRole does): the RLS policy knows team roles only, not teams.appRoleBypass (#458)
+   *   (updateMemberRole does): the RLS policy knows team roles only, not teams.appRoleBypass (#458). `expectedRole`:
+   *   the current role the caller checked
    * @returns Updated team member
    *
    * @example
@@ -385,7 +395,7 @@ export class TeamMemberService {
     userId: string,
     role: TeamRole,
     actorId: string,
-    options?: RLSOptions
+    options?: TeamMemberWriteOptions
   ): Promise<TeamMember> {
     if (!teamId || teamId.trim() === '') {
       throw new Error('Team ID is required')
@@ -409,18 +419,19 @@ export class TeamMemberService {
       throw new Error('Cannot change owner role. Transfer ownership first.')
     }
 
+    const { expectedRole, ...rlsOptions } = options ?? {}
     const result = await mutateWithRLS<TeamMember>(
       `UPDATE "team_members"
        SET role = $3, "updatedAt" = NOW()
-       WHERE "teamId" = $1 AND "userId" = $2
+       WHERE "teamId" = $1 AND "userId" = $2 AND role = $4
        RETURNING *`,
-      [teamId, userId, role],
+      [teamId, userId, role, expectedRole ?? currentRole],
       actorId,
-      options
+      rlsOptions
     )
 
     if (!result.rows[0]) {
-      throw new Error('Team member not found')
+      throw new Error('Team member not found, or their role changed')
     }
 
     return result.rows[0]

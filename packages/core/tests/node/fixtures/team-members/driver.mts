@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server'
 
 type Step =
   | { method: 'PATCH' | 'DELETE'; path: string; key: string; body?: unknown }
-  | { method: 'CALL'; path: 'remove' | 'updateRole'; args: string[]; service: boolean }
+  | { method: 'CALL'; path: 'remove' | 'updateRole'; args: string[]; service: boolean; expectedRole?: string }
 
 const CORE_SRC = new URL('../../../../src/', import.meta.url)
 const memberRoute = await import(new URL('routes/api/v1/teams/[teamId]/members/[memberId]/route.ts', CORE_SRC).href)
@@ -17,7 +17,7 @@ const invitationsRoute = await import(new URL('routes/api/v1/teams/[teamId]/invi
 const { TeamMemberService } = await import(new URL('lib/services/team-member.service.ts', CORE_SRC).href)
 
 async function call(step: Extract<Step, { method: 'CALL' }>) {
-  const options = step.service ? { service: true } : undefined
+  const options = step.service || step.expectedRole ? { service: step.service, expectedRole: step.expectedRole } : undefined
   try {
     await (TeamMemberService[step.path] as (...a: unknown[]) => Promise<unknown>)(...step.args, options)
     return { status: 200, body: {} }

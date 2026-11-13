@@ -307,11 +307,12 @@ describe('TeamMemberService', () => {
 
       await TeamMemberService.remove('team-456', 'user-789', 'user-789')
 
+      // only the row in this team, and only while it still has the role read (#458)
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
-        'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-        ['team-456', 'user-789'],
+        'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2 AND role = $3',
+        ['team-456', 'user-789', 'member'],
         'user-789',
-        undefined
+        {}
       )
     })
 
@@ -326,9 +327,10 @@ describe('TeamMemberService', () => {
       mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
       mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 1 })
 
-      await TeamMemberService.remove('team-456', 'user-789', 'actor', { service: true })
+      await TeamMemberService.remove('team-456', 'user-789', 'actor', { service: true, expectedRole: 'viewer' })
 
-      expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.any(String), ['team-456', 'user-789'], 'actor', { service: true })
+      // the role the caller checked guards the write; it does not reach the connection options
+      expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.any(String), ['team-456', 'user-789', 'viewer'], 'actor', { service: true })
     })
 
     it('throws error when trying to remove owner', async () => {
@@ -540,7 +542,7 @@ describe('TeamMemberService writes run as the actor', () => {
 
     await TeamMemberService.remove('team-456', 'user-789', 'owner-1')
 
-    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/DELETE FROM "team_members"/), ['team-456', 'user-789'], 'owner-1', undefined)
+    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/DELETE FROM "team_members"/), ['team-456', 'user-789', 'member'], 'owner-1', {})
   })
 
   it('updateRole updates under the RLS context of the user changing the role', async () => {
@@ -549,6 +551,6 @@ describe('TeamMemberService writes run as the actor', () => {
 
     await TeamMemberService.updateRole('team-456', 'user-789', 'viewer', 'admin-1')
 
-    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/UPDATE "team_members"/), ['team-456', 'user-789', 'viewer'], 'admin-1', undefined)
+    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/UPDATE "team_members"/), ['team-456', 'user-789', 'viewer', 'member'], 'admin-1', {})
   })
 })
