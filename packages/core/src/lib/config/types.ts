@@ -55,6 +55,15 @@ export interface TeamsConfig {
   /** Additional options */
   options?: TeamsConfigOptions
   /**
+   * Which app roles (users.role) skip team permissions inside a team they belong to (#457):
+   * - 'none': everyone follows their team role
+   * - 'developer' (default): a developer skips them; a superadmin follows their team role
+   * - 'developer-and-superadmin': both skip them
+   * The server checks and the UI apply the same rule. The admin area, the row-level security bypass and acting as
+   * another user are not affected.
+   */
+  appRoleBypass?: 'none' | 'developer' | 'developer-and-superadmin'
+  /**
    * Resolved team-role system (set, hierarchy, labels) for team_members.role.
    * Themes declare the active set declaratively via `teams.roles` in app.config
    * (REPLACE model); the merged value here is the fully resolved object.

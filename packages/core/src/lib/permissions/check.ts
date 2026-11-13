@@ -1,6 +1,7 @@
 import { permissionRegistry, ensureEntityPermissionsLoaded } from './init'  // Import from init to ensure initialization
 import type { Permission, TeamRole } from './types'
 import { queryOneWithRLS } from '../db'
+import { hasTeamPermission, teamPermissionsFor } from './app-role-bypass'
 
 /**
  * Get the team member role for a user in a specific team
@@ -9,11 +10,15 @@ import { queryOneWithRLS } from '../db'
  * @param teamId - Team ID
  * @returns Team role or null if not a member
  */
-async function getTeamMemberRole(userId: string, teamId: string): Promise<string | null> {
-  const result = await queryOneWithRLS<{ role: string }>(
-    `SELECT tm.role
+async function getTeamMemberRole(
+  userId: string,
+  teamId: string
+): Promise<{ teamRole: string; appRole: string | null } | null> {
+  const result = await queryOneWithRLS<{ role: string; appRole: string | null }>(
+    `SELECT tm.role, u.role AS "appRole"
      FROM "team_members" tm
      INNER JOIN "teams" t ON t.id = tm."teamId"
+     LEFT JOIN "users" u ON u.id = tm."userId"
      WHERE tm."userId" = $1
        AND tm."teamId" = $2
        AND t."deletedAt" IS NULL
@@ -21,7 +26,7 @@ async function getTeamMemberRole(userId: string, teamId: string): Promise<string
     [userId, teamId]
   )
 
-  return result?.role || null
+  return result?.role ? { teamRole: result.role, appRole: result.appRole ?? null } : null
 }
 
 /**
@@ -48,21 +53,21 @@ export async function checkPermission(
   ensureEntityPermissionsLoaded()
 
   // 1. Get user's role in the team
-  const teamRole = await getTeamMemberRole(userId, teamId)
+  const roles = await getTeamMemberRole(userId, teamId)
 
-  if (!teamRole) {
+  if (!roles) {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[checkPermission] User ${userId} is not a member of team ${teamId}`)
     }
     return false // User is not a member of the team
   }
 
-  // 2. Check permission in registry
-  const hasPermission = permissionRegistry.hasPermission(teamRole as TeamRole, permission)
+  // 2. The team role, or an app role that teams.appRoleBypass lets skip team permissions (#457)
+  const hasPermission = hasTeamPermission(roles.appRole, roles.teamRole, permission)
 
   // Debug logging only in development
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[checkPermission] Role: ${teamRole}, Perm: ${permission}, Has: ${hasPermission}`)
+    console.log(`[checkPermission] Role: ${roles.teamRole} (app: ${roles.appRole}), Perm: ${permission}, Has: ${hasPermission}`)
   }
 
   return hasPermission
@@ -143,13 +148,8 @@ export async function getUserPermissions(
   userId: string,
   teamId: string
 ): Promise<Permission[]> {
-  const teamRole = await getTeamMemberRole(userId, teamId)
-
-  if (!teamRole) {
-    return []
-  }
-
-  return permissionRegistry.getRolePermissions(teamRole as TeamRole)
+  const roles = await getTeamMemberRole(userId, teamId)
+  return roles ? teamPermissionsFor(roles.appRole, roles.teamRole) : []
 }
 
 /**

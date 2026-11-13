@@ -88,8 +88,14 @@ describe('teams/permissions', () => {
   })
 
   describe('checkTeamPermission', () => {
-    it.each(['superadmin', 'developer'])('a %s holds every team permission, member of the team or not', (role) => {
-      expect(checkTeamPermission(role as never, null, 'team.delete' as never)).toBe(true)
+    // Which app roles skip team permissions is teams.appRoleBypass (default: developer), see app-role-bypass.test (#457)
+    it('a developer holds every team permission in a team they belong to, a superadmin follows their team role', () => {
+      expect(checkTeamPermission('developer', 'member', 'team.delete' as never)).toBe(true)
+      expect(checkTeamPermission('superadmin', 'member', 'team.delete' as never)).toBe(false)
+    })
+
+    it.each(['superadmin', 'developer'])('a %s outside the team holds none', (role) => {
+      expect(checkTeamPermission(role as never, null, 'team.delete' as never)).toBe(false)
     })
 
     it('a member outside the team holds none', () => {

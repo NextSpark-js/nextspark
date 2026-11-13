@@ -14,6 +14,8 @@ import { APP_CONFIG_MERGED } from '../config/config-sync'
 import { TeamMemberService } from './team-member.service'
 import { SubscriptionService } from './subscription.service'
 import { PermissionService } from './permission.service'
+import { queryOneWithRLS } from '../db'
+import { teamPermissionsFor } from '../permissions/app-role-bypass'
 import { PlanService } from './plan.service'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import type {
@@ -339,8 +341,10 @@ export class MembershipService {
     // 2. Get hierarchy from APP_CONFIG_MERGED
     const hierarchy = this.getHierarchyForRole(teamMember.role)
 
-    // 3. Get role permissions from PermissionService
-    const permissions = PermissionService.getRolePermissions(teamMember.role)
+    // 3. The team role's permissions, or every permission for an app role that teams.appRoleBypass lets skip them
+    // (#457): the same rule as checkPermission and the UI hooks
+    const appUser = await queryOneWithRLS<{ role: string }>('SELECT role FROM "users" WHERE id = $1', [userId])
+    const permissions = teamPermissionsFor(appUser?.role, teamMember.role)
 
     // 4. Get subscription info
     const subscription = await SubscriptionService.getActive(teamId)

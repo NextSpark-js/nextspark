@@ -977,35 +977,34 @@ export class SubscriptionService {
       return { allowed: false, reason: 'no_permission' }
     }
 
-    // 0. ADMIN BYPASS - Superadmin and Developer bypass all billing restrictions
     const user = await queryOneWithRLS<{ role: string }>(
       'SELECT role FROM "users" WHERE id = $1',
       [userId]
     )
-
-    if (user?.role === 'superadmin' || user?.role === 'developer') {
-      return { allowed: true }
-    }
-
-    // 1. RBAC Check - Verify role permission (for regular users)
-    const teamMember = await queryOneWithRLS<{ role: string; userRole: string }>(
-      `
-      SELECT tm.role, u.role as "userRole"
-      FROM "team_members" tm
-      JOIN "users" u ON u.id = tm."userId"
-      WHERE tm."teamId" = $1 AND tm."userId" = $2
-      `,
-      [teamId, userId]
-    )
-
-    if (!teamMember) {
-      return { allowed: false, reason: 'no_permission' }
-    }
-
-    // Verify RBAC permission if mapping is defined
+    // Superadmin and developer skip the plan's features and quotas (billing restrictions, not team permissions)
+    const skipsBillingRestrictions = user?.role === 'superadmin' || user?.role === 'developer'
     const requiredPermission = ownMapping(BILLING_REGISTRY.actionMappings.permissions, action)
-    if (requiredPermission) {
-      try {
+
+    // 1. RBAC Check - a mapped team permission follows the team role, or teams.appRoleBypass for the app role:
+    // the same rule as the UI hooks (#457). An action with no permission mapping needs only membership, which
+    // superadmin and developer skip along with the billing restrictions.
+    if (requiredPermission || !skipsBillingRestrictions) {
+      const teamMember = await queryOneWithRLS<{ role: string; userRole: string }>(
+        `
+        SELECT tm.role, u.role as "userRole"
+        FROM "team_members" tm
+        JOIN "users" u ON u.id = tm."userId"
+        WHERE tm."teamId" = $1 AND tm."userId" = $2
+        `,
+        [teamId, userId]
+      )
+
+      if (!teamMember) {
+        return { allowed: false, reason: 'no_permission' }
+      }
+
+      if (requiredPermission) {
+        // No try/catch: an error here (an invalid teams.appRoleBypass) must deny, not skip the check
         const { checkTeamPermission } = await import('../teams/permissions')
         const hasPermission = checkTeamPermission(
           teamMember.userRole as any,
@@ -1015,10 +1014,11 @@ export class SubscriptionService {
         if (!hasPermission) {
           return { allowed: false, reason: 'no_permission' }
         }
-      } catch {
-        // Permissions module not available, skip RBAC check
-        console.warn('[SubscriptionService] Team permissions module not available')
       }
+    }
+
+    if (skipsBillingRestrictions) {
+      return { allowed: true }
     }
 
     // No plans declared = no billing (billing 'free'): nothing to gate by feature or quota.

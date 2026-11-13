@@ -328,7 +328,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 
 - To keep an action from admins and members, list only `owner` (`roles: ['owner']`).
 - Declaring a permission with `roles: []` does not close it to owner. The only way to keep an action out of owner's hands is not to declare it.
-- The team-management helpers in `lib/teams/permissions` (`hasPermission`, `checkTeamPermission`) read the `team.*` role lists as written, with no owner shortcut, and `POST /api/v1/billing/check-action` uses `checkTeamPermission` for the actions mapped in `actionMappings.permissions`. Owner is therefore granted there only what a `team.*` permission lists, so a `team.*` permission declared with `roles: []` is denied to owner on those paths.
+- `checkTeamPermission` (`lib/teams/permissions`), which `POST /api/v1/billing/check-action` uses for the actions mapped in `actionMappings.permissions`, resolves owner the same way since #457. Only `hasPermission` and `getRolePermissions` of `lib/teams/permissions` still read the `team.*` role lists as written, with no owner shortcut.
 
 ---
 

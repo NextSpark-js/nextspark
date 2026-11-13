@@ -22,6 +22,8 @@ interface TeamContextValue {
   isReady: boolean
   isSwitching: boolean
   canCurrentUserCreateTeam: boolean
+  /** The signed-in user's app role (users.role), for the team-permission rule (#457). Null until known. */
+  appRole: string | null
   switchTeam: (teamId: string) => Promise<void>
   refreshTeams: () => Promise<void>
 }
@@ -397,6 +399,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         isReady,
         isSwitching,
         canCurrentUserCreateTeam,
+        appRole: (user as { role?: string } | null | undefined)?.role ?? null,
         switchTeam,
         refreshTeams
       }}

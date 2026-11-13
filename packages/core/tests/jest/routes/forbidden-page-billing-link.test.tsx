@@ -18,9 +18,17 @@ jest.mock('@/core/hooks/useAuth', () => ({
   useAuth: () => mockAuth,
 }))
 const mockAuth = { user: { id: 'user-1', email: 'a@x.com', role: 'member' }, session: null, isLoading: false }
-jest.mock('@/core/lib/permissions/init', () => ({
-  permissionRegistry: { hasPermission: (r: string, p: string) => r === 'owner' && p === 'settings.billing' },
-}))
+// The permission hooks decide through PermissionService (lib/permissions/app-role-bypass, #457)
+jest.mock('@/core/lib/services/permission.service', () => {
+  const actual = jest.requireActual('@/core/lib/services/permission.service')
+  return {
+    ...actual,
+    PermissionService: {
+      ...actual.PermissionService,
+      hasPermission: (r: string, p: string) => r === 'owner' && p === 'settings.billing',
+    },
+  }
+})
 
 import ForbiddenPage from '@/core/routes/403/page'
 

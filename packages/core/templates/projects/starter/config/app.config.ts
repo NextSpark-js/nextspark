@@ -41,6 +41,11 @@ export const APP_CONFIG_OVERRIDES = {
      * Custom roles can be added here and configured in permissions.config.ts
      */
     availableTeamRoles: ['owner', 'admin', 'member', 'viewer'],
+    /**
+     * Which app roles skip team permissions inside a team they belong to:
+     * 'none' | 'developer' (default) | 'developer-and-superadmin'
+     */
+    appRoleBypass: 'developer' as const,
     options: {
       maxMembersPerTeam: 50,
       allowLeaveTeam: true,

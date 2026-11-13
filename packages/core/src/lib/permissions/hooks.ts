@@ -2,9 +2,17 @@
 
 import { useMemo } from 'react'
 import { useTeamContext, useOptionalTeamContext } from '../../contexts/TeamContext'
-// Import from ./init to ensure permission registry is initialized on client-side
-import { permissionRegistry } from './init'
+import { hasTeamPermission, teamPermissionsFor } from './app-role-bypass'
 import type { Permission, TeamRole } from './types'
+import type { Team, UserTeamMembership } from '../teams/types'
+
+/** The user's role in the current team, null when there is no current team or no membership in it. */
+function currentTeamRole(currentTeam: Team | null | undefined, userTeams: UserTeamMembership[] | undefined): string | null {
+  if (!currentTeam || !userTeams) return null
+  return userTeams.find(t => t.team.id === currentTeam.id)?.role ?? null
+}
+
+// Every hook below decides with hasTeamPermission, the same rule as the server's checkPermission (#457).
 
 /**
  * Hook to check a single permission in the current team
@@ -20,17 +28,12 @@ import type { Permission, TeamRole } from './types'
  * ```
  */
 export function usePermission(permission: Permission): boolean {
-  const { currentTeam, userTeams } = useTeamContext()
+  const { currentTeam, userTeams, appRole } = useTeamContext()
 
-  return useMemo(() => {
-    if (!currentTeam) return false
-
-    // Find user's membership in current team
-    const membership = userTeams.find(t => t.team.id === currentTeam.id)
-    if (!membership?.role) return false
-
-    return permissionRegistry.hasPermission(membership.role as TeamRole, permission)
-  }, [currentTeam, userTeams, permission])
+  return useMemo(
+    () => hasTeamPermission(appRole, currentTeamRole(currentTeam, userTeams), permission),
+    [currentTeam, userTeams, appRole, permission]
+  )
 }
 
 /**
@@ -41,13 +44,12 @@ export function useOptionalPermission(permission: Permission): boolean {
   const team = useOptionalTeamContext()
   const currentTeam = team?.currentTeam
   const userTeams = team?.userTeams
+  const appRole = team?.appRole
 
-  return useMemo(() => {
-    if (!currentTeam || !userTeams) return false
-    const membership = userTeams.find(t => t.team.id === currentTeam.id)
-    if (!membership?.role) return false
-    return permissionRegistry.hasPermission(membership.role as TeamRole, permission)
-  }, [currentTeam, userTeams, permission])
+  return useMemo(
+    () => hasTeamPermission(appRole, currentTeamRole(currentTeam, userTeams), permission),
+    [currentTeam, userTeams, appRole, permission]
+  )
 }
 
 /**
@@ -74,29 +76,18 @@ export function useOptionalPermission(permission: Permission): boolean {
 export function usePermissions<T extends Record<string, Permission>>(
   permissions: T
 ): Record<keyof T, boolean> {
-  const { currentTeam, userTeams } = useTeamContext()
+  const { currentTeam, userTeams, appRole } = useTeamContext()
 
   return useMemo(() => {
     const result: Record<string, boolean> = {}
-
-    // Find user's membership in current team
-    const membership = currentTeam
-      ? userTeams.find(t => t.team.id === currentTeam.id)
-      : null
+    const teamRole = currentTeamRole(currentTeam, userTeams)
 
     for (const [key, permission] of Object.entries(permissions)) {
-      if (!membership?.role) {
-        result[key] = false
-      } else {
-        result[key] = permissionRegistry.hasPermission(
-          membership.role as TeamRole,
-          permission
-        )
-      }
+      result[key] = hasTeamPermission(appRole, teamRole, permission)
     }
 
     return result as Record<keyof T, boolean>
-  }, [currentTeam, userTeams, permissions])
+  }, [currentTeam, userTeams, appRole, permissions])
 }
 
 /**
@@ -111,16 +102,12 @@ export function usePermissions<T extends Record<string, Permission>>(
  * ```
  */
 export function useAllPermissions(): Permission[] {
-  const { currentTeam, userTeams } = useTeamContext()
+  const { currentTeam, userTeams, appRole } = useTeamContext()
 
-  return useMemo(() => {
-    if (!currentTeam) return []
-
-    const membership = userTeams.find(t => t.team.id === currentTeam.id)
-    if (!membership?.role) return []
-
-    return permissionRegistry.getRolePermissions(membership.role as TeamRole)
-  }, [currentTeam, userTeams])
+  return useMemo(
+    () => teamPermissionsFor(appRole, currentTeamRole(currentTeam, userTeams)),
+    [currentTeam, userTeams, appRole]
+  )
 }
 
 /**

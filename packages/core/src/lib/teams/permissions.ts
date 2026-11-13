@@ -6,8 +6,7 @@
  * Phase 2 Simplification:
  * - Global roles: only 'member' and 'superadmin' (5 → 2)
  * - Team roles: unchanged (owner, admin, member, viewer)
- * - Superadmin bypasses all team permissions
- * - Member permissions determined by team role only
+ * - Which app roles skip team permissions: `teams.appRoleBypass` (#457, see ../permissions/app-role-bypass)
  *
  * Phase 5 Dynamic System:
  * - Permissions, hierarchy, and invitable roles read from merged config
@@ -27,6 +26,8 @@ import {
   ROLE_HIERARCHY,
   ROLE_DESCRIPTIONS,
 } from '@nextsparkjs/registries/permissions-registry'
+import { hasTeamPermission } from '../permissions/app-role-bypass'
+import type { Permission } from '../permissions/types'
 
 /**
  * Global user roles (simplified Phase 2)
@@ -164,11 +165,13 @@ export function getRolePermissions(
 }
 
 /**
- * Check team permission with simplified Phase 2 roles
+ * Check team permission: the same decision as checkPermission, MembershipService and the UI hooks
+ * (hasTeamPermission, #457)
  *
- * This is the recommended function for permission checking.
- * - Superadmin and developer: bypass all permissions (returns true)
- * - Member: checks team role for permission
+ * - Not a member of the team (no team role): no permission, whatever the app role
+ * - An app role that `teams.appRoleBypass` lets skip team permissions (default: developer): every registered
+ *   permission
+ * - Anyone else: what the team role grants (owner: every registered permission)
  *
  * @param userRole - The user's global role ('member', 'superadmin' or 'developer')
  * @param teamRole - The user's role in the team (null if not a member)
@@ -180,19 +183,7 @@ export function checkTeamPermission(
   teamRole: string | null,
   permission: TeamPermission
 ): boolean {
-  // Superadmin and developer bypass all permissions
-  if (userRole === 'superadmin' || userRole === 'developer') {
-    return true
-  }
-
-  // Member without team role has no permissions
-  if (!teamRole) {
-    return false
-  }
-
-  // Check if team role has the specific permission
-  const permissions = getPermissionsFromRegistry()
-  return permissions[teamRole]?.includes(permission) || false
+  return hasTeamPermission(userRole, teamRole, permission as Permission)
 }
 
 /**

@@ -418,12 +418,59 @@ describe('SubscriptionService', () => {
   })
 
   describe('canPerformAction', () => {
-    it('returns allowed for superadmin user', async () => {
-      mockQueryOneWithRLS.mockResolvedValue({ role: 'superadmin' })
+    it('a superadmin skips the plan restrictions of an action with no permission mapping, member or not', async () => {
+      mockQueryOneWithRLS.mockResolvedValueOnce({ role: 'superadmin' })
+
+      const result = await SubscriptionService.canPerformAction('user-123', 'team-456', 'use_analytics')
+
+      expect(result.allowed).toBe(true)
+    })
+
+    // The permission mapped for an action follows teams.appRoleBypass, as the UI does (#457): by default a
+    // developer skips it and a superadmin follows their team role
+    it.each([
+      ['superadmin', 'member', false],
+      ['superadmin', 'owner', true],
+      ['developer', 'viewer', true],
+      ['member', 'member', false],
+    ])('a %s with team role %s gets the mapped permission: %s', async (appRole, teamRole, allowed) => {
+      mockQueryOneWithRLS
+        .mockResolvedValueOnce({ role: appRole })
+        .mockResolvedValueOnce({ role: teamRole, userRole: appRole })
+
+      // An owner-only permission of the registry mock
+      const { BILLING_REGISTRY } = jest.requireMock('@/core/lib/registries/billing-registry') as any
+      const { permissions } = BILLING_REGISTRY.actionMappings
+      BILLING_REGISTRY.actionMappings.permissions = { create_project: 'customers.delete' }
+      try {
+        const result = await SubscriptionService.canPerformAction('user-123', 'team-456', 'create_project')
+        expect(result).toEqual(allowed ? { allowed: true } : { allowed: false, reason: 'no_permission' })
+      } finally {
+        BILLING_REGISTRY.actionMappings.permissions = permissions
+      }
+    })
+
+    it('an invalid teams.appRoleBypass makes a mapped permission fail, not pass unchecked', async () => {
+      const { TEAMS_CONFIG } = require('@/core/lib/config/config-client')
+      TEAMS_CONFIG.appRoleBypass = 'everyone'
+      mockQueryOneWithRLS
+        .mockResolvedValueOnce({ role: 'member' })
+        .mockResolvedValueOnce({ role: 'member', userRole: 'member' })
+      try {
+        await expect(SubscriptionService.canPerformAction('user-123', 'team-456', 'create_project')).rejects.toThrow(
+          /teams\.appRoleBypass/
+        )
+      } finally {
+        delete TEAMS_CONFIG.appRoleBypass
+      }
+    })
+
+    it('a superadmin outside the team does not get a mapped permission', async () => {
+      mockQueryOneWithRLS.mockResolvedValueOnce({ role: 'superadmin' }).mockResolvedValueOnce(null)
 
       const result = await SubscriptionService.canPerformAction('user-123', 'team-456', 'create_project')
 
-      expect(result.allowed).toBe(true)
+      expect(result).toEqual({ allowed: false, reason: 'no_permission' })
     })
 
     it('returns not allowed when user is not team member', async () => {

@@ -28,7 +28,12 @@ Users have a global role stored in the `users` table:
 | Role | Description |
 |------|-------------|
 | `member` | Default role for all users |
-| `superadmin` | Full system access, bypasses RLS |
+| `superadmin` | System administration, bypasses RLS |
+| `developer` | Everything a superadmin can do, plus devtools |
+
+Inside a team, which of these skip team permissions is the project setting `teams.appRoleBypass` (see
+[App roles inside a team](#app-roles-inside-a-team)). By default a `developer` skips them and a `superadmin` follows
+their team role.
 
 ### Team Roles
 
@@ -102,7 +107,8 @@ Before checking team-level permissions, the system enforces mode-level restricti
 
 ### checkTeamPermission
 
-The primary function for checking team permissions. Combines global role (superadmin bypass) with team role checks:
+Checks a team permission from the user's app role and team role, with the same rule as `checkPermission` and the UI
+hooks ([App roles inside a team](#app-roles-inside-a-team)):
 
 ```typescript
 import { checkTeamPermission, type UserRole, type TeamPermission } from '@nextsparkjs/core/lib/teams/permissions'
@@ -115,16 +121,16 @@ const canEdit = checkTeamPermission(
   'team.edit'                // Permission to check
 )
 
-// Superadmin bypasses all team permissions
-const superadminCanDelete = checkTeamPermission(
-  'superadmin',              // Superadmin global role
-  null,                      // No team role needed
-  'team.delete'              // Always returns true for superadmin
-)
+// With the default teams.appRoleBypass ('developer'), a developer member of the team holds every permission...
+checkTeamPermission('developer', 'member', 'team.delete')  // true
+// ...a superadmin follows their team role
+checkTeamPermission('superadmin', 'member', 'team.delete') // false
+// Outside the team nobody holds a team permission
+checkTeamPermission('developer', null, 'team.delete')      // false
 ```
 
 **Parameters:**
-- `userRole: UserRole` - The user's global role (`'member'` or `'superadmin'`)
+- `userRole: UserRole` - The user's global role (`'member'`, `'superadmin'` or `'developer'`)
 - `teamRole: TeamRole | null` - The user's role in the team (or `null` if not a member)
 - `permission: TeamPermission` - The permission to check
 
@@ -262,9 +268,37 @@ function TeamSettings() {
 }
 ```
 
-## Superadmin Bypass
+## App Roles Inside a Team
 
-Superadmins bypass all team restrictions:
+The project setting `teams.appRoleBypass` in `config/app.config.ts` decides which app roles skip team permissions:
+
+```typescript
+teams: {
+  mode: 'multi-tenant',
+  appRoleBypass: 'developer', // 'none' | 'developer' | 'developer-and-superadmin'
+}
+```
+
+| Value | developer | superadmin |
+|-------|-----------|------------|
+| `'none'` | follows their team role | follows their team role |
+| `'developer'` (**default**, also when the key is left out) | every team permission | follows their team role |
+| `'developer-and-superadmin'` | every team permission | every team permission |
+
+Skipping applies only in a team the user belongs to, and grants every permission registered in `permissions.config.ts`.
+The server (`checkPermission`, `checkTeamPermission`, `MembershipService`, `SubscriptionService.canPerformAction`) and
+the UI (`usePermission`, `usePermissions`, `useAllPermissions`, `<PermissionGate>`) decide through the same function,
+`hasTeamPermission()` in `lib/permissions/app-role-bypass`, so a menu entry is shown exactly when the server allows
+the action. Any other value throws `teams.appRoleBypass in app.config must be one of 'none', 'developer',
+'developer-and-superadmin'` on the first permission check, which denies. The full rule is in
+[Permissions and Roles](../06-authentication/06-permissions-and-roles.md#app-roles-inside-a-team-teamsapprolebypass).
+
+The setting changes team permissions only. The database bypass below, the admin area and acting as another user stay
+as they are, whatever its value.
+
+## Superadmin Bypass (Database)
+
+A superadmin and a developer bypass row-level security, whatever `teams.appRoleBypass` says:
 
 ### Database Level (RLS)
 
@@ -280,16 +314,8 @@ CREATE POLICY "team_policy" ON public."teams"
 
 ### Application Level
 
-```typescript
-// Check for superadmin in API
-if (authResult.user.role === 'superadmin') {
-  // Skip permission checks
-  return proceedWithAction()
-}
-
-// Normal permission check
-const hasPermission = await checkTeamPermission(...)
-```
+Do not test `user.role === 'superadmin'` to skip a team permission: call `checkPermission` (or `checkTeamPermission`
+with the app role), which applies `teams.appRoleBypass`.
 
 ## Entity Configuration
 
@@ -320,8 +346,8 @@ const tasksConfig: EntityConfig = {
 ```typescript
 // core/lib/teams/permissions.ts
 
-// Global user roles (Phase 2 simplification: only 2 roles)
-export type UserRole = 'member' | 'superadmin'
+// Global user roles
+export type UserRole = 'member' | 'superadmin' | 'developer'
 
 // Team-specific permissions (string literals, not enum)
 export type TeamPermission =

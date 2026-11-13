@@ -5,7 +5,40 @@ NextSpark implements a comprehensive role-based access control (RBAC) system int
 ## User Roles
 
 A user's global role is `users.role`. What a user can do inside a team comes from their **team** role (`owner`, `admin`,
-`member`, ... in `permissions.config.ts`), not from this one.
+`member`, ... in `permissions.config.ts`), except for the app roles that `teams.appRoleBypass` lets skip team
+permissions (below).
+
+### App Roles Inside a Team (`teams.appRoleBypass`)
+
+One project setting in `config/app.config.ts` decides which app roles skip team permissions:
+
+```typescript
+teams: {
+  mode: 'multi-tenant',
+  appRoleBypass: 'developer', // 'none' | 'developer' | 'developer-and-superadmin'
+}
+```
+
+| Value | developer | superadmin |
+|-------|-----------|------------|
+| `'none'` | follows their team role | follows their team role |
+| `'developer'` (**default**, also when the key is left out) | every team permission | follows their team role |
+| `'developer-and-superadmin'` | every team permission | every team permission |
+
+- Skipping applies only inside a team the user belongs to: it grants every permission registered in
+  `permissions.config.ts` (what an owner holds), whatever the team role. In a team they are not a member of, a
+  developer or a superadmin holds no team permission.
+- Every team-permission check applies the same rule, so what the UI shows and what the server allows never differ:
+  `checkPermission` (entity API, server actions, page layouts), `checkTeamPermission`, `MembershipService` (team and
+  billing routes), `SubscriptionService.canPerformAction`, and the UI hooks `usePermission`, `usePermissions`,
+  `useAllPermissions` and `<PermissionGate>`. All of them decide through `hasTeamPermission()`
+  (`lib/permissions/app-role-bypass`).
+- Any other value is an error: `teams.appRoleBypass in app.config must be one of 'none', 'developer',
+  'developer-and-superadmin'`, thrown by the first permission check, which then denies.
+- The setting does not change what app roles keep regardless of it: the admin area (`/superadmin`, `/admin`), the RLS
+  bypass (`can_bypass_rls()`, and the cross-team access it backs) and acting as another user. A superadmin and a
+  developer also keep skipping a plan's features and quotas in `SubscriptionService.canPerformAction`; only the
+  permission an action maps to follows this setting.
 
 ### Role Hierarchy
 
