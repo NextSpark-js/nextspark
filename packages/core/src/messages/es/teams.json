@@ -182,6 +182,7 @@
     "permissionDenied": "No tienes permiso para realizar esta acción",
     "cannotDeletePersonal": "No se puede eliminar el equipo personal",
     "cannotLeaveOwner": "Los propietarios no pueden abandonar. Transfiere la propiedad primero.",
+    "cannotLeaveSystemTeam": "La membresía del equipo de administración del sistema depende de tu rol, así que no puedes abandonarlo.",
     "lastAdmin": "No se puede eliminar al último administrador del equipo",
     "ownerOnlyEdit": "Solo los propietarios del equipo pueden editar el nombre y descripción"
   },

@@ -166,6 +166,7 @@
     "permissionDenied": "You don't have permission to perform this action",
     "cannotDeletePersonal": "Cannot delete personal team",
     "cannotLeaveOwner": "Team owners cannot leave. Transfer ownership first.",
+    "cannotLeaveSystemTeam": "Membership of the system admin team follows your role, so you cannot leave it.",
     "lastAdmin": "Cannot remove the last admin from the team",
     "ownerOnlyEdit": "Only team owners can edit team name and description"
   },

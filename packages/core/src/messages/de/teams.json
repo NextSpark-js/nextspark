@@ -166,6 +166,7 @@
     "permissionDenied": "Sie haben keine Berechtigung für diese Aktion",
     "cannotDeletePersonal": "Persönliches Team kann nicht gelöscht werden",
     "cannotLeaveOwner": "Eigentümer können nicht gehen. Übertragen Sie zuerst das Eigentum.",
+    "cannotLeaveSystemTeam": "Die Mitgliedschaft im Systemadministrations-Team richtet sich nach Ihrer Rolle, daher können Sie es nicht verlassen.",
     "lastAdmin": "Letzter Administrator des Teams kann nicht entfernt werden",
     "ownerOnlyEdit": "Nur Teameigentümer können Teamnamen und Beschreibung bearbeiten"
   },

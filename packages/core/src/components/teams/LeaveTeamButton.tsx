@@ -18,6 +18,12 @@ import {
 import { useTeamContext } from '../../contexts/TeamContext'
 import { withBasePath } from '../../lib/base-path'
 
+/** The route's refusal codes with a message of their own in the `teams` catalog */
+const REFUSAL_MESSAGES = new Map<unknown, string>([
+  ['OWNER_CANNOT_LEAVE', 'errors.cannotLeaveOwner'],
+  ['SYSTEM_TEAM_LEAVE_DISABLED', 'errors.cannotLeaveSystemTeam'],
+])
+
 interface LeaveTeamButtonProps {
   teamId: string
   teamName: string
@@ -39,13 +45,15 @@ export function LeaveTeamButton({ teamId, teamName, role }: LeaveTeamButtonProps
 
   const leave = async () => {
     setLeaving(true)
-    // the API's reason when it gives one (say, the system admin team); a network failure gets the generic message
+    // A refusal the user can act on is translated by its code; anything else (and a network failure) gets the generic
+    // message. The API's own `error` is English, so it is never shown.
     let failure: string | null = null
     try {
       const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/members/me`), { method: 'DELETE' })
       if (!response.ok) {
         const body = await response.json().catch(() => null)
-        failure = typeof body?.error === 'string' && body.error ? body.error : t('leave.error')
+        const key = REFUSAL_MESSAGES.get(body?.code)
+        failure = key ? t(key) : t('leave.error')
       }
     } catch {
       failure = t('leave.error')

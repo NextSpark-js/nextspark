@@ -136,8 +136,11 @@ describe('Leave team on the teams settings page', () => {
   })
 
   it.each([
-    ['the API gives a reason: it is shown', { ok: false, json: async () => ({ code: 'SYSTEM_TEAM_LEAVE_DISABLED', error: "Membership of the system admin team follows the user's role" }) }, "Membership of the system admin team follows the user's role"],
-    ['the API gives none: the generic message', { ok: false, json: async () => ({ code: 'X' }) }, 'leave.error'],
+    ['the code is SYSTEM_TEAM_LEAVE_DISABLED: its translated message', { ok: false, json: async () => ({ code: 'SYSTEM_TEAM_LEAVE_DISABLED', error: "Membership of the system admin team follows the user's role" }) }, 'errors.cannotLeaveSystemTeam'],
+    ['the code is OWNER_CANNOT_LEAVE: its translated message', { ok: false, json: async () => ({ code: 'OWNER_CANNOT_LEAVE', error: 'Team owners cannot leave. Transfer ownership first.' }) }, 'errors.cannotLeaveOwner'],
+    ['another code: the generic message, never the raw error', { ok: false, json: async () => ({ code: 'TEAM_LEAVE_DISABLED', error: 'Leaving a team is not allowed in this mode' }) }, 'leave.error'],
+    ['a code inherited from Object: the generic message', { ok: false, json: async () => ({ code: 'constructor', error: 'x' }) }, 'leave.error'],
+    ['no code: the generic message', { ok: false, json: async () => ({ error: 'Internal server error' }) }, 'leave.error'],
     ['the body is not JSON: the generic message', { ok: false, json: async () => { throw new Error('not json') } }, 'leave.error'],
   ])('a refusal where %s, and no team changes', async (_label, reply, message) => {
     fetchMock.mockResolvedValue(reply)

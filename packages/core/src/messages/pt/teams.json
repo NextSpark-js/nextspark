@@ -166,6 +166,7 @@
     "permissionDenied": "Você não tem permissão para realizar esta ação",
     "cannotDeletePersonal": "Não é possível excluir a equipe pessoal",
     "cannotLeaveOwner": "Proprietários não podem sair. Transfira a propriedade primeiro.",
+    "cannotLeaveSystemTeam": "A participação na equipe de administração do sistema depende da sua função, por isso você não pode sair dela.",
     "lastAdmin": "Não é possível remover o último administrador da equipe",
     "ownerOnlyEdit": "Apenas proprietários da equipe podem editar nome e descrição"
   },
