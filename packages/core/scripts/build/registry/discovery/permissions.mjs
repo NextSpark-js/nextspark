@@ -296,7 +296,7 @@ function extractObjectBlock(content, key) {
 }
 
 // Keep in step with APP_ROLE_BYPASS_VALUES in src/lib/permissions/app-role-bypass.ts (#457)
-const APP_ROLE_BYPASS_VALUES = ['none', 'developer', 'developer-and-superadmin']
+export const APP_ROLE_BYPASS_VALUES = ['none', 'developer', 'developer-and-superadmin']
 
 /**
  * Validate `teams.appRoleBypass` of the project's config/app.config.ts when the registries are generated, so a wrong

@@ -8,6 +8,7 @@
 // Import icon names type (will be created in next step)
 import type { IconName } from './icon-map'
 import type { JobsConfig } from '../jobs/types'
+import type { AppRoleBypass } from '../permissions/app-role-bypass'
 
 /** A source `i18n.detectionStrategy` can turn on. */
 export type LocaleDetectionSource = 'user_database' | 'cookie' | 'header' | 'default'
@@ -62,7 +63,7 @@ export interface TeamsConfig {
    * The server checks and the UI apply the same rule. The admin area, the row-level security bypass and acting as
    * another user are not affected.
    */
-  appRoleBypass?: 'none' | 'developer' | 'developer-and-superadmin'
+  appRoleBypass?: AppRoleBypass
   /**
    * Resolved team-role system (set, hierarchy, labels) for team_members.role.
    * Themes declare the active set declaratively via `teams.roles` in app.config

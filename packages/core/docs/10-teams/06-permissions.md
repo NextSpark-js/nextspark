@@ -291,8 +291,9 @@ These server checks (`checkPermission`, `getUserPermissions`, `checkTeamPermissi
 `useAllPermissions`, and `<PermissionGate>` on them) decide through the same function, `hasTeamPermission()` in
 `lib/permissions/app-role-bypass`, so they agree with each other. Known exceptions that do not follow the setting yet:
 the checks against a fixed list of team roles (`TeamMembersList` and `TeamPendingInvitations` for `owner`/`admin`, the
-team name and description on the teams settings page for `owner`, `verifyTeamPermission` in
-`lib/actions/team.actions.ts`, `checkTeamPermission(userId, teamId, roles)` in `lib/teams/actions.ts`), and
+team name and description on the teams settings page for `owner`, the server actions in `lib/actions/team.actions.ts`
+(`verifyTeamPermission`, `updateMemberRole`), `checkTeamPermission(userId, teamId, roles)` in `lib/teams/actions.ts`),
+and
 `GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team as an admin-area
 capability. A wrong value fails the build (the registry build validates a string literal); at runtime the check throws,
 so the request or the page fails. The full rule is in

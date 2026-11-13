@@ -8,12 +8,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { validateAppRoleBypass } from '../discovery/permissions.mjs'
+import { APP_ROLE_BYPASS_VALUES, validateAppRoleBypass } from '../discovery/permissions.mjs'
 
 const CORE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
 const ERROR = /teams\.appRoleBypass in config\/app\.config\.ts must be one of 'none', 'developer', 'developer-and-superadmin'; got 'superadmin'/
@@ -41,6 +41,14 @@ function withProject(appConfig, fn) {
 }
 
 const config = value => `export const APP_CONFIG_OVERRIDES = {\n  teams: {\n    mode: 'multi-tenant' as const,\n    options: { allowCreateTeams: true },\n    appRoleBypass: ${value},\n  },\n}\n`
+
+test('the build accepts exactly the values the runtime accepts (APP_ROLE_BYPASS_VALUES of app-role-bypass.ts)', () => {
+  const source = readFileSync(join(CORE_DIR, 'src', 'lib', 'permissions', 'app-role-bypass.ts'), 'utf8')
+  const list = source.match(/export const APP_ROLE_BYPASS_VALUES = \[([^\]]*)\]/)
+  assert.ok(list, 'APP_ROLE_BYPASS_VALUES not found in app-role-bypass.ts')
+  const runtime = [...list[1].matchAll(/'([^']*)'/g)].map(match => match[1])
+  assert.deepEqual(APP_ROLE_BYPASS_VALUES, runtime)
+})
 
 test('each valid value is accepted, with or without as const', () => {
   for (const value of ['none', 'developer', 'developer-and-superadmin']) {

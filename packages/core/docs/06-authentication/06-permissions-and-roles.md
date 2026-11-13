@@ -36,8 +36,8 @@ teams: {
 - Known exceptions, which do not follow the setting yet:
   - checks against a fixed list of team roles: managing members in `TeamMembersList` and pending invitations in
     `TeamPendingInvitations` (`owner` or `admin`), editing the team's name and description on the teams settings page
-    (`owner`), `verifyTeamPermission` in `lib/actions/team.actions.ts` and `checkTeamPermission(userId, teamId, roles)`
-    in `lib/teams/actions.ts`;
+    (`owner`), the server actions in `lib/actions/team.actions.ts` (`verifyTeamPermission`, `updateMemberRole`) and
+    `checkTeamPermission(userId, teamId, roles)` in `lib/teams/actions.ts`;
   - `GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team, as an admin-area
     capability.
 - A wrong value fails the build: the registry build validates `teams.appRoleBypass` when it is a string literal, with
