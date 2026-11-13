@@ -24,6 +24,7 @@ import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveMagicLinkExpiresIn, resolveOtpConfig } from './auth/otp-config';
+import { E2E_FIXED_OTP_ENV, e2eFixedOtpPluginOptions } from './auth/e2e-fixed-otp';
 import { isPasswordLoginEnabled, resolveAuthMethods } from './auth/auth-methods';
 import { isDemoMode } from './demo/mode';
 import { sessionSecretProblem } from './auth/readiness';
@@ -127,6 +128,9 @@ const sessionConfig = resolveSessionConfig(AUTH_CONFIG);
 // derived from what the server enforces instead of restating it.
 const otpConfig = resolveOtpConfig(AUTH_CONFIG);
 const magicLinkExpiresIn = resolveMagicLinkExpiresIn(AUTH_CONFIG);
+// NEXTSPARK_E2E_FIXED_OTP (lib/auth/e2e-fixed-otp): a fixed code for E2E runs. Throws here in production, so a
+// production build or server that sees it fails instead of serving a known code.
+const e2eFixedOtpOptions = e2eFixedOtpPluginOptions(process.env, otpConfig.otpLength);
 
 // The social provider map (lib/auth/social-providers): the built-in providers
 // auth.methods or auth.providers lists whose credentials are ready (Google is
@@ -317,6 +321,11 @@ export const auth = betterAuth({
     ...(isRuntimeEmailAvailable()
       ? [emailOTP({
           sendVerificationOTP({ email, otp, type }) {
+            if (e2eFixedOtpOptions.generateOTP) {
+              // The suite knows the code: no email goes out, real or console
+              console.warn(`[auth] ${E2E_FIXED_OTP_ENV} is set: the ${type} code is the fixed one and no email was sent`);
+              return Promise.resolve();
+            }
             const send = (async () => {
               try {
                 const template = await sendOtpVerificationEmail({
@@ -339,6 +348,7 @@ export const auth = betterAuth({
           },
           otpLength: otpConfig.otpLength,
           expiresIn: otpConfig.expiresIn,
+          ...e2eFixedOtpOptions,
           sendVerificationOnSignUp: false,
           disableSignUp: false, // auto-create user on first OTP sign-in
         })]

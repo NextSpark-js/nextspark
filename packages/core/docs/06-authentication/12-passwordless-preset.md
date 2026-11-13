@@ -207,6 +207,9 @@ An invalid `expiresIn` is rejected with a `console.warn` and falls back to the d
   users, reuse, expiry, foreign destinations, registration gates and send failures.
 - `tests/jest/components/auth/forms/LoginForm.magic-link.test.tsx` and
   `tests/jest/emails/magic-link.test.ts` — the form and the email in every locale.
+- `tests/node/e2e-fixed-otp.test.ts`, `tests/jest/lib/auth-e2e-fixed-otp.test.ts` and
+  `tests/jest/instrumentation/e2e-fixed-otp.test.ts` — `NEXTSPARK_E2E_FIXED_OTP`, the fixed code for E2E runs
+  against a development server; see [Testing Authentication](./08-testing-authentication.md#testing-email-otp-sign-in-fixed-code).
 
 ## Runtime provider readiness
 

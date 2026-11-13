@@ -56,6 +56,10 @@ Object.assign(error, { code: '${SENTINEL}' })
 throw error
 `)
   fs.writeFileSync(path.join(core, 'lib/auth/readiness.js'), 'export function sessionSecretProblem() { return null }\n')
+  // The fixed E2E code check (#448), core's real module: pure, nothing to stand in for
+  fs.writeFileSync(path.join(core, 'lib/auth/e2e-fixed-otp.js'), ts.transpileModule(fs.readFileSync(path.join(REPO_ROOT, 'packages/core/src/lib/auth/e2e-fixed-otp.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText)
   fs.writeFileSync(path.join(core, 'lib/scheduled-actions/index.js'), "export function initializeScheduledActions() { console.log('SCHEDULED_ACTIONS_INITIALIZED') }\nexport async function initializeRecurringActions() {}\n")
   // register() reads scheduledActions.requireRecurringSeed from the merged config (#435)
   fs.mkdirSync(path.join(core, 'lib/config'), { recursive: true })
@@ -65,6 +69,7 @@ throw error
   }).outputText
     .replace("'../lib/auth/runtime-readiness'", "'../lib/auth/runtime-readiness.js'")
     .replace("'../lib/auth/readiness'", "'../lib/auth/readiness.js'")
+    .replace("'../lib/auth/e2e-fixed-otp'", "'../lib/auth/e2e-fixed-otp.js'")
     .replace("'../lib/scheduled-actions'", "'../lib/scheduled-actions/index.js'")
     .replace("'../lib/config/config-sync'", "'../lib/config/config-sync.js'")
   fs.mkdirSync(path.join(core, 'instrumentation'), { recursive: true })

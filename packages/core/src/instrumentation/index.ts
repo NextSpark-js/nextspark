@@ -39,6 +39,18 @@ export async function register(): Promise<void> {
       }
     }
 
+    // NEXTSPARK_E2E_FIXED_OTP: a production server never starts with it; anywhere else it warns at every start
+    {
+      const { isE2eFixedOtpSet, E2E_FIXED_OTP_ENV, E2E_FIXED_OTP_PRODUCTION_MESSAGE } = await import('../lib/auth/e2e-fixed-otp')
+      if (isE2eFixedOtpSet(process.env)) {
+        if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+          console.error(`[auth] ${E2E_FIXED_OTP_PRODUCTION_MESSAGE} The server will not start.`)
+          process.exit(1)
+        }
+        console.warn(`[auth] ${E2E_FIXED_OTP_ENV} is set: email sign-in codes are the fixed one and no code email is sent. For end-to-end runs only.`)
+      }
+    }
+
     // Re-validate login providers at startup: logs one safe error in production when none can work
     try {
       const { logAuthReadinessAtStartup } = await import('../lib/auth/runtime-readiness')

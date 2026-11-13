@@ -448,3 +448,19 @@ test('a core whose dist lacks the evaluator, or its exports, fails closed', asyn
     await project.cleanup()
   }
 })
+
+test('the fixed E2E sign-in code fails the production check, even with the bypass, and its value is never printed (#448)', async () => {
+  const project = await fixture(methods(['google']))
+  try {
+    for (const extra of [{}, { NEXTSPARK_AUTH_PREFLIGHT: 'off' }, { NEXTSPARK_DEMO_MODE: 'true' }]) {
+      const result = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...extra, NEXTSPARK_E2E_FIXED_OTP: '482913' })
+      assert.equal(result.status, 1, result.output)
+      assert.match(result.output, /E2E_FIXED_OTP_IN_PRODUCTION/)
+      assert.ok(!result.output.includes('482913'), result.output)
+    }
+    const clean = run(project.root, ['prepare', '--production'], VALID_GOOGLE)
+    assert.equal(clean.status, 0, clean.output)
+  } finally {
+    await project.cleanup()
+  }
+})

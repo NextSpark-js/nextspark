@@ -179,6 +179,48 @@ describe('Protected Routes', () => {
 })
 ```
 
+## Testing Email OTP Sign-In (fixed code)
+
+An E2E suite can sign in by email code without reading an inbox. Start the **development** server with
+`NEXTSPARK_E2E_FIXED_OTP` set to a code of `auth.otp.otpLength` digits (6 by default):
+
+```bash
+NEXTSPARK_E2E_FIXED_OTP=482913 pnpm dev
+```
+
+While it is set:
+
+- Every email code Better Auth issues (sign-in, verification, password reset, email change) is that code.
+- No code email is sent, real or console; the server logs a warning on each send and at startup.
+- The rest is unchanged: the code expires after `auth.otp.expiresIn`, three wrong attempts invalidate it, and the
+  auth rate limits apply, so a suite still requests a code before each sign-in. A suite that signs in as the same
+  address more than 5 times in 15 minutes hits the per-email limit; set `DISABLE_RATE_LIMITING=true` on the test
+  server, as for the rest of an E2E run, or spread sign-ins over several addresses.
+
+Production refuses it. `nextspark build` fails with `E2E_FIXED_OTP_IN_PRODUCTION` (`NEXTSPARK_AUTH_PREFLIGHT=off`
+does not skip it), a production server does not start, and the auth module throws when it loads with
+`NODE_ENV=production`. There is no override, so run these specs against `pnpm dev`, not `pnpm cy:run:prod`. Nothing
+is inferred from the host: unset, the code is random and emailed as always. Never put the variable in a shared or
+deployed `.env`.
+
+Cypress:
+
+```typescript
+const OTP = Cypress.env('E2E_FIXED_OTP') // the same value as the server's NEXTSPARK_E2E_FIXED_OTP
+
+cy.request('POST', '/api/auth/email-otp/send-verification-otp', { email, type: 'sign-in' })
+cy.request('POST', '/api/auth/sign-in/email-otp', { email, otp: OTP })
+```
+
+Playwright:
+
+```typescript
+await page.request.post('/api/auth/email-otp/send-verification-otp', { data: { email, type: 'sign-in' } })
+await page.request.post('/api/auth/sign-in/email-otp', { data: { email, otp: process.env.E2E_FIXED_OTP } })
+```
+
+The browser's login form works the same way: request the code, then type the fixed one.
+
 ## Testing OAuth
 
 ### Google OAuth Flow (Mocked)

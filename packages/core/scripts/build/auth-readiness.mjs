@@ -18,6 +18,7 @@
  *   the project's methods, as the runtime gate does; no email provider is required.
  * - NEXTSPARK_AUTH_PREFLIGHT=off: the one bypass. Skips this check with a
  *   warning; the runtime gates and the startup check still apply.
+ * - NEXTSPARK_E2E_FIXED_OTP: any value fails the build, bypass or not (lib/auth/e2e-fixed-otp).
  *
  * The project's config/app.config.ts is loaded with Node's type stripping in a child
  * (auth-readiness-load.mjs) whose output is discarded. A config Node can't
@@ -146,6 +147,13 @@ function validAuthSubset(subset) {
 }
 
 async function main() {
+  // Before the bypass: a production build never carries the fixed E2E sign-in code (lib/auth/e2e-fixed-otp)
+  if (env.NEXTSPARK_E2E_FIXED_OTP) {
+    fail('E2E_FIXED_OTP_IN_PRODUCTION', 'NEXTSPARK_E2E_FIXED_OTP is set, and production refuses it: it is for end-to-end runs against a development server.', [
+      'Unset it for this build. NEXTSPARK_AUTH_PREFLIGHT=off does not skip this check.',
+    ])
+  }
+
   const preflight = env.NEXTSPARK_AUTH_PREFLIGHT ?? ''
   if (preflight === 'off') {
     console.log(`⚠️ Production auth readiness check skipped (${BYPASS}): this build does not prove that any login method can authenticate.`)
