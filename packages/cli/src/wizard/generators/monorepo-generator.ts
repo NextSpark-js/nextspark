@@ -163,7 +163,7 @@ export const VERSIONS = {
   JEST_EXPO: '~58.0.11',
   RN_JEST_PRESET: '^0.88.0',
   TESTING_LIBRARY_RN: '^14.1.0',
-  // jest-expo 58 peers 1.3.0 exactly; RNTL 14 renders through it instead of react-test-renderer
+  // jest-expo 58 depends on test-renderer 1.3.0 exactly; keep them together. RNTL 14 renders through it instead of react-test-renderer
   TEST_RENDERER: '1.3.0',
 } as const
 
