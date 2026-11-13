@@ -169,6 +169,7 @@ export const QUERY_MODULES = new Set([
   'components/teams/CreateTeamDialog',
   'components/teams/InlineEditableField',
   'components/teams/InviteMemberDialog',
+  'components/teams/LeaveTeamButton',
   'components/teams/TeamDetailSection',
   'components/teams/TeamMembersList',
   'components/teams/TeamPendingInvitations',
