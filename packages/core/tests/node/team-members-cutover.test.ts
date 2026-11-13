@@ -24,7 +24,7 @@ type Step =
   | { method: 'CALL'; path: 'remove' | 'updateRole'; args: string[]; service: boolean; expectedRole?: string }
 type Result = { method: string; path: string; status: number; body: { data?: unknown; code?: string; error?: string } }
 
-function runSteps(appUrl: string, ownerUrl: string, steps: Step[]): Result[] {
+function runSteps(appUrl: string, ownerUrl: string, steps: Step[], appConfig?: unknown): Result[] {
   const run = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'driver.mts')], {
     cwd: CORE,
     encoding: 'utf8',
@@ -42,6 +42,8 @@ function runSteps(appUrl: string, ownerUrl: string, steps: Step[]): Result[] {
       NEXT_PUBLIC_APP_URL: 'http://localhost:5173',
       DISABLE_RATE_LIMITING: 'true',
       TEAM_MEMBERS_STEPS: JSON.stringify(steps),
+      // the project's app config the fixture registry serves (core's defaults when unset)
+      ...(appConfig ? { REGISTRATION_GATES_APP_CONFIG: JSON.stringify(appConfig) } : {}),
     },
   })
   const results = run.stdout.split('\n').filter(l => l.startsWith('RESULT ')).map(l => JSON.parse(l.slice(7)) as Result)
@@ -204,4 +206,36 @@ test('#458 cutover: a member write fails when the role changed after the caller 
   assert.deepEqual([remove.status, remove.body.error], [500, 'Team member not found, or their role changed'])
   assert.deepEqual([update.status, update.body.error], [500, 'Team member not found, or their role changed'])
   assert.equal((await owner.query(`SELECT role FROM team_members WHERE id = 'm-tz'`)).rows[0].role, 'admin')
+})
+
+test('#459 cutover: an admin, a member and a viewer leave a team as nextspark_app; the owner and an outsider cannot', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 300000 }, async t => {
+  const { owner, appUrl, ownerUrl } = await cutoverDatabase(t)
+  await owner.query(`
+    INSERT INTO users (id, email, name, role, "emailVerified") VALUES
+      ('uo', 'o@example.test', 'Owner', 'member', true),
+      ('ua', 'a@example.test', 'Admin', 'member', true),
+      ('um', 'm@example.test', 'Member', 'member', true),
+      ('uv', 'v@example.test', 'Viewer', 'member', true),
+      ('ux', 'x@example.test', 'Outsider', 'member', true);
+    INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-1', 'Team', 'team-1', 'uo'), ('team-2', 'Team 2', 'team-2', 'ux');
+    INSERT INTO team_members (id, "teamId", "userId", role) VALUES
+      ('m-uo', 'team-1', 'uo', 'owner'), ('m-ua', 'team-1', 'ua', 'admin'),
+      ('m-um', 'team-1', 'um', 'member'), ('m-uv', 'team-1', 'uv', 'viewer'),
+      ('m-ux', 'team-2', 'ux', 'owner'), ('m-um2', 'team-2', 'um', 'member');
+  `)
+  const keys: Record<string, string> = {}
+  for (const id of ['uo', 'ua', 'um', 'uv', 'ux']) keys[id] = await apiKey(owner, id)
+  const leave = (id: string): Step => ({ method: 'DELETE', path: '/api/v1/teams/team-1/members/me', key: keys[id] })
+  const membersOf = async (team: string) =>
+    (await owner.query(`SELECT "userId" FROM team_members WHERE "teamId" = $1 ORDER BY "userId"`, [team])).rows.map(r => r.userId)
+
+  const [ownerLeaves, outsiderLeaves, adminLeaves, memberLeaves, viewerLeaves] = runSteps(appUrl, ownerUrl, [
+    leave('uo'), leave('ux'), leave('ua'), leave('um'), leave('uv'),
+  ], { teams: { mode: 'multi-tenant' } })
+  assert.deepEqual([ownerLeaves.status, ownerLeaves.body.code], [403, 'OWNER_CANNOT_LEAVE'])
+  assert.deepEqual([outsiderLeaves.status, outsiderLeaves.body.code], [404, 'MEMBER_NOT_FOUND'])
+  for (const result of [adminLeaves, memberLeaves, viewerLeaves]) assert.equal(result.status, 200, JSON.stringify(result))
+  assert.deepEqual(await membersOf('team-1'), ['uo'])
+  // leaving team-1 leaves the member's membership of team-2 alone
+  assert.deepEqual(await membersOf('team-2'), ['um', 'ux'])
 })

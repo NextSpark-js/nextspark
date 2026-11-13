@@ -362,6 +362,29 @@ DELETE /api/v1/teams/:teamId/members/:memberId
 
 Empty response on success.
 
+### Leave Team
+
+The signed-in user leaves the team. Any member but the owner can; no permission is needed.
+
+```http
+DELETE /api/v1/teams/:teamId/members/me
+```
+
+**Rules:**
+
+- Always the caller's own membership: nothing in the request names another user
+- The owner cannot leave: they transfer ownership first (`POST /api/v1/teams/:teamId/transfer-ownership`)
+- Only in `multi-tenant` mode. In `single-user` mode the only member is the owner, and in `single-tenant` mode the one team is the whole app, so leaving it would strand the account; an admin removes a member instead
+- Runs on the RLS connection: the `team_members` delete policy (migration 033) lets anyone but the owner delete their own row
+
+**Response (200 OK):**
+
+```json
+{ "success": true, "data": { "deleted": true, "id": "membership-id", "teamId": "team-id" } }
+```
+
+**Errors:** `403 OWNER_CANNOT_LEAVE`, `403 TEAM_LEAVE_DISABLED` (not `multi-tenant` mode), `404 MEMBER_NOT_FOUND` (the caller is not a member of the team).
+
 ---
 
 ## Team Invitations
@@ -596,6 +619,8 @@ The first user in `single-tenant` mode uses regular signup (`/api/auth/signup`):
 | `TEAM_CREATION_DISABLED` | 403 | Team creation not allowed in current mode |
 | `PUBLIC_SIGNUP_RESTRICTED` | 403 | Public signup blocked (single-tenant mode after first user) |
 | `INVITATIONS_DISABLED` | 403 | Invitations not allowed in current mode (single-user) |
+| `TEAM_LEAVE_DISABLED` | 403 | Leaving a team not allowed in current mode (single-user, single-tenant) |
+| `OWNER_CANNOT_LEAVE` | 403 | The owner must transfer ownership before leaving |
 
 ## Rate Limiting
 

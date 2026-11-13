@@ -414,6 +414,11 @@
   },
   {
     "kind": "route",
+    "target": "api/v1/teams/[teamId]/members/me/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/members/me/route"
+  },
+  {
+    "kind": "route",
     "target": "api/v1/teams/[teamId]/members/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/v1/teams/[teamId]/members/route"
   },
