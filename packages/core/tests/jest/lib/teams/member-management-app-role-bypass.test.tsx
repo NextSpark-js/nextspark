@@ -222,7 +222,7 @@ async function viaApi(op: Op): Promise<boolean> {
 }
 
 /** What the UI offers for each operation: the members list, the pending invitations and the settings page. */
-async function viaUi(): Promise<Record<Op, boolean> & { cancelInvitation: boolean }> {
+async function viaUi(): Promise<Record<Op, boolean> & { cancelInvitation: boolean; transfer: boolean }> {
   const list = render(<TeamMembersList teamId={TEAM_ID} />)
   const inviteButton = list.container.querySelector('[data-cy="invite-member-button"]') !== null
   const dialogRole = list.container.querySelector('[data-cy="invite-dialog"]')?.getAttribute('data-role') ?? ''
@@ -237,6 +237,7 @@ async function viaUi(): Promise<Record<Op, boolean> & { cancelInvitation: boolea
     promote: offers('t-member', 'make-admin-action'),
     demote: offers('t-admin', 'make-member-action'),
     toViewer: offers('t-member', 'make-viewer-action'),
+    transfer: list.container.querySelector('[data-cy="transfer-ownership-action"]') !== null,
   }
   list.unmount()
 
@@ -284,6 +285,8 @@ describe.each(Object.keys(EXPECTED))('teams.appRoleBypass = %s', setting => {
       expect(Object.fromEntries(OPS.map(op => [op, ui[op]]))).toEqual(want)
       // Cancelling an invitation takes the invite permission: whoever invites a member cancels
       expect(ui.cancelInvitation).toBe(want.inviteMember)
+      // Transferring ownership stays with the team's owner: an app role that skips team permissions does not get it
+      expect(ui.transfer).toBe(actor === 'owner')
     })
 
     test.each(OPS)('%s: the server action and the API route agree with the expected answer', async op => {
