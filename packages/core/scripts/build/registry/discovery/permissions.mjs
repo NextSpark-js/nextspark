@@ -295,6 +295,32 @@ function extractObjectBlock(content, key) {
   return null
 }
 
+// Keep in step with APP_ROLE_BYPASS_VALUES in src/lib/permissions/app-role-bypass.ts (#457)
+const APP_ROLE_BYPASS_VALUES = ['none', 'developer', 'developer-and-superadmin']
+
+/**
+ * Validate `teams.appRoleBypass` of the project's config/app.config.ts when the registries are generated, so a wrong
+ * value fails the build instead of every permission check at runtime (#457). Only a string literal is read
+ * (`'developer'`, `'developer' as const`); a variable is left to the runtime check.
+ *
+ * @param {string} projectRoot
+ * @returns {string|null} The literal value, or null when there is no file, no setting or no literal
+ */
+export function validateAppRoleBypass(projectRoot) {
+  const appConfigPath = join(projectRoot, 'config', 'app.config.ts')
+  if (!existsSync(appConfigPath)) return null
+  const content = readFileSync(appConfigPath, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')
+  const teamsBlock = extractObjectBlock(content, 'teams')
+  const match = teamsBlock?.match(/\bappRoleBypass\s*:\s*(['"`])([^'"`]*)\1/)
+  if (!match) return null
+  if (!APP_ROLE_BYPASS_VALUES.includes(match[2])) {
+    throw new Error(
+      `teams.appRoleBypass in config/app.config.ts must be one of ${APP_ROLE_BYPASS_VALUES.map(v => `'${v}'`).join(', ')}; got '${match[2]}'`
+    )
+  }
+  return match[2]
+}
+
 /**
  * Parse team roles from app.config.ts.
  *

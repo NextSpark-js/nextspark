@@ -28,13 +28,21 @@ teams: {
 - Skipping applies only inside a team the user belongs to: it grants every permission registered in
   `permissions.config.ts` (what an owner holds), whatever the team role. In a team they are not a member of, a
   developer or a superadmin holds no team permission.
-- Every team-permission check applies the same rule, so what the UI shows and what the server allows never differ:
-  `checkPermission` (entity API, server actions, page layouts), `checkTeamPermission`, `MembershipService` (team and
-  billing routes), `SubscriptionService.canPerformAction`, and the UI hooks `usePermission`, `usePermissions`,
-  `useAllPermissions` and `<PermissionGate>`. All of them decide through `hasTeamPermission()`
-  (`lib/permissions/app-role-bypass`).
-- Any other value is an error: `teams.appRoleBypass in app.config must be one of 'none', 'developer',
-  'developer-and-superadmin'`, thrown by the first permission check, which then denies.
+- The rule applies to these checks, which decide through `hasTeamPermission()` (`lib/permissions/app-role-bypass`)
+  and so agree with each other: `checkPermission` and `getUserPermissions` (entity API, server actions, page
+  layouts), `checkTeamPermission`, `MembershipService` (team and billing routes), `SubscriptionService.canPerformAction`,
+  and the UI hooks `usePermission`, `useOptionalPermission`, `usePermissions`, `useAllPermissions` (with
+  `<PermissionGate>` and the menus built on them).
+- Known exceptions, which do not follow the setting yet:
+  - checks against a fixed list of team roles: managing members in `TeamMembersList` and pending invitations in
+    `TeamPendingInvitations` (`owner` or `admin`), editing the team's name and description on the teams settings page
+    (`owner`), `verifyTeamPermission` in `lib/actions/team.actions.ts` and `checkTeamPermission(userId, teamId, roles)`
+    in `lib/teams/actions.ts`;
+  - `GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team, as an admin-area
+    capability.
+- A wrong value fails the build: the registry build validates `teams.appRoleBypass` when it is a string literal, with
+  `teams.appRoleBypass in config/app.config.ts must be one of 'none', 'developer', 'developer-and-superadmin'`. At
+  runtime (a value the build could not read, such as a variable) the check throws, so the request or the page fails.
 - The setting does not change what app roles keep regardless of it: the admin area (`/superadmin`, `/admin`), the RLS
   bypass (`can_bypass_rls()`, and the cross-team access it backs) and acting as another user. A superadmin and a
   developer also keep skipping a plan's features and quotas in `SubscriptionService.canPerformAction`; only the

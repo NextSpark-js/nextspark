@@ -41,7 +41,7 @@ import { projectFiles } from './safe-fs.mjs'
 
 // Import discovery modules (migrated from this file)
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
-import { discoverPermissionsConfig } from './registry/discovery/permissions.mjs'
+import { discoverPermissionsConfig, validateAppRoleBypass } from './registry/discovery/permissions.mjs'
 import { discoverCoreEntities } from './registry/discovery/core-entities.mjs'
 import { mergeEntities } from './registry/discovery/all-entities.mjs'
 import { discoverPlugins } from './registry/discovery/plugins.mjs'
@@ -104,6 +104,8 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
     const providersScope = readProvidersScope(CONFIG.projectRoot)
     // `i18n.requestLocale` of app.config: which route groups render in the request's locale
     const requestLocale = readRequestLocale(CONFIG.projectRoot)
+    // `teams.appRoleBypass` of app.config: a wrong value stops the build here (#457)
+    validateAppRoleBypass(CONFIG.projectRoot)
 
     // Each registry takes only the plugins that declare its surface: the server registries the
     // 'server' plugins, the client registry the 'web' ones (a build-only or mobile-only plugin is in neither).

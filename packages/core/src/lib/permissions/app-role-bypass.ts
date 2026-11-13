@@ -7,12 +7,14 @@
  * - 'developer-and-superadmin': both skip team permissions
  *
  * "Skip" means: inside a team the user belongs to, every registered permission is granted whatever the team role.
- * It never grants anything in a team the user is not a member of. Every team-permission check, on the server
- * (checkPermission, checkTeamPermission, MembershipService, billing) and in the UI (the permission hooks), decides
- * through hasTeamPermission() here, so the two always agree. The admin area, the row-level security bypass and
- * acting as another user are separate rules this setting does not change.
+ * It never grants anything in a team the user is not a member of. The server checks (checkPermission,
+ * checkTeamPermission, MembershipService, billing) and the UI permission hooks decide through hasTeamPermission()
+ * here, so they agree. Checks against a fixed list of team roles do not use it yet (see the permissions guides).
+ * The admin area, the row-level security bypass and acting as another user are separate rules this setting does
+ * not change.
  *
- * The setting is plain project config, already part of the client-safe app config.
+ * The setting is plain project config, already part of the client-safe app config. The registry build validates a
+ * literal value (scripts/build/registry/discovery/permissions.mjs); here a wrong value throws.
  */
 
 import { TEAMS_CONFIG } from '../config/config-client'

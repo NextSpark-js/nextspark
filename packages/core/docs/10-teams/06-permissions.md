@@ -286,11 +286,16 @@ teams: {
 | `'developer-and-superadmin'` | every team permission | every team permission |
 
 Skipping applies only in a team the user belongs to, and grants every permission registered in `permissions.config.ts`.
-The server (`checkPermission`, `checkTeamPermission`, `MembershipService`, `SubscriptionService.canPerformAction`) and
-the UI (`usePermission`, `usePermissions`, `useAllPermissions`, `<PermissionGate>`) decide through the same function,
-`hasTeamPermission()` in `lib/permissions/app-role-bypass`, so a menu entry is shown exactly when the server allows
-the action. Any other value throws `teams.appRoleBypass in app.config must be one of 'none', 'developer',
-'developer-and-superadmin'` on the first permission check, which denies. The full rule is in
+These server checks (`checkPermission`, `getUserPermissions`, `checkTeamPermission`, `MembershipService`,
+`SubscriptionService.canPerformAction`) and UI hooks (`usePermission`, `useOptionalPermission`, `usePermissions`,
+`useAllPermissions`, and `<PermissionGate>` on them) decide through the same function, `hasTeamPermission()` in
+`lib/permissions/app-role-bypass`, so they agree with each other. Known exceptions that do not follow the setting yet:
+the checks against a fixed list of team roles (`TeamMembersList` and `TeamPendingInvitations` for `owner`/`admin`, the
+team name and description on the teams settings page for `owner`, `verifyTeamPermission` in
+`lib/actions/team.actions.ts`, `checkTeamPermission(userId, teamId, roles)` in `lib/teams/actions.ts`), and
+`GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team as an admin-area
+capability. A wrong value fails the build (the registry build validates a string literal); at runtime the check throws,
+so the request or the page fails. The full rule is in
 [Permissions and Roles](../06-authentication/06-permissions-and-roles.md#app-roles-inside-a-team-teamsapprolebypass).
 
 The setting changes team permissions only. The database bypass below, the admin area and acting as another user stay
