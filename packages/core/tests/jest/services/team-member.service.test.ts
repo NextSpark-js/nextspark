@@ -385,23 +385,8 @@ describe('TeamMemberService', () => {
     })
   })
 
-  describe('hasPermission', () => {
-    it('returns true when user has required role', async () => {
-      mockQueryOneWithRLS.mockResolvedValue({ role: 'admin' })
-
-      const result = await TeamMemberService.hasPermission('user-789', 'team-456', ['admin', 'owner'])
-
-      expect(result).toBe(true)
-    })
-
-    it('returns false when user lacks required role', async () => {
-      mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
-
-      const result = await TeamMemberService.hasPermission('user-789', 'team-456', ['admin', 'owner'])
-
-      expect(result).toBe(false)
-    })
-  })
+  // REMOVED (#458): hasPermission(userId, teamId, roles) compared against a fixed role list. Use
+  // checkPermission(userId, teamId, permission) or MembershipService.get() + canPerformAction(permission).
 
   // REMOVED IN V2: isOwner() and isAdminOrOwner() methods
   // These legacy methods were removed in favor of MembershipService pattern

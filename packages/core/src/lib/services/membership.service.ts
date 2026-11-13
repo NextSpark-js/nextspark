@@ -40,6 +40,7 @@ export class TeamMembership implements TeamMembershipData {
   readonly userId: string
   readonly teamId: string
   readonly role: string | null
+  readonly appRole: string | null
   readonly hierarchy: number
   readonly permissions: Permission[]
   readonly subscription: MembershipSubscription | null
@@ -50,6 +51,7 @@ export class TeamMembership implements TeamMembershipData {
     this.userId = data.userId
     this.teamId = data.teamId
     this.role = data.role
+    this.appRole = data.appRole ?? null
     this.hierarchy = data.hierarchy
     this.permissions = data.permissions
     this.subscription = data.subscription
@@ -345,6 +347,7 @@ export class MembershipService {
     // (#457): the same rule as checkPermission and the UI hooks
     const appUser = await queryOneWithRLS<{ role: string }>('SELECT role FROM "users" WHERE id = $1', [userId])
     const permissions = teamPermissionsFor(appUser?.role, teamMember.role)
+    const appRole = appUser?.role ?? null
 
     // 4. Get subscription info
     const subscription = await SubscriptionService.getActive(teamId)
@@ -377,6 +380,7 @@ export class MembershipService {
       userId,
       teamId,
       role: teamMember.role,
+      appRole,
       hierarchy,
       permissions,
       subscription: membershipSubscription,

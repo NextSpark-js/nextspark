@@ -50,7 +50,9 @@ import { actionRateLimitError } from './rate-limit'
 import { actionErrorMessage } from './errors'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
-import { getInvitableRoles } from '../teams/permissions'
+import type { Permission } from '../permissions/types'
+import { getInvitableRoles, canManageRole, hierarchyRoleFor, validateRoleTransition } from '../teams/permissions'
+import { MembershipService, type TeamMembership } from '../services/membership.service'
 import { APP_CONFIG_MERGED } from '../config/config-sync'
 
 // ============================================================================
@@ -102,24 +104,23 @@ async function getAuthUser(): Promise<
 }
 
 /**
- * Verify user has required role in team
+ * Verify the user holds a team permission, by the check the REST routes make (MembershipService.canPerformAction):
+ * the team role's permissions, or every permission for an app role that teams.appRoleBypass lets skip them (#458).
+ * Returns the membership for the role-hierarchy checks that follow.
  */
 async function verifyTeamPermission(
   userId: string,
   teamId: string,
-  requiredRoles: TeamRole[] = ['owner', 'admin']
-): Promise<{ success: true } | { success: false; error: string }> {
-  const hasPermission = await TeamMemberService.hasPermission(
-    userId,
-    teamId,
-    requiredRoles
-  )
+  permission: Permission
+): Promise<{ success: true; membership: TeamMembership } | { success: false; error: string }> {
+  const membership = await MembershipService.get(userId, teamId)
+  const result = membership.canPerformAction(permission)
 
-  if (!hasPermission) {
-    return { success: false, error: 'Permission denied. Required role: ' + requiredRoles.join(' or ') }
+  if (result.allowed === false) {
+    return { success: false, error: result.message ?? 'Permission denied' }
   }
 
-  return { success: true }
+  return { success: true, membership }
 }
 
 // ============================================================================
@@ -129,7 +130,7 @@ async function verifyTeamPermission(
 /**
  * Update a team's information
  *
- * Requires owner or admin role in the team.
+ * Requires the team.edit permission, as `PATCH /api/v1/teams/:teamId` does.
  *
  * @param teamId - The team ID to update
  * @param data - Team fields to update
@@ -168,8 +169,8 @@ export async function updateTeam(
     }
     const { userId } = authResult
 
-    // 3. Verify permission (owner or admin)
-    const permResult = await verifyTeamPermission(userId, teamId, ['owner', 'admin'])
+    // 3. Verify permission (team.edit, as PATCH /api/v1/teams/:teamId)
+    const permResult = await verifyTeamPermission(userId, teamId, 'team.edit' as Permission)
     if (permResult.success === false) {
       return { success: false, error: permResult.error }
     }
@@ -309,8 +310,9 @@ export async function inviteMember(
 /**
  * Remove a member from the team
  *
- * Requires owner or admin role in the team.
- * Cannot remove the team owner (must transfer ownership first).
+ * The same rules as `DELETE /api/v1/teams/:teamId/members/:memberId` (#458): the team.members.remove permission,
+ * never the owner (transfer ownership first), and only a role below the caller's (hierarchyRoleFor: the team role,
+ * or the owner's for an app role that teams.appRoleBypass lets skip team permissions).
  *
  * @param teamId - The team ID
  * @param memberId - The member ID to remove (from team_members table)
@@ -346,44 +348,37 @@ export async function removeMember(
     }
     const { userId } = authResult
 
-    // 3. Verify permission (owner or admin)
-    const permResult = await verifyTeamPermission(userId, teamId, ['owner', 'admin'])
+    // 3. Verify permission (team.members.remove, as the REST route)
+    const permResult = await verifyTeamPermission(userId, teamId, 'team.members.remove' as Permission)
     if (permResult.success === false) {
       return { success: false, error: permResult.error }
     }
+    const { membership } = permResult
 
     const limited = await actionRateLimitError(userId, 'write')
     if (limited) return { success: false, error: limited }
 
-    // 4. Get the member to find their userId
-    // The memberId is the user's ID in the context of team actions
+    // 4. The memberId is the user's ID in the context of team actions
     const targetUserId = memberId
-
-    // 5. Check if trying to remove self
-    if (targetUserId === userId) {
-      // Allow self-removal if not owner
-      const selfRole = await TeamMemberService.getRole(teamId, userId)
-      if (selfRole === 'owner') {
-        return { success: false, error: 'Cannot remove yourself as owner. Transfer ownership first.' }
-      }
+    const targetRole = await TeamMemberService.getRole(teamId, targetUserId)
+    if (!targetRole) {
+      return { success: false, error: 'Member not found in this team' }
     }
 
-    // 6. Verify target is not owner (unless admin trying to remove themselves)
-    const targetRole = await TeamMemberService.getRole(teamId, targetUserId)
+    // 5. Never the owner
     if (targetRole === 'owner') {
       return { success: false, error: 'Cannot remove team owner. Transfer ownership first.' }
     }
 
-    // 7. Admins can only remove members/viewers, not other admins (unless owner)
-    const requestorRole = await TeamMemberService.getRole(teamId, userId)
-    if (requestorRole === 'admin' && targetRole === 'admin' && targetUserId !== userId) {
-      return { success: false, error: 'Admins cannot remove other admins. Only the owner can do that.' }
+    // 6. Only a role below the caller's (the REST route's hierarchy check)
+    if (!canManageRole(hierarchyRoleFor(membership.appRole, membership.role) ?? '', targetRole)) {
+      return { success: false, error: 'You do not have permission to remove this user.' }
     }
 
-    // 8. Remove member
+    // 7. Remove member
     await TeamMemberService.remove(teamId, targetUserId, userId)
 
-    // 9. Revalidate team-related paths
+    // 8. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')
     revalidatePath('/dashboard/settings/team/members')
 
@@ -404,9 +399,10 @@ export async function removeMember(
 /**
  * Update a team member's role
  *
- * Requires owner role to change to/from admin.
- * Admins can change member/viewer roles.
- * Cannot change owner role (must transfer ownership).
+ * The same rules as `PATCH /api/v1/teams/:teamId/members/:memberId` (#458): the team.members.update_role
+ * permission, and validateRoleTransition with the caller's hierarchy role (hierarchyRoleFor: the team role, or the
+ * owner's for an app role that teams.appRoleBypass lets skip team permissions): the owner's role never changes,
+ * nobody is promoted to owner, and the caller outranks both the current and the new role.
  *
  * @param teamId - The team ID
  * @param memberId - The member's user ID
@@ -454,11 +450,12 @@ export async function updateMemberRole(
     const limited = await actionRateLimitError(userId, 'write')
     if (limited) return { success: false, error: limited }
 
-    // 3. Get requestor's role
-    const requestorRole = await TeamMemberService.getRole(teamId, userId)
-    if (!requestorRole) {
-      return { success: false, error: 'You are not a member of this team' }
+    // 3. Verify permission (team.members.update_role, as the REST route)
+    const permResult = await verifyTeamPermission(userId, teamId, 'team.members.update_role' as Permission)
+    if (permResult.success === false) {
+      return { success: false, error: permResult.error }
     }
+    const { membership } = permResult
 
     // 4. Get target member's current role
     const targetUserId = memberId
@@ -468,21 +465,10 @@ export async function updateMemberRole(
       return { success: false, error: 'Member not found in this team' }
     }
 
-    // 5. Permission checks based on role changes
-    if (currentRole === 'owner') {
-      return { success: false, error: 'Cannot change owner role. Use transferOwnership instead.' }
-    }
-
-    // Only owner can promote to admin or demote from admin
-    if ((role === 'admin' || currentRole === 'admin') && requestorRole !== 'owner') {
-      return { success: false, error: 'Only the team owner can promote to or demote from admin' }
-    }
-
-    // Admins can change member/viewer roles
-    if (requestorRole === 'admin' && (role === 'member' || role === 'viewer')) {
-      // OK
-    } else if (requestorRole !== 'owner' && requestorRole !== 'admin') {
-      return { success: false, error: 'Permission denied. You must be an owner or admin.' }
+    // 5. The role hierarchy (the REST route's check)
+    const transition = validateRoleTransition(currentRole, role, hierarchyRoleFor(membership.appRole, membership.role) ?? '')
+    if (!transition.allowed) {
+      return { success: false, error: transition.reason ?? 'Invalid role transition' }
     }
 
     // 6. Update role

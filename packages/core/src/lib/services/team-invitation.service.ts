@@ -12,7 +12,7 @@ import { queryOneWithRLS, mutateWithRLS } from '../db'
 import { checkRateLimit } from '../api/rate-limit'
 import { RATE_LIMITS } from '../api/keys'
 import { inviteMemberSchema } from '../teams/schema'
-import { canInviteToRole } from '../teams/permissions'
+import { canInviteToRole, hierarchyRoleFor } from '../teams/permissions'
 import { MembershipService } from './membership.service'
 import { EmailFactory } from '../email/factory'
 import { sendTeamInvitationEmail } from '../email/send'
@@ -70,7 +70,8 @@ export class TeamInvitationService {
         details: { reason: actionResult.reason, meta: actionResult.meta },
       }
     }
-    const actorRole = membership.role as TeamRole
+    // The team role, or the owner's for an app role that teams.appRoleBypass lets skip team permissions (#458)
+    const actorRole = hierarchyRoleFor(membership.appRole, membership.role) as TeamRole
 
     const { email, role } = inviteMemberSchema.parse(input)
 

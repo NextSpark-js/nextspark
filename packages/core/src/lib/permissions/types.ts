@@ -315,6 +315,8 @@ export interface TeamMembershipData {
   userId: string
   teamId: string
   role: string | null
+  /** The user's app role (users.role), for the role-hierarchy checks (hierarchyRoleFor, #458). */
+  appRole?: string | null
   hierarchy: number
   permissions: Permission[]
   subscription: MembershipSubscription | null

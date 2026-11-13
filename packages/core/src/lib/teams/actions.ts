@@ -6,7 +6,7 @@
  * - getGlobalTeam → TeamService.getGlobal()
  * - hasGlobalTeam → TeamService.hasGlobal()
  * - getUserTeamRole → TeamMemberService.getRole(teamId, userId) [NOTE: param order changed!]
- * - checkTeamPermission → TeamMemberService.hasPermission()
+ * - checkTeamPermission → removed (#458): checkPermission(userId, teamId, permission) in lib/permissions/check
  * - isTeamMember → TeamMemberService.isMember(teamId, userId) [NOTE: param order changed!]
  * - isSlugAvailable → TeamService.isSlugAvailable()
  * - switchActiveTeam → TeamService.switchActive()
@@ -168,32 +168,6 @@ export async function addUserToGlobalTeam(
   )
 
   console.log(`User ${userId} added to global team ${team.id} as ${role}`)
-}
-
-/**
- * Check if user has required permission in team
- *
- * @param userId - The user ID
- * @param teamId - The team ID
- * @param requiredRoles - Array of roles that are allowed
- * @returns True if user has permission, false otherwise
- */
-export async function checkTeamPermission(
-  userId: string,
-  teamId: string,
-  requiredRoles: TeamRole[] = ['owner', 'admin']
-): Promise<boolean> {
-  const member = await queryOneWithRLS<{ role: TeamRole }>(
-    'SELECT role FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-    [teamId, userId],
-    userId
-  )
-
-  if (!member) {
-    return false
-  }
-
-  return requiredRoles.includes(member.role)
 }
 
 /**

@@ -17,7 +17,10 @@ jest.mock('@/core/lib/services/user.service', () => ({
 }))
 jest.mock('@/core/lib/services/team.service', () => ({ TeamService: {} }))
 jest.mock('@/core/lib/services/team-member.service', () => ({
-  TeamMemberService: { transferOwnership: jest.fn(), hasPermission: jest.fn().mockResolvedValue(true), getRole: jest.fn() },
+  TeamMemberService: { transferOwnership: jest.fn(), getRole: jest.fn() },
+}))
+jest.mock('@/core/lib/services/membership.service', () => ({
+  MembershipService: { get: async () => ({ role: 'owner', appRole: 'member', canPerformAction: () => ({ allowed: true }) }) },
 }))
 jest.mock('@/core/lib/services/team-invitation.service', () => ({ TeamInvitationService: { create: jest.fn() } }))
 jest.mock('@/core/lib/services/generic-entity.service', () => ({

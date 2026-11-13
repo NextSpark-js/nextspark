@@ -12,7 +12,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { updateMemberRoleSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
-import { validateRoleTransition, canManageRole } from '@nextsparkjs/core/lib/teams/permissions'
+import { validateRoleTransition, canManageRole, hierarchyRoleFor } from '@nextsparkjs/core/lib/teams/permissions'
 import type { TeamMember, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
@@ -69,8 +69,9 @@ export const PATCH = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Get user's role for role hierarchy validation
-      const userRole = membership.role as TeamRole
+      // The role the hierarchy checks run with: the team role, or the owner's for an app role that
+      // teams.appRoleBypass lets skip team permissions (#458)
+      const userRole = hierarchyRoleFor(membership.appRole, membership.role) as TeamRole
 
       // Get target member
       const targetMember = await queryOneWithRLS<TeamMember>(
@@ -208,8 +209,9 @@ export const DELETE = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Get user's role for role hierarchy validation
-      const userRole = membership.role as TeamRole
+      // The role the hierarchy checks run with: the team role, or the owner's for an app role that
+      // teams.appRoleBypass lets skip team permissions (#458)
+      const userRole = hierarchyRoleFor(membership.appRole, membership.role) as TeamRole
 
       // Get target member
       const targetMember = await queryOneWithRLS<TeamMember>(

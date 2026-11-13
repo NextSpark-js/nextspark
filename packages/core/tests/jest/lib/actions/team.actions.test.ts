@@ -24,10 +24,26 @@ jest.mock('@/core/lib/services/team.service', () => ({
   },
 }))
 
+// The caller's membership: the real class, with the team role's permissions (the REST routes' check, #458)
+let mockCallerRole: string | null = 'owner'
+jest.mock('@/core/lib/services/membership.service', () => {
+  const actual = jest.requireActual('@/core/lib/services/membership.service')
+  const { teamPermissionsFor } = jest.requireActual('@/core/lib/permissions/app-role-bypass')
+  return {
+    ...actual,
+    MembershipService: {
+      get: async (userId: string, teamId: string) =>
+        new actual.TeamMembership({
+          userId, teamId, role: mockCallerRole, appRole: 'member', hierarchy: 0,
+          permissions: teamPermissionsFor('member', mockCallerRole), subscription: null, features: [], quotas: {},
+        }),
+    },
+  }
+})
+
 // Mock TeamMemberService
 jest.mock('@/core/lib/services/team-member.service', () => ({
   TeamMemberService: {
-    hasPermission: jest.fn(),
     getRole: jest.fn(),
     getByTeamAndUser: jest.fn(),
     add: jest.fn(),
@@ -99,8 +115,8 @@ function setupAuthenticatedOwner() {
     get: jest.fn().mockReturnValue({ value: 'team-123' }),
   })
   mockGetTypedSession.mockResolvedValue(mockSession)
-  mockTeamMemberService.hasPermission.mockResolvedValue(true)
-  mockTeamMemberService.getRole.mockResolvedValue('owner')
+  mockCallerRole = 'owner'
+  mockTeamMemberService.getRole.mockResolvedValue('member')
 }
 
 function setupAuthenticatedAdmin() {
@@ -109,8 +125,8 @@ function setupAuthenticatedAdmin() {
     get: jest.fn().mockReturnValue({ value: 'team-123' }),
   })
   mockGetTypedSession.mockResolvedValue(mockSession)
-  mockTeamMemberService.hasPermission.mockResolvedValue(true)
-  mockTeamMemberService.getRole.mockResolvedValue('admin')
+  mockCallerRole = 'admin'
+  mockTeamMemberService.getRole.mockResolvedValue('member')
 }
 
 function setupUnauthenticatedUser() {
@@ -121,7 +137,7 @@ function setupUnauthenticatedUser() {
 function setupPermissionDenied() {
   mockHeaders.mockReturnValue(new Headers())
   mockGetTypedSession.mockResolvedValue(mockSession)
-  mockTeamMemberService.hasPermission.mockResolvedValue(false)
+  mockCallerRole = 'viewer'
 }
 
 // ===========================================
@@ -185,7 +201,7 @@ describe('Team Server Actions', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('Permission denied')
+        expect(result.error).toBe('You do not have permission: team.edit')
       }
     })
 
@@ -196,7 +212,7 @@ describe('Team Server Actions', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('Permission denied')
+        expect(result.error).toBe('You do not have permission: team.members.remove')
       }
     })
   })
@@ -331,10 +347,7 @@ describe('Team Server Actions', () => {
 
   describe('removeMember', () => {
     it('removes member successfully', async () => {
-      // The action checks target role first, then requestor role for admin check
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('member') // target role (not owner, not admin)
-        .mockResolvedValueOnce('owner')  // requestor role (for admin check)
+      mockTeamMemberService.getRole.mockResolvedValueOnce('member') // target role
       mockTeamMemberService.remove.mockResolvedValue(undefined)
 
       const result = await removeMember('team-123', 'user-789')
@@ -376,23 +389,44 @@ describe('Team Server Actions', () => {
 
     it('prevents admin from removing other admins', async () => {
       setupAuthenticatedAdmin()
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('admin') // target role (is admin)
-        .mockResolvedValueOnce('admin') // requestor role (also admin)
+      mockTeamMemberService.getRole.mockResolvedValueOnce('admin') // target role (is admin)
 
       const result = await removeMember('team-123', 'other-admin')
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('Admins cannot remove other admins')
+        expect(result.error).toBe('You do not have permission to remove this user.')
       }
+      expect(mockTeamMemberService.remove).not.toHaveBeenCalled()
+    })
+
+    it('lets an admin remove a member, as the REST route does', async () => {
+      setupAuthenticatedAdmin()
+      mockTeamMemberService.getRole.mockResolvedValueOnce('member')
+
+      expect((await removeMember('team-123', 'user-789')).success).toBe(true)
+      expect(mockTeamMemberService.remove).toHaveBeenCalledWith('team-123', 'user-789', 'user-456')
+    })
+
+    it('refuses an admin removing themselves, as the REST route does (same rank)', async () => {
+      setupAuthenticatedAdmin()
+      mockTeamMemberService.getRole.mockResolvedValueOnce('admin')
+
+      expect((await removeMember('team-123', 'user-456')).success).toBe(false)
+      expect(mockTeamMemberService.remove).not.toHaveBeenCalled()
+    })
+
+    it('returns error when the target is not a member', async () => {
+      mockTeamMemberService.getRole.mockResolvedValueOnce(null)
+
+      const result = await removeMember('team-123', 'stranger')
+
+      expect(result).toEqual({ success: false, error: 'Member not found in this team' })
     })
 
     it('revalidates team paths after removal', async () => {
       const { revalidatePath } = require('next/cache')
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('member') // target role
-        .mockResolvedValueOnce('owner')  // requestor role
+      mockTeamMemberService.getRole.mockResolvedValueOnce('member') // target role
       mockTeamMemberService.remove.mockResolvedValue(undefined)
 
       await removeMember('team-123', 'user-789')
@@ -409,10 +443,7 @@ describe('Team Server Actions', () => {
   describe('updateMemberRole', () => {
     it('updates member role successfully', async () => {
       const updatedMember = { ...mockMember, role: 'admin' as const }
-      // The action gets: 1) requestor role, 2) target current role
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('owner')  // requestor role
-        .mockResolvedValueOnce('member') // current target role
+      mockTeamMemberService.getRole.mockResolvedValueOnce('member') // current target role
       mockTeamMemberService.updateRole.mockResolvedValue(updatedMember)
 
       const result = await updateMemberRole('team-123', 'user-789', 'admin')
@@ -452,46 +483,33 @@ describe('Team Server Actions', () => {
     })
 
     it('returns error when trying to change owner role', async () => {
-      // The action: 1) gets requestor role, 2) gets target current role
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('owner') // requestor role (is owner)
-        .mockResolvedValueOnce('owner') // current target role (is also owner)
+      mockTeamMemberService.getRole.mockResolvedValueOnce('owner') // current target role (is owner)
 
       const result = await updateMemberRole('team-123', 'owner-id', 'admin')
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('Cannot change owner role')
+        expect(result.error).toContain('Owner role cannot be changed')
       }
     })
 
     it('prevents non-owner from promoting to admin', async () => {
-      // Setup admin requestor (not owner)
-      mockHeaders.mockReturnValue(new Headers())
-      mockGetTypedSession.mockResolvedValue(mockSession)
-      mockTeamMemberService.hasPermission.mockResolvedValue(true)
-      // The action: 1) gets requestor role, 2) gets target current role
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('admin')  // requestor role (is admin, not owner)
-        .mockResolvedValueOnce('member') // current target role
+      setupAuthenticatedAdmin()
+      mockTeamMemberService.getRole.mockResolvedValueOnce('member') // current target role
 
       const result = await updateMemberRole('team-123', 'user-789', 'admin')
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('Only the team owner can promote')
+        expect(result.error).toBe('You cannot assign a role equal to or higher than your own.')
       }
+      expect(mockTeamMemberService.updateRole).not.toHaveBeenCalled()
     })
 
     it('allows admin to change member to viewer', async () => {
       const updatedMember = { ...mockMember, role: 'viewer' as const }
-      mockHeaders.mockReturnValue(new Headers())
-      mockGetTypedSession.mockResolvedValue(mockSession)
-      mockTeamMemberService.hasPermission.mockResolvedValue(true)
-      // The action: 1) gets requestor role, 2) gets target current role
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('admin')  // requestor role
-        .mockResolvedValueOnce('member') // current target role
+      setupAuthenticatedAdmin()
+      mockTeamMemberService.getRole.mockResolvedValueOnce('member') // current target role
       mockTeamMemberService.updateRole.mockResolvedValue(updatedMember)
 
       const result = await updateMemberRole('team-123', 'user-789', 'viewer')
@@ -501,9 +519,7 @@ describe('Team Server Actions', () => {
 
     it('revalidates team paths after role update', async () => {
       const { revalidatePath } = require('next/cache')
-      mockTeamMemberService.getRole
-        .mockResolvedValueOnce('owner')  // requestor role
-        .mockResolvedValueOnce('member') // target current role
+      mockTeamMemberService.getRole.mockResolvedValueOnce('member') // target current role
       mockTeamMemberService.updateRole.mockResolvedValue(mockMember)
 
       await updateMemberRole('team-123', 'user-789', 'admin')

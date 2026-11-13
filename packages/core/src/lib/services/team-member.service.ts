@@ -448,39 +448,6 @@ export class TeamMemberService {
   }
 
   /**
-   * Check if user has required permission in team
-   *
-   * @param userId - User ID
-   * @param teamId - Team ID
-   * @param requiredRoles - Array of roles that are allowed
-   * @returns True if user has permission
-   *
-   * @example
-   * const hasPermission = await TeamMemberService.hasPermission(
-   *   'user-123',
-   *   'team-456',
-   *   ['owner', 'admin']
-   * )
-   */
-  static async hasPermission(
-    userId: string,
-    teamId: string,
-    requiredRoles: TeamRole[] = ['owner', 'admin']
-  ): Promise<boolean> {
-    if (!userId || !teamId) {
-      return false
-    }
-
-    const role = await this.getRole(teamId, userId)
-    if (!role) {
-      return false
-    }
-
-    return requiredRoles.includes(role)
-  }
-
-
-  /**
    * Get count of team members
    *
    * @param teamId - Team ID

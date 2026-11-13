@@ -26,7 +26,7 @@ import {
   ROLE_HIERARCHY,
   ROLE_DESCRIPTIONS,
 } from '@nextsparkjs/registries/permissions-registry'
-import { hasTeamPermission } from '../permissions/app-role-bypass'
+import { hasTeamPermission, appRoleSkipsTeamPermissions } from '../permissions/app-role-bypass'
 import type { Permission } from '../permissions/types'
 
 /**
@@ -218,6 +218,27 @@ export function canManageRole(
 
   // Can only manage roles lower in hierarchy
   return (hierarchy[actorRole] ?? 0) > (hierarchy[targetRole] ?? 0)
+}
+
+/**
+ * The role a user's role-hierarchy checks (canManageRole, canInviteToRole, validateRoleTransition) run with (#458).
+ *
+ * A user whose app role `teams.appRoleBypass` lets skip team permissions holds every permission in a team they
+ * belong to, as an owner does, so the hierarchy treats them as an owner too: they manage every role below the owner
+ * (invite, remove, change it) and, like an owner, cannot remove the owner or change the owner's role. Anyone else
+ * runs with their team role. Not a member (no team role): null, which the callers deny.
+ *
+ * Transferring ownership is not a hierarchy check: only the team's owner does it, whatever this returns.
+ *
+ * @param appRole - The user's app role (users.role)
+ * @param teamRole - The user's role in the team (null if not a member)
+ */
+export function hierarchyRoleFor(
+  appRole: string | null | undefined,
+  teamRole: string | null | undefined
+): string | null {
+  if (!teamRole) return null
+  return appRoleSkipsTeamPermissions(appRole) ? 'owner' : teamRole
 }
 
 /**

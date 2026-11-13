@@ -173,6 +173,11 @@ describe('the setting', () => {
     await expect(checkPermission('u', TEAM, SENSITIVE)).rejects.toThrow(/teams\.appRoleBypass/)
   })
 
+  it('MembershipService.get carries the app role, for the role-hierarchy checks of the member routes (#458)', async () => {
+    rows = { u: { teamRole: 'member', appRole: 'developer' } }
+    expect((await MembershipService.get('u', TEAM)).appRole).toBe('developer')
+  })
+
   it('an unregistered permission is not granted to a skipping app role', () => {
     setSetting('developer-and-superadmin')
     expect(hasTeamPermission('developer', 'member', 'nope.nothing' as Permission)).toBe(false)
