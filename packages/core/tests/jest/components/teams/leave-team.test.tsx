@@ -135,14 +135,27 @@ describe('Leave team on the teams settings page', () => {
     expect(mockSwitchTeam).not.toHaveBeenCalled()
   })
 
-  it('a refusal shows the error and changes no team', async () => {
-    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ code: 'OWNER_CANNOT_LEAVE' }) })
+  it.each([
+    ['the API gives a reason: it is shown', { ok: false, json: async () => ({ code: 'SYSTEM_TEAM_LEAVE_DISABLED', error: "Membership of the system admin team follows the user's role" }) }, "Membership of the system admin team follows the user's role"],
+    ['the API gives none: the generic message', { ok: false, json: async () => ({ code: 'X' }) }, 'leave.error'],
+    ['the body is not JSON: the generic message', { ok: false, json: async () => { throw new Error('not json') } }, 'leave.error'],
+  ])('a refusal where %s, and no team changes', async (_label, reply, message) => {
+    fetchMock.mockResolvedValue(reply)
     mockTeams = [membership('a', 'member', '2026-01-01'), membership('b', 'member', '2026-02-01')]
     const view = openTeam('a')
     await confirmLeave(view)
 
-    expect(mockToast.error).toHaveBeenCalledWith('leave.error')
+    expect(mockToast.error).toHaveBeenCalledWith(message)
     expect(mockSwitchTeam).not.toHaveBeenCalled()
     expect(mockRefreshTeams).not.toHaveBeenCalled()
+  })
+
+  it('a network failure shows the generic message', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
+    mockTeams = [membership('a', 'member', '2026-01-01')]
+    const view = openTeam('a')
+    await confirmLeave(view)
+
+    expect(mockToast.error).toHaveBeenCalledWith('leave.error')
   })
 })

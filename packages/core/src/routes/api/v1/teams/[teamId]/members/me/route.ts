@@ -50,14 +50,29 @@ export const DELETE = withRateLimitTier(withApiLogging(
       // Always the authenticated user: nothing in the request names who leaves
       const userId = authResult.user!.id
 
-      const membership = await queryOneWithRLS<{ role: string }>(
-        'SELECT role FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+      // The team's systemAdmin flag (migration 027) comes along, read under RLS like the membership
+      const membership = await queryOneWithRLS<{ role: string; systemAdmin: boolean }>(
+        `SELECT tm.role, (t.metadata->>'systemAdmin')::boolean IS TRUE AS "systemAdmin"
+         FROM "team_members" tm INNER JOIN "teams" t ON t.id = tm."teamId"
+         WHERE tm."teamId" = $1 AND tm."userId" = $2`,
         [teamId, userId],
         userId
       )
 
       if (!membership) {
         const response = createApiError('You are not a member of this team', 404, null, 'MEMBER_NOT_FOUND')
+        return addCorsHeaders(response, req)
+      }
+
+      // The system admin team: 027's trigger enrolls a developer or superadmin when their role changes, and only then,
+      // so leaving it would drop the cross-team admin bypass (canBypassTeamContext) for good
+      if (membership.systemAdmin) {
+        const response = createApiError(
+          "Membership of the system admin team follows the user's role",
+          403,
+          null,
+          'SYSTEM_TEAM_LEAVE_DISABLED'
+        )
         return addCorsHeaders(response, req)
       }
 

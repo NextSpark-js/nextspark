@@ -208,7 +208,7 @@ test('#458 cutover: a member write fails when the role changed after the caller 
   assert.equal((await owner.query(`SELECT role FROM team_members WHERE id = 'm-tz'`)).rows[0].role, 'admin')
 })
 
-test('#459 cutover: an admin, a member and a viewer leave a team as nextspark_app; the owner and an outsider cannot', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 300000 }, async t => {
+test('#459 cutover: an admin, a member and a viewer leave a team as nextspark_app; the owner, an outsider and a developer in the system admin team cannot', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 300000 }, async t => {
   const { owner, appUrl, ownerUrl } = await cutoverDatabase(t)
   await owner.query(`
     INSERT INTO users (id, email, name, role, "emailVerified") VALUES
@@ -238,4 +238,17 @@ test('#459 cutover: an admin, a member and a viewer leave a team as nextspark_ap
   assert.deepEqual(await membersOf('team-1'), ['uo'])
   // leaving team-1 leaves the member's membership of team-2 alone
   assert.deepEqual(await membersOf('team-2'), ['um', 'ux'])
+
+  // The system admin team (027): a developer enrolled there as admin does not leave it, the row stays
+  await owner.query(`
+    INSERT INTO users (id, email, name, role, "emailVerified") VALUES ('ud', 'd@example.test', 'Developer', 'developer', true);
+    INSERT INTO teams (id, name, slug, "ownerId", metadata) VALUES ('team-sys', 'System', 'team-sys', 'uo', '{"systemAdmin":true}');
+    INSERT INTO team_members (id, "teamId", "userId", role) VALUES ('m-ud', 'team-sys', 'ud', 'admin') ON CONFLICT DO NOTHING;
+  `)
+  const developer = await apiKey(owner, 'ud')
+  const [developerLeaves] = runSteps(appUrl, ownerUrl, [
+    { method: 'DELETE', path: '/api/v1/teams/team-sys/members/me', key: developer },
+  ], { teams: { mode: 'multi-tenant' } })
+  assert.deepEqual([developerLeaves.status, developerLeaves.body.code], [403, 'SYSTEM_TEAM_LEAVE_DISABLED'])
+  assert.deepEqual(await membersOf('team-sys'), ['ud'])
 })

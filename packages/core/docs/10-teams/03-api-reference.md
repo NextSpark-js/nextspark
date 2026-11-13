@@ -374,6 +374,7 @@ DELETE /api/v1/teams/:teamId/members/me
 
 - Always the caller's own membership: nothing in the request names another user
 - The owner cannot leave: they transfer ownership first (`POST /api/v1/teams/:teamId/transfer-ownership`)
+- Nobody leaves the system admin team (`teams.metadata.systemAdmin = true`): its membership follows the user's role (migration 027 enrolls a developer or superadmin when their role changes, and only then), and leaving it would drop the cross-team admin bypass of `x-admin-bypass`
 - Only in `multi-tenant` mode. In `single-user` mode the only member is the owner, and in `single-tenant` mode the one team is the whole app, so leaving it would strand the account; an admin removes a member instead
 - Runs on the RLS connection: the `team_members` delete policy (migration 033) lets anyone but the owner delete their own row
 
@@ -383,7 +384,7 @@ DELETE /api/v1/teams/:teamId/members/me
 { "success": true, "data": { "deleted": true, "id": "membership-id", "teamId": "team-id" } }
 ```
 
-**Errors:** `403 OWNER_CANNOT_LEAVE`, `403 TEAM_LEAVE_DISABLED` (not `multi-tenant` mode), `404 MEMBER_NOT_FOUND` (the caller is not a member of the team).
+**Errors:** `403 OWNER_CANNOT_LEAVE`, `403 SYSTEM_TEAM_LEAVE_DISABLED` (the system admin team), `403 TEAM_LEAVE_DISABLED` (not `multi-tenant` mode), `404 MEMBER_NOT_FOUND` (the caller is not a member of the team).
 
 ---
 
@@ -621,6 +622,7 @@ The first user in `single-tenant` mode uses regular signup (`/api/auth/signup`):
 | `INVITATIONS_DISABLED` | 403 | Invitations not allowed in current mode (single-user) |
 | `TEAM_LEAVE_DISABLED` | 403 | Leaving a team not allowed in current mode (single-user, single-tenant) |
 | `OWNER_CANNOT_LEAVE` | 403 | The owner must transfer ownership before leaving |
+| `SYSTEM_TEAM_LEAVE_DISABLED` | 403 | Membership of the system admin team follows the user's role; nobody leaves it |
 
 ## Rate Limiting
 

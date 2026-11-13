@@ -13,7 +13,7 @@ import { DELETE } from '@/app/api/v1/teams/[teamId]/members/me/route'
 const { mocks } = routeHarness
 const TEAM = 'team-1'
 
-type Row = { id: string; teamId: string; userId: string; role: string }
+type Row = { id: string; teamId: string; userId: string; role: string; systemAdmin?: boolean }
 let rows: Row[] = []
 
 function seed() {
@@ -84,6 +84,17 @@ describe('DELETE /api/v1/teams/:teamId/members/me', () => {
     expect(await response.json()).toMatchObject({ code: 'MEMBER_NOT_FOUND' })
     expect(mocks.mutateWithRLS).not.toHaveBeenCalled()
     expect(rows).toHaveLength(5)
+  })
+
+  it('a developer does not leave the system admin team: its membership follows their role', async () => {
+    rows.push({ id: 'm-dev', teamId: TEAM, userId: 'developer', role: 'admin', systemAdmin: true })
+
+    const response = await leave('developer')
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({ code: 'SYSTEM_TEAM_LEAVE_DISABLED' })
+    expect(find(TEAM, 'developer')).toBeDefined()
+    expect(mocks.mutateWithRLS).not.toHaveBeenCalled()
   })
 
   it('a user id in the request does not choose who leaves: the session user does', async () => {

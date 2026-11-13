@@ -204,6 +204,7 @@ import { LeaveTeamButton } from '@nextsparkjs/core/components/teams/LeaveTeamBut
 - The owner sees the button disabled, with the reason (`teams.errors.cannotLeaveOwner`): they transfer ownership first
 - Leaving the current team switches to the user's earliest-joined other team (the switch flow: cookie, cleared cache, reload), or clears the current team when none is left, the no-team state `TeamContext` already handles
 - Leaving another team refreshes the team list
+- A refusal shows the API's `error` when it gives one (for example, for the system admin team), else `teams.leave.error`
 
 ## CreateTeamDialog
 

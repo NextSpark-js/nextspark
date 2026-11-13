@@ -39,11 +39,19 @@ export function LeaveTeamButton({ teamId, teamName, role }: LeaveTeamButtonProps
 
   const leave = async () => {
     setLeaving(true)
+    // the API's reason when it gives one (say, the system admin team); a network failure gets the generic message
+    let failure: string | null = null
     try {
       const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/members/me`), { method: 'DELETE' })
-      if (!response.ok) throw new Error('leave failed')
+      if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        failure = typeof body?.error === 'string' && body.error ? body.error : t('leave.error')
+      }
     } catch {
-      toast.error(t('leave.error'))
+      failure = t('leave.error')
+    }
+    if (failure) {
+      toast.error(failure)
       setLeaving(false)
       return
     }

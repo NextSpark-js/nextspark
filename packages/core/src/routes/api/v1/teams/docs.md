@@ -173,9 +173,9 @@ Remove a member from the team. Cannot remove the last owner.
 ### Leave Team
 `DELETE /api/v1/teams/[teamId]/members/me`
 
-The signed-in user leaves the team (their own membership, never one named in the request). The owner cannot leave without transferring ownership first. Only in `multi-tenant` mode.
+The signed-in user leaves the team (their own membership, never one named in the request). The owner cannot leave without transferring ownership first, and nobody leaves the system admin team (its membership follows the user's role). Only in `multi-tenant` mode.
 
-**Errors:** `403 OWNER_CANNOT_LEAVE`, `403 TEAM_LEAVE_DISABLED` (not `multi-tenant` mode), `404 MEMBER_NOT_FOUND`.
+**Errors:** `403 OWNER_CANNOT_LEAVE`, `403 SYSTEM_TEAM_LEAVE_DISABLED`, `403 TEAM_LEAVE_DISABLED` (not `multi-tenant` mode), `404 MEMBER_NOT_FOUND`.
 
 ### Transfer Ownership
 `POST /api/v1/teams/[teamId]/transfer-ownership`
