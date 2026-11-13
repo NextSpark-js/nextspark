@@ -32,7 +32,10 @@ export const E2E_FIXED_OTP_PRODUCTION_MESSAGE =
 export function resolveE2eFixedOtp(env: Env, otpLength: number): string | null {
   const value = env[E2E_FIXED_OTP_ENV]
   if (!value) return null
-  if (env.NODE_ENV === 'production') throw new Error(E2E_FIXED_OTP_PRODUCTION_MESSAGE)
+  // The literal `process.env.NODE_ENV` is on purpose: Next inlines it as "production" in a production build, so a
+  // build started with another NODE_ENV at runtime (and a project instrumentation that skips core's register()) still
+  // refuses the code. `env.NODE_ENV` covers the runtime value and the build check.
+  if (env.NODE_ENV === 'production' || process.env.NODE_ENV === 'production') throw new Error(E2E_FIXED_OTP_PRODUCTION_MESSAGE)
   if (!/^\d+$/.test(value) || value.length !== otpLength) {
     throw new Error(`${E2E_FIXED_OTP_ENV} must be exactly ${otpLength} digits, the code length (auth.otp.otpLength).`)
   }

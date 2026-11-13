@@ -190,7 +190,8 @@ NEXTSPARK_E2E_FIXED_OTP=482913 pnpm dev
 
 While it is set:
 
-- Every email code Better Auth issues (sign-in, verification, password reset, email change) is that code.
+- Every email code Better Auth issues (sign-in, verification, password reset, email change) is that code, for any
+  address, administration accounts included.
 - No code email is sent, real or console; the server logs a warning on each send and at startup.
 - The rest is unchanged: the code expires after `auth.otp.expiresIn`, three wrong attempts invalidate it, and the
   auth rate limits apply, so a suite still requests a code before each sign-in. A suite that signs in as the same

@@ -76,6 +76,17 @@ test('production refuses the variable, without printing its value', () => {
   })
 })
 
+test('a production build refuses the variable even when the env it is handed has no NODE_ENV', () => {
+  const saved = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production' // what Next inlines in a production build
+  try {
+    assert.throws(() => e2eFixedOtpPluginOptions({ [E2E_FIXED_OTP_ENV]: CODE }, 6), /production refuses it/)
+  } finally {
+    if (saved === undefined) delete process.env.NODE_ENV
+    else process.env.NODE_ENV = saved
+  }
+})
+
 test('a code that is not otpLength digits is refused; unset is off', () => {
   assert.throws(() => resolveE2eFixedOtp({ [E2E_FIXED_OTP_ENV]: '12345' }, 6), /exactly 6 digits/)
   assert.throws(() => resolveE2eFixedOtp({ [E2E_FIXED_OTP_ENV]: '12345a' }, 6), /exactly 6 digits/)
