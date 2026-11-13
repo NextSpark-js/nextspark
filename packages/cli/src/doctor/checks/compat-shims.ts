@@ -19,6 +19,8 @@ import { COMPAT_MARKER } from '../../utils/migrate-extras.js'
 
 const NEXT_CONFIGS = ['next.config.ts', 'next.config.mts', 'next.config.mjs', 'next.config.js', 'next.config.cjs']
 const THEME_NAMES = ['NEXT_PUBLIC_ACTIVE_THEME', 'ROOT_FIRST_PROJECT']
+const CODE_FILE = /\.[cm]?[jt]sx?$/
+const SKIPPED_DIRECTORIES = new Set(['node_modules', '.next', 'dist', '.git', '.nextspark'])
 const lineOf = (text: string, index: number) => text.slice(0, index).split('\n').length
 const shown = (items: string[], limit = 4) => items.slice(0, limit).join(', ') + (items.length > limit ? ` (+${items.length - limit} more)` : '')
 
@@ -62,10 +64,22 @@ async function anyScopeShim(cwd: string): Promise<{ result: HealthCheckResult | 
       name: 'Compat: API keys',
       status: 'warn',
       code: 'NS_COMPAT_ALLOW_ANY_SCOPE',
-      message: `NS_COMPAT_ALLOW_ANY_SCOPE: ${calls.length} call${calls.length === 1 ? '' : 's'} pass allowAnyScope: true, so any valid API key is accepted there whatever its scopes (${shown(calls.map(found.describe))}). That is how 0.x behaved; a route that does this on purpose is fine, and this cannot tell which ones are`,
-      fix: "For each route, pass { requiredScope: '<scope>' } instead (declare a scope of your own in api.scopes of config/app.config.ts); keys then need that scope or the wildcard, so create or update the keys the integrations use first",
+      message: `NS_COMPAT_ALLOW_ANY_SCOPE: ${calls.length} call${calls.length === 1 ? '' : 's'} pass allowAnyScope: true, so the route accepts any valid API key whatever its scopes (${shown(calls.map(found.describe))}). 0.x routes did this by default, and a migrated project keeps them; a route that does it on purpose is fine, and this cannot tell which ones are`,
+      fix: "To narrow a route, pass { requiredScope: '<scope>' } instead (declare a scope of your own in api.scopes of config/app.config.ts, or apiScopes in a plugin); keys then need that scope or the wildcard, so create or update the keys the integrations use first",
     },
   }
+}
+
+/** The code files of the project (not dependencies, build output or the generated src/app), as paths relative to `cwd`. */
+async function codeFiles(cwd: string, directory = ''): Promise<string[]> {
+  const files: string[] = []
+  for (const entry of await fs.readdir(path.join(cwd, directory), { withFileTypes: true }).catch(() => [])) {
+    const relative = directory ? `${directory}/${entry.name}` : entry.name
+    if (entry.isDirectory()) {
+      if (!SKIPPED_DIRECTORIES.has(entry.name) && relative !== 'src/app') files.push(...(await codeFiles(cwd, relative)))
+    } else if (entry.isFile() && CODE_FILE.test(entry.name)) files.push(relative)
+  }
+  return files
 }
 
 /** Mentions of the theme variable in the .env* files and the scripts of package.json. */
@@ -90,12 +104,19 @@ async function themeShim(cwd: string): Promise<HealthCheckResult | null> {
       places.push(`package.json:${at === -1 ? 1 : lineOf(packageText, at)} (script ${script})`)
     }
   }
+  // ROOT_FIRST_PROJECT is what an earlier migrate wrote in place of the variable: it gives no false positives in code
+  for (const file of (await codeFiles(cwd)).sort()) {
+    const text = await fs.readFile(path.join(cwd, file), 'utf-8').catch(() => '')
+    text.split('\n').forEach((line, index) => {
+      if (line.includes('ROOT_FIRST_PROJECT')) places.push(`${file}:${index + 1}`)
+    })
+  }
   if (places.length === 0) return null
   return {
     name: 'Compat: theme',
     status: 'warn',
     code: 'NS_COMPAT_THEME_LEFTOVER',
-    message: `NS_COMPAT_THEME_LEFTOVER: ${shown(places, 6)} still sets or names the theme (NEXT_PUBLIC_ACTIVE_THEME or ROOT_FIRST_PROJECT). A root-first project is its own theme and nothing reads either. Only .env* files and package.json scripts are looked at: reads in code are listed by nextspark migrate, not here`,
+    message: `NS_COMPAT_THEME_LEFTOVER: ${shown(places, 6)} still sets or names the theme (NEXT_PUBLIC_ACTIVE_THEME or ROOT_FIRST_PROJECT). A root-first project is its own theme and nothing reads either. The .env* files, the package.json scripts and ROOT_FIRST_PROJECT in code are looked at; NEXT_PUBLIC_ACTIVE_THEME in code is not (migrate already turned its reads into undefined): find it with git grep -n -e NEXT_PUBLIC_ACTIVE_THEME -e ROOT_FIRST_PROJECT`,
     fix: "Delete those lines (and the same variable in the deployment's environment); in a script keep the command and drop the variable assignment",
   }
 }
@@ -103,7 +124,10 @@ async function themeShim(cwd: string): Promise<HealthCheckResult | null> {
 /** One result per shim the project still has, or a single pass when it has none. */
 export async function checkCompatShims(cwd = process.cwd()): Promise<HealthCheckResult[]> {
   const scopes = await anyScopeShim(cwd)
-  const results = [await rewriteShim(cwd), scopes.result, await themeShim(cwd)].filter((result): result is HealthCheckResult => result !== null)
+  // The note that the routes were not read must not be lost when other shims are listed
+  const notChecked: HealthCheckResult | null = scopes.note ? { name: 'Compat: API keys', status: 'warn', message: `Not checked: ${scopes.note}`, fix: 'Run nextspark migrate (or upgrade @nextsparkjs/core) so the routes can be read, then run doctor again' } : null
+  const found = [await rewriteShim(cwd), scopes.result, await themeShim(cwd)]
+  const results = (found.some(Boolean) ? [found[0], scopes.result ?? notChecked, found[2]] : []).filter((result): result is HealthCheckResult => result !== null)
   if (results.length > 0) return results
   return [{ name: 'Compat shims', status: 'pass', message: `No 0.x compatibility shims (rewrites of the old API URLs, routes with allowAnyScope, theme leftovers)${scopes.note ? `; ${scopes.note}` : ''}` }]
 }

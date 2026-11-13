@@ -61,7 +61,7 @@ test('a migrated project lists the three shims, each with where it is and how to
   assert.match(scope.message, /api\/intake\/route\.ts:3 POST authenticateRequest\(request, \{ allowAnyScope: true \}\)/)
   assert.match(scope.fix ?? '', /requiredScope/)
   assert.match(theme.message, /\.env:2, package\.json:6 \(script dev\)/)
-  assert.match(theme.message, /reads in code are listed by nextspark migrate/)
+  assert.match(theme.message, /NEXT_PUBLIC_ACTIVE_THEME in code is not/)
 })
 
 test('a project created by the wizard shows none', async () => {
@@ -91,4 +91,37 @@ test('routes that cannot be read are said, not guessed', async () => {
   const results = await inProject({ ...CLEAN, 'src/app/page.tsx': 'export default function Page() { return null }\n' })
   assert.equal(results[0].status, 'pass')
   assert.match(results[0].message, /routes with allowAnyScope not checked: src\/app is a committed app tree/)
+})
+
+test('a rewrite listed with routes that could not be read keeps the note, as a result of its own', async () => {
+  const results = await inProject({ ...CLEAN, 'next.config.mjs': NEXT_CONFIG, 'src/app/page.tsx': 'export default function Page() { return null }\n' })
+  assert.deepEqual(results.map(result => result.name), ['Compat: rewrite', 'Compat: API keys'])
+  assert.match(results[1].message, /^Not checked: routes with allowAnyScope not checked: src\/app is a committed app tree/)
+})
+
+test('ROOT_FIRST_PROJECT in code is listed with file and line; generated code, dependencies and NEXT_PUBLIC_ACTIVE_THEME in code are not', async () => {
+  const results = await inProject({
+    ...CLEAN,
+    'lib/theme.ts': 'export const a = 1\nexport const theme = process.env.ROOT_FIRST_PROJECT\n',
+    'src/app/page.tsx': 'const x = "ROOT_FIRST_PROJECT"\n',
+    'node_modules/dep/index.js': 'ROOT_FIRST_PROJECT\n',
+    'lib/other.ts': 'const y = process.env.NEXT_PUBLIC_ACTIVE_THEME\n',
+  })
+  // (the src/app of the fixture also makes the routes unreadable, which is its own result)
+  const theme = results.filter(result => result.code === 'NS_COMPAT_THEME_LEFTOVER')
+  assert.equal(theme.length, 1)
+  assert.match(theme[0].message, /lib\/theme\.ts:2/)
+  assert.doesNotMatch(theme[0].message, /src\/app|node_modules|lib\/other/)
+  assert.match(theme[0].message, /git grep -n -e NEXT_PUBLIC_ACTIVE_THEME -e ROOT_FIRST_PROJECT/)
+})
+
+test('a commented line of an .env file does not count', async () => {
+  const results = await inProject({ ...CLEAN, '.env': '# NEXT_PUBLIC_ACTIVE_THEME=acme\n  # ROOT_FIRST_PROJECT=1\nDATABASE_URL=x\n' })
+  assert.equal(results[0].status, 'pass')
+})
+
+test('the allowAnyScope message does not blame a migration', async () => {
+  const results = await inProject({ ...CLEAN, 'api/intake/route.ts': ROUTE('{ allowAnyScope: true }') })
+  assert.deepEqual(codes(results), ['NS_COMPAT_ALLOW_ANY_SCOPE'])
+  assert.match(results[0].message, /0\.x routes did this by default, and a migrated project keeps them/)
 })
