@@ -196,5 +196,13 @@
     "description": "{name} becomes the owner of this team and you become an admin. Only the new owner can give it back.",
     "confirm": "Transfer ownership",
     "success": "{name} is now the owner of this team"
+  },
+
+  "leave": {
+    "title": "Leave {name}?",
+    "description": "You lose access to this team and its content. To come back, a team admin has to invite you again.",
+    "confirm": "Leave team",
+    "success": "You left {name}",
+    "error": "Could not leave the team"
   }
 }

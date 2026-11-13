@@ -196,5 +196,13 @@
     "description": "{name} devient propriétaire de cette équipe et vous devenez administrateur. Seul le nouveau propriétaire pourra vous la rendre.",
     "confirm": "Transférer la propriété",
     "success": "{name} est désormais propriétaire de cette équipe"
+  },
+
+  "leave": {
+    "title": "Quitter {name} ?",
+    "description": "Vous perdez l'accès à cette équipe et à son contenu. Pour revenir, un administrateur de l'équipe devra vous inviter à nouveau.",
+    "confirm": "Quitter l'équipe",
+    "success": "Vous avez quitté {name}",
+    "error": "Impossible de quitter l'équipe"
   }
 }

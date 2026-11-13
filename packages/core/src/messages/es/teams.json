@@ -196,5 +196,13 @@
     "description": "{name} pasa a ser propietario de este equipo y tú pasas a ser administrador. Solo el nuevo propietario puede devolverla.",
     "confirm": "Transferir propiedad",
     "success": "{name} ahora es propietario de este equipo"
+  },
+
+  "leave": {
+    "title": "¿Abandonar {name}?",
+    "description": "Pierdes el acceso a este equipo y a su contenido. Para volver, un administrador del equipo tiene que invitarte de nuevo.",
+    "confirm": "Abandonar equipo",
+    "success": "Abandonaste {name}",
+    "error": "No se pudo abandonar el equipo"
   }
 }

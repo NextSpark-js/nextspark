@@ -196,5 +196,13 @@
     "description": "{name} wird Eigentümer dieses Teams und Sie werden Administrator. Nur der neue Eigentümer kann sie zurückgeben.",
     "confirm": "Eigentümerschaft übertragen",
     "success": "{name} ist jetzt Eigentümer dieses Teams"
+  },
+
+  "leave": {
+    "title": "{name} verlassen?",
+    "description": "Sie verlieren den Zugriff auf dieses Team und seine Inhalte. Um zurückzukehren, muss ein Team-Administrator Sie erneut einladen.",
+    "confirm": "Team verlassen",
+    "success": "Sie haben {name} verlassen",
+    "error": "Das Team konnte nicht verlassen werden"
   }
 }

@@ -196,5 +196,13 @@
     "description": "{name} diventa proprietario di questo team e tu diventi amministratore. Solo il nuovo proprietario potrà restituirla.",
     "confirm": "Trasferisci la proprietà",
     "success": "{name} è ora il proprietario di questo team"
+  },
+
+  "leave": {
+    "title": "Abbandonare {name}?",
+    "description": "Perdi l'accesso a questo team e ai suoi contenuti. Per tornare, un amministratore del team dovrà invitarti di nuovo.",
+    "confirm": "Abbandona team",
+    "success": "Hai abbandonato {name}",
+    "error": "Impossibile abbandonare il team"
   }
 }

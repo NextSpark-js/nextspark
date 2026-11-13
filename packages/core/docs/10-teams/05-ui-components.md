@@ -181,6 +181,30 @@ function TeamSettings({ teamId }) {
 - Joined date
 - Disabled actions for owner
 
+## LeaveTeamButton
+
+"Leave team" with a confirmation dialog, through `DELETE /api/v1/teams/:teamId/members/me`. The teams settings page shows it under the selected team in `multi-tenant` mode only: in `single-user` mode the only member is the owner, and in `single-tenant` mode the one team is the whole app.
+
+```tsx
+import { LeaveTeamButton } from '@nextsparkjs/core/components/teams/LeaveTeamButton'
+
+<LeaveTeamButton teamId={team.id} teamName={team.name} role={membership.role} />
+```
+
+**Props:**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `teamId` | string | Team ID |
+| `teamName` | string | Shown in the confirmation and the success message |
+| `role` | string | The signed-in user's role in the team |
+
+**Behavior:**
+
+- The owner sees the button disabled, with the reason (`teams.errors.cannotLeaveOwner`): they transfer ownership first
+- Leaving the current team switches to the user's earliest-joined other team (the switch flow: cookie, cleared cache, reload), or clears the current team when none is left, the no-team state `TeamContext` already handles
+- Leaving another team refreshes the team list
+
 ## CreateTeamDialog
 
 Modal dialog for creating new teams.
@@ -384,6 +408,8 @@ cy.get('[data-cy="create-team-button"]').click()
 | `create-team-form` | Form inside CreateTeamDialog | `multi-tenant` only |
 | `invite-member-dialog` | InviteMemberDialog | `single-tenant`, `multi-tenant` |
 | `team-members-list` | TeamMembersList | All modes |
+| `leave-team-button` | LeaveTeamButton (disabled for the owner) | `multi-tenant` only |
+| `leave-team-dialog` / `leave-team-confirm` | LeaveTeamButton's confirmation | `multi-tenant` only |
 | `team-member-row` | Individual member row | All modes |
 | `mobile-team-switcher` | Mobile navigation team switcher | `multi-tenant` only |
 

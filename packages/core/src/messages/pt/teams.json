@@ -196,5 +196,13 @@
     "description": "{name} passa a ser proprietário desta equipe e você passa a ser administrador. Só o novo proprietário pode devolvê-la.",
     "confirm": "Transferir propriedade",
     "success": "{name} agora é o proprietário desta equipe"
+  },
+
+  "leave": {
+    "title": "Sair de {name}?",
+    "description": "Você perde o acesso a esta equipe e ao seu conteúdo. Para voltar, um administrador da equipe precisa convidá-lo novamente.",
+    "confirm": "Sair da equipe",
+    "success": "Você saiu de {name}",
+    "error": "Não foi possível sair da equipe"
   }
 }

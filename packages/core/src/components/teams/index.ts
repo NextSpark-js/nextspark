@@ -9,6 +9,7 @@ export { CreateTeamButton } from './CreateTeamButton'
 export { CreateTeamDialog } from './CreateTeamDialog'
 export { TeamDetailSection } from './TeamDetailSection'
 export { TeamBadge } from './TeamBadge'
+export { LeaveTeamButton } from './LeaveTeamButton'
 
 // Team Switching
 export { TeamSwitcher } from './TeamSwitcher'

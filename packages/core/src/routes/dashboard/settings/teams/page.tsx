@@ -12,6 +12,7 @@ import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 import { TeamMembersList } from '@nextsparkjs/core/components/teams/TeamMembersList'
 import { TeamPendingInvitations } from '@nextsparkjs/core/components/teams/TeamPendingInvitations'
+import { LeaveTeamButton } from '@nextsparkjs/core/components/teams/LeaveTeamButton'
 import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamDialog'
 import { InlineEditableField } from '@nextsparkjs/core/components/teams/InlineEditableField'
 import { sel } from '@nextsparkjs/core/lib/selectors'
@@ -256,6 +257,18 @@ function TeamsSettingsPage() {
 
               {/* Pending Invitations */}
               <TeamPendingInvitations teamId={selectedMembership.team.id} />
+
+              {/* Leave the team (#459): only where a user has several teams (multi-tenant mode); the owner sees why not */}
+              {canSwitch && (
+                <>
+                  <Separator />
+                  <LeaveTeamButton
+                    teamId={selectedMembership.team.id}
+                    teamName={selectedMembership.team.name}
+                    role={selectedMembership.role}
+                  />
+                </>
+              )}
             </CardContent>
           </Card>
         )}
