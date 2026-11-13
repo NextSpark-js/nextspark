@@ -6,7 +6,7 @@ import { runWizard } from '../wizard/index.js';
 import { parseLocales } from '../wizard/presets.js';
 import type { CLIOptions, WizardMode, PresetName, ThemeOption, PluginOption, ProjectType } from '../wizard/types.js';
 
-interface InitOptions {
+export interface InitOptions {
   force?: boolean;
   wizard?: boolean;
   quick?: boolean;
@@ -215,6 +215,27 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 }
 
 /**
+ * The wizard's options from the command's flags. Throws on a bad --locales / --default-locale.
+ */
+export function wizardOptionsFrom(options: InitOptions): CLIOptions {
+  if (options.defaultLocale !== undefined && options.locales === undefined) {
+    throw new Error('--default-locale needs --locales.');
+  }
+  return {
+    mode: getWizardMode(options),
+    preset: options.preset as PresetName | undefined,
+    theme: options.theme as ThemeOption | undefined,
+    plugins: parsePlugins(options.plugins),
+    yes: options.yes,
+    name: options.name,
+    slug: options.slug,
+    description: options.description,
+    type: options.type as ProjectType | undefined,
+    locales: options.locales !== undefined ? parseLocales(options.locales, options.defaultLocale) : undefined,
+  };
+}
+
+/**
  * Main init command handler
  */
 export async function initCommand(options: InitOptions): Promise<void> {
@@ -232,30 +253,13 @@ export async function initCommand(options: InitOptions): Promise<void> {
     return;
   }
 
-  let locales: CLIOptions['locales'];
+  let wizardOptions: CLIOptions;
   try {
-    if (options.defaultLocale !== undefined && options.locales === undefined) {
-      throw new Error('--default-locale needs --locales.');
-    }
-    locales = options.locales !== undefined ? parseLocales(options.locales, options.defaultLocale) : undefined;
+    wizardOptions = wizardOptionsFrom(options);
   } catch (error) {
     console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
     process.exit(1);
   }
-
-  // Run the full wizard
-  const wizardOptions: CLIOptions = {
-    mode: getWizardMode(options),
-    preset: options.preset as PresetName | undefined,
-    theme: options.theme as ThemeOption | undefined,
-    plugins: parsePlugins(options.plugins),
-    yes: options.yes,
-    name: options.name,
-    slug: options.slug,
-    description: options.description,
-    type: options.type as ProjectType | undefined,
-    locales,
-  };
 
   await runWizard(wizardOptions);
 }
