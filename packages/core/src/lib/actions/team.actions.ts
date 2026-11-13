@@ -375,8 +375,9 @@ export async function removeMember(
       return { success: false, error: 'You do not have permission to remove this user.' }
     }
 
-    // 7. Remove member
-    await TeamMemberService.remove(teamId, targetUserId, userId)
+    // 7. Remove member. Service connection, only after the permission and hierarchy checks above: the RLS policy knows
+    // team roles only, not teams.appRoleBypass (#458)
+    await TeamMemberService.remove(teamId, targetUserId, userId, { service: true })
 
     // 8. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')
@@ -472,7 +473,9 @@ export async function updateMemberRole(
     }
 
     // 6. Update role
-    const updatedMember = await TeamMemberService.updateRole(teamId, targetUserId, role, userId)
+    // Service connection, only after the permission and hierarchy checks above: the RLS policy knows team roles only,
+    // not teams.appRoleBypass (#458)
+    const updatedMember = await TeamMemberService.updateRole(teamId, targetUserId, role, userId, { service: true })
 
     // 7. Revalidate team-related paths
     revalidatePath('/dashboard/settings/team')

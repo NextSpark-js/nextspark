@@ -353,7 +353,7 @@ describe('Team Server Actions', () => {
       const result = await removeMember('team-123', 'user-789')
 
       expect(result.success).toBe(true)
-      expect(mockTeamMemberService.remove).toHaveBeenCalledWith('team-123', 'user-789', 'user-456')
+      expect(mockTeamMemberService.remove).toHaveBeenCalledWith('team-123', 'user-789', 'user-456', { service: true })
     })
 
     it('returns error when team ID is missing', async () => {
@@ -405,7 +405,7 @@ describe('Team Server Actions', () => {
       mockTeamMemberService.getRole.mockResolvedValueOnce('member')
 
       expect((await removeMember('team-123', 'user-789')).success).toBe(true)
-      expect(mockTeamMemberService.remove).toHaveBeenCalledWith('team-123', 'user-789', 'user-456')
+      expect(mockTeamMemberService.remove).toHaveBeenCalledWith('team-123', 'user-789', 'user-456', { service: true })
     })
 
     it('refuses an admin removing themselves, as the REST route does (same rank)', async () => {
@@ -452,7 +452,7 @@ describe('Team Server Actions', () => {
       if (result.success) {
         expect(result.data.role).toBe('admin')
       }
-      expect(mockTeamMemberService.updateRole).toHaveBeenCalledWith('team-123', 'user-789', 'admin', 'user-456')
+      expect(mockTeamMemberService.updateRole).toHaveBeenCalledWith('team-123', 'user-789', 'admin', 'user-456', { service: true })
     })
 
     it('returns error when team ID is missing', async () => {

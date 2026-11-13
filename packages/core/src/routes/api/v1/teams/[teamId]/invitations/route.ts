@@ -155,13 +155,16 @@ export const DELETE = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Update invitation status to 'cancelled' (or delete it)
+      // Delete the pending invitation. Service connection, and only here, after the permission check above: the
+      // delete policy of team_invitations admits owners and admins only, so it would refuse a user whose app role
+      // teams.appRoleBypass lets skip team permissions, or a role the project grants team.members.invite (#458)
       const result = await mutateWithRLS(
         `DELETE FROM "team_invitations"
          WHERE id = $1 AND "teamId" = $2 AND status = 'pending'
          RETURNING *`,
         [invitationId, teamId],
-        authResult.user!.id
+        authResult.user!.id,
+        { service: true }
       )
 
       if (result.rowCount === 0) {

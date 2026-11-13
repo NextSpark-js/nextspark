@@ -109,14 +109,18 @@ export const PATCH = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Update member role
+      // Update member role.
+      // Service connection, and only here, after the permission and the role-hierarchy checks above: the RLS policy
+      // (auth_can_manage_member) knows team roles only, so it would refuse a user whose app role teams.appRoleBypass
+      // lets skip team permissions and those checks allowed (#458)
       const result = await mutateWithRLS(
         `UPDATE "team_members"
          SET role = $1, "updatedAt" = CURRENT_TIMESTAMP
          WHERE id = $2 AND "teamId" = $3
          RETURNING *`,
         [validatedData.role, memberId, teamId],
-        authResult.user!.id
+        authResult.user!.id,
+        { service: true }
       )
 
       if (result.rows.length === 0) {
@@ -242,11 +246,15 @@ export const DELETE = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Remove member
+      // Remove member.
+      // Service connection, and only here, after the permission and the role-hierarchy checks above: the RLS policy
+      // (auth_can_manage_member) knows team roles only, so it would refuse a user whose app role teams.appRoleBypass
+      // lets skip team permissions and those checks allowed (#458)
       const result = await mutateWithRLS(
         'DELETE FROM "team_members" WHERE id = $1 AND "teamId" = $2 RETURNING id',
         [memberId, teamId],
-        authResult.user!.id
+        authResult.user!.id,
+        { service: true }
       )
 
       if (result.rows.length === 0) {

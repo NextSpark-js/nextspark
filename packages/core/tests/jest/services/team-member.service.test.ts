@@ -303,15 +303,32 @@ describe('TeamMemberService', () => {
   describe('remove', () => {
     it('removes member from team', async () => {
       mockQueryOneWithRLS.mockResolvedValue({ role: 'member' }) // Not owner
-      mockQueryWithRLS.mockResolvedValue([])
+      mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 1 })
 
       await TeamMemberService.remove('team-456', 'user-789', 'user-789')
 
-      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+      expect(mockMutateWithRLS).toHaveBeenCalledWith(
         'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
         ['team-456', 'user-789'],
-        'user-789'
+        'user-789',
+        undefined
       )
+    })
+
+    it('fails when no row was removed, instead of reporting a removal (#458)', async () => {
+      mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
+      mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 0 })
+
+      await expect(TeamMemberService.remove('team-456', 'user-789', 'actor')).rejects.toThrow('Team member not found')
+    })
+
+    it('passes the connection options through (the actions use the service connection after their checks)', async () => {
+      mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
+      mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 1 })
+
+      await TeamMemberService.remove('team-456', 'user-789', 'actor', { service: true })
+
+      expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.any(String), ['team-456', 'user-789'], 'actor', { service: true })
     })
 
     it('throws error when trying to remove owner', async () => {
@@ -326,7 +343,7 @@ describe('TeamMemberService', () => {
       await expect(
         (TeamMemberService.remove as (...a: unknown[]) => Promise<void>)('team-456', 'user-789')
       ).rejects.toThrow('Actor ID is required')
-      expect(mockQueryWithRLS).not.toHaveBeenCalled()
+      expect(mockMutateWithRLS).not.toHaveBeenCalled()
     })
   })
 
@@ -519,11 +536,11 @@ describe('TeamMemberService writes run as the actor', () => {
 
   it('remove deletes under the RLS context of the user removing the member', async () => {
     mockQueryOneWithRLS.mockResolvedValue({ role: 'member' })
-    mockQueryWithRLS.mockResolvedValue([])
+    mockMutateWithRLS.mockResolvedValue({ rows: [], rowCount: 1 })
 
     await TeamMemberService.remove('team-456', 'user-789', 'owner-1')
 
-    expect(mockQueryWithRLS).toHaveBeenCalledWith(expect.stringMatching(/DELETE FROM "team_members"/), ['team-456', 'user-789'], 'owner-1')
+    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/DELETE FROM "team_members"/), ['team-456', 'user-789'], 'owner-1', undefined)
   })
 
   it('updateRole updates under the RLS context of the user changing the role', async () => {
@@ -532,6 +549,6 @@ describe('TeamMemberService writes run as the actor', () => {
 
     await TeamMemberService.updateRole('team-456', 'user-789', 'viewer', 'admin-1')
 
-    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/UPDATE "team_members"/), ['team-456', 'user-789', 'viewer'], 'admin-1')
+    expect(mockMutateWithRLS).toHaveBeenCalledWith(expect.stringMatching(/UPDATE "team_members"/), ['team-456', 'user-789', 'viewer'], 'admin-1', undefined)
   })
 })

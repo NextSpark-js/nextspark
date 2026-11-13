@@ -8,7 +8,7 @@
  */
 
 import { APP_CONFIG_MERGED } from '../config/config-sync'
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getServiceTransactionClient } from '../db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getServiceTransactionClient, type RLSOptions } from '../db'
 import { TeamService } from './team.service'
 import type { TeamMember, TeamRole } from '../teams/types'
 
@@ -327,11 +327,14 @@ export class TeamMemberService {
    * @param teamId - Team ID
    * @param userId - User ID to remove
    * @param actorId - User removing them (RLS context): the team's owner or admin, or `userId` leaving on their own
+   * @param options - `{ service: true }` only after the caller checked the permission and the role hierarchy
+   *   (removeMember does): the RLS policy knows team roles only, not teams.appRoleBypass (#458)
+   * @throws When no row was removed (not a member, or RLS refused it)
    *
    * @example
    * await TeamMemberService.remove('team-123', 'user-456', 'owner-id')
    */
-  static async remove(teamId: string, userId: string, actorId: string): Promise<void> {
+  static async remove(teamId: string, userId: string, actorId: string, options?: RLSOptions): Promise<void> {
     if (!teamId || teamId.trim() === '') {
       throw new Error('Team ID is required')
     }
@@ -350,11 +353,17 @@ export class TeamMemberService {
       throw new Error('Cannot remove team owner. Transfer ownership first.')
     }
 
-    await queryWithRLS(
+    const result = await mutateWithRLS(
       'DELETE FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
       [teamId, userId],
-      actorId
+      actorId,
+      options
     )
+
+    // Zero rows is not a success: the caller must not report a removal that did not happen (#458)
+    if (result.rowCount === 0) {
+      throw new Error('Team member not found')
+    }
   }
 
   /**
@@ -364,6 +373,8 @@ export class TeamMemberService {
    * @param userId - User ID
    * @param role - New role
    * @param actorId - User changing the role (RLS context): the team's owner, or an admin for roles below admin
+   * @param options - `{ service: true }` only after the caller checked the permission and the role hierarchy
+   *   (updateMemberRole does): the RLS policy knows team roles only, not teams.appRoleBypass (#458)
    * @returns Updated team member
    *
    * @example
@@ -373,7 +384,8 @@ export class TeamMemberService {
     teamId: string,
     userId: string,
     role: TeamRole,
-    actorId: string
+    actorId: string,
+    options?: RLSOptions
   ): Promise<TeamMember> {
     if (!teamId || teamId.trim() === '') {
       throw new Error('Team ID is required')
@@ -403,7 +415,8 @@ export class TeamMemberService {
        WHERE "teamId" = $1 AND "userId" = $2
        RETURNING *`,
       [teamId, userId, role],
-      actorId
+      actorId,
+      options
     )
 
     if (!result.rows[0]) {
