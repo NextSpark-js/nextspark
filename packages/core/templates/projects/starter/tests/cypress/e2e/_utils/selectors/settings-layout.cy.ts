@@ -20,7 +20,7 @@
  */
 
 import { SettingsPOM } from '../../../src/features/SettingsPOM'
-import { loginAsDefaultDeveloper } from '../../../src/session-helpers'
+import { loginAsDefaultDeveloper, loginAsDefaultSuperadmin } from '../../../src/session-helpers'
 
 describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
@@ -107,9 +107,14 @@ describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors', '@set
     // With `features: { billing: false }` in nextspark.config.ts (the wizard's default) there is no billing page,
     // so the menu has no entry for it: the test applies only with billing on. cy.readFile resolves from the
     // project root, where cy.mjs runs Cypress.
+    // The entry needs the team permission settings.billing, which core gives the team owner only. The developer
+    // account is an admin of the sample team, so the check signs in as the superadmin account, the team's owner.
     it('should find billing nav item', function () {
       cy.readFile('nextspark.config.ts').then((config: string) => {
         if (/['"]?billing['"]?\s*:\s*false/.test(config)) this.skip()
+        loginAsDefaultSuperadmin()
+        settings.visitSettings()
+        settings.waitForSettings()
         cy.get(settings.selectors.sidebarNavItem('billing')).should('exist')
       })
     })
