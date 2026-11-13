@@ -16,7 +16,7 @@ program
   .description('Create a new NextSpark SaaS project')
   .version(pkg.version)
   .argument('[project-name]', 'Name of the project')
-  .option('--preset <preset>', 'Use a preset (saas, blog, crm)')
+  .option('--preset <preset>', 'Use a preset (saas, blog, crm); a preset sets configuration only, the template comes from --theme')
   .option('--type <type>', 'Project type: web or web-mobile')
   .option('--name <name>', 'Project name (non-interactive mode)')
   .option('--slug <slug>', 'Project slug (non-interactive mode)')

@@ -1,12 +1,13 @@
 /**
  * #443: --locales picks the languages the i18n prompt would, and the rest of the wizard works from the same config.
+ * #444: a preset named like a template says the template is still the starter.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { applyPreset, parseLocales } from '../src/wizard/presets.js'
+import { applyPreset, parseLocales, presetTemplateNotice } from '../src/wizard/presets.js'
 import { processI18n } from '../src/wizard/generators/messages-generator.js'
 import { AVAILABLE_LOCALES } from '../src/wizard/types.js'
 
@@ -55,4 +56,13 @@ test('the catalogs of a --locales en,es run are the es ones next to the en ones'
     process.chdir(cwd)
     fs.rmSync(root, { recursive: true, force: true })
   }
+})
+
+test('a crm or blog preset without --theme says the template stays the starter; with --theme, or saas, nothing', () => {
+  assert.match(presetTemplateNotice('crm', undefined) ?? '', /starter template.*--theme crm/)
+  assert.match(presetTemplateNotice('blog', undefined) ?? '', /--theme blog/)
+  assert.equal(presetTemplateNotice('crm', 'crm'), null)
+  assert.equal(presetTemplateNotice('crm', 'none'), null)
+  assert.equal(presetTemplateNotice('saas', undefined), null)
+  assert.equal(presetTemplateNotice(undefined, undefined), null)
 })

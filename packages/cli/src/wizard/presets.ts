@@ -18,6 +18,7 @@ import type {
   DevConfig,
 } from './types.js'
 import { AVAILABLE_LOCALES } from './types.js'
+import { PROJECT_TEMPLATE_NAMES } from './generators/theme-plugins-installer.js'
 
 /**
  * Partial preset configuration (projectName, projectSlug, projectDescription
@@ -258,6 +259,16 @@ export function parseLocales(locales: string, defaultLocale?: string): LocaleSel
     supportedLocales,
     defaultLocale: chosen ?? (supportedLocales.includes('en') ? 'en' : supportedLocales[0]),
   }
+}
+
+/**
+ * The note for a preset named like a project template (blog, crm) run without `--theme`: the preset sets the
+ * project's configuration (team mode, billing, features) and the code comes from the template, which stays the
+ * starter. Null when there is nothing to say.
+ */
+export function presetTemplateNotice(preset: string | undefined, theme: string | undefined): string | null {
+  if (!preset || theme !== undefined || !(PROJECT_TEMPLATE_NAMES as readonly string[]).includes(preset)) return null
+  return `The ${preset} preset sets the project's configuration only; the code is the starter template. For the ${preset} template (experimental) add --theme ${preset}.`
 }
 
 /**

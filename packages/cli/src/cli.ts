@@ -147,7 +147,7 @@ program
   .option('--wizard', 'Run full project wizard')
   .option('--quick', 'Quick wizard mode (essential steps only)')
   .option('--expert', 'Expert wizard mode (all options)')
-  .option('--preset <name>', 'Use preset configuration (saas, blog, crm)')
+  .option('--preset <name>', 'Use preset configuration (saas, blog, crm); a preset sets configuration only, the template comes from --theme')
   .option('--theme <name>', `Pre-select project template (${PROJECT_TEMPLATE_OPTIONS.join(', ')}); blog, crm and productivity are experimental`)
   .option('--plugins <list>', 'Pre-select plugins (starter, ai, langchain, social-media-publisher; comma-separated; all but starter are experimental)')
   .option('-y, --yes', 'Skip confirmations')

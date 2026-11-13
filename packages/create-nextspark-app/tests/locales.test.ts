@@ -1,6 +1,7 @@
 /**
  * #443: `--locales` / `--default-locale` of create-nextspark-app. A bad value fails before the install; a good one
  * reaches the wizard. `pnpm` is replaced by a script on PATH that records what `pnpm exec` (the wizard) is given.
+ * #444: the --preset help says a preset is configuration only.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -70,9 +71,10 @@ test('no --locales passes nothing to the wizard', () => {
   assert.doesNotMatch(r.exec ?? '', /locale/)
 })
 
-test('--help documents the flags', () => {
+test('--help documents the flags and that a preset is configuration only', () => {
   const r = spawnSync(path.join(PACKAGE_ROOT, 'node_modules/.bin/tsx'), [path.join(PACKAGE_ROOT, 'src/index.ts'), '--help'], { encoding: 'utf8' })
   const help = r.stdout.replace(/\s+/g, ' ') // commander wraps the lines
   assert.match(help, /--locales <list> Languages of the project, comma-separated \(en, es, fr, de, it, pt\)/)
   assert.match(help, /--default-locale <locale> Default language/)
+  assert.match(help, /--preset <preset> .*configuration only, the template comes from --theme/)
 })

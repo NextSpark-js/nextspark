@@ -20,13 +20,17 @@ This will:
 # Interactive setup (default)
 npx create-nextspark-app my-app
 
-# Use a preset to skip some prompts
+# Use a preset to skip some prompts. A preset sets the project's configuration (team mode, billing,
+# features); the code comes from the template, which is the starter unless you pass --theme
 npx create-nextspark-app my-app --preset saas
 npx create-nextspark-app my-app --preset blog
 npx create-nextspark-app my-app --preset crm
 
 # Pick a template (starter is stable; blog, crm and productivity are experimental)
 npx create-nextspark-app my-app --theme starter
+
+# The CRM template with the CRM configuration
+npx create-nextspark-app my-app --preset crm --theme crm
 
 # Skip all prompts (use defaults)
 npx create-nextspark-app my-app -y
@@ -41,6 +45,8 @@ npx create-nextspark-app my-app --no-git
 ```
 
 `--locales` applies to `--yes` and `--preset` runs, where the prompts do not ask for languages; in a fully interactive run it is ignored with a warning, and you choose the languages in the prompts. A locale outside the six, an empty list, or a `--default-locale` that is not in the list stops the command before anything is installed. The list may come in any order and repeat a locale: it is read in the catalog's order, once each.
+
+`--preset crm` and `--preset blog` are configurations, not templates: `--preset crm` on its own gives the starter template with a single-tenant, paid-subscription configuration, and the command says so. The CRM template itself is `--theme crm` (experimental), which you can combine with the preset.
 
 After the dependencies are installed the project gets a git repository with a first commit (lockfile included, `node_modules` and `.env` ignored), because `nextspark update-core` starts only from a clean git tree. Nothing is created when `git` is not installed or the project sits inside an existing repository; if the commit fails (for example, no `user.name`/`user.email`), the repository is left initialized and the CLI says how to commit.
 

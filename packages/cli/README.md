@@ -24,7 +24,7 @@ pnpm add -g @nextsparkjs/cli
 npx nextspark init              # Interactive wizard
 npx nextspark init --preset saas    # Use SaaS preset
 npx nextspark init --preset blog    # Use Blog preset
-npx nextspark init --preset crm     # Use CRM preset
+npx nextspark init --preset crm     # Use CRM preset (configuration only; the template is --theme)
 npx nextspark init --yes --locales en,es   # Languages without prompts (--default-locale picks the default)
 npx nextspark init --theme blog     # Pre-select a template: starter (stable); blog, crm, productivity (experimental)
 

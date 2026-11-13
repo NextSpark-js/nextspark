@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`--preset crm` and `--preset blog` say they are configurations, not templates.** The preset sets the team mode, billing and features; the code comes from the template, the starter unless `--theme` names another, so `--preset crm` alone never gave the CRM template. The `--preset` help, the READMEs and the wizard guide say so, and a run with one of those presets and no `--theme` prints the same note and the `--theme` to add. Nothing about what the presets generate changed. (#444)
 - **A plugin's tables are named `<prefix>_<table>`, the prefix being the first segment of the plugin's name, and `social-media-publisher`'s audit log table is now `social_audit_logs`.** The plugins in `plugins/` already followed it (`ai_history`, `langchain_*`, `marketplace_*`, `social_accounts`) except for `audit_logs`, a name a project or another plugin could use as well. A new migration of the plugin renames it (see Upgrading), and its routes, entity config (`tableName`), README and docs use the new name. The plugin system guide documents the convention, and that a published plugin changes a table with a new migration instead of editing an applied one; `create-plugin` writes the prefix into the scaffold's migration example. A core test reads the migrations of the plugins in `plugins/`, following the renames of later files, and fails on a table without its plugin's prefix and on a plugin entity whose table no migration of its plugin leaves. (#455)
 
 ### Fixed

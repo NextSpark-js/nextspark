@@ -118,6 +118,8 @@ Presets pre-configure all settings for common use cases:
 | **blog** | single-user | free | pages: false, blog: true |
 | **crm** | single-tenant | paid | pages: true, blog: false |
 
+A preset is configuration only: `--preset crm` sets a single-tenant, paid configuration on the starter template, and the wizard says so. The CRM and blog templates are `--theme crm` and `--theme blog` (experimental), which combine with the preset (`--preset crm --theme crm`).
+
 ## Generated Structure
 
 The wizard generates:

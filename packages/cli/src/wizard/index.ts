@@ -29,7 +29,7 @@ function getCliVersion(): string {
 import { showBanner, showSection, showError, showInfo, showWarning } from './banner.js'
 import { runAllPrompts, runQuickPrompts, runExpertPrompts } from './prompts/index.js'
 import { generateProject, isMonorepoProject, getWebDir, type ProjectGenerationResult } from './generators/index.js'
-import { getPreset, applyPreset, PRESET_DESCRIPTIONS, DEFAULT_PRESET } from './presets.js'
+import { getPreset, applyPreset, presetTemplateNotice, PRESET_DESCRIPTIONS, DEFAULT_PRESET } from './presets.js'
 import type { WizardConfig, CLIOptions } from './types.js'
 import { promptProjectInfo } from './prompts/project-info.js'
 // Theme & Plugin Selection
@@ -159,6 +159,8 @@ export async function runWizard(
     if (options.locales && !preset) {
       showWarning('--locales applies to --yes and --preset runs; choose the languages in the prompts instead. Ignoring it.')
     }
+    const presetNotice = presetTemplateNotice(options.preset, options.theme)
+    if (presetNotice) showInfo(presetNotice)
 
     if (preset) {
       // Preset mode: get project info then apply preset
