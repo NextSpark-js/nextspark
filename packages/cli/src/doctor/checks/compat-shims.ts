@@ -20,7 +20,7 @@ import { COMPAT_MARKER } from '../../utils/migrate-extras.js'
 const NEXT_CONFIGS = ['next.config.ts', 'next.config.mts', 'next.config.mjs', 'next.config.js', 'next.config.cjs']
 const THEME_NAMES = ['NEXT_PUBLIC_ACTIVE_THEME', 'ROOT_FIRST_PROJECT']
 const CODE_FILE = /\.[cm]?[jt]sx?$/
-const SKIPPED_DIRECTORIES = new Set(['node_modules', '.next', 'dist', '.git', '.nextspark'])
+const SKIPPED_DIRECTORIES = new Set(['node_modules', '.next', 'dist', 'build', 'out', 'coverage', '.turbo', '.git', '.nextspark'])
 const lineOf = (text: string, index: number) => text.slice(0, index).split('\n').length
 const shown = (items: string[], limit = 4) => items.slice(0, limit).join(', ') + (items.length > limit ? ` (+${items.length - limit} more)` : '')
 
@@ -125,9 +125,9 @@ async function themeShim(cwd: string): Promise<HealthCheckResult | null> {
 export async function checkCompatShims(cwd = process.cwd()): Promise<HealthCheckResult[]> {
   const scopes = await anyScopeShim(cwd)
   // The note that the routes were not read must not be lost when other shims are listed
-  const notChecked: HealthCheckResult | null = scopes.note ? { name: 'Compat: API keys', status: 'warn', message: `Not checked: ${scopes.note}`, fix: 'Run nextspark migrate (or upgrade @nextsparkjs/core) so the routes can be read, then run doctor again' } : null
+  const notChecked: HealthCheckResult | null = scopes.note ? { name: 'Compat: API keys', status: 'warn', message: scopes.note.charAt(0).toUpperCase() + scopes.note.slice(1), fix: 'Fix what the reason says, then run nextspark doctor again' } : null
   const found = [await rewriteShim(cwd), scopes.result, await themeShim(cwd)]
-  const results = (found.some(Boolean) ? [found[0], scopes.result ?? notChecked, found[2]] : []).filter((result): result is HealthCheckResult => result !== null)
+  const results = [found[0], scopes.result ?? notChecked, found[2]].filter((result): result is HealthCheckResult => result !== null)
   if (results.length > 0) return results
-  return [{ name: 'Compat shims', status: 'pass', message: `No 0.x compatibility shims (rewrites of the old API URLs, routes with allowAnyScope, theme leftovers)${scopes.note ? `; ${scopes.note}` : ''}` }]
+  return [{ name: 'Compat shims', status: 'pass', message: 'No 0.x compatibility shims (rewrites of the old API URLs, routes with allowAnyScope, theme leftovers)' }]
 }

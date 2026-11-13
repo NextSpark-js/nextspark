@@ -89,14 +89,16 @@ test('a rewrite merged by hand is recognized by its paths and says it could not 
 
 test('routes that cannot be read are said, not guessed', async () => {
   const results = await inProject({ ...CLEAN, 'src/app/page.tsx': 'export default function Page() { return null }\n' })
-  assert.equal(results[0].status, 'pass')
-  assert.match(results[0].message, /routes with allowAnyScope not checked: src\/app is a committed app tree/)
+  assert.equal(results.length, 1)
+  assert.equal(results[0].status, 'warn')
+  assert.match(results[0].message, /^Routes with allowAnyScope not checked: src\/app is a committed app tree/)
+  assert.match(results[0].fix ?? '', /^Fix what the reason says/)
 })
 
 test('a rewrite listed with routes that could not be read keeps the note, as a result of its own', async () => {
   const results = await inProject({ ...CLEAN, 'next.config.mjs': NEXT_CONFIG, 'src/app/page.tsx': 'export default function Page() { return null }\n' })
   assert.deepEqual(results.map(result => result.name), ['Compat: rewrite', 'Compat: API keys'])
-  assert.match(results[1].message, /^Not checked: routes with allowAnyScope not checked: src\/app is a committed app tree/)
+  assert.match(results[1].message, /^Routes with allowAnyScope not checked: src\/app is a committed app tree/)
 })
 
 test('ROOT_FIRST_PROJECT in code is listed with file and line; generated code, dependencies and NEXT_PUBLIC_ACTIVE_THEME in code are not', async () => {
@@ -105,13 +107,17 @@ test('ROOT_FIRST_PROJECT in code is listed with file and line; generated code, d
     'lib/theme.ts': 'export const a = 1\nexport const theme = process.env.ROOT_FIRST_PROJECT\n',
     'src/app/page.tsx': 'const x = "ROOT_FIRST_PROJECT"\n',
     'node_modules/dep/index.js': 'ROOT_FIRST_PROJECT\n',
+    'build/x.js': 'ROOT_FIRST_PROJECT\n',
+    'out/x.js': 'ROOT_FIRST_PROJECT\n',
+    'coverage/x.js': 'ROOT_FIRST_PROJECT\n',
+    '.turbo/x.js': 'ROOT_FIRST_PROJECT\n',
     'lib/other.ts': 'const y = process.env.NEXT_PUBLIC_ACTIVE_THEME\n',
   })
   // (the src/app of the fixture also makes the routes unreadable, which is its own result)
   const theme = results.filter(result => result.code === 'NS_COMPAT_THEME_LEFTOVER')
   assert.equal(theme.length, 1)
   assert.match(theme[0].message, /lib\/theme\.ts:2/)
-  assert.doesNotMatch(theme[0].message, /src\/app|node_modules|lib\/other/)
+  assert.doesNotMatch(theme[0].message, /src\/app|node_modules|lib\/other|build|out\/|coverage|\.turbo/)
   assert.match(theme[0].message, /git grep -n -e NEXT_PUBLIC_ACTIVE_THEME -e ROOT_FIRST_PROJECT/)
 })
 
