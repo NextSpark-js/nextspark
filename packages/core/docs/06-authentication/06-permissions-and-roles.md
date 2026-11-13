@@ -42,6 +42,10 @@ teams: {
   `validateRoleTransition`): only a role below your own. A user whose app role skips team permissions ranks as the
   owner there (`hierarchyRoleFor()` in `lib/teams/permissions`): they manage every role below the owner and, like the
   owner, cannot remove the owner or change the owner's role. Transferring ownership stays with the team's owner.
+  The member being managed is judged by their team role, so two users who both skip, neither of them the owner,
+  can manage each other.
+- The row-level security policies of `team_members` and `team_invitations` know team roles only, so those writes run
+  on the service connection, and only after the permission and hierarchy checks above.
 - Known exception: `GET /api/v1/teams/:teamId/members`, where a superadmin or a developer sees the roster of any team,
   as an admin-area capability.
 - A wrong value fails the build: the registry build validates `teams.appRoleBypass` when it is a string literal, with
