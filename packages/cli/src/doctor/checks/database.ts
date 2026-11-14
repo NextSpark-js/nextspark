@@ -12,7 +12,7 @@ import { projectEnvFiles } from '../../utils/env-files.js'
 /**
  * Parse a .env file and return key-value pairs
  */
-function parseEnvFile(content: string): Record<string, string> {
+export function parseEnvFile(content: string): Record<string, string> {
   const result: Record<string, string> = {}
   const lines = content.split('\n')
 
