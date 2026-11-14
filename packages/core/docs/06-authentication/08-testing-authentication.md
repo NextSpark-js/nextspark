@@ -198,11 +198,36 @@ While it is set:
   address more than 5 times in 15 minutes hits the per-email limit; set `DISABLE_RATE_LIMITING=true` on the test
   server, as for the rest of an E2E run, or spread sign-ins over several addresses.
 
-Production refuses it. `nextspark build` fails with `E2E_FIXED_OTP_IN_PRODUCTION` (`NEXTSPARK_AUTH_PREFLIGHT=off`
-does not skip it), a production server does not start, and the auth module throws when it loads with
-`NODE_ENV=production`. There is no override, so run these specs against `pnpm dev`, not `pnpm cy:run:prod`. Nothing
-is inferred from the host: unset, the code is random and emailed as always. Never put the variable in a shared or
-deployed `.env`.
+A production build refuses it. `nextspark build` fails with `E2E_FIXED_OTP_IN_PRODUCTION` (`NEXTSPARK_AUTH_PREFLIGHT=off`
+does not skip it), a production server does not start, and the auth module throws when it loads in a production build,
+whatever `NODE_ENV` the server is started with. The one exception is a preview deployment, below. Nothing is inferred
+from the host: unset, the code is random and emailed as always. Never put the variable in a shared `.env`.
+
+### On a preview or QA deployment
+
+A deployed preview is a production build that is not the production deployment. It accepts the fixed code only when
+a second variable, set on purpose next to it, names it a preview:
+
+```bash
+NEXTSPARK_E2E_FIXED_OTP=482913
+NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT=preview
+```
+
+- Only the exact value `preview` counts; anything else is refused as if it were unset. Use it for QA deployments too.
+- Set both for the build and the server: the build's auth check applies the same rule with the build's variables, and
+  the server decides again with its own when it starts and when the auth module loads.
+- `VERCEL_ENV=production` refuses the code whatever else is set: the build fails and the server does not start, with
+  `E2E_FIXED_OTP_ON_PRODUCTION_DEPLOYMENT`.
+- The server warns at startup and on every send that this production build accepts the fixed code. The value is never
+  printed.
+
+On Vercel, as an example: add both variables in the project's environment variables for the **Preview** environment
+only (Vercel exposes them to the build and the server), and never for **Production**. A production deployment that
+received them anyway is refused by `VERCEL_ENV=production`.
+
+Elsewhere, core has no way to tell that a deployment is the production one: a production build with both variables
+accepts the code. The only safeguard is not setting them in the production environment, so keep them out of anything
+it inherits (shared `.env` files, a base environment, a copied configuration).
 
 Cypress:
 
