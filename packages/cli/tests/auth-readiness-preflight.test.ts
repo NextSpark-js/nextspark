@@ -39,7 +39,7 @@ before(() => {
   cliEntry = buildCli()
   // The evaluator from core's source, bundled the way the check imports it from dist/
   const out = join(PKG_ROOT, 'node_modules', '.cache', `nextspark-auth-readiness-${process.pid}`)
-  execFileSync('pnpm', ['exec', 'tsup', join(CORE_ROOT, 'src/lib/auth/readiness.ts'), '--format', 'esm', '--outDir', out], { cwd: PKG_ROOT, stdio: 'ignore' })
+  execFileSync('pnpm', ['exec', 'tsup', join(CORE_ROOT, 'src/lib/auth/readiness.ts'), join(CORE_ROOT, 'src/lib/auth/e2e-fixed-otp.ts'), '--format', 'esm', '--outDir', out], { cwd: PKG_ROOT, stdio: 'ignore' })
   process.once('exit', () => rmSync(out, { recursive: true, force: true }))
   evaluatorBundle = join(out, 'readiness.js')
 })
@@ -56,6 +56,7 @@ async function fixture(appConfig: string | null | typeof PROJECT_WITHOUT_CONFIG,
   }
   await mkdir(join(core, 'dist/lib/auth'), { recursive: true })
   await copyFile(evaluatorBundle, join(core, 'dist/lib/auth/readiness.js'))
+  await copyFile(join(dirname(evaluatorBundle), 'e2e-fixed-otp.js'), join(core, 'dist/lib/auth/e2e-fixed-otp.js'))
   await writeFile(join(core, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
   // The check's one dependency, resolved from core as in an installed package
   await mkdir(join(core, 'node_modules'), { recursive: true })
@@ -460,6 +461,39 @@ test('the fixed E2E sign-in code fails the production check, even with the bypas
     }
     const clean = run(project.root, ['prepare', '--production'], VALID_GOOGLE)
     assert.equal(clean.status, 0, clean.output)
+  } finally {
+    await project.cleanup()
+  }
+})
+
+test('the fixed E2E sign-in code passes the production check with the preview signal, never with VERCEL_ENV=production, and a core without the decision fails closed (#460)', async () => {
+  const project = await fixture(methods(['google']))
+  const code = { NEXTSPARK_E2E_FIXED_OTP: '482913' }
+  const preview = { NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT: 'preview' }
+  try {
+    const passed = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...preview, VERCEL_ENV: 'preview' })
+    assert.equal(passed.status, 0, passed.output)
+    assert.match(passed.output, /NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT=preview/)
+    assert.ok(!passed.output.includes('482913'), passed.output)
+
+    for (const extra of [{}, { NEXTSPARK_AUTH_PREFLIGHT: 'off' }]) {
+      const deployment = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...preview, ...extra, VERCEL_ENV: 'production' })
+      assert.equal(deployment.status, 1, deployment.output)
+      assert.match(deployment.output, /E2E_FIXED_OTP_ON_PRODUCTION_DEPLOYMENT/)
+      assert.ok(!deployment.output.includes('482913'), deployment.output)
+    }
+
+    // Only the exact value counts
+    for (const value of ['Preview', 'true', 'qa']) {
+      const loose = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT: value })
+      assert.equal(loose.status, 1, loose.output)
+      assert.match(loose.output, /E2E_FIXED_OTP_IN_PRODUCTION/)
+    }
+
+    await rm(join(project.root, 'node_modules/@nextsparkjs/core/dist/lib/auth/e2e-fixed-otp.js'))
+    const missing = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...preview })
+    assert.equal(missing.status, 1, missing.output)
+    assert.match(missing.output, /E2E_FIXED_OTP_IN_PRODUCTION/)
   } finally {
     await project.cleanup()
   }
