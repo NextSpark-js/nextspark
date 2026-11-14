@@ -8,7 +8,7 @@ jest.mock('@/core/lib/scheduled-actions', () => ({
 
 import { register } from '@/core/instrumentation'
 
-const ENV_KEYS = ['NODE_ENV', 'NEXT_RUNTIME', 'NEXT_PHASE', 'NEXTSPARK_E2E_FIXED_OTP', 'NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT', 'VERCEL_ENV', 'STORAGE_DRIVER', 'UPLOADS_DIR', 'BETTER_AUTH_SECRET'] as const
+const ENV_KEYS = ['NODE_ENV', 'NEXT_RUNTIME', 'NEXT_PHASE', 'NEXTSPARK_E2E_FIXED_OTP', 'VERCEL_ENV', 'STORAGE_DRIVER', 'UPLOADS_DIR', 'BETTER_AUTH_SECRET'] as const
 const env = process.env as Record<string, string | undefined>
 const saved = Object.fromEntries(ENV_KEYS.map(key => [key, env[key]]))
 
@@ -25,7 +25,6 @@ describe('register() and NEXTSPARK_E2E_FIXED_OTP (#448)', () => {
     env.STORAGE_DRIVER = 'local'
     env.UPLOADS_DIR = '/tmp/e2e'
     env.NEXTSPARK_E2E_FIXED_OTP = '482913'
-    delete env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT
     delete env.VERCEL_ENV
     exit = jest.spyOn(process, 'exit').mockImplementation((() => undefined) as never)
     error = jest.spyOn(console, 'error').mockImplementation(() => {})
@@ -41,37 +40,22 @@ describe('register() and NEXTSPARK_E2E_FIXED_OTP (#448)', () => {
     }
   })
 
-  test('a production server does not start, and the value is not printed', async () => {
+  test('a production server starts and warns that a fixed code is active on a production build (#460)', async () => {
     await register()
-    expect(exit).toHaveBeenCalledWith(1)
-    expect(String(error.mock.calls[0][0])).toContain('NEXTSPARK_E2E_FIXED_OTP is set')
-    expect(JSON.stringify(error.mock.calls)).not.toContain('482913')
+    expect(exit).not.toHaveBeenCalled()
+    expect(JSON.stringify(warn.mock.calls)).toContain('a fixed sign-in code is active on a production build')
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('482913')
   })
 
-  test('a development server starts and warns', async () => {
+  test('a development server starts and warns, without the production build warning', async () => {
     env.NODE_ENV = 'development'
     await register()
     expect(exit).not.toHaveBeenCalled()
     expect(JSON.stringify(warn.mock.calls)).toContain('NEXTSPARK_E2E_FIXED_OTP is set')
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('production build')
   })
 
-  test('a production server with the preview signal starts and warns that it is a production build (#460)', async () => {
-    env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT = 'preview'
-    await register()
-    expect(exit).not.toHaveBeenCalled()
-    expect(JSON.stringify(warn.mock.calls)).toContain('this is a production build')
-    expect(JSON.stringify(warn.mock.calls)).not.toContain('482913')
-  })
-
-  test('a production server with another signal value does not start (#460)', async () => {
-    env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT = 'on'
-    await register()
-    expect(exit).toHaveBeenCalledWith(1)
-    expect(String(error.mock.calls[0][0])).toContain('E2E_FIXED_OTP_IN_PRODUCTION')
-  })
-
-  test('VERCEL_ENV=production: no server starts, even with the preview signal or a development NODE_ENV (#460)', async () => {
-    env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT = 'preview'
+  test('VERCEL_ENV=production: no server starts, in any NODE_ENV, and the value is not printed (#460)', async () => {
     env.VERCEL_ENV = 'production'
     for (const nodeEnv of ['production', 'development']) {
       exit.mockClear()

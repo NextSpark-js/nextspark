@@ -450,50 +450,32 @@ test('a core whose dist lacks the evaluator, or its exports, fails closed', asyn
   }
 })
 
-test('the fixed E2E sign-in code fails the production check, even with the bypass, and its value is never printed (#448)', async () => {
-  const project = await fixture(methods(['google']))
-  try {
-    for (const extra of [{}, { NEXTSPARK_AUTH_PREFLIGHT: 'off' }, { NEXTSPARK_DEMO_MODE: 'true' }]) {
-      const result = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...extra, NEXTSPARK_E2E_FIXED_OTP: '482913' })
-      assert.equal(result.status, 1, result.output)
-      assert.match(result.output, /E2E_FIXED_OTP_IN_PRODUCTION/)
-      assert.ok(!result.output.includes('482913'), result.output)
-    }
-    const clean = run(project.root, ['prepare', '--production'], VALID_GOOGLE)
-    assert.equal(clean.status, 0, clean.output)
-  } finally {
-    await project.cleanup()
-  }
-})
-
-test('the fixed E2E sign-in code passes the production check with the preview signal, never with VERCEL_ENV=production, and a core without the decision fails closed (#460)', async () => {
+test('the fixed E2E sign-in code passes the production check with a warning, never with VERCEL_ENV=production even with the bypass, its value is never printed, and a core without the decision fails closed (#448, #460)', async () => {
   const project = await fixture(methods(['google']))
   const code = { NEXTSPARK_E2E_FIXED_OTP: '482913' }
-  const preview = { NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT: 'preview' }
   try {
-    const passed = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...preview, VERCEL_ENV: 'preview' })
-    assert.equal(passed.status, 0, passed.output)
-    assert.match(passed.output, /NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT=preview/)
-    assert.ok(!passed.output.includes('482913'), passed.output)
+    for (const extra of [{}, { VERCEL_ENV: 'preview' }, { NEXTSPARK_AUTH_PREFLIGHT: 'off' }]) {
+      const passed = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...extra })
+      assert.equal(passed.status, 0, passed.output)
+      assert.match(passed.output, /⚠️ NEXTSPARK_E2E_FIXED_OTP is set: a fixed sign-in code is active on this production build/)
+      assert.ok(!passed.output.includes('482913'), passed.output)
+    }
 
-    for (const extra of [{}, { NEXTSPARK_AUTH_PREFLIGHT: 'off' }]) {
-      const deployment = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...preview, ...extra, VERCEL_ENV: 'production' })
+    for (const extra of [{}, { NEXTSPARK_AUTH_PREFLIGHT: 'off' }, { NEXTSPARK_DEMO_MODE: 'true' }]) {
+      const deployment = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...extra, VERCEL_ENV: 'production' })
       assert.equal(deployment.status, 1, deployment.output)
       assert.match(deployment.output, /E2E_FIXED_OTP_ON_PRODUCTION_DEPLOYMENT/)
       assert.ok(!deployment.output.includes('482913'), deployment.output)
     }
 
-    // Only the exact value counts
-    for (const value of ['Preview', 'true', 'qa']) {
-      const loose = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT: value })
-      assert.equal(loose.status, 1, loose.output)
-      assert.match(loose.output, /E2E_FIXED_OTP_IN_PRODUCTION/)
-    }
+    const clean = run(project.root, ['prepare', '--production'], VALID_GOOGLE)
+    assert.equal(clean.status, 0, clean.output)
+    assert.doesNotMatch(clean.output, /NEXTSPARK_E2E_FIXED_OTP/)
 
     await rm(join(project.root, 'node_modules/@nextsparkjs/core/dist/lib/auth/e2e-fixed-otp.js'))
-    const missing = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code, ...preview })
+    const missing = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code })
     assert.equal(missing.status, 1, missing.output)
-    assert.match(missing.output, /E2E_FIXED_OTP_IN_PRODUCTION/)
+    assert.match(missing.output, /E2E_FIXED_OTP_CHECK_UNAVAILABLE/)
   } finally {
     await project.cleanup()
   }

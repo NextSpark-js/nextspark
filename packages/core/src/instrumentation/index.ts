@@ -39,18 +39,17 @@ export async function register(): Promise<void> {
       }
     }
 
-    // NEXTSPARK_E2E_FIXED_OTP: a production server starts with it only with the preview signal, and never on a
-    // production deployment (lib/auth/e2e-fixed-otp, #460); wherever it starts it warns at every start
+    // NEXTSPARK_E2E_FIXED_OTP: no server starts with it on a production deployment (lib/auth/e2e-fixed-otp, #460);
+    // wherever it starts it warns at every start, louder in a production build
     {
-      const { isE2eFixedOtpSet, e2eFixedOtpRefusal, E2E_FIXED_OTP_ENV, E2E_FIXED_OTP_PREVIEW_WARNING } = await import('../lib/auth/e2e-fixed-otp')
+      const { isE2eFixedOtpSet, e2eFixedOtpRefusal, E2E_FIXED_OTP_ENV, E2E_FIXED_OTP_PRODUCTION_BUILD_WARNING } = await import('../lib/auth/e2e-fixed-otp')
       if (isE2eFixedOtpSet(process.env)) {
-        const productionServer = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build'
-        const refusal = e2eFixedOtpRefusal(process.env, productionServer)
+        const refusal = e2eFixedOtpRefusal(process.env)
         if (refusal) {
           console.error(`[auth] ${refusal.code}: ${refusal.message} The server will not start.`)
           process.exit(1)
         }
-        console.warn(`[auth] ${E2E_FIXED_OTP_ENV} is set: email sign-in codes are the fixed one and no code email is sent. For end-to-end runs only.${productionServer ? ` ${E2E_FIXED_OTP_PREVIEW_WARNING}` : ''}`)
+        console.warn(`[auth] ${E2E_FIXED_OTP_ENV} is set: email sign-in codes are the fixed one and no code email is sent. For end-to-end runs only.${process.env.NODE_ENV === 'production' ? ` ${E2E_FIXED_OTP_PRODUCTION_BUILD_WARNING}` : ''}`)
       }
     }
 

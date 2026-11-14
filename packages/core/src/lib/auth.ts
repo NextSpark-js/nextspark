@@ -24,7 +24,7 @@ import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveMagicLinkExpiresIn, resolveOtpConfig } from './auth/otp-config';
-import { E2E_FIXED_OTP_ENV, E2E_FIXED_OTP_PREVIEW_WARNING, e2eFixedOtpPluginOptions } from './auth/e2e-fixed-otp';
+import { E2E_FIXED_OTP_ENV, E2E_FIXED_OTP_PRODUCTION_BUILD_WARNING, e2eFixedOtpPluginOptions } from './auth/e2e-fixed-otp';
 import { isPasswordLoginEnabled, resolveAuthMethods } from './auth/auth-methods';
 import { isDemoMode } from './demo/mode';
 import { sessionSecretProblem } from './auth/readiness';
@@ -128,11 +128,11 @@ const sessionConfig = resolveSessionConfig(AUTH_CONFIG);
 // derived from what the server enforces instead of restating it.
 const otpConfig = resolveOtpConfig(AUTH_CONFIG);
 const magicLinkExpiresIn = resolveMagicLinkExpiresIn(AUTH_CONFIG);
-// NEXTSPARK_E2E_FIXED_OTP (lib/auth/e2e-fixed-otp): a fixed code for E2E runs. Throws here in production without the
-// preview signal (and always on a production deployment), so the build or server fails instead of serving a known code.
+// NEXTSPARK_E2E_FIXED_OTP (lib/auth/e2e-fixed-otp): a fixed code for E2E runs and deployed previews. Throws here on a
+// production deployment (VERCEL_ENV=production), so the server fails instead of serving a known code there.
 const e2eFixedOtpOptions = e2eFixedOtpPluginOptions(process.env, otpConfig.otpLength);
-// Reached only with the preview signal: then every send says this production build serves the fixed code
-const e2eFixedOtpWarning = process.env.NODE_ENV === 'production' ? ` ${E2E_FIXED_OTP_PREVIEW_WARNING}` : '';
+// In a production build every send says so, louder
+const e2eFixedOtpWarning = process.env.NODE_ENV === 'production' ? ` ${E2E_FIXED_OTP_PRODUCTION_BUILD_WARNING}` : '';
 
 // The social provider map (lib/auth/social-providers): the built-in providers
 // auth.methods or auth.providers lists whose credentials are ready (Google is

@@ -18,8 +18,8 @@
  *   the project's methods, as the runtime gate does; no email provider is required.
  * - NEXTSPARK_AUTH_PREFLIGHT=off: the one bypass. Skips this check with a
  *   warning; the runtime gates and the startup check still apply.
- * - NEXTSPARK_E2E_FIXED_OTP: fails the build, bypass or not, unless NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT=preview names
- *   it a preview build, and always with VERCEL_ENV=production (core's e2eFixedOtpRefusal from dist/, #460).
+ * - NEXTSPARK_E2E_FIXED_OTP: a warning; with VERCEL_ENV=production it fails the build, bypass or not (core's
+ *   e2eFixedOtpRefusal from dist/, #460).
  *
  * The project's config/app.config.ts is loaded with Node's type stripping in a child
  * (auth-readiness-load.mjs) whose output is discarded. A config Node can't
@@ -148,19 +148,19 @@ function validAuthSubset(subset) {
 }
 
 async function main() {
-  // Before the bypass: a production build carries the fixed E2E sign-in code only for a preview deployment, by core's
-  // own decision (lib/auth/e2e-fixed-otp) with the build's variables. A core without it fails closed.
+  // Before the bypass: never on a production deployment, by core's own decision (lib/auth/e2e-fixed-otp) with the
+  // build's variables. A core without it fails closed.
   if (env.NEXTSPARK_E2E_FIXED_OTP) {
     let refusal
     try {
       const { e2eFixedOtpRefusal } = await import(pathToFileURL(join(coreDir, 'dist/lib/auth/e2e-fixed-otp.js')).href)
       if (typeof e2eFixedOtpRefusal !== 'function') throw new Error('missing export')
-      refusal = e2eFixedOtpRefusal(env, true)
+      refusal = e2eFixedOtpRefusal(env)
     } catch {
-      refusal = { code: 'E2E_FIXED_OTP_IN_PRODUCTION', message: "NEXTSPARK_E2E_FIXED_OTP is set, and core's check for it (dist/lib/auth/e2e-fixed-otp.js) could not be loaded." }
+      refusal = { code: 'E2E_FIXED_OTP_CHECK_UNAVAILABLE', message: "NEXTSPARK_E2E_FIXED_OTP is set, and core's check for it (dist/lib/auth/e2e-fixed-otp.js) could not be loaded." }
     }
     if (refusal) fail(refusal.code, refusal.message, ['Unset it for this build. NEXTSPARK_AUTH_PREFLIGHT=off does not skip this check.'])
-    console.log('⚠️ NEXTSPARK_E2E_FIXED_OTP is set with NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT=preview: this production build accepts the fixed sign-in code. Never deploy it as production.')
+    console.log('⚠️ NEXTSPARK_E2E_FIXED_OTP is set: a fixed sign-in code is active on this production build, for every address. Never set it in the production environment.')
   }
 
   const preflight = env.NEXTSPARK_AUTH_PREFLIGHT ?? ''

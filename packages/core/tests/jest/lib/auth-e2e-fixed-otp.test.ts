@@ -1,7 +1,7 @@
 /**
  * #448: lib/auth.ts hands NEXTSPARK_E2E_FIXED_OTP to the emailOTP plugin as its code generator, sends no email while
- * it is on, ignores it when unset, and fails to load in production. tests/node/e2e-fixed-otp.test.ts runs the same
- * options against a real Better Auth.
+ * it is on, ignores it when unset, warns louder in a production build and fails to load on a production deployment
+ * (#460). tests/node/e2e-fixed-otp.test.ts runs the same options against a real Better Auth.
  */
 import { afterEach, describe, test, expect, jest } from '@jest/globals'
 
@@ -34,7 +34,7 @@ jest.mock('@/core/lib/email/send', () => ({
 }))
 
 const env = process.env as Record<string, string | undefined>
-const saved = { NODE_ENV: env.NODE_ENV, NEXTSPARK_E2E_FIXED_OTP: env.NEXTSPARK_E2E_FIXED_OTP, NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT: env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT, VERCEL_ENV: env.VERCEL_ENV, BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET, EMAIL_PROVIDER: env.EMAIL_PROVIDER, RESEND_API_KEY: env.RESEND_API_KEY, RESEND_FROM_EMAIL: env.RESEND_FROM_EMAIL }
+const saved = { NODE_ENV: env.NODE_ENV, NEXTSPARK_E2E_FIXED_OTP: env.NEXTSPARK_E2E_FIXED_OTP, VERCEL_ENV: env.VERCEL_ENV, BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET, EMAIL_PROVIDER: env.EMAIL_PROVIDER, RESEND_API_KEY: env.RESEND_API_KEY, RESEND_FROM_EMAIL: env.RESEND_FROM_EMAIL }
 
 type OtpOptions = {
   generateOTP?: () => string
@@ -82,19 +82,9 @@ describe('NEXTSPARK_E2E_FIXED_OTP in lib/auth.ts (#448)', () => {
     expect(mockSendOtpVerificationEmail).toHaveBeenCalledTimes(1)
   })
 
-  test('production: the auth module refuses to load', () => {
+  test('production build: the fixed code, and every send warns louder (#460)', async () => {
     env.NODE_ENV = 'production'
     env.NEXTSPARK_E2E_FIXED_OTP = '482913'
-    expect(() => jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('@/core/lib/auth')
-    })).toThrow(/production refuses it/)
-  })
-
-  test('production with the preview signal: the fixed code, and every send warns that this is a production build (#460)', async () => {
-    env.NODE_ENV = 'production'
-    env.NEXTSPARK_E2E_FIXED_OTP = '482913'
-    env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT = 'preview'
     env.BETTER_AUTH_SECRET = 'Zq7-Lm2_Rt8+Vb4/Nc6=Hd1.Ys5~Wa3x'
     // A production server registers the code plugin only with a usable provider: synthetic values, never real ones
     Object.assign(env, { EMAIL_PROVIDER: 'resend', RESEND_API_KEY: 're_synthetic0123456789abcdef', RESEND_FROM_EMAIL: 'auth@example.test' })
@@ -104,29 +94,37 @@ describe('NEXTSPARK_E2E_FIXED_OTP in lib/auth.ts (#448)', () => {
     expect(options.generateOTP?.()).toBe('482913')
     await options.sendVerificationOTP({ email: 'a@example.test', otp: '482913', type: 'sign-in' })
     expect(mockSendOtpVerificationEmail).not.toHaveBeenCalled()
-    expect(JSON.stringify(warn.mock.calls)).toContain('this is a production build')
+    expect(JSON.stringify(warn.mock.calls)).toContain('a fixed sign-in code is active on a production build')
     expect(JSON.stringify(warn.mock.calls)).not.toContain('482913')
   })
 
-  test('production with the preview signal on a production deployment: the auth module refuses to load (#460)', () => {
-    env.NODE_ENV = 'production'
+  test('outside a production build the send warning is the plain one (#460)', async () => {
+    env.NODE_ENV = 'test'
     env.NEXTSPARK_E2E_FIXED_OTP = '482913'
-    env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT = 'preview'
-    env.VERCEL_ENV = 'production'
-    expect(() => jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('@/core/lib/auth')
-    })).toThrow(/VERCEL_ENV=production/)
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const options = loadOtpOptions()
+    await options.sendVerificationOTP({ email: 'a@example.test', otp: '482913', type: 'sign-in' })
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('production build')
   })
 
-  test('production with another signal value: the auth module refuses to load (#460)', () => {
-    env.NODE_ENV = 'production'
+  test('a production deployment (VERCEL_ENV=production): the auth module refuses to load, in any NODE_ENV (#460)', () => {
     env.NEXTSPARK_E2E_FIXED_OTP = '482913'
-    env.NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT = 'yes'
-    delete env.VERCEL_ENV
+    env.VERCEL_ENV = 'production'
+    for (const nodeEnv of ['production', 'test']) {
+      env.NODE_ENV = nodeEnv
+      expect(() => jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('@/core/lib/auth')
+      })).toThrow(/VERCEL_ENV=production/)
+    }
+  })
+
+  test('a code of the wrong length: the auth module refuses to load', () => {
+    env.NODE_ENV = 'test'
+    env.NEXTSPARK_E2E_FIXED_OTP = '48291'
     expect(() => jest.isolateModules(() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('@/core/lib/auth')
-    })).toThrow(/production refuses it/)
+    })).toThrow(/exactly 6 digits/)
   })
 })
