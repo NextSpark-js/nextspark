@@ -220,6 +220,8 @@ NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT=preview
   `E2E_FIXED_OTP_ON_PRODUCTION_DEPLOYMENT`.
 - The server warns at startup and on every send that this production build accepts the fixed code. The value is never
   printed.
+- A production build still needs an email provider configured for production (Resend or SMTP), even though no code
+  email is sent: with `EMAIL_PROVIDER=console` the send answers `503 AUTH_METHOD_UNAVAILABLE`.
 
 On Vercel, as an example: add both variables in the project's environment variables for the **Preview** environment
 only (Vercel exposes them to the build and the server), and never for **Production**. A production deployment that
