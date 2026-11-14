@@ -181,8 +181,8 @@ describe('Protected Routes', () => {
 
 ## Testing Email OTP Sign-In (fixed code)
 
-An E2E suite can sign in by email code without reading an inbox. Start the **development** server with
-`NEXTSPARK_E2E_FIXED_OTP` set to a code of `auth.otp.otpLength` digits (6 by default):
+An E2E suite can sign in by email code without reading an inbox. Start the server with `NEXTSPARK_E2E_FIXED_OTP`
+set to a code of `auth.otp.otpLength` digits (6 by default), a development server or a deployed preview alike:
 
 ```bash
 NEXTSPARK_E2E_FIXED_OTP=482913 pnpm dev
@@ -192,44 +192,35 @@ While it is set:
 
 - Every email code Better Auth issues (sign-in, verification, password reset, email change) is that code, for any
   address, administration accounts included.
-- No code email is sent, real or console; the server logs a warning on each send and at startup.
+- No code email is sent, real or console; the server logs a warning on each send and at startup, a stronger one in a
+  production build ("a fixed sign-in code is active on a production build"). The value is never printed.
 - The rest is unchanged: the code expires after `auth.otp.expiresIn`, three wrong attempts invalidate it, and the
   auth rate limits apply, so a suite still requests a code before each sign-in. A suite that signs in as the same
   address more than 5 times in 15 minutes hits the per-email limit; set `DISABLE_RATE_LIMITING=true` on the test
   server, as for the rest of an E2E run, or spread sign-ins over several addresses.
+- A value that is not exactly `otpLength` digits stops the server: the auth module throws when it loads.
 
-A production build refuses it. `nextspark build` fails with `E2E_FIXED_OTP_IN_PRODUCTION` (`NEXTSPARK_AUTH_PREFLIGHT=off`
-does not skip it), a production server does not start, and the auth module throws when it loads in a production build,
-whatever `NODE_ENV` the server is started with. The one exception is a preview deployment, below. Nothing is inferred
-from the host: unset, the code is random and emailed as always. Never put the variable in a shared `.env`.
+Nothing turns it on but the variable, and nothing is inferred from the host: unset, the code is random and emailed as
+always.
 
-### On a preview or QA deployment
+### Where to set it
 
-A deployed preview is a production build that is not the production deployment. It accepts the fixed code only when
-a second variable, set on purpose next to it, names it a preview:
+- **Never in the production environment.** A production build accepts the code like any other build.
+- **Not in `.env` or `.env.local`.** `next build` and `next start` load them (and `.env.production`,
+  `.env.production.local`), so every production build made from that checkout would accept the code. Put it in
+  `.env.development.local`, which only the development server loads, or pass it in the E2E run's command.
+  `nextspark doctor` warns when one of those files sets it (`NS_E2E_FIXED_OTP_IN_ENV_FILE`).
+- **On Vercel, only in the Preview environment** of the project's environment variables (Vercel exposes them to the
+  build and the server). If it ends up in Production anyway, `VERCEL_ENV=production` refuses it: `nextspark build`
+  fails and the server does not start, with `E2E_FIXED_OTP_ON_PRODUCTION_DEPLOYMENT` (`NEXTSPARK_AUTH_PREFLIGHT=off`
+  does not skip it), and the auth module throws when it loads.
+- **Elsewhere, core cannot tell that a deployment is the production one**: any build that has the variable accepts the
+  code. Keep it out of anything the production environment inherits (shared `.env` files, a base environment, a
+  copied configuration).
 
-```bash
-NEXTSPARK_E2E_FIXED_OTP=482913
-NEXTSPARK_E2E_FIXED_OTP_DEPLOYMENT=preview
-```
-
-- Only the exact value `preview` counts; anything else is refused as if it were unset. Use it for QA deployments too.
-- Set both for the build and the server: the build's auth check applies the same rule with the build's variables, and
-  the server decides again with its own when it starts and when the auth module loads.
-- `VERCEL_ENV=production` refuses the code whatever else is set: the build fails and the server does not start, with
-  `E2E_FIXED_OTP_ON_PRODUCTION_DEPLOYMENT`.
-- The server warns at startup and on every send that this production build accepts the fixed code. The value is never
-  printed.
-- A production build still needs an email provider configured for production (Resend or SMTP), even though no code
-  email is sent: with `EMAIL_PROVIDER=console` the send answers `503 AUTH_METHOD_UNAVAILABLE`.
-
-On Vercel, as an example: add both variables in the project's environment variables for the **Preview** environment
-only (Vercel exposes them to the build and the server), and never for **Production**. A production deployment that
-received them anyway is refused by `VERCEL_ENV=production`.
-
-Elsewhere, core has no way to tell that a deployment is the production one: a production build with both variables
-accepts the code. The only safeguard is not setting them in the production environment, so keep them out of anything
-it inherits (shared `.env` files, a base environment, a copied configuration).
+`nextspark build` shows a warning when the variable is set for a production build. A production build still needs an
+email provider configured for production (Resend or SMTP), even though no code email is sent: with
+`EMAIL_PROVIDER=console` the send answers `503 AUTH_METHOD_UNAVAILABLE`.
 
 Cypress:
 
