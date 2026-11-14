@@ -31,10 +31,14 @@ export function parseEnvFile(content: string): Record<string, string> {
       const key = trimmed.substring(0, equalsIndex).trim().replace(/^export\s+/, '')
       let value = trimmed.substring(equalsIndex + 1).trim()
 
-      // Remove quotes if present; an unquoted value ends at its first `#`, where dotenv (and @next/env) starts a comment
-      if ((value.startsWith('"') && value.endsWith('"')) ||
-          (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1)
+      // As dotenv (and @next/env) reads it: a quoted value is what lies up to its closing quote (an escaped quote does
+      // not close it) and the rest of the line is ignored; an unquoted value, or an unclosed quote, ends at its first `#`
+      const quote = value[0]
+      const quoted = quote === '"' || quote === "'" || quote === '`'
+        ? new RegExp(`^${quote}((?:\\\\${quote}|[^${quote}])*)${quote}`).exec(value)
+        : null
+      if (quoted) {
+        value = quoted[1]
       } else if (value.includes('#')) {
         value = value.slice(0, value.indexOf('#')).trim()
       }

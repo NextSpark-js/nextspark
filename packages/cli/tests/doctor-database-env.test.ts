@@ -63,3 +63,15 @@ test('.env.local wins over .env, as in Next.js (#438)', () =>
     // Next.js reads no .env.local when NODE_ENV is test
     assert.equal((await readProjectEnv(dir, 'test')).DATABASE_URL, 'postgres://localhost/from_env')
   }))
+
+test('doctor reads a quoted value with a comment after it as Next.js does (#460)', () =>
+  inProject('DATABASE_URL="postgres://u:pa#ss@h/db" # local\nQ1="quoted" # c\nQ2=\'x\' #c\nQ3="has # inside" # c\nU=abc #def\n', async dir => {
+    assert.deepEqual(await readProjectEnv(dir), {
+      DATABASE_URL: 'postgres://u:pa#ss@h/db',
+      Q1: 'quoted',
+      Q2: 'x',
+      Q3: 'has # inside',
+      U: 'abc',
+    })
+    assert.equal(await resolveDatabaseUrl(dir, {}), 'postgres://u:pa#ss@h/db')
+  }))

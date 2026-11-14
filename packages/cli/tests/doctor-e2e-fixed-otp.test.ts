@@ -27,6 +27,8 @@ test('doctor warns when a file a production build loads sets NEXTSPARK_E2E_FIXED
   }
   // `export KEY=value` sets KEY, as Next.js reads it
   assert.equal((await doctor({ '.env': 'export NEXTSPARK_E2E_FIXED_OTP=482913\n' })).status, 'warn')
+  // A quoted value with a comment after it is set
+  assert.equal((await doctor({ '.env': 'NEXTSPARK_E2E_FIXED_OTP="482913" # e2e\n' })).status, 'warn')
   const both = await doctor({ '.env': 'NEXTSPARK_E2E_FIXED_OTP=482913\n', '.env.local': 'NEXTSPARK_E2E_FIXED_OTP=482913\n' })
   assert.match(both.message, /^NS_E2E_FIXED_OTP_IN_ENV_FILE: \.env, \.env\.local set/)
 })
