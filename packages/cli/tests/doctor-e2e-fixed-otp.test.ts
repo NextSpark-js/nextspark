@@ -25,6 +25,8 @@ test('doctor warns when a file a production build loads sets NEXTSPARK_E2E_FIXED
     assert.match(result.fix ?? '', /\.env\.development\.local/)
     assert.ok(!JSON.stringify(result).includes('482913'), file)
   }
+  // `export KEY=value` sets KEY, as Next.js reads it
+  assert.equal((await doctor({ '.env': 'export NEXTSPARK_E2E_FIXED_OTP=482913\n' })).status, 'warn')
   const both = await doctor({ '.env': 'NEXTSPARK_E2E_FIXED_OTP=482913\n', '.env.local': 'NEXTSPARK_E2E_FIXED_OTP=482913\n' })
   assert.match(both.message, /^NS_E2E_FIXED_OTP_IN_ENV_FILE: \.env, \.env\.local set/)
 })
@@ -34,6 +36,9 @@ test('doctor passes with the variable in .env.development.local, commented out, 
     { '.env.development.local': 'NEXTSPARK_E2E_FIXED_OTP=482913\n', '.env': 'DATABASE_URL=postgres://x\n' },
     { '.env': '# NEXTSPARK_E2E_FIXED_OTP=482913\n' },
     { '.env': 'NEXTSPARK_E2E_FIXED_OTP=\n' },
+    // An unquoted value ends at `#`: Next.js reads these as empty
+    { '.env': 'NEXTSPARK_E2E_FIXED_OTP= # comment\n' },
+    { '.env': 'NEXTSPARK_E2E_FIXED_OTP=#482913\n' },
     {},
   ]) {
     assert.equal((await doctor(files)).status, 'pass', JSON.stringify(files))

@@ -476,6 +476,7 @@ test('the fixed E2E sign-in code passes the production check with a warning, nev
     const missing = run(project.root, ['prepare', '--production'], { ...VALID_GOOGLE, ...code })
     assert.equal(missing.status, 1, missing.output)
     assert.match(missing.output, /E2E_FIXED_OTP_CHECK_UNAVAILABLE/)
+    assert.match(missing.output, /or rebuild\/update @nextsparkjs\/core/)
   } finally {
     await project.cleanup()
   }

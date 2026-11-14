@@ -159,7 +159,10 @@ async function main() {
     } catch {
       refusal = { code: 'E2E_FIXED_OTP_CHECK_UNAVAILABLE', message: "NEXTSPARK_E2E_FIXED_OTP is set, and core's check for it (dist/lib/auth/e2e-fixed-otp.js) could not be loaded." }
     }
-    if (refusal) fail(refusal.code, refusal.message, ['Unset it for this build. NEXTSPARK_AUTH_PREFLIGHT=off does not skip this check.'])
+    if (refusal) {
+      const unset = refusal.code === 'E2E_FIXED_OTP_CHECK_UNAVAILABLE' ? 'Unset it for this build, or rebuild/update @nextsparkjs/core.' : 'Unset it for this build.'
+      fail(refusal.code, refusal.message, [`${unset} NEXTSPARK_AUTH_PREFLIGHT=off does not skip this check.`])
+    }
     console.log('⚠️ NEXTSPARK_E2E_FIXED_OTP is set: a fixed sign-in code is active on this production build, for every address. Never set it in the production environment.')
   }
 
