@@ -39,8 +39,24 @@ jest.mock('next-intl', () => ({
 jest.mock('@nextsparkjs/core/contexts/TeamContext', () => ({ useTeamContext: () => ({ currentTeam: { id: 't1' }, isLoading: false }) }))
 jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: () => true }))
 jest.mock('@nextsparkjs/core/components/permissions/PermissionGate', () => ({ PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
+// like the API: `ids` picks rows, `page` and `limit` slice (at most 100) and the pagination says if there is a next page
+const mockCalls: string[] = []
 jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
-  fetchWithTeam: async (url: string) => ({ ok: true, json: async () => ({ data: mockOther[url.split('?')[0]] ?? mockRows }) }),
+  fetchWithTeam: async (url: string) => {
+    mockCalls.push(url)
+    const [path, query = ''] = url.split('?')
+    const params = new URLSearchParams(query)
+    let rows = (mockOther[path] ?? mockRows) as { id: string }[]
+    if (params.has('ids')) {
+      const ids = params.get('ids')!.split(',')
+      return { ok: true, json: async () => ({ data: rows.filter(row => ids.includes(row.id)) }) }
+    }
+    const limit = Math.min(Number(params.get('limit') ?? 10), 100)
+    const page = Number(params.get('page') ?? 1)
+    const total = rows.length
+    rows = rows.slice((page - 1) * limit, page * limit)
+    return { ok: true, json: async () => ({ data: rows, pagination: { page, limit, total, hasNextPage: page * limit < total } }) }
+  },
 }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 
@@ -158,6 +174,60 @@ describe('what the API sends: the columns of the table (#422)', () => {
     render(<ProductsPage />)
     await waitFor(() => expect(screen.getByText(text('es', 'products.stats.active')).previousElementSibling?.textContent).toBe('2'))
     expect(document.body.textContent).toContain(text('es', 'products.sku').replace('{sku}', 'SKU-1'))
+  })
+})
+
+describe('more than 100 companies (#451)', () => {
+  const companies = Array.from({ length: 150 }, (_, i) => ({ id: `co${i + 1}`, name: `Company ${i + 1}` }))
+  beforeEach(() => {
+    mockLocale = 'es'
+    mockRows = []
+    mockOther = {}
+    mockCalls.length = 0
+  })
+
+  test('a contact of the 150th company shows its name, asked by id and not from a list of 100', async () => {
+    mockRows = [{ id: 'c1', firstName: 'Ana', lastName: 'Ruiz', email: 'a@example.com', companyId: 'co150' }]
+    mockOther = { '/api/v1/contacts': mockRows, '/api/v1/companies': companies }
+    render(<ContactsPage />)
+    await waitFor(() => expect(screen.getAllByText('Company 150').length).toBeGreaterThan(0))
+    expect(mockCalls.some(url => url.startsWith('/api/v1/companies?') && url.includes('ids=co150'))).toBe(true)
+  })
+
+  test('the counters count 150 contacts of one company, over two pages of 100', async () => {
+    mockRows = [{ id: 'co1', name: 'Acme' }]
+    mockOther = {
+      '/api/v1/companies': mockRows,
+      '/api/v1/contacts': Array.from({ length: 150 }, (_, i) => ({ id: `c${i}`, companyId: 'co1' })),
+      '/api/v1/opportunities': [],
+    }
+    render(<CompaniesPage />)
+    await waitFor(() => expect(screen.getAllByText('150').length).toBeGreaterThanOrEqual(1))
+    const asked = mockCalls.filter(url => url.startsWith('/api/v1/contacts?'))
+    expect(asked.some(url => url.includes('page=2'))).toBe(true)
+    expect(asked.every(url => url.includes('fields=companyId'))).toBe(true)
+  })
+})
+
+describe('the opportunities list reads what the API sends (#451)', () => {
+  beforeEach(() => {
+    mockLocale = 'es'
+    mockOther = {}
+    mockCalls.length = 0
+  })
+
+  test('the pipeline name and the stage name come from the pipeline, and the close date from closeDate', async () => {
+    mockRows = [{ id: 'o1', name: 'Big deal', amount: '10', companyId: 'co1', pipelineId: 'p1', stageId: 's2', closeDate: '2026-12-31' }]
+    mockOther = {
+      '/api/v1/opportunities': mockRows,
+      '/api/v1/companies': [{ id: 'co1', name: 'Acme' }],
+      '/api/v1/pipelines': [{ id: 'p1', name: 'Enterprise Sales', stages: [{ id: 's1', name: 'Lead In' }, { id: 's2', name: 'Negotiation' }] }],
+    }
+    render(<OpportunitiesPage />)
+    await waitFor(() => expect(screen.getByText('Enterprise Sales')).toBeTruthy())
+    expect(screen.getByText('Negotiation')).toBeTruthy()
+    // the close date column shows a date (not "-"): its year is in the page
+    expect(document.body.textContent).toContain('2026')
   })
 })
 

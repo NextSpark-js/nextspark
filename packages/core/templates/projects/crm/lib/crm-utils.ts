@@ -20,19 +20,65 @@ export function sumNumeric(values: unknown[]): number {
     return values.reduce<number>((sum, value) => sum + (toNumber(value) ?? 0), 0)
 }
 
+/** Largest page the list endpoints serve */
+const PAGE_SIZE = 100
+
 /**
- * The rows of a list endpoint for a lookup (company names, counters); an endpoint that fails gives no rows, so the page still renders.
- * The API sends the columns of the table only: a contact carries `companyId`, not the name of the company.
+ * Every row of a list endpoint for a lookup (company names, counters), page by page until the API says there are no more;
+ * `fields` asks for those columns only, so a counter does not carry whole rows. An endpoint that fails gives no rows, so the
+ * page still renders. The API sends the columns of the table only: a contact carries `companyId`, not the name of the company.
+ * ponytail: the counters are added in the browser; a server-side count if a team has tens of thousands of rows.
  */
-export async function fetchRows<T>(endpoint: string): Promise<T[]> {
+export async function fetchRows<T>(endpoint: string, fields?: string[]): Promise<T[]> {
+    const rows: T[] = []
     try {
-        const response = await fetchWithTeam(`${endpoint}?limit=100`)
-        if (!response.ok) return []
-        const result = await response.json()
-        return Array.isArray(result.data) ? result.data : []
+        for (let page = 1; ; page++) {
+            const query = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(page) })
+            if (fields) query.set('fields', fields.join(','))
+            const response = await fetchWithTeam(`${endpoint}?${query}`)
+            if (!response.ok) return []
+            const result = await response.json()
+            if (!Array.isArray(result.data)) return []
+            rows.push(...result.data)
+            if (!result.pagination?.hasNextPage) return rows
+        }
     } catch {
         return []
     }
+}
+
+/** The rows with those ids only (`ids=`), in requests of 50: a lookup of the companies a page shows, not of every company. */
+export async function fetchRowsByIds<T>(endpoint: string, ids: (string | null | undefined)[]): Promise<T[]> {
+    const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))]
+    const chunks: string[][] = []
+    for (let i = 0; i < unique.length; i += 50) chunks.push(unique.slice(i, i + 50))
+    const found = await Promise.all(chunks.map(async chunk => {
+        try {
+            const response = await fetchWithTeam(`${endpoint}?${new URLSearchParams({ ids: chunk.join(','), limit: String(PAGE_SIZE) })}`)
+            if (!response.ok) return []
+            const result = await response.json()
+            return Array.isArray(result.data) ? (result.data as T[]) : []
+        } catch {
+            return []
+        }
+    }))
+    return found.flat()
+}
+
+/**
+ * The opportunities with the `pipelineName` and the `stage` name the list reads: the table has `pipelineId` and `stageId`,
+ * and the names live in the pipeline (`stages` is a list of `{ id, name }`).
+ */
+export function withPipelineInfo<T extends { pipelineId?: string | null; stageId?: string | null; pipelineName?: string; stage?: string }>(
+    rows: T[],
+    pipelines: { id: string; name?: string; stages?: { id: string; name?: string }[] | null }[],
+): T[] {
+    const byId = new Map(pipelines.map(pipeline => [pipeline.id, pipeline]))
+    return rows.map(row => {
+        const pipeline = row.pipelineId ? byId.get(row.pipelineId) : undefined
+        const stage = Array.isArray(pipeline?.stages) ? pipeline.stages.find(candidate => candidate.id === row.stageId) : undefined
+        return { ...row, pipelineName: row.pipelineName || pipeline?.name, stage: row.stage || stage?.name }
+    })
 }
 
 /** The rows with `companyName` filled in from their `companyId` (a row that has its own name keeps it). */

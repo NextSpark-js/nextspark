@@ -90,8 +90,8 @@ export default function CompaniesPage() {
                 const result = await response.json()
                 // the companies table has no counters: they come from the contacts and the opportunities that point to each company
                 const [contacts, opportunities] = await Promise.all([
-                    fetchRows<{ companyId?: string }>('/api/v1/contacts'),
-                    fetchRows<{ companyId?: string; amount?: unknown; status?: string }>('/api/v1/opportunities'),
+                    fetchRows<{ companyId?: string }>('/api/v1/contacts', ['companyId']),
+                    fetchRows<{ companyId?: string; amount?: unknown; status?: string }>('/api/v1/opportunities', ['companyId', 'amount', 'status']),
                 ])
                 setCompanies(withCompanyCounts<Company>(result.data || [], contacts, opportunities))
             } catch (error) {

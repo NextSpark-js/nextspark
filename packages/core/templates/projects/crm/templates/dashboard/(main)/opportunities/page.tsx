@@ -26,7 +26,7 @@ import {
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
-import { fetchRows, sumNumeric, toNumber, withCompanyName } from '@/lib/crm-utils'
+import { fetchRowsByIds, sumNumeric, toNumber, withCompanyName, withPipelineInfo } from '@/lib/crm-utils'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
 interface Opportunity {
@@ -41,7 +41,7 @@ interface Opportunity {
     pipelineName?: string
     companyId?: string
     companyName?: string
-    expectedCloseDate?: string
+    closeDate?: string
     status?: 'open' | 'won' | 'lost'
     createdAt: string
     updatedAt: string
@@ -118,9 +118,13 @@ export default function OpportunitiesPage() {
                 const response = await fetchWithTeam('/api/v1/opportunities')
                 if (!response.ok) throw new Error('Failed to fetch opportunities')
                 const result = await response.json()
-                // the API sends the id of the company, not its name
-                const companies = await fetchRows<{ id: string; name?: string }>('/api/v1/companies')
-                setOpportunities(withCompanyName<Opportunity>(result.data || [], companies))
+                // the API sends the ids of the company and the pipeline and the id of the stage, not their names
+                const rows: Opportunity[] = result.data || []
+                const [companies, pipelines] = await Promise.all([
+                    fetchRowsByIds<{ id: string; name?: string }>('/api/v1/companies', rows.map(row => row.companyId)),
+                    fetchRowsByIds<{ id: string; name?: string; stages?: { id: string; name?: string }[] }>('/api/v1/pipelines', rows.map(row => row.pipelineId)),
+                ])
+                setOpportunities(withPipelineInfo<Opportunity>(withCompanyName<Opportunity>(rows, companies), pipelines))
             } catch (error) {
                 console.error('Error loading opportunities:', error)
             } finally {
@@ -226,7 +230,7 @@ export default function OpportunitiesPage() {
             render: (value) => <StatusBadge status={value} />,
         },
         {
-            key: 'expectedCloseDate',
+            key: 'closeDate',
             header: t('opportunities.columns.expectedClose'),
             sortable: true,
             render: (value) => value ? (
