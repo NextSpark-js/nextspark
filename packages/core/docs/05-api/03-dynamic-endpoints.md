@@ -159,7 +159,7 @@ export const OPTIONS = handleGenericOptions // CORS
 | `fields` | LIST, READ | Select specific fields |
 | `distinct` | LIST | Get distinct values (with `fields`) |
 | `ids` | LIST | Get specific IDs (comma-separated) |
-| `search` | LIST | Search `name`, `title`, `slug` and `content` (the ones the entity declares), and the field `searchField` names |
+| `search` | LIST | Search `name`, `title`, `slug` and `content` (the ones the entity declares), and the fields `searchField` lists |
 | `searchField` | LIST | More fields to search with `search`, a comma-separated list (or the parameter repeated) of at most 5; a row matches when any matches. Each is a text field of the entity (`text`, `textarea`, `email`, `url`, `phone`, `markdown`, `richtext`; not `api.searchable: false`). A relation select sends its `titleField`, a people list `firstName,lastName,email`, so a record is found by the label it shows |
 | `from` / `to` | LIST | Date range filtering |
 | `dateField` | LIST | Field for date range |

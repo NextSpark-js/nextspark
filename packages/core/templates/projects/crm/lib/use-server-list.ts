@@ -16,7 +16,7 @@ interface Options<T> {
     enabled: boolean
     /** Column key to the entity field the API sorts by; a column that is not here is not sortable */
     sortFields: Record<string, string>
-    /** The one more field `search` matches besides name, title, slug and content (the API's `searchField`) */
+    /** The fields `search` matches besides name, title, slug and content: a comma-separated list, at most 5 (the API's `searchField`) */
     searchField?: string
     /** Adds what the API does not send (names of related rows) to the rows of the page */
     enrich?: (rows: T[]) => Promise<T[]>
