@@ -4,6 +4,8 @@
 
 > **Package managers:** this guide is for contributing to the NextSpark monorepo, which pins pnpm 9. Projects you create with NextSpark support pnpm 10 (>=10.34.6), 11 and 12; npm, yarn and bun are not supported.
 
+> **Windows** is not a supported platform: NextSpark is developed and tested on macOS and Linux. On Windows `pnpm` and `npx` are `.cmd` files, which Node starts only through `cmd.exe`, so the CLI (`nextspark migrate`), `create-nextspark-app`, `pnpm update-core`, `scripts/cy-run-prod.cjs` and core's dev and test scripts start them there with every argument quoted, and refuse an argument that contains `"`, `%` or a line break instead of handing it to the shell (#450). What has been run on Windows is the tests of the helper these commands share and of update-core's command runner, where pnpm receives arguments with spaces and `& | < > ^ !` whole. Creating a project, `nextspark migrate`, `pnpm dev` and `cy-run-prod.cjs` have not been run end to end on Windows.
+
 > **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark prepare --watch`.
 
 ## Introduction
