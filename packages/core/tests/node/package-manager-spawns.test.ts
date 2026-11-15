@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { packageManagerCommand } from '../../scripts/utils/package-manager.mjs'
-import { runCommand, stepCommand } from '../../scripts/maintenance/core-updater.mjs'
+import { packageManagerCommand, stepCommand } from '../../scripts/utils/package-manager.mjs'
+import { runCommand } from '../../scripts/maintenance/core-updater.mjs'
 
 // update-core and the cy-run-prod.cjs projects get start pnpm the same way on every platform (#450)
 const require = createRequire(import.meta.url)
@@ -36,4 +36,15 @@ test('on this machine update-core hands pnpm each argument whole', () => {
   const result = runCommand('pnpm', ['exec', 'node', '-e', 'console.log(JSON.stringify(process.argv.slice(1)))', ...values], { cwd: import.meta.dirname, capture: true })
   assert.equal(result.status, 0, result.stderr)
   assert.deepEqual(JSON.parse(result.stdout.trim().split('\n').pop()!), values)
+})
+
+test('cy-run-prod.cjs starts pnpm through the helper: no shell on linux, one quoted command line on win32', () => {
+  const calls: unknown[][] = []
+  const spawner = (...call: unknown[]) => { calls.push(call); return {} }
+  cyRunProd.spawnPnpm(spawner, ['build'], { cwd: 'x' }, 'linux')
+  cyRunProd.spawnPnpm(spawner, ['build'], { cwd: 'x' }, 'win32')
+  assert.deepEqual(calls, [
+    ['pnpm', ['build'], { cwd: 'x', shell: false, windowsHide: true }],
+    ['pnpm "build"', [], { cwd: 'x', shell: true, windowsHide: true }],
+  ])
 })

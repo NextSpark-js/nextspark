@@ -54,8 +54,8 @@ function packageManagerCommand(command, args, platform = process.platform) {
   return { command: [command, ...quoted].join(' '), args: [], shell: true, windowsHide: true }
 }
 
-function spawnPnpm(spawner, pnpmArgs, options) {
-  const pnpm = packageManagerCommand('pnpm', pnpmArgs)
+function spawnPnpm(spawner, pnpmArgs, options, platform = process.platform) {
+  const pnpm = packageManagerCommand('pnpm', pnpmArgs, platform)
   return spawner(pnpm.command, pnpm.args, { ...options, shell: pnpm.shell, windowsHide: pnpm.windowsHide })
 }
 
@@ -255,7 +255,7 @@ async function main() {
 
 // Required by core's tests: hand over the helper, run nothing
 if (require.main !== module) {
-  module.exports = { packageManagerCommand }
+  module.exports = { packageManagerCommand, spawnPnpm }
 } else {
   // Handle signals
   process.on('SIGINT', () => {
