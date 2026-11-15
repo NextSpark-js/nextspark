@@ -1,7 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { packageManagerCommand } from '../src/utils/package-manager.js'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { isOnPath, packageManagerCommand } from '../src/utils/package-manager.js'
+import { isOnPath as createAppIsOnPath } from '../../create-nextspark-app/src/utils/package-manager.js'
 // Core's scripts start pnpm and npx with their own copy (#450)
 import { packageManagerCommand as corePackageManagerCommand } from '../../core/scripts/utils/package-manager.mjs'
 
@@ -38,6 +42,31 @@ test('the CLI and core build the same command for every platform', () => {
       assert.deepEqual(packageManagerCommand(command, AWKWARD, platform), corePackageManagerCommand(command, AWKWARD, platform))
       assert.throws(() => corePackageManagerCommand(command, ['%x%'], 'win32'), /cannot quote/)
     }
+  }
+})
+
+test('isOnPath finds pnpm as the platform would start it, and only then', () => {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-on-path-'))
+  try {
+    const cmdShim = join(root, 'cmd'), shShim = join(root, 'sh'), empty = join(root, 'empty')
+    for (const directory of [cmdShim, shShim, empty]) mkdirSync(directory)
+    writeFileSync(join(cmdShim, 'pnpm.CMD'), '')
+    writeFileSync(join(shShim, 'pnpm'), '')
+    const windows = (path: string) => ({ Path: `${empty};${path}`, PATHEXT: '.EXE;.CMD' })
+    // Windows: a PATHEXT extension is needed, and a copied environment spells it Path
+    assert.equal(isOnPath('pnpm', windows(cmdShim), 'win32'), true)
+    assert.equal(isOnPath('pnpm', windows(shShim), 'win32'), false)
+    assert.equal(isOnPath('pnpm', { Path: cmdShim }, 'win32'), true, 'PATHEXT unset: the default list has .CMD')
+    // Elsewhere the bare name
+    assert.equal(isOnPath('pnpm', { PATH: `${empty}:${shShim}` }, 'linux'), true)
+    assert.equal(isOnPath('pnpm', { PATH: empty }, 'linux'), false)
+    assert.equal(isOnPath('pnpm', {}, 'linux'), false)
+    // create-nextspark-app's copy answers the same
+    for (const [env, platform] of [[windows(cmdShim), 'win32'], [windows(shShim), 'win32'], [{ PATH: shShim }, 'darwin'], [{ PATH: empty }, 'darwin']] as const) {
+      assert.equal(createAppIsOnPath('pnpm', env, platform), isOnPath('pnpm', env, platform))
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
   }
 })
 

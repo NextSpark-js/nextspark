@@ -5,7 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
-import { packageManagerCommand } from '../utils/package-manager.js';
+import { isOnPath, packageManagerCommand } from '../utils/package-manager.js';
 import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, isStaticMetadataFile, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
@@ -815,9 +815,8 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
       }).trim();
     } catch (viewError) {
       if (didProcessTimeOut(viewError)) throw new PreviousTemplateTimeoutError('running pnpm view', budget.total);
-      // pnpm is missing from PATH: ENOENT without a shell, cmd.exe's "not recognized" exit code 9009 on Windows
-      const { code, status } = viewError as { code?: unknown; status?: unknown };
-      if (code === 'ENOENT' || status === 9009) {
+      // pnpm never started: ENOENT without a shell; through cmd.exe on Windows it is not on PATH
+      if ((viewError as { code?: unknown }).code === 'ENOENT' || !isOnPath('pnpm', environment)) {
         throw new PreviousTemplateLookupError('pnpm could not be started; check that pnpm is installed and on PATH', false);
       }
       // The registry answered and said no: rerunning with network access will not change that. pnpm 12

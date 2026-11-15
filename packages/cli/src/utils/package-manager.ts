@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 /**
  * How to start `pnpm` or `npx` with child_process on every platform (#450).
  *
@@ -27,4 +30,18 @@ export function packageManagerCommand(
     return `"${arg.replace(/(\\+)$/, '$1$1')}"`;
   });
   return { command: [command, ...quoted].join(' '), args: [], shell: true, windowsHide: true };
+}
+
+/**
+ * Whether `command` is on the PATH of `env`, as Node or cmd.exe would find it: on Windows only with
+ * one of PATHEXT's extensions. Through cmd.exe a missing command exits 1 with a localized message,
+ * so a failed run can't say by itself that pnpm never started (#450).
+ */
+export function isOnPath(command: string, env: NodeJS.ProcessEnv = process.env, platform: string = process.platform): boolean {
+  // Windows spells it Path, and a copied environment keeps that spelling
+  const value = (name: string) => Object.entries(env).find(([key]) => key.toUpperCase() === name)?.[1] ?? '';
+  const windows = platform === 'win32';
+  const extensions = windows ? (value('PATHEXT') || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean) : [''];
+  return value('PATH').split(windows ? ';' : ':').filter(Boolean)
+    .some(directory => extensions.some(extension => existsSync(join(directory, `${command}${extension}`))));
 }

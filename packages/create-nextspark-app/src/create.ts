@@ -4,7 +4,7 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { setupGitRepository } from './utils/git.js'
-import { packageManagerCommand } from './utils/package-manager.js'
+import { isOnPath, packageManagerCommand } from './utils/package-manager.js'
 
 /**
  * Find local tarball for a package (for development testing)
@@ -573,8 +573,8 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       : process.env,
   })
 
-  // ENOENT without a shell, cmd.exe's "not recognized" exit code 9009 on Windows
-  if (result.error || result.status === 9009) {
+  // pnpm never started: ENOENT without a shell; through cmd.exe on Windows it is not on PATH
+  if (result.error || (result.status !== 0 && !isOnPath('pnpm'))) {
     throw new Error('pnpm could not be started; check that pnpm is installed and on PATH')
   }
   if (result.status !== 0) {
