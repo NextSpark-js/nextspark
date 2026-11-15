@@ -66,9 +66,10 @@ describe('the crm list pages write no text in the source', () => {
   })
 
   test('the scan finds a title written in a page (the check is not vacuous)', () => {
-    const source = parseSource(path.join(CRM, FILES[0]))
+    // the leads list still fetches in its own page (the lists that page on the server fetch in useServerList)
+    const source = parseSource(path.join(CRM, FILES[1]))
     const found = fixedTexts(source)
-    expect(found.some(line => line.includes('Failed to fetch contacts'))).toBe(true)
+    expect(found.some(line => line.includes('Failed to fetch leads'))).toBe(true)
   })
 })
 
