@@ -24,7 +24,7 @@ import {
     Send
 } from 'lucide-react'
 import { fetchRowsByIds, withCompanyName } from '@/lib/crm-utils'
-import { useServerList } from '@/lib/use-server-list'
+import { useExactCounts, useServerList } from '@/lib/use-server-list'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
@@ -109,19 +109,18 @@ export default function ContactsPage() {
         enrich: async rows => withCompanyName<Contact>(rows, await fetchRowsByIds<{ id: string; name?: string }>('/api/v1/companies', rows.map(row => row.companyId))),
     })
 
+    // the exact number of the recently active ones is asked of the API (by the date of the last contact); "with company" and "with email" have no filter there and are of the page
+    const counts = useExactCounts('/api/v1/contacts', !teamLoading && !!currentTeam, {
+        recentlyActive: { dateField: 'lastContactedAt', from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
+    })
+
     // Stats
     const stats = useMemo(() => {
         const withCompany = contacts.filter(c => c.companyId || c.companyName).length
-        const recentlyActive = contacts.filter(c => {
-            if (!c.lastActivityAt) return false
-            const days = Math.floor((Date.now() - new Date(c.lastActivityAt).getTime()) / (1000 * 60 * 60 * 24))
-            return days <= 30
-        }).length
 
         return {
             total,
             withCompany,
-            recentlyActive,
             withEmail: contacts.filter(c => c.email).length,
         }
     }, [contacts, total])
@@ -169,7 +168,7 @@ export default function ContactsPage() {
         {
             key: 'companyName',
             header: t('contacts.columns.company'),
-                        render: (value, contact) => value ? (
+            render: (value, contact) => value ? (
                 <button
                     onClick={(e) => {
                         e.stopPropagation()
@@ -192,7 +191,7 @@ export default function ContactsPage() {
         {
             key: 'lastActivityAt',
             header: t('contacts.columns.lastActivity'),
-                        render: (value) => <RelativeTime date={value} />,
+            render: (value) => <RelativeTime date={value} />,
         },
     ]
 
@@ -289,7 +288,7 @@ export default function ContactsPage() {
                             <Clock className="w-5 h-5 text-emerald-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-foreground">{formatLocaleNumber(stats.recentlyActive, locale)}</p>
+                            <p className="text-2xl font-bold text-foreground">{counts.recentlyActive == null ? '-' : formatLocaleNumber(counts.recentlyActive, locale)}</p>
                             <p className="text-xs text-muted-foreground">{t('contacts.stats.recentlyActive')}</p>
                         </div>
                     </div>

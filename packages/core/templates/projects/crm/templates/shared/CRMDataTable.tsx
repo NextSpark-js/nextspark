@@ -110,9 +110,14 @@ export function CRMDataTable<T extends { id: string }>({
     const sortState = server ? server.sort : sort
 
     // The person stops typing: ask the server for the search (the first page of it)
+    // (the query already sent is not sent again: on mount it would reset the page the person went to)
+    const sentQuery = React.useRef('')
     useEffect(() => {
-        if (!server) return
-        const timer = setTimeout(() => server.onSearchChange(searchQuery), 300)
+        if (!server || searchQuery === sentQuery.current) return
+        const timer = setTimeout(() => {
+            sentQuery.current = searchQuery
+            server.onSearchChange(searchQuery)
+        }, 300)
         return () => clearTimeout(timer)
         // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new query restarts the wait
     }, [searchQuery])

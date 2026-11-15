@@ -317,14 +317,14 @@
         "add": "Ajouter un contact",
         "sendEmail": "Envoyer un e-mail",
         "deleteConfirm": "Supprimer {count, plural, one {# contact} other {# contacts}} ?",
-        "search": "Rechercher des contacts...",
+        "search": "Rechercher par nom de famille...",
         "empty": "Aucun contact pour le moment",
         "emptyDescription": "Commencez à ajouter des contacts pour développer votre réseau.",
         "stats": {
           "total": "Total des contacts",
-          "withCompany": "Avec entreprise",
+          "withCompany": "Avec entreprise (cette page)",
           "recentlyActive": "Récemment actifs",
-          "withEmail": "Avec e-mail"
+          "withEmail": "Avec e-mail (cette page)"
         },
         "columns": {
           "name": "Nom",
@@ -386,9 +386,9 @@
         },
         "stats": {
           "total": "Entreprises",
-          "contacts": "Contacts",
-          "opportunities": "Opportunités",
-          "pipelineValue": "Valeur du pipeline"
+          "contacts": "Contacts (cette page)",
+          "opportunities": "Opportunités (cette page)",
+          "pipelineValue": "Valeur du pipeline (cette page)"
         },
         "columns": {
           "company": "Entreprise",
@@ -414,9 +414,9 @@
         },
         "stats": {
           "total": "Total des opportunités",
-          "pipelineValue": "Valeur du pipeline",
+          "pipelineValue": "Valeur du pipeline (cette page)",
           "won": "Gagnées",
-          "avgProbability": "Probabilité moyenne"
+          "avgProbability": "Probabilité moyenne (cette page)"
         },
         "columns": {
           "opportunity": "Opportunité",

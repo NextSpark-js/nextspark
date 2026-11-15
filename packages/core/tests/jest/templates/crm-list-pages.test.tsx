@@ -41,6 +41,7 @@ jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: () 
 jest.mock('@nextsparkjs/core/components/permissions/PermissionGate', () => ({ PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 // like the API: `ids` and `companyId` pick rows, `page` and `limit` slice (at most 100) and `info` (createApiResponse) says if there is a next page
 const mockCalls: string[] = []
+let mockDelay: (url: string) => number = () => 0 // a slow endpoint, to answer out of order
 let mockStuck = false // an endpoint that always says there is a next page, with no rows
 jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
   fetchWithTeam: async (url: string) => {
@@ -57,6 +58,9 @@ jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
       const wanted = params.get('companyId')!.split(',')
       rows = rows.filter(row => wanted.includes((row as { companyId?: string }).companyId ?? ''))
     }
+    // like the generic handler: equality filters on a field, and a `from` date on `dateField`
+    if (params.get('status')) rows = rows.filter(row => (row as { status?: string }).status === params.get('status'))
+    if (params.get('dateField')) rows = rows.filter(row => String((row as Record<string, unknown>)[params.get('dateField')!] ?? '') >= params.get('from')!)
     // like the generic handler: `search` matches name (and the one `searchField`) with ILIKE, `sortBy`/`sortOrder` order the whole set
     if (params.get('search')) {
       const wanted = params.get('search')!.toLowerCase()
@@ -74,6 +78,8 @@ jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
     const limit = Math.min(Number(params.get('limit') ?? 10), 100)
     const page = Number(params.get('page') ?? 1)
     const total = rows.length
+    const delay = mockDelay(url)
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay))
     rows = rows.slice((page - 1) * limit, page * limit)
     return { ok: true, json: async () => ({ data: rows, info: { timestamp: 'now', page, limit, total, hasNextPage: page * limit < total } }) }
   },
@@ -314,6 +320,8 @@ describe('the lists page on the server (#461)', () => {
     expect(screen.getByText('150')).toBeTruthy() // stats total, not the 15 rows of the page
     fireEvent.click(screen.getByRole('button', { name: '10' }))
     await waitFor(() => expect(screen.getByText('Company 136')).toBeTruthy())
+    await new Promise(resolve => setTimeout(resolve, 450)) // past the search debounce: the page must stay
+    expect(screen.getByText('Company 136')).toBeTruthy()
     expect(screen.getByText('Company 150')).toBeTruthy() // page 10 is rows 136-150: 150 is its last
     expect(screen.queryByText('Company 001')).toBeNull()
   })
@@ -350,6 +358,8 @@ describe('the lists page on the server (#461)', () => {
     expect(screen.getByText('150')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '10' }))
     await waitFor(() => expect(screen.getByText(/Last150/)).toBeTruthy())
+    await new Promise(resolve => setTimeout(resolve, 450))
+    expect(screen.getByText(/Last150/)).toBeTruthy()
     fireEvent.change(screen.getByPlaceholderText(text('es', 'contacts.search')), { target: { value: 'Last077' } })
     await waitFor(() => expect(screen.getByText(/Last077/)).toBeTruthy())
     fireEvent.click(screen.getByText(text('es', 'contacts.columns.name')))
@@ -368,10 +378,73 @@ describe('the lists page on the server (#461)', () => {
     expect(screen.getByText('150')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '10' }))
     await waitFor(() => expect(screen.getByText('Deal 150')).toBeTruthy())
+    await new Promise(resolve => setTimeout(resolve, 450))
+    expect(screen.getByText('Deal 150')).toBeTruthy()
     fireEvent.change(screen.getByPlaceholderText(text('es', 'opportunities.search')), { target: { value: 'Deal 042' } })
     await waitFor(() => expect(screen.getByText('Deal 042')).toBeTruthy())
     fireEvent.click(screen.getByText(text('es', 'opportunities.columns.value')))
     await waitFor(() => expect(listCalls('/api/v1/opportunities').some(q => q.get('sortBy') === 'amount' && q.get('sortOrder') === 'asc')).toBe(true))
+  })
+
+  test('an old slow answer that arrives after a newer one is dropped', async () => {
+    mockRows = companies
+    mockOther = { '/api/v1/companies': companies, '/api/v1/contacts': [], '/api/v1/opportunities': [] }
+    render(<CompaniesPage />)
+    await waitFor(() => expect(screen.getByText('Company 001')).toBeTruthy())
+    mockDelay = url => (url.startsWith('/api/v1/companies?') && url.includes('page=2') ? 500 : 0)
+    try {
+      fireEvent.click(screen.getByRole('button', { name: '2' })) // slow
+      fireEvent.click(await screen.findByRole('button', { name: '3' })) // fast, asked after
+      await waitFor(() => expect(screen.getByText('Company 031')).toBeTruthy())
+      await new Promise(resolve => setTimeout(resolve, 800)) // page 2 arrives now
+    } finally {
+      mockDelay = () => 0
+    }
+    expect(screen.getByText('Company 031')).toBeTruthy()
+    expect(screen.queryByText('Company 016')).toBeNull()
+  })
+
+  test('sorting goes back to the first page', async () => {
+    mockRows = companies
+    mockOther = { '/api/v1/companies': companies, '/api/v1/contacts': [], '/api/v1/opportunities': [] }
+    render(<CompaniesPage />)
+    await waitFor(() => expect(screen.getByText('Company 001')).toBeTruthy())
+    fireEvent.click(screen.getByRole('button', { name: '10' }))
+    await waitFor(() => expect(screen.getByText('Company 136')).toBeTruthy())
+    mockCalls.length = 0
+    fireEvent.click(screen.getByText(text('es', 'companies.columns.company')))
+    await waitFor(() => expect(listCalls('/api/v1/companies').some(q => q.get('sortBy') === 'name' && q.get('page') === '1')).toBe(true))
+    await waitFor(() => expect(screen.getByText('Company 001')).toBeTruthy())
+    expect(listCalls('/api/v1/companies').every(q => q.get('page') === '1')).toBe(true)
+  })
+
+  test('the stats the API can count come from a filtered request, the sums are labelled as of the page', async () => {
+    const opportunities = Array.from({ length: 150 }, (_, i) => ({ id: `o${i + 1}`, name: `Deal ${i + 1}`, amount: '10', status: i % 3 === 0 ? 'won' : 'open' }))
+    mockRows = opportunities
+    mockOther = { '/api/v1/opportunities': opportunities, '/api/v1/companies': [], '/api/v1/pipelines': [] }
+    render(<OpportunitiesPage />)
+    // 50 won in all (5 in the 15 rows of the page); 150 in all
+    await waitFor(() => expect(screen.getByText(text('es', 'opportunities.stats.won')).previousElementSibling?.textContent).toBe('50'))
+    expect(screen.getByText(text('es', 'opportunities.stats.total')).previousElementSibling?.textContent).toBe('150')
+    expect(listCalls('/api/v1/opportunities').some(q => q.get('status') === 'won' && q.get('limit') === '1')).toBe(true)
+    // the value and the average add the rows of the page: the label says so (in the six catalogs)
+    expect(text('es', 'opportunities.stats.pipelineValue')).toMatch(/esta página/)
+    for (const locale of ['en', 'es', 'de', 'pt', 'fr', 'it']) {
+      for (const key of ['opportunities.stats.pipelineValue', 'opportunities.stats.avgProbability', 'contacts.stats.withCompany', 'contacts.stats.withEmail', 'companies.stats.contacts', 'companies.stats.opportunities', 'companies.stats.pipelineValue']) {
+        expect(text(locale, key)).toMatch(/\(.+\)$/)
+      }
+    }
+  })
+
+  test('contacts: recently active is counted by the API over the last 30 days', async () => {
+    const recent = new Date(Date.now() - 86_400_000).toISOString()
+    const old = new Date(Date.now() - 90 * 86_400_000).toISOString()
+    const contacts = Array.from({ length: 150 }, (_, i) => ({ id: `c${i + 1}`, firstName: 'N', lastName: `L${i + 1}`, email: 'a@example.com', lastContactedAt: i < 40 ? recent : old }))
+    mockRows = contacts
+    mockOther = { '/api/v1/contacts': contacts, '/api/v1/companies': [] }
+    render(<ContactsPage />)
+    await waitFor(() => expect(screen.getByText(text('es', 'contacts.stats.recentlyActive')).previousElementSibling?.textContent).toBe('40'))
+    expect(listCalls('/api/v1/contacts').some(q => q.get('dateField') === 'lastContactedAt' && q.get('limit') === '1')).toBe(true)
   })
 
   test('the lists always ask for a page and its size', async () => {

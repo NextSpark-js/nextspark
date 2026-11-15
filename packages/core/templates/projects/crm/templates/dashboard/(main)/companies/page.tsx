@@ -162,7 +162,7 @@ export default function CompaniesPage() {
         {
             key: 'contactCount',
             header: t('companies.columns.contacts'),
-                        render: (value) => (
+            render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
                     <Users className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{value || 0}</span>
@@ -172,7 +172,7 @@ export default function CompaniesPage() {
         {
             key: 'opportunityCount',
             header: t('companies.columns.opportunities'),
-                        render: (value) => (
+            render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
                     <Target className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{value || 0}</span>
@@ -182,7 +182,7 @@ export default function CompaniesPage() {
         {
             key: 'totalPipelineValue',
             header: t('companies.columns.pipelineValue'),
-                        render: (value) => (
+            render: (value) => (
                 <span className="font-medium text-primary">
                     {value ? formatCurrency(sumNumeric([value])) : '-'}
                 </span>

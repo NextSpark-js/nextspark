@@ -326,14 +326,14 @@
         "add": "Add Contact",
         "sendEmail": "Send Email",
         "deleteConfirm": "Delete {count, plural, one {# contact} other {# contacts}}?",
-        "search": "Search contacts...",
+        "search": "Search by last name...",
         "empty": "No contacts yet",
         "emptyDescription": "Start adding contacts to build your network.",
         "stats": {
           "total": "Total Contacts",
-          "withCompany": "With Company",
+          "withCompany": "With Company (this page)",
           "recentlyActive": "Recently Active",
-          "withEmail": "With Email"
+          "withEmail": "With Email (this page)"
         },
         "columns": {
           "name": "Name",
@@ -395,9 +395,9 @@
         },
         "stats": {
           "total": "Companies",
-          "contacts": "Contacts",
-          "opportunities": "Opportunities",
-          "pipelineValue": "Pipeline Value"
+          "contacts": "Contacts (this page)",
+          "opportunities": "Opportunities (this page)",
+          "pipelineValue": "Pipeline Value (this page)"
         },
         "columns": {
           "company": "Company",
@@ -423,9 +423,9 @@
         },
         "stats": {
           "total": "Total Opportunities",
-          "pipelineValue": "Pipeline Value",
+          "pipelineValue": "Pipeline Value (this page)",
           "won": "Won",
-          "avgProbability": "Avg. Probability"
+          "avgProbability": "Avg. Probability (this page)"
         },
         "columns": {
           "opportunity": "Opportunity",

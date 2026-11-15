@@ -83,3 +83,32 @@ export function useServerList<T>({ endpoint, pageSize, enabled, sortFields, sear
     }
     return { rows, total, isLoading, server }
 }
+
+/**
+ * Exact counts of a list that the API answers: one request per filter with `limit=1`, reading `info.total`. A count is
+ * `undefined` until it arrives (or when its request fails). The API has no sums or averages: those stay per page.
+ */
+export function useExactCounts(endpoint: string, enabled: boolean, filters: Record<string, Record<string, string>>) {
+    const [counts, setCounts] = useState<Record<string, number | undefined>>({})
+    useEffect(() => {
+        if (!enabled) return
+        let current = true
+        ;(async () => {
+            const entries = await Promise.all(Object.entries(filters).map(async ([name, filter]) => {
+                try {
+                    const response = await fetchWithTeam(`${endpoint}?${new URLSearchParams({ ...filter, page: '1', limit: '1' })}`)
+                    if (!response.ok) return [name, undefined] as const
+                    const total = Number((await response.json()).info?.total)
+                    return [name, Number.isFinite(total) ? total : undefined] as const
+                } catch {
+                    return [name, undefined] as const
+                }
+            }))
+            if (current) setCounts(Object.fromEntries(entries))
+        })()
+        return () => { current = false }
+        // the filters are constants of the page
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enabled, endpoint])
+    return counts
+}

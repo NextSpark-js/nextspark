@@ -26,7 +26,7 @@ import {
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { fetchRowsByIds, sumNumeric, toNumber, withCompanyName, withPipelineInfo } from '@/lib/crm-utils'
-import { useServerList } from '@/lib/use-server-list'
+import { useExactCounts, useServerList } from '@/lib/use-server-list'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
 interface Opportunity {
@@ -122,11 +122,13 @@ export default function OpportunitiesPage() {
         },
     })
 
+    // the exact number of the won ones is asked of the API; sums and averages have no aggregate there and are of the page
+    const counts = useExactCounts('/api/v1/opportunities', !teamLoading && !!currentTeam, { won: { status: 'won' } })
+
     // Stats
     const stats = useMemo(() => {
         const totalValue = sumNumeric(opportunities.map(o => o.amount))
         const openCount = opportunities.filter(o => o.status !== 'won' && o.status !== 'lost').length
-        const wonCount = opportunities.filter(o => o.status === 'won').length
         const avgProbability = opportunities.length > 0
             ? Math.round(sumNumeric(opportunities.map(o => o.probability)) / opportunities.length)
             : 0
@@ -135,7 +137,6 @@ export default function OpportunitiesPage() {
             total,
             totalValue,
             openCount,
-            wonCount,
             avgProbability,
         }
     }, [opportunities, total])
@@ -172,7 +173,7 @@ export default function OpportunitiesPage() {
         {
             key: 'companyName',
             header: t('opportunities.columns.company'),
-                        render: (value, opportunity) => value ? (
+            render: (value, opportunity) => value ? (
                 <button
                     onClick={(e) => {
                         e.stopPropagation()
@@ -200,7 +201,7 @@ export default function OpportunitiesPage() {
         {
             key: 'stage',
             header: t('opportunities.columns.stage'),
-                        render: (value) => <StageBadge stage={value} />,
+            render: (value) => <StageBadge stage={value} />,
         },
         {
             key: 'probability',
@@ -309,7 +310,7 @@ export default function OpportunitiesPage() {
                             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-foreground">{stats.wonCount}</p>
+                            <p className="text-2xl font-bold text-foreground">{counts.won == null ? '-' : counts.won}</p>
                             <p className="text-xs text-muted-foreground">{t('opportunities.stats.won')}</p>
                         </div>
                     </div>
