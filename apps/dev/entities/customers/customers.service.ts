@@ -11,6 +11,7 @@
  */
 
 import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern'
 import type {
   Customer,
   CustomerListOptions,
@@ -230,7 +231,7 @@ export class CustomersService {
         return []
       }
 
-      const searchTerm = `%${query.trim()}%`
+      const searchTerm = containsPattern(query.trim())
 
       const customers = await queryWithRLS<DbCustomer>(
         `
@@ -247,10 +248,10 @@ export class CustomersService {
           "updatedAt"
         FROM customers
         WHERE
-          name ILIKE $1
-          OR office ILIKE $1
-          OR "salesRep" ILIKE $1
-          OR account::text ILIKE $1
+          name ILIKE $1 ${LIKE_ESCAPE_CLAUSE}
+          OR office ILIKE $1 ${LIKE_ESCAPE_CLAUSE}
+          OR "salesRep" ILIKE $1 ${LIKE_ESCAPE_CLAUSE}
+          OR account::text ILIKE $1 ${LIKE_ESCAPE_CLAUSE}
         ORDER BY name ASC
         LIMIT $2
         `,

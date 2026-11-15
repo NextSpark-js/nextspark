@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { cn } from '../../lib/utils'
+import { MAX_SEARCH_TERM_LENGTH } from '../../lib/utils/like-pattern'
 import { sel } from '../../lib/selectors'
 import type { MediaListOptions } from '../../lib/media/types'
 
@@ -98,6 +99,7 @@ export const MediaToolbar = memo(function MediaToolbar({
           type="text"
           placeholder={t('toolbar.search')}
           value={searchQuery}
+          maxLength={MAX_SEARCH_TERM_LENGTH}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9"
         />

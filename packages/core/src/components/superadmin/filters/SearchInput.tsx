@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
+import { MAX_SEARCH_TERM_LENGTH } from '../../../lib/utils/like-pattern';
 import { useCommonText, useMessageText } from '../../../lib/i18n/common-text';
 
 interface SearchInputProps {
@@ -64,6 +65,7 @@ export function SearchInput({
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         placeholder={placeholder}
+        maxLength={MAX_SEARCH_TERM_LENGTH}
         className="pl-10 pr-10"
         data-cy={dataCy}
       />
