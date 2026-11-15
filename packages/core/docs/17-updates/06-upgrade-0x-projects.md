@@ -142,6 +142,7 @@ A root-first project is its own theme, so nothing sets or reads `NEXT_PUBLIC_ACT
 - `ROOT_FIRST_PROJECT` (`git grep -n ROOT_FIRST_PROJECT`): nothing reads it. Delete each mention, or the line, and the setting in `.env` files and the deployment's environment if you added one.
 - `const activeTheme = undefined` and other places where a theme name is read from `undefined` (`undefined || 'default'`): delete the branch that chose a theme.
 - `scripts/cy-run-prod.cjs` still looking under `contents/themes`: copy `node_modules/@nextsparkjs/core/templates/scripts/cy-run-prod.cjs` over it unless you changed it.
+- `pnpm cy:run:prod` ending with exit 137 or hiding a failed Cypress run (`scripts/cy-run-prod.cjs` killing its own process when it frees the port): copy the same file over it. The script is copied once when the project is created, so an update does not replace it.
 
 ### The database of a 0.x project
 

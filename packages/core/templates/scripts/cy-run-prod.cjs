@@ -27,7 +27,7 @@ const fs = require('fs')
 const http = require('http')
 
 // Configuration
-const PORT = 3000
+const PORT = Number(process.env.PORT) || 3000 // `pnpm start` reads the same variable
 const HEALTH_CHECK_URL = `http://localhost:${PORT}/`
 const HEALTH_CHECK_TIMEOUT = 60000 // 60 seconds max wait for server
 const HEALTH_CHECK_INTERVAL = 1000 // Check every 1 second
@@ -78,6 +78,7 @@ function killPort(port) {
           const pid = line.trim().split(/\s+/).pop()
           if (pid && /^\d+$/.test(pid)) {
             try {
+              if (Number(pid) === process.pid) return
               execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' })
             } catch {
               // Process might already be dead
@@ -85,7 +86,18 @@ function killPort(port) {
           }
         })
     } else {
-      execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`, { stdio: 'ignore' })
+      // Never this process: a socket of its own on the port (the health check's) lists it too,
+      // and killing it ended the run with 137 instead of Cypress's exit code (#466)
+      const pids = execSync(`lsof -ti:${port} || true`, { encoding: 'utf-8' })
+        .split('\n')
+        .filter((pid) => /^\d+$/.test(pid) && Number(pid) !== process.pid)
+      for (const pid of pids) {
+        try {
+          process.kill(Number(pid), 'SIGKILL')
+        } catch {
+          // Process might already be dead
+        }
+      }
     }
     console.log(`[cy:run:prod] Port ${port} cleared`)
   } catch {
@@ -145,7 +157,8 @@ function waitForServer() {
         return
       }
 
-      const req = http.get(HEALTH_CHECK_URL, (res) => {
+      // agent: false closes the connection after the response, so it holds no socket on the port
+      const req = http.get(HEALTH_CHECK_URL, { agent: false }, (res) => {
         // Any response means server is up (even 3xx redirects)
         if (res.statusCode >= 200 && res.statusCode < 500) {
           console.log(`[cy:run:prod] Server is ready (status: ${res.statusCode})`)
@@ -183,7 +196,8 @@ function runCypress(configFile) {
     cwd: process.cwd(),
   })
 
-  return result.status || 0
+  // A Cypress that died on a signal has no status: that is a failure, not a pass
+  return result.status ?? 1
 }
 
 // Cleanup function
@@ -255,7 +269,7 @@ async function main() {
 
 // Required by core's tests: hand over the helper, run nothing
 if (require.main !== module) {
-  module.exports = { packageManagerCommand, spawnPnpm }
+  module.exports = { packageManagerCommand, spawnPnpm, killPort }
 } else {
   // Handle signals
   process.on('SIGINT', () => {
