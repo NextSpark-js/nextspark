@@ -88,7 +88,8 @@ function killPort(port) {
     } else {
       // Never this process: a socket of its own on the port (the health check's) lists it too,
       // and killing it ended the run with 137 instead of Cypress's exit code (#466)
-      const pids = execSync(`lsof -ti:${port} || true`, { encoding: 'utf-8' })
+      // Only the listener: a client connected to the port (a browser on localhost) is not ours to kill
+      const pids = execSync(`lsof -ti tcp:${port} -sTCP:LISTEN || true`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] })
         .split('\n')
         .filter((pid) => /^\d+$/.test(pid) && Number(pid) !== process.pid)
       for (const pid of pids) {

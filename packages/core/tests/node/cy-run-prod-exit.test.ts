@@ -26,12 +26,15 @@ function project() {
   writeFileSync(path.join(dir, 'bin/pnpm'), `#!${process.execPath}
 const [cmd] = process.argv.slice(2)
 if (cmd === 'start') require('http').createServer((q, r) => r.end('ok')).listen(Number(process.env.PORT))
-else if (cmd === 'exec') process.exit(Number(process.env.FAKE_CYPRESS_EXIT))
+else if (cmd === 'exec') {
+  if (process.env.FAKE_CYPRESS_EXIT === 'signal') process.kill(process.pid, 'SIGKILL')
+  process.exit(Number(process.env.FAKE_CYPRESS_EXIT))
+}
 `)
   chmodSync(path.join(dir, 'bin/pnpm'), 0o755)
   return dir
 }
-const run = (dir: string, exit: number, port: number) => spawnSync(process.execPath, [script], {
+const run = (dir: string, exit: number | 'signal', port: number) => spawnSync(process.execPath, [script], {
   cwd: dir, encoding: 'utf-8', timeout: 60000,
   env: { ...process.env, PATH: `${dir}/bin${path.delimiter}${process.env.PATH}`, PORT: String(port), FAKE_CYPRESS_EXIT: String(exit) },
 })
@@ -43,13 +46,18 @@ test('a run whose Cypress fails ends with that code, and one that passes with 0'
     assert.equal(failed.status, 3, failed.stdout + failed.stderr)
     const passed = run(dir, 0, await freePort())
     assert.equal(passed.status, 0, passed.stdout + passed.stderr)
+    const killed = run(dir, 'signal', await freePort())
+    assert.equal(killed.status, 1, killed.stdout + killed.stderr)
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
-test('freeing the port kills the process that holds it, not the script holding a socket to it', { skip: !posix }, async () => {
+test('freeing the port kills the listener, not a client of it nor the script holding a socket to it', { skip: !posix }, async () => {
   const port = await freePort()
   const other = holdPort(port)
   await up(other)
+  // A client of the server (a browser on localhost) must survive
+  const client = spawn(process.execPath, ['-e', `require('http').get({ port: ${port}, agent: new (require('http').Agent)({ keepAlive: true }) }, (r) => { r.resume(); console.log('up') }); setInterval(() => {}, 1000)`], { stdio: ['ignore', 'pipe', 'inherit'] })
+  await up(client)
   // A script with its own keep-alive socket on the port, as the health check once had
   const probe = spawnSync(process.execPath, ['-e', `
     const { killPort } = require(${JSON.stringify(script)})
@@ -60,5 +68,7 @@ test('freeing the port kills the process that holds it, not the script holding a
     assert.match(probe.stdout, /alive/, `signal ${probe.signal} status ${probe.status} ${probe.stderr}`)
     await Promise.race([exited(other), new Promise((r) => setTimeout(r, 5000))])
     assert.equal(other.signalCode, 'SIGKILL', 'the foreign process still holds the port')
-  } finally { other.kill('SIGKILL') }
+    await Promise.race([exited(client), new Promise((r) => setTimeout(r, 1000))])
+    assert.equal(client.signalCode, null, 'a client connected to the port was killed')
+  } finally { other.kill('SIGKILL'); client.kill('SIGKILL') }
 })
