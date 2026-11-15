@@ -10,6 +10,11 @@
  * `windowsHide` keeps that shell from opening a console window of its own when
  * the caller has none, such as a test runner or an editor (it has no effect elsewhere).
  *
+ * With DelayedExpansion enabled in the Windows registry, cmd.exe expands `!VAR!`
+ * even inside double quotes. That does not break the command but can change the
+ * value of an argument, so callers validate what comes from the user (update-core
+ * validates the version).
+ *
  * The CLI and create-nextspark-app keep TypeScript copies of this function;
  * their tests check they agree with this one.
  *
@@ -28,4 +33,13 @@ export function packageManagerCommand(command, args, platform = process.platform
     return `"${arg.replace(/(\\+)$/, '$1$1')}"`
   })
   return { command: [command, ...quoted].join(' '), args: [], shell: true, windowsHide: true }
+}
+
+/**
+ * How update-core starts `command`: pnpm through packageManagerCommand (a `.cmd`
+ * shim on Windows, #450), anything else (git, node) directly, with no shell to
+ * read its arguments.
+ */
+export function stepCommand(command, args, platform = process.platform) {
+  return command === 'pnpm' ? packageManagerCommand(command, args, platform) : { command, args, shell: false, windowsHide: true }
 }

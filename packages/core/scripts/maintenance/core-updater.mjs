@@ -27,7 +27,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { addCommands, dependenciesBelowCore, floorsToRaise, workspaceAddCommands, workspaceFloors } from './dependency-floors.mjs'
 import { CODE_MIGRATIONS } from './code-migrations.mjs'
-import { packageManagerCommand } from '../utils/package-manager.mjs'
+import { stepCommand } from '../utils/package-manager.mjs'
 
 const SCOPE = '@nextsparkjs/'
 const CORE_PACKAGE = '@nextsparkjs/core'
@@ -149,15 +149,6 @@ overwrote, nor git refs a script changed (a submodule is put back on the branch
 it was on only if that branch still points at the commit the project records),
 and removes untracked files created while the update ran.
 `
-
-/**
- * How update-core starts `command`: pnpm through packageManagerCommand (a `.cmd`
- * shim on Windows, #450), anything else (git, node) directly, with no shell to
- * read its arguments.
- */
-export function stepCommand(command, args, platform = process.platform) {
-  return command === 'pnpm' ? packageManagerCommand(command, args, platform) : { command, args, shell: false, windowsHide: true }
-}
 
 /** Runs a command to completion, printing its output as it goes unless `capture` asks for it back. */
 export function runCommand(command, args, { cwd, capture = false }) {

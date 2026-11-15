@@ -25,7 +25,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { stepCommand } from './core-updater.mjs'
+import { stepCommand } from '../utils/package-manager.mjs'
 
 const windows = process.platform === 'win32'
 const [command, ...args] = process.argv.slice(2)
