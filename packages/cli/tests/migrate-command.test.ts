@@ -13,7 +13,7 @@ import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
-import { projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
+import { pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
 import { loadCoreHost } from '../src/utils/app-tree.js'
 import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
@@ -2391,6 +2391,40 @@ else process.exit(2)
     await rm(mismatched.root, { recursive: true, force: true })
     await rm(mismatched.support, { recursive: true, force: true })
   }
+})
+
+test('migrate says pnpm could not be started when it is not on PATH', async () => {
+  const { root } = await moveFixture()
+  const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-no-pnpm-'))
+  try {
+    const packageFile = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.183'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'app/page.tsx', 'export default function Page() { return <main>old core</main> }\n')
+    await commitFixture(root)
+    packageFile.dependencies['@nextsparkjs/core'] = '0.1.0-beta.192'
+    await write(root, 'package.json', `${JSON.stringify(packageFile, null, 2)}\n`)
+    await write(root, 'node_modules/@nextsparkjs/core/package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.1.0-beta.192' }))
+    await write(root, 'node_modules/@nextsparkjs/core/templates/next.config.mjs', 'export default {}\n')
+    await commitFixture(root)
+
+    // a PATH with git but no pnpm
+    const git = execFileSync('which', ['git'], { encoding: 'utf8' }).trim()
+    const bin = join(support, 'bin')
+    await write(bin, 'git', `#!/bin/sh\nexec ${git} "$@"\n`)
+    await chmod(join(bin, 'git'), 0o755)
+    const dryRun = run(root, ['--dry-run', '--json'], { PATH: bin })
+    const report = JSON.parse(dryRun.stdout)
+    assert.equal(report.appTemplates.previousTemplateUnavailableReason, 'pnpm could not be started; check that pnpm is installed and on PATH')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(support, { recursive: true, force: true })
+  }
+})
+
+test('an argument cmd.exe cannot quote is reported as such, not as a registry answer', () => {
+  assert.throws(() => pnpmViewCommand('1.0.0"x', 'win32'), (error: Error) => /cannot be started with this argument on Windows/.test(error.message) && !(error as { network?: boolean }).network)
+  assert.equal(pnpmViewCommand('1.0.0', 'linux').command, 'pnpm')
 })
 
 test('migrate keeps unmatched files as customizations and reports when the previous core cannot be fetched', async () => {

@@ -522,6 +522,15 @@ class PreviousTemplateLookupError extends Error {
   }
 }
 
+/** The `pnpm view` command for a version; an argument Windows cannot carry is a lookup failure, not a registry answer. */
+export function pnpmViewCommand(version: string, platform: NodeJS.Platform = process.platform) {
+  try {
+    return packageManagerCommand('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace'], platform);
+  } catch (error) {
+    throw new PreviousTemplateLookupError(`pnpm cannot be started with this argument on Windows: ${(error as Error).message}`, false);
+  }
+}
+
 class PreviousTemplateTimeoutError extends PreviousTemplateLookupError {
   constructor(step: string, timeoutMs: number) {
     super(`timed out after ${timeoutMs}ms while ${step}`, true);
@@ -803,8 +812,8 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
       })),
     };
     let url: string;
+    const pnpm = pnpmViewCommand(version);
     try {
-      const pnpm = packageManagerCommand('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace']);
       url = execFileSync(pnpm.command, pnpm.args, {
         shell: pnpm.shell, windowsHide: pnpm.windowsHide,
         cwd: directory,
