@@ -29,22 +29,40 @@ const PAGE_SIZE = 100
  * page still renders. The API sends the columns of the table only: a contact carries `companyId`, not the name of the company.
  * ponytail: the counters are added in the browser; a server-side count if a team has tens of thousands of rows.
  */
-export async function fetchRows<T>(endpoint: string, fields?: string[]): Promise<T[]> {
+export async function fetchRows<T>(endpoint: string, fields?: string[], filter: Record<string, string> = {}): Promise<T[]> {
     const rows: T[] = []
     try {
         for (let page = 1; ; page++) {
             const query = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(page) })
             if (fields) query.set('fields', fields.join(','))
+            for (const [key, value] of Object.entries(filter)) query.set(key, value)
+            for (const [key, value] of Object.entries(filter)) query.set(key, value)
             const response = await fetchWithTeam(`${endpoint}?${query}`)
             if (!response.ok) return []
             const result = await response.json()
             if (!Array.isArray(result.data)) return []
             rows.push(...result.data)
-            if (!result.pagination?.hasNextPage) return rows
+            if (!result.info?.hasNextPage || result.data.length === 0) return rows
         }
     } catch {
         return []
     }
+}
+
+/** Every row of the companies given (`companyId=a,b` is an OR filter), in requests of 50 ids: the counters of the companies a page shows, not of the whole team. */
+export async function fetchRowsOfCompanies<T>(endpoint: string, fields: string[], companyIds: (string | null | undefined)[]): Promise<T[]> {
+    const unique = [...new Set(companyIds.filter((id): id is string => Boolean(id)))]
+    const chunks: string[][] = []
+    for (let i = 0; i < unique.length; i += 50) chunks.push(unique.slice(i, i + 50))
+    return (await Promise.all(chunks.map(chunk => fetchRows<T>(endpoint, fields, { companyId: chunk.join(',') })))).flat()
+}
+
+/** Every row of the companies given (`companyId=a,b` is an OR filter), in requests of 50 ids: the counters of the companies a page shows, not of the whole team. */
+export async function fetchRowsOfCompanies<T>(endpoint: string, fields: string[], companyIds: (string | null | undefined)[]): Promise<T[]> {
+    const unique = [...new Set(companyIds.filter((id): id is string => Boolean(id)))]
+    const chunks: string[][] = []
+    for (let i = 0; i < unique.length; i += 50) chunks.push(unique.slice(i, i + 50))
+    return (await Promise.all(chunks.map(chunk => fetchRows<T>(endpoint, fields, { companyId: chunk.join(',') })))).flat()
 }
 
 /** The rows with those ids only (`ids=`), in requests of 50: a lookup of the companies a page shows, not of every company. */
