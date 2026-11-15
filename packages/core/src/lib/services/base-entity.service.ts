@@ -30,7 +30,7 @@
  */
 
 import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '../db'
-import { LIKE_ESCAPE_CLAUSE, containsPattern } from '../utils/like-pattern'
+import { LIKE_ESCAPE_CLAUSE, containsPattern, nullsLast } from '../utils/like-pattern'
 
 // ============================================
 // TYPES
@@ -276,7 +276,7 @@ export abstract class BaseEntityService<
       `SELECT ${this.buildSelectClause()}
        FROM ${this.config.tableName}
        ${fullWhereClause}
-       ORDER BY ${orderColumn} ${validOrderDir} NULLS LAST
+       ORDER BY ${orderColumn} ${validOrderDir}${nullsLast(validOrderBy)}
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
       [...allParams, limit, offset],
       userId

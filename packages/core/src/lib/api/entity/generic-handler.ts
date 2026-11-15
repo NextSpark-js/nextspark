@@ -47,7 +47,7 @@ import type { Permission } from '../../permissions/types'
 import { filterPatternReferencesToTeam } from '../../blocks/team-pattern-references'
 import { SubscriptionService } from '../../services/subscription.service'
 import { UsageService } from '../../services/usage.service'
-import { LIKE_ESCAPE_CLAUSE, MAX_SEARCH_TERM_LENGTH, containsPattern } from '../../utils/like-pattern'
+import { LIKE_ESCAPE_CLAUSE, MAX_SEARCH_TERM_LENGTH, containsPattern, nullsLast, searchTermLength } from '../../utils/like-pattern'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 
 // ==========================================
@@ -1073,7 +1073,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     }
     const extraSearchFields = allowedSearchFields.filter(name => searchFieldParams.includes(name))
     const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name) && !hiddenFields.has(name)), ...extraSearchFields])]
-    if (searchParam && searchParam.trim().length > MAX_SEARCH_TERM_LENGTH) {
+    if (searchParam && searchTermLength(searchParam.trim()) > MAX_SEARCH_TERM_LENGTH) {
       const response = createApiError(
         `The search term is too long: at most ${MAX_SEARCH_TERM_LENGTH} characters`,
         400,
@@ -1472,7 +1472,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       const sortOrderRaw = url.searchParams.get('sortOrder') || url.searchParams.get('order')
       const sortOrderParam = sortOrderRaw?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
       const orderByClause = sortByParam
-        ? `t."${sortByParam}" ${sortOrderParam} NULLS LAST`
+        ? `t."${sortByParam}" ${sortOrderParam}${nullsLast(sortByParam)}`
         : 't."createdAt" DESC'
 
       // Use COUNT(*) OVER() window function to get total count in single query

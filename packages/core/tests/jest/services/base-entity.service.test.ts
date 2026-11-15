@@ -254,6 +254,47 @@ describe('BaseEntityService', () => {
       )
     })
 
+    it('searches % and _ literally: escaped in the bound term, ESCAPE after every ILIKE (#463)', async () => {
+      mockQueryWithRLS
+        .mockResolvedValueOnce([{ count: '1' }])
+        .mockResolvedValueOnce([mockEntityRow])
+
+      await service.list('user-456', { search: '50%_' })
+
+      const [sql, params] = mockQueryWithRLS.mock.calls[0] as [string, unknown[]]
+      expect(sql.match(/ILIKE \$\d+ ESCAPE '\\'/g)).toHaveLength(2)
+      expect(params).toContain('%50\\%\\_%')
+    })
+
+    it('puts empty values last on a nullable field in both directions (#463)', async () => {
+      for (const [dir, sql] of [['desc', 'DESC'], ['asc', 'ASC']] as const) {
+        mockQueryWithRLS.mockReset()
+        mockQueryWithRLS
+          .mockResolvedValueOnce([{ count: '1' }])
+          .mockResolvedValueOnce([mockEntityRow])
+
+        await service.list('user-456', { orderBy: 'description', orderDir: dir })
+
+        expect(mockQueryWithRLS).toHaveBeenLastCalledWith(
+          expect.stringContaining(`ORDER BY description ${sql} NULLS LAST`),
+          expect.any(Array),
+          'user-456'
+        )
+      }
+    })
+
+    it('leaves NULLS LAST off the NOT NULL createdAt default, so its index still serves the order (#463)', async () => {
+      mockQueryWithRLS
+        .mockResolvedValueOnce([{ count: '1' }])
+        .mockResolvedValueOnce([mockEntityRow])
+
+      await service.list('user-456', {})
+
+      const [sql] = mockQueryWithRLS.mock.calls[1] as [string]
+      expect(sql).toContain('ORDER BY "createdAt" DESC')
+      expect(sql).not.toContain('NULLS')
+    })
+
     it('applies ordering', async () => {
       mockQueryWithRLS
         .mockResolvedValueOnce([{ count: '1' }])

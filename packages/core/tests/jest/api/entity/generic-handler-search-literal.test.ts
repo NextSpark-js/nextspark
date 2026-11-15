@@ -72,6 +72,20 @@ describe('handleGenericList — sort and search SQL (#463)', () => {
     }
   })
 
+  it('leaves NULLS LAST off the NOT NULL system columns, the default order included, so their index serves the order', async () => {
+    await list({})
+    expect(listSql()[0]).toContain('ORDER BY t."createdAt" DESC\n')
+
+    mocks.queryWithRLS.mockClear()
+    await list({ sortBy: 'updatedAt', sortOrder: 'asc' })
+    expect(listSql()[0]).toContain('ORDER BY t."updatedAt" ASC\n')
+  })
+
+  it('counts the cap in characters: 200 emoji (400 UTF-16 units) pass and 201 emoji are refused', async () => {
+    expect((await list({ search: '😀'.repeat(MAX_SEARCH_TERM_LENGTH) })).status).toBe(200)
+    expect((await list({ search: '😀'.repeat(MAX_SEARCH_TERM_LENGTH + 1) })).status).toBe(400)
+  })
+
   it(`accepts a term of ${MAX_SEARCH_TERM_LENGTH} characters and refuses a longer one with 400 SEARCH_TERM_TOO_LONG, never querying`, async () => {
     expect((await list({ search: 'a'.repeat(MAX_SEARCH_TERM_LENGTH) })).status).toBe(200)
 

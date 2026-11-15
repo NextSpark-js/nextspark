@@ -40,7 +40,7 @@ import { bindFieldValue, findInvalidRelationField } from '../entities/relation-r
 import { textValueIssue } from '../entities/portable/schema-generator'
 import { roleForFieldRules, hiddenFieldsForRole, deniedWriteFields, omitHiddenFields } from '../entities/field-access'
 import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../permissions/check'
-import { LIKE_ESCAPE_CLAUSE, containsPattern } from '../utils/like-pattern'
+import { LIKE_ESCAPE_CLAUSE, containsPattern, nullsLast } from '../utils/like-pattern'
 
 // ============================================
 // TYPES
@@ -536,7 +536,7 @@ export class GenericEntityService {
       `SELECT ${selectClause}
        FROM ${tableName}
        ${fullWhereClause}
-       ORDER BY ${orderColumn} ${validOrderDir} NULLS LAST
+       ORDER BY ${orderColumn} ${validOrderDir}${nullsLast(validOrderBy)}
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
       [...allParams, limit, offset],
       userId

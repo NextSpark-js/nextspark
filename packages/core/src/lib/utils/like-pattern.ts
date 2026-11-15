@@ -15,3 +15,14 @@ export const escapeLikeTerm = (term: string): string => term.replace(/[\\%_]/g, 
 
 /** The pattern for "contains the term, literally". */
 export const containsPattern = (term: string): string => `%${escapeLikeTerm(term)}%`
+
+/** Length in characters, not UTF-16 units: an emoji counts as one. */
+export const searchTermLength = (term: string): number => [...term].length
+
+const NEVER_NULL_COLUMNS = new Set(['id', 'createdAt', 'updatedAt'])
+
+/**
+ * ` NULLS LAST` for an ORDER BY on `column`, empty for the NOT NULL system columns: there it changes nothing, and it
+ * keeps PostgreSQL from using a plain `("createdAt" DESC)` index (which is DESC NULLS FIRST).
+ */
+export const nullsLast = (column: string): string => (NEVER_NULL_COLUMNS.has(column.replace(/"/g, '')) ? '' : ' NULLS LAST')
