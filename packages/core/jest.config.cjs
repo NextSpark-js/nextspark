@@ -45,6 +45,7 @@ module.exports = {
     // the crm template's own aliases (what its pages import in a generated project)
     '^@/templates/shared/(.*)$': '<rootDir>/templates/projects/crm/templates/shared/$1',
     '^@/lib/crm-utils$': '<rootDir>/templates/projects/crm/lib/crm-utils',
+    '^@/lib/use-server-list$': '<rootDir>/templates/projects/crm/lib/use-server-list',
     '^@nextsparkjs/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',
     '^next/server$': '<rootDir>/tests/jest/__mocks__/next-server.js',
     '^server-only$': '<rootDir>/tests/jest/__mocks__/server-only.js',

@@ -8,7 +8,7 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { CRMDataTable, type Column, type BulkAction } from '@/templates/shared/CRMDataTable'
 import {
@@ -23,10 +23,10 @@ import {
     Clock,
     CheckCircle2
 } from 'lucide-react'
-import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { fetchRowsByIds, sumNumeric, toNumber, withCompanyName, withPipelineInfo } from '@/lib/crm-utils'
+import { useServerList } from '@/lib/use-server-list'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
 interface Opportunity {
@@ -104,36 +104,23 @@ export default function OpportunitiesPage() {
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
-    const [opportunities, setOpportunities] = useState<Opportunity[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-
     // Permission checks for bulk actions
     const canDeleteOpportunities = usePermission('opportunities.delete')
 
-    useEffect(() => {
-        if (teamLoading || !currentTeam) return
-
-        async function fetchOpportunities() {
-            try {
-                const response = await fetchWithTeam('/api/v1/opportunities')
-                if (!response.ok) throw new Error('Failed to fetch opportunities')
-                const result = await response.json()
-                // the API sends the ids of the company and the pipeline and the id of the stage, not their names
-                const rows: Opportunity[] = result.data || []
-                const [companies, pipelines] = await Promise.all([
-                    fetchRowsByIds<{ id: string; name?: string }>('/api/v1/companies', rows.map(row => row.companyId)),
-                    fetchRowsByIds<{ id: string; name?: string; stages?: { id: string; name?: string }[] }>('/api/v1/pipelines', rows.map(row => row.pipelineId)),
-                ])
-                setOpportunities(withPipelineInfo<Opportunity>(withCompanyName<Opportunity>(rows, companies), pipelines))
-            } catch (error) {
-                console.error('Error loading opportunities:', error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchOpportunities()
-    }, [teamLoading, currentTeam])
+    // the API sends the ids of the company and the pipeline and the id of the stage, not their names
+    const { rows: opportunities, total, isLoading, server } = useServerList<Opportunity>({
+        endpoint: '/api/v1/opportunities',
+        pageSize: 15,
+        enabled: !teamLoading && !!currentTeam,
+        sortFields: { name: 'name', amount: 'amount', probability: 'probability', status: 'status', closeDate: 'closeDate' },
+        enrich: async rows => {
+            const [companies, pipelines] = await Promise.all([
+                fetchRowsByIds<{ id: string; name?: string }>('/api/v1/companies', rows.map(row => row.companyId)),
+                fetchRowsByIds<{ id: string; name?: string; stages?: { id: string; name?: string }[] }>('/api/v1/pipelines', rows.map(row => row.pipelineId)),
+            ])
+            return withPipelineInfo<Opportunity>(withCompanyName<Opportunity>(rows, companies), pipelines)
+        },
+    })
 
     // Stats
     const stats = useMemo(() => {
@@ -145,13 +132,13 @@ export default function OpportunitiesPage() {
             : 0
 
         return {
-            total: opportunities.length,
+            total,
             totalValue,
             openCount,
             wonCount,
             avgProbability,
         }
-    }, [opportunities])
+    }, [opportunities, total])
 
     const formatCurrency = (value: number, currency = 'USD') => {
         return new Intl.NumberFormat(locale, {
@@ -185,8 +172,7 @@ export default function OpportunitiesPage() {
         {
             key: 'companyName',
             header: t('opportunities.columns.company'),
-            sortable: true,
-            render: (value, opportunity) => value ? (
+                        render: (value, opportunity) => value ? (
                 <button
                     onClick={(e) => {
                         e.stopPropagation()
@@ -214,8 +200,7 @@ export default function OpportunitiesPage() {
         {
             key: 'stage',
             header: t('opportunities.columns.stage'),
-            sortable: true,
-            render: (value) => <StageBadge stage={value} />,
+                        render: (value) => <StageBadge stage={value} />,
         },
         {
             key: 'probability',
@@ -351,7 +336,7 @@ export default function OpportunitiesPage() {
                 onRowClick={handleRowClick}
                 isLoading={isLoading}
                 searchPlaceholder={t('opportunities.search')}
-                searchFields={['name', 'companyName', 'stage']}
+                server={server}
                 pageSize={15}
                 emptyMessage={t('opportunities.empty')}
                 emptyDescription={t('opportunities.emptyDescription')}

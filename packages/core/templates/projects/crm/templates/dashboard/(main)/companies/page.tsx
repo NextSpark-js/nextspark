@@ -7,7 +7,7 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { CRMDataTable, type Column, type BulkAction } from '@/templates/shared/CRMDataTable'
 import {
@@ -20,10 +20,10 @@ import {
     Target,
     DollarSign
 } from 'lucide-react'
-import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { fetchRowsOfCompanies, sumNumeric, withCompanyCounts } from '@/lib/crm-utils'
+import { useServerList } from '@/lib/use-server-list'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 
@@ -74,37 +74,25 @@ export default function CompaniesPage() {
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
-    const [companies, setCompanies] = useState<Company[]>([])
-    const [isLoading, setIsLoading] = useState(true)
 
     // Permission checks for bulk actions
     const canDeleteCompanies = usePermission('companies.delete')
 
-    useEffect(() => {
-        if (teamLoading || !currentTeam) return
-
-        async function fetchCompanies() {
-            try {
-                const response = await fetchWithTeam('/api/v1/companies')
-                if (!response.ok) throw new Error('Failed to fetch companies')
-                const result = await response.json()
-                // the companies table has no counters: they come from the contacts and the opportunities that point to each company
-                const rows: Company[] = result.data || []
-                const ids = rows.map(row => row.id)
-                const [contacts, opportunities] = await Promise.all([
-                    fetchRowsOfCompanies<{ companyId?: string }>('/api/v1/contacts', ['companyId'], ids),
-                    fetchRowsOfCompanies<{ companyId?: string; amount?: unknown; status?: string }>('/api/v1/opportunities', ['companyId', 'amount', 'status'], ids),
-                ])
-                setCompanies(withCompanyCounts<Company>(rows, contacts, opportunities))
-            } catch (error) {
-                console.error('Error loading companies:', error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchCompanies()
-    }, [teamLoading, currentTeam])
+    // the companies table has no counters: they come from the contacts and the opportunities that point to each company shown
+    const { rows: companies, total, isLoading, server } = useServerList<Company>({
+        endpoint: '/api/v1/companies',
+        pageSize: 15,
+        enabled: !teamLoading && !!currentTeam,
+        sortFields: { name: 'name', size: 'size' },
+        enrich: async rows => {
+            const ids = rows.map(row => row.id)
+            const [contacts, opportunities] = await Promise.all([
+                fetchRowsOfCompanies<{ companyId?: string }>('/api/v1/contacts', ['companyId'], ids),
+                fetchRowsOfCompanies<{ companyId?: string; amount?: unknown; status?: string }>('/api/v1/opportunities', ['companyId', 'amount', 'status'], ids),
+            ])
+            return withCompanyCounts<Company>(rows, contacts, opportunities)
+        },
+    })
 
     // Stats
     const stats = useMemo(() => {
@@ -113,12 +101,12 @@ export default function CompaniesPage() {
         const totalPipeline = sumNumeric(companies.map(c => c.totalPipelineValue))
 
         return {
-            total: companies.length,
+            total,
             totalContacts,
             totalOpportunities,
             totalPipeline,
         }
-    }, [companies])
+    }, [companies, total])
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat(locale, {
@@ -174,8 +162,7 @@ export default function CompaniesPage() {
         {
             key: 'contactCount',
             header: t('companies.columns.contacts'),
-            sortable: true,
-            render: (value) => (
+                        render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
                     <Users className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{value || 0}</span>
@@ -185,8 +172,7 @@ export default function CompaniesPage() {
         {
             key: 'opportunityCount',
             header: t('companies.columns.opportunities'),
-            sortable: true,
-            render: (value) => (
+                        render: (value) => (
                 <div className="flex items-center gap-1.5 text-sm">
                     <Target className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{value || 0}</span>
@@ -196,8 +182,7 @@ export default function CompaniesPage() {
         {
             key: 'totalPipelineValue',
             header: t('companies.columns.pipelineValue'),
-            sortable: true,
-            render: (value) => (
+                        render: (value) => (
                 <span className="font-medium text-primary">
                     {value ? formatCurrency(sumNumeric([value])) : '-'}
                 </span>
@@ -297,7 +282,7 @@ export default function CompaniesPage() {
                 onRowClick={(c) => router.push(`/dashboard/companies/${c.id}`)}
                 isLoading={isLoading}
                 searchPlaceholder={t('companies.search')}
-                searchFields={['name', 'industry', 'website']}
+                server={server}
                 pageSize={15}
                 emptyMessage={t('companies.empty')}
                 emptyDescription={t('companies.emptyDescription')}

@@ -6,7 +6,7 @@
  */
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 const CRM = path.join(__dirname, '../../../templates/projects/crm')
 const catalog = (locale: string) => JSON.parse(readFileSync(path.join(CRM, `messages/${locale}.json`), 'utf8'))
@@ -56,6 +56,20 @@ jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
     if (params.has('companyId')) {
       const wanted = params.get('companyId')!.split(',')
       rows = rows.filter(row => wanted.includes((row as { companyId?: string }).companyId ?? ''))
+    }
+    // like the generic handler: `search` matches name (and the one `searchField`) with ILIKE, `sortBy`/`sortOrder` order the whole set
+    if (params.get('search')) {
+      const wanted = params.get('search')!.toLowerCase()
+      const fields = ['name', ...(params.get('searchField') ? [params.get('searchField')!] : [])]
+      rows = rows.filter(row => fields.some(field => String((row as Record<string, unknown>)[field] ?? '').toLowerCase().includes(wanted)))
+    }
+    if (params.get('sortBy')) {
+      const field = params.get('sortBy')!
+      const sign = params.get('sortOrder') === 'desc' ? -1 : 1
+      rows = [...rows].sort((x, y) => {
+        const l = (x as Record<string, unknown>)[field] as string | number, r = (y as Record<string, unknown>)[field] as string | number
+        return (l < r ? -1 : l > r ? 1 : 0) * sign
+      })
     }
     const limit = Math.min(Number(params.get('limit') ?? 10), 100)
     const page = Number(params.get('page') ?? 1)
@@ -278,5 +292,93 @@ describe('sumNumeric', () => {
     expect(sumNumeric([])).toBe(0)
     expect(toNumber('7')).toBe(7)
     expect(toNumber(' ')).toBeNull()
+  })
+})
+
+describe('the lists page on the server (#461)', () => {
+  const companies = Array.from({ length: 150 }, (_, i) => ({ id: `co${i + 1}`, name: `Company ${String(i + 1).padStart(3, '0')}`, size: 'small' }))
+  const listCalls = (endpoint: string) => mockCalls.filter(url => url.startsWith(`${endpoint}?`)).map(url => new URLSearchParams(url.split('?')[1]))
+  beforeEach(() => {
+    mockLocale = 'es'
+    mockRows = []
+    mockOther = {}
+    mockCalls.length = 0
+  })
+
+  test('companies: the 150th is reached by the pagination (page 10 of 15 rows) and the total is the API\'s', async () => {
+    mockRows = companies
+    mockOther = { '/api/v1/companies': companies, '/api/v1/contacts': [], '/api/v1/opportunities': [] }
+    render(<CompaniesPage />)
+    await waitFor(() => expect(screen.getByText('Company 001')).toBeTruthy())
+    expect(screen.queryByText('Company 016')).toBeNull()
+    expect(screen.getByText('150')).toBeTruthy() // stats total, not the 15 rows of the page
+    fireEvent.click(screen.getByRole('button', { name: '10' }))
+    await waitFor(() => expect(screen.getByText('Company 136')).toBeTruthy())
+    expect(screen.getByText('Company 150')).toBeTruthy() // page 10 is rows 136-150: 150 is its last
+    expect(screen.queryByText('Company 001')).toBeNull()
+  })
+
+  test('companies: the search is asked of the server and finds the 150th', async () => {
+    mockRows = companies
+    mockOther = { '/api/v1/companies': companies, '/api/v1/contacts': [], '/api/v1/opportunities': [] }
+    render(<CompaniesPage />)
+    await waitFor(() => expect(screen.getByText('Company 001')).toBeTruthy())
+    fireEvent.change(screen.getByPlaceholderText(text('es', 'companies.search')), { target: { value: 'Company 150' } })
+    await waitFor(() => expect(screen.getByText('Company 150')).toBeTruthy())
+    expect(screen.queryByText('Company 001')).toBeNull()
+    expect(listCalls('/api/v1/companies').some(q => q.get('search') === 'Company 150' && q.get('page') === '1')).toBe(true)
+  })
+
+  test('companies: the order is asked of the server over the whole set', async () => {
+    mockRows = companies
+    mockOther = { '/api/v1/companies': companies, '/api/v1/contacts': [], '/api/v1/opportunities': [] }
+    render(<CompaniesPage />)
+    await waitFor(() => expect(screen.getByText('Company 001')).toBeTruthy())
+    const header = screen.getByText(text('es', 'companies.columns.company'))
+    fireEvent.click(header) // asc
+    fireEvent.click(header) // desc
+    await waitFor(() => expect(screen.getByText('Company 150')).toBeTruthy())
+    expect(listCalls('/api/v1/companies').some(q => q.get('sortBy') === 'name' && q.get('sortOrder') === 'desc')).toBe(true)
+  })
+
+  test('contacts: page, search and order go to the server, and the company names are asked for the page only', async () => {
+    const contacts = Array.from({ length: 150 }, (_, i) => ({ id: `c${i + 1}`, firstName: 'N', lastName: `Last${String(i + 1).padStart(3, '0')}`, email: `c${i + 1}@example.com`, companyId: 'co1' }))
+    mockRows = contacts
+    mockOther = { '/api/v1/contacts': contacts, '/api/v1/companies': [{ id: 'co1', name: 'Acme' }] }
+    render(<ContactsPage />)
+    await waitFor(() => expect(screen.getAllByText('Acme').length).toBeGreaterThan(0))
+    expect(screen.getByText('150')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '10' }))
+    await waitFor(() => expect(screen.getByText(/Last150/)).toBeTruthy())
+    fireEvent.change(screen.getByPlaceholderText(text('es', 'contacts.search')), { target: { value: 'Last077' } })
+    await waitFor(() => expect(screen.getByText(/Last077/)).toBeTruthy())
+    fireEvent.click(screen.getByText(text('es', 'contacts.columns.name')))
+    await waitFor(() => expect(listCalls('/api/v1/contacts').some(q => q.get('sortBy') === 'lastName' && q.get('search') === 'Last077')).toBe(true))
+    const calls = listCalls('/api/v1/contacts')
+    expect(calls.some(q => q.get('page') === '10')).toBe(true)
+    expect(calls.some(q => q.get('search') === 'Last077' && q.get('searchField') === 'lastName' && q.get('page') === '1')).toBe(true)
+  })
+
+  test('opportunities: page, search and order go to the server', async () => {
+    const opportunities = Array.from({ length: 150 }, (_, i) => ({ id: `o${i + 1}`, name: `Deal ${String(i + 1).padStart(3, '0')}`, amount: String(i + 1) }))
+    mockRows = opportunities
+    mockOther = { '/api/v1/opportunities': opportunities, '/api/v1/companies': [], '/api/v1/pipelines': [] }
+    render(<OpportunitiesPage />)
+    await waitFor(() => expect(screen.getByText('Deal 001')).toBeTruthy())
+    expect(screen.getByText('150')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '10' }))
+    await waitFor(() => expect(screen.getByText('Deal 150')).toBeTruthy())
+    fireEvent.change(screen.getByPlaceholderText(text('es', 'opportunities.search')), { target: { value: 'Deal 042' } })
+    await waitFor(() => expect(screen.getByText('Deal 042')).toBeTruthy())
+    fireEvent.click(screen.getByText(text('es', 'opportunities.columns.value')))
+    await waitFor(() => expect(listCalls('/api/v1/opportunities').some(q => q.get('sortBy') === 'amount' && q.get('sortOrder') === 'asc')).toBe(true))
+  })
+
+  test('the lists always ask for a page and its size', async () => {
+    mockRows = companies
+    mockOther = { '/api/v1/companies': companies, '/api/v1/contacts': [], '/api/v1/opportunities': [] }
+    render(<CompaniesPage />)
+    await waitFor(() => expect(screen.getByText('Company 001')).toBeTruthy())
+    expect(listCalls('/api/v1/companies').every(q => q.get('page') === '1' && q.get('limit') === '15')).toBe(true)
   })
 })

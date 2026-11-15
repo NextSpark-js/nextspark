@@ -5,7 +5,7 @@
 
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleNumber } from '@nextsparkjs/core/lib/i18n/format'
 import {
@@ -55,11 +55,29 @@ interface CRMDataTableProps<T extends { id: string }> {
     emptyDescription?: string
     /** Entity slug for data-cy selectors (e.g., 'leads', 'contacts') */
     entitySlug?: string
+    /**
+     * Server-side mode: `data` is the page the API returned, and page, sort and search live in the caller (see `useServerList`).
+     * The table does not filter, sort or slice `data`; `searchFields` is not needed.
+     */
+    server?: ServerTable
+}
+
+export interface ServerTable {
+    /** Rows in the whole result (the API's `info.total`) */
+    total: number
+    page: number
+    sort: SortState
+    onPageChange: (page: number) => void
+    onSortChange: (sort: SortState) => void
+    /** Called once the person stops typing */
+    onSearchChange: (search: string) => void
+    /** A request is in flight: the rows on screen are the previous ones */
+    busy?: boolean
 }
 
 // Sorting
-type SortDirection = 'asc' | 'desc' | null
-interface SortState {
+export type SortDirection = 'asc' | 'desc' | null
+export interface SortState {
     key: string | null
     direction: SortDirection
 }
@@ -76,6 +94,7 @@ export function CRMDataTable<T extends { id: string }>({
     emptyMessage,
     emptyDescription,
     entitySlug,
+    server,
 }: CRMDataTableProps<T>) {
     const t = useTranslations('crm.list.table')
     const locale = useLocale()
@@ -85,10 +104,22 @@ export function CRMDataTable<T extends { id: string }>({
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [sort, setSort] = useState<SortState>({ key: null, direction: null })
     const [searchQuery, setSearchQuery] = useState('')
-    const [currentPage, setCurrentPage] = useState(1)
+    const [localPage, setCurrentPage] = useState(1)
+    const currentPage = server ? server.page : localPage
+    const setPage = server ? server.onPageChange : setCurrentPage
+    const sortState = server ? server.sort : sort
+
+    // The person stops typing: ask the server for the search (the first page of it)
+    useEffect(() => {
+        if (!server) return
+        const timer = setTimeout(() => server.onSearchChange(searchQuery), 300)
+        return () => clearTimeout(timer)
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new query restarts the wait
+    }, [searchQuery])
 
     // Filter and sort data
     const processedData = useMemo(() => {
+        if (server) return data
         let result = [...data]
 
         // Search filter
@@ -118,14 +149,16 @@ export function CRMDataTable<T extends { id: string }>({
         }
 
         return result
-    }, [data, searchQuery, searchFields, sort])
+    }, [data, searchQuery, searchFields, sort, server])
 
     // Pagination
-    const totalPages = Math.ceil(processedData.length / pageSize)
+    const totalRows = server ? server.total : processedData.length
+    const totalPages = Math.ceil(totalRows / pageSize)
     const paginatedData = useMemo(() => {
+        if (server) return data
         const start = (currentPage - 1) * pageSize
         return processedData.slice(start, start + pageSize)
-    }, [processedData, currentPage, pageSize])
+    }, [processedData, currentPage, pageSize, server, data])
 
     // Selection handlers
     const isAllSelected = paginatedData.length > 0 && paginatedData.every(row => selectedIds.has(row.id))
@@ -159,7 +192,7 @@ export function CRMDataTable<T extends { id: string }>({
 
     // Sort handler
     const handleSort = (key: string) => {
-        setSort((prev) => {
+        const next = (prev: SortState): SortState => {
             if (prev.key !== key) {
                 return { key, direction: 'asc' }
             }
@@ -167,7 +200,9 @@ export function CRMDataTable<T extends { id: string }>({
                 return { key, direction: 'desc' }
             }
             return { key: null, direction: null }
-        })
+        }
+        if (server) server.onSortChange(next(sortState))
+        else setSort(next)
     }
 
     // Get cell value
@@ -182,10 +217,10 @@ export function CRMDataTable<T extends { id: string }>({
 
     // Render sort icon
     const renderSortIcon = (columnKey: string) => {
-        if (sort.key !== columnKey) {
+        if (sortState.key !== columnKey) {
             return <ChevronsUpDown className="w-4 h-4 text-muted-foreground/50" />
         }
-        if (sort.direction === 'asc') {
+        if (sortState.direction === 'asc') {
             return <ChevronUp className="w-4 h-4 text-primary" />
         }
         return <ChevronDown className="w-4 h-4 text-primary" />
@@ -211,7 +246,7 @@ export function CRMDataTable<T extends { id: string }>({
             {/* Toolbar */}
             <div className="flex items-center justify-between gap-4">
                 {/* Search */}
-                {searchFields.length > 0 && (
+                {(searchFields.length > 0 || server) && (
                     <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
@@ -219,7 +254,7 @@ export function CRMDataTable<T extends { id: string }>({
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value)
-                                setCurrentPage(1)
+                                if (!server) setCurrentPage(1)
                             }}
                             placeholder={searchPlaceholder ?? t('search')}
                             className="w-full pl-10 pr-10 py-2 bg-muted/50 border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -267,7 +302,7 @@ export function CRMDataTable<T extends { id: string }>({
             </div>
 
             {/* Table */}
-            <div className="border rounded-xl overflow-hidden">
+            <div className={cn('border rounded-xl overflow-hidden transition-opacity', server?.busy && 'opacity-60')}>
                 <table className="w-full" data-cy={dataCy('table')}>
                     <thead>
                         <tr className="bg-muted/50">
@@ -381,14 +416,14 @@ export function CRMDataTable<T extends { id: string }>({
             {totalPages > 1 && (
                 <div className="flex items-center justify-between" data-cy={dataCy('pagination')}>
                     <p className="text-sm text-muted-foreground">
-                        {t('showing', { from: formatLocaleNumber(((currentPage - 1) * pageSize) + 1, locale), to: formatLocaleNumber(Math.min(currentPage * pageSize, processedData.length), locale), total: formatLocaleNumber(processedData.length, locale) })}
+                        {t('showing', { from: formatLocaleNumber(((currentPage - 1) * pageSize) + 1, locale), to: formatLocaleNumber(Math.min(currentPage * pageSize, totalRows), locale), total: formatLocaleNumber(totalRows, locale) })}
                     </p>
 
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            onClick={() => setPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                             className="gap-1"
                             data-cy={dataCy('pagination-prev')}
@@ -410,7 +445,7 @@ export function CRMDataTable<T extends { id: string }>({
                                             <span className="px-2 text-muted-foreground">...</span>
                                         )}
                                         <button
-                                            onClick={() => setCurrentPage(page)}
+                                            onClick={() => setPage(page)}
                                             className={cn(
                                                 'w-8 h-8 rounded-md text-sm font-medium transition-colors',
                                                 page === currentPage
@@ -427,7 +462,7 @@ export function CRMDataTable<T extends { id: string }>({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
                             disabled={currentPage === totalPages}
                             className="gap-1"
                             data-cy={dataCy('pagination-next')}

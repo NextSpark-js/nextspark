@@ -8,7 +8,7 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleDate, formatLocaleNumber, formatLocaleRelative } from '@nextsparkjs/core/lib/i18n/format'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { CRMDataTable, type Column, type BulkAction } from '@/templates/shared/CRMDataTable'
 import {
@@ -23,8 +23,8 @@ import {
     Clock,
     Send
 } from 'lucide-react'
-import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { fetchRowsByIds, withCompanyName } from '@/lib/crm-utils'
+import { useServerList } from '@/lib/use-server-list'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
@@ -96,33 +96,18 @@ export default function ContactsPage() {
     const locale = useLocale()
     const router = useRouter()
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
-    const [contacts, setContacts] = useState<Contact[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-
     // Permission checks for bulk actions
     const canDeleteContacts = usePermission('contacts.delete')
 
-    useEffect(() => {
-        if (teamLoading || !currentTeam) return
-
-        async function fetchContacts() {
-            try {
-                const response = await fetchWithTeam('/api/v1/contacts')
-                if (!response.ok) throw new Error('Failed to fetch contacts')
-                const result = await response.json()
-                // the API sends the id of the company, not its name
-                const rows: Contact[] = result.data || []
-                const companies = await fetchRowsByIds<{ id: string; name?: string }>('/api/v1/companies', rows.map(row => row.companyId))
-                setContacts(withCompanyName<Contact>(rows, companies))
-            } catch (error) {
-                console.error('Error loading contacts:', error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchContacts()
-    }, [teamLoading, currentTeam])
+    // the API sends the id of the company, not its name
+    const { rows: contacts, total, isLoading, server } = useServerList<Contact>({
+        endpoint: '/api/v1/contacts',
+        pageSize: 15,
+        enabled: !teamLoading && !!currentTeam,
+        sortFields: { name: 'lastName' },
+        searchField: 'lastName',
+        enrich: async rows => withCompanyName<Contact>(rows, await fetchRowsByIds<{ id: string; name?: string }>('/api/v1/companies', rows.map(row => row.companyId))),
+    })
 
     // Stats
     const stats = useMemo(() => {
@@ -134,12 +119,12 @@ export default function ContactsPage() {
         }).length
 
         return {
-            total: contacts.length,
+            total,
             withCompany,
             recentlyActive,
             withEmail: contacts.filter(c => c.email).length,
         }
-    }, [contacts])
+    }, [contacts, total])
 
     // Column definitions
     const columns: Column<Contact>[] = [
@@ -184,8 +169,7 @@ export default function ContactsPage() {
         {
             key: 'companyName',
             header: t('contacts.columns.company'),
-            sortable: true,
-            render: (value, contact) => value ? (
+                        render: (value, contact) => value ? (
                 <button
                     onClick={(e) => {
                         e.stopPropagation()
@@ -208,8 +192,7 @@ export default function ContactsPage() {
         {
             key: 'lastActivityAt',
             header: t('contacts.columns.lastActivity'),
-            sortable: true,
-            render: (value) => <RelativeTime date={value} />,
+                        render: (value) => <RelativeTime date={value} />,
         },
     ]
 
@@ -333,7 +316,7 @@ export default function ContactsPage() {
                 onRowClick={handleRowClick}
                 isLoading={isLoading}
                 searchPlaceholder={t('contacts.search')}
-                searchFields={['firstName', 'lastName', 'email', 'companyName']}
+                server={server}
                 pageSize={15}
                 emptyMessage={t('contacts.empty')}
                 emptyDescription={t('contacts.emptyDescription')}
