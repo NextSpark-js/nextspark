@@ -41,9 +41,11 @@ jest.mock('@nextsparkjs/core/lib/permissions/hooks', () => ({ usePermission: () 
 jest.mock('@nextsparkjs/core/components/permissions/PermissionGate', () => ({ PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 // like the API: `ids` and `companyId` pick rows, `page` and `limit` slice (at most 100) and `info` (createApiResponse) says if there is a next page
 const mockCalls: string[] = []
+let mockStuck = false // an endpoint that always says there is a next page, with no rows
 jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
   fetchWithTeam: async (url: string) => {
     mockCalls.push(url)
+    if (mockStuck) return { ok: mockCalls.length < 6, json: async () => ({ data: [], info: { hasNextPage: true } }) } // not ok after 5 calls, so a loop without the cut ends and the count fails
     const [path, query = ''] = url.split('?')
     const params = new URLSearchParams(query)
     let rows = (mockOther[path] ?? mockRows) as { id: string }[]
@@ -210,6 +212,21 @@ describe('more than 100 companies (#451)', () => {
     const asked = mockCalls.filter(url => url.startsWith('/api/v1/contacts?'))
     expect(asked.some(url => url.includes('page=2'))).toBe(true)
     expect(asked.every(url => url.includes('fields=companyId'))).toBe(true)
+  })
+})
+
+describe('an empty page ends the paging (#451)', () => {
+  test('the API says hasNextPage but sends no rows: the loop stops instead of asking forever', async () => {
+    const { fetchRows } = jest.requireActual('../../../templates/projects/crm/lib/crm-utils') as typeof import('../../../templates/projects/crm/lib/crm-utils')
+    mockCalls.length = 0
+    mockOther = { '/api/v1/stuck': [] }
+    mockStuck = true
+    try {
+      expect(await fetchRows('/api/v1/stuck')).toEqual([])
+    } finally {
+      mockStuck = false
+    }
+    expect(mockCalls.filter(url => url.startsWith('/api/v1/stuck?')).length).toBe(1)
   })
 })
 

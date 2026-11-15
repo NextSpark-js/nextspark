@@ -46,7 +46,7 @@ const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const TEMPLATES = path.join(CORE, 'templates')
 
 /** Integration template .ts files the wizard copies into every generated project. */
-const ROOT_TEMPLATE_TS_FILES = ['proxy.ts', 'i18n.ts', 'instrumentation.ts']
+const ROOT_TEMPLATE_TS_FILES = ['proxy.ts', 'i18n.ts', 'instrumentation.ts', 'projects/crm/lib/crm-utils.ts']
 
 /** A virtual path standing in for the per-project generated registry module. */
 const REGISTRY_STUB = path.join(CORE, '.templates-typecheck-registry-stub.ts')

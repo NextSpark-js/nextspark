@@ -36,7 +36,6 @@ export async function fetchRows<T>(endpoint: string, fields?: string[], filter: 
             const query = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(page) })
             if (fields) query.set('fields', fields.join(','))
             for (const [key, value] of Object.entries(filter)) query.set(key, value)
-            for (const [key, value] of Object.entries(filter)) query.set(key, value)
             const response = await fetchWithTeam(`${endpoint}?${query}`)
             if (!response.ok) return []
             const result = await response.json()
@@ -47,14 +46,6 @@ export async function fetchRows<T>(endpoint: string, fields?: string[], filter: 
     } catch {
         return []
     }
-}
-
-/** Every row of the companies given (`companyId=a,b` is an OR filter), in requests of 50 ids: the counters of the companies a page shows, not of the whole team. */
-export async function fetchRowsOfCompanies<T>(endpoint: string, fields: string[], companyIds: (string | null | undefined)[]): Promise<T[]> {
-    const unique = [...new Set(companyIds.filter((id): id is string => Boolean(id)))]
-    const chunks: string[][] = []
-    for (let i = 0; i < unique.length; i += 50) chunks.push(unique.slice(i, i + 50))
-    return (await Promise.all(chunks.map(chunk => fetchRows<T>(endpoint, fields, { companyId: chunk.join(',') })))).flat()
 }
 
 /** Every row of the companies given (`companyId=a,b` is an OR filter), in requests of 50 ids: the counters of the companies a page shows, not of the whole team. */
