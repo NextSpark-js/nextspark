@@ -36,7 +36,7 @@ if (plugins.length === 0) {
 }
 console.log(`🔍 Watching ${plugins.length} local plugin(s): ${plugins.map(({ name }) => name).join(', ')}`)
 const pnpm = packageManagerCommand('pnpm', ['dev'])
-const children = plugins.map(({ dir }) => spawn(pnpm.command, pnpm.args, { cwd: dir, stdio: 'inherit', shell: pnpm.shell }))
+const children = plugins.map(({ dir }) => spawn(pnpm.command, pnpm.args, { cwd: dir, stdio: 'inherit', shell: pnpm.shell, windowsHide: pnpm.windowsHide }))
 let exitCode = 0
 for (const child of children) child.on('exit', code => { if (code) exitCode = code })
 const stop = signal => {

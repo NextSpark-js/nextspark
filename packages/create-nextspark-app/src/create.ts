@@ -259,7 +259,7 @@ function getPnpmMajorVersion(projectPath: string): number | null {
   try {
     const pnpm = packageManagerCommand('pnpm', ['--version'])
     const output = execFileSync(pnpm.command, pnpm.args, {
-      shell: pnpm.shell,
+      shell: pnpm.shell, windowsHide: pnpm.windowsHide,
       cwd: projectPath,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -567,7 +567,7 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   const result = spawnSync(pnpm.command, pnpm.args, {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
-    shell: pnpm.shell,
+    shell: pnpm.shell, windowsHide: pnpm.windowsHide,
     env: Object.keys(localPluginTarballs).length > 0
       ? { ...process.env, [LOCAL_PLUGIN_TARBALLS_ENV]: JSON.stringify(localPluginTarballs) }
       : process.env,

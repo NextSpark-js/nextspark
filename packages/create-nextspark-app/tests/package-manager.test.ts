@@ -7,11 +7,12 @@ import { packageManagerCommand as corePackageManagerCommand } from '../../core/s
 const ARGS = ['exec', 'nextspark', 'init', '--name', 'My App', '--description', 'Tom & Jerry <3', '--yes']
 
 test('the wizard arguments reach pnpm whole on Windows and untouched elsewhere', () => {
-  assert.deepEqual(packageManagerCommand('pnpm', ARGS, 'linux'), { command: 'pnpm', args: ARGS, shell: false })
+  assert.deepEqual(packageManagerCommand('pnpm', ARGS, 'linux'), { command: 'pnpm', args: ARGS, shell: false, windowsHide: true })
   assert.deepEqual(packageManagerCommand('pnpm', ARGS, 'win32'), {
     command: 'pnpm "exec" "nextspark" "init" "--name" "My App" "--description" "Tom & Jerry <3" "--yes"',
     args: [],
     shell: true,
+    windowsHide: true,
   })
   assert.throws(() => packageManagerCommand('pnpm', ['--name', '50% "off"'], 'win32'), /cannot quote/)
 })

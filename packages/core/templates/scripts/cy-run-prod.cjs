@@ -38,11 +38,12 @@ const args = process.argv.slice(2)
 /**
  * How to start pnpm: directly, except on Windows, where it is a .cmd shim that
  * only a shell starts, so every argument is quoted for cmd.exe and one it
- * cannot quote safely is refused (#450). A copy of
+ * cannot quote safely is refused (#450); windowsHide keeps it from opening a
+ * console window when the caller has none. A copy of
  * node_modules/@nextsparkjs/core/scripts/utils/package-manager.mjs.
  */
 function packageManagerCommand(command, args, platform = process.platform) {
-  if (platform !== 'win32') return { command, args, shell: false }
+  if (platform !== 'win32') return { command, args, shell: false, windowsHide: true }
   const quoted = args.map((arg) => {
     if (/["%\r\n]/.test(arg)) {
       throw new Error(`Cannot pass ${JSON.stringify(arg)} to ${command} on Windows: cmd.exe cannot quote " or % or a line break safely`)
@@ -50,12 +51,12 @@ function packageManagerCommand(command, args, platform = process.platform) {
     // A backslash right before the closing quote would escape it for the program's own parser
     return `"${arg.replace(/(\\+)$/, '$1$1')}"`
   })
-  return { command: [command, ...quoted].join(' '), args: [], shell: true }
+  return { command: [command, ...quoted].join(' '), args: [], shell: true, windowsHide: true }
 }
 
 function spawnPnpm(spawner, pnpmArgs, options) {
   const pnpm = packageManagerCommand('pnpm', pnpmArgs)
-  return spawner(pnpm.command, pnpm.args, { ...options, shell: pnpm.shell })
+  return spawner(pnpm.command, pnpm.args, { ...options, shell: pnpm.shell, windowsHide: pnpm.windowsHide })
 }
 
 // Resolve the root-first project's Cypress configuration.

@@ -156,7 +156,7 @@ and removes untracked files created while the update ran.
  * read its arguments.
  */
 export function stepCommand(command, args, platform = process.platform) {
-  return command === 'pnpm' ? packageManagerCommand(command, args, platform) : { command, args, shell: false }
+  return command === 'pnpm' ? packageManagerCommand(command, args, platform) : { command, args, shell: false, windowsHide: true }
 }
 
 /** Runs a command to completion, printing its output as it goes unless `capture` asks for it back. */
@@ -166,7 +166,7 @@ export function runCommand(command, args, { cwd, capture = false }) {
     cwd,
     encoding: 'utf8',
     stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-    shell: step.shell,
+    shell: step.shell, windowsHide: step.windowsHide,
   })
   return {
     status: result.error ? null : result.status,

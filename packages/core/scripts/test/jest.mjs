@@ -102,7 +102,7 @@ const pnpm = packageManagerCommand('pnpm', ['exec', 'jest', '--config', configPa
 child = spawn(pnpm.command, pnpm.args, {
   cwd: projectRoot,
   stdio: 'inherit',
-  shell: pnpm.shell,
+  shell: pnpm.shell, windowsHide: pnpm.windowsHide,
   env,
 })
 if (signaled) child.kill(signaled)

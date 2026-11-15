@@ -9,8 +9,8 @@ const AWKWARD = ['view', '@nextsparkjs/core@0.1.0-beta.1', 'My App', 'a&b|c<d>e^
 
 test('outside Windows pnpm and npx start directly, with the arguments untouched', () => {
   for (const platform of ['linux', 'darwin']) {
-    assert.deepEqual(packageManagerCommand('pnpm', AWKWARD, platform), { command: 'pnpm', args: AWKWARD, shell: false })
-    assert.deepEqual(packageManagerCommand('npx', ['next', 'dev'], platform), { command: 'npx', args: ['next', 'dev'], shell: false })
+    assert.deepEqual(packageManagerCommand('pnpm', AWKWARD, platform), { command: 'pnpm', args: AWKWARD, shell: false, windowsHide: true })
+    assert.deepEqual(packageManagerCommand('npx', ['next', 'dev'], platform), { command: 'npx', args: ['next', 'dev'], shell: false, windowsHide: true })
   }
 })
 
@@ -19,8 +19,9 @@ test('on Windows the shell gets one command line with every argument quoted', ()
     command: 'pnpm "view" "@nextsparkjs/core@0.1.0-beta.1" "My App" "a&b|c<d>e^f!g" "C:\\Users\\Me\\\\" ""',
     args: [],
     shell: true,
+    windowsHide: true,
   })
-  assert.deepEqual(packageManagerCommand('npx', [], 'win32'), { command: 'npx', args: [], shell: true })
+  assert.deepEqual(packageManagerCommand('npx', [], 'win32'), { command: 'npx', args: [], shell: true, windowsHide: true })
 })
 
 test('on Windows an argument cmd.exe cannot quote is refused, not run', () => {
@@ -43,6 +44,6 @@ test('the CLI and core build the same command for every platform', () => {
 test('on this machine pnpm receives each argument whole', () => {
   const values = ['My App', 'a&b|c<d>e^f!g', 'C:\\dir\\', 'plain']
   const pnpm = packageManagerCommand('pnpm', ['exec', 'node', '-e', 'console.log(JSON.stringify(process.argv.slice(1)))', ...values])
-  const output = execFileSync(pnpm.command, pnpm.args, { shell: pnpm.shell, cwd: import.meta.dirname, encoding: 'utf8' })
+  const output = execFileSync(pnpm.command, pnpm.args, { shell: pnpm.shell, windowsHide: pnpm.windowsHide, cwd: import.meta.dirname, encoding: 'utf8' })
   assert.deepEqual(JSON.parse(output.trim().split('\n').pop()!), values)
 })

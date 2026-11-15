@@ -32,7 +32,7 @@ if (command === 'e2e') {
   execFileSync('node', [join(projectRoot, 'scripts/build-test-entities.mjs')], { cwd: projectRoot, stdio: 'inherit' })
   const pnpm = packageManagerCommand('pnpm', ['exec', 'start-server-and-test', 'pnpm dev', `http://localhost:${port}`, 'pnpm cy:run'])
   execFileSync(pnpm.command, pnpm.args, {
-    shell: pnpm.shell,
+    shell: pnpm.shell, windowsHide: pnpm.windowsHide,
     cwd: projectRoot,
     stdio: 'inherit',
   })
@@ -68,6 +68,6 @@ const pnpm = packageManagerCommand('pnpm', ['exec', 'cypress', command, '--confi
 const child = spawn(pnpm.command, pnpm.args, {
   cwd: projectRoot,
   stdio: 'inherit',
-  shell: pnpm.shell,
+  shell: pnpm.shell, windowsHide: pnpm.windowsHide,
 })
 child.on('close', code => process.exit(code ?? 1))

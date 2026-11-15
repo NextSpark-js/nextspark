@@ -703,7 +703,7 @@ function pnpmConfigValue(key: string, directory: string, environment: NodeJS.Pro
   try {
     const pnpm = packageManagerCommand('pnpm', ['config', 'get', key, '--ignore-workspace']);
     const value = execFileSync(pnpm.command, pnpm.args, {
-      shell: pnpm.shell,
+      shell: pnpm.shell, windowsHide: pnpm.windowsHide,
       cwd: directory,
       env: environment,
       encoding: 'utf8',
@@ -806,7 +806,7 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
     try {
       const pnpm = packageManagerCommand('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace']);
       url = execFileSync(pnpm.command, pnpm.args, {
-        shell: pnpm.shell,
+        shell: pnpm.shell, windowsHide: pnpm.windowsHide,
         cwd: directory,
         env: environment,
         encoding: 'utf8',

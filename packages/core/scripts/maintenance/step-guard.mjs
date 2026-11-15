@@ -38,7 +38,7 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => {
 
 const windowsStep = windows ? stepCommand(command, args) : null
 const step = windowsStep
-  ? spawn(windowsStep.command, windowsStep.args, { stdio: ['ignore', 'inherit', 'inherit'], shell: windowsStep.shell })
+  ? spawn(windowsStep.command, windowsStep.args, { stdio: ['ignore', 'inherit', 'inherit'], shell: windowsStep.shell, windowsHide: windowsStep.windowsHide })
   : spawn('/bin/sh', ['-c', GATE, 'update-core-step', command, ...args], { stdio: ['ignore', 'inherit', 'inherit', 'pipe'], detached: true })
 const gate = windows ? null : step.stdio[3]
 // EPIPE: the group was stopped before the gate opened

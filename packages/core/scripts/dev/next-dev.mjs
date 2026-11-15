@@ -29,7 +29,7 @@ console.log(`Starting Next.js dev server on port ${port}...`)
 const npx = packageManagerCommand('npx', ['next', 'dev', '--turbopack', '-p', String(port)])
 const child = spawn(npx.command, npx.args, {
   stdio: 'inherit',
-  shell: npx.shell
+  shell: npx.shell, windowsHide: npx.windowsHide
 })
 
 child.on('close', (code) => {

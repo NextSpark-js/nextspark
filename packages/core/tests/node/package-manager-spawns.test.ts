@@ -11,16 +11,16 @@ const cyRunProd = require('../../templates/scripts/cy-run-prod.cjs')
 const AWKWARD = ['exec', 'cypress', 'run', '--spec', 'tests/My Specs/a&b.cy.ts', '--env', 'grepTags=@smoke|@api', 'C:\\dir\\', '']
 
 test('update-core starts pnpm through the helper: quoted for cmd.exe on Windows, directly elsewhere', () => {
-  assert.deepEqual(stepCommand('pnpm', ['install'], 'win32'), { command: 'pnpm "install"', args: [], shell: true })
-  assert.deepEqual(stepCommand('pnpm', ['install'], 'linux'), { command: 'pnpm', args: ['install'], shell: false })
+  assert.deepEqual(stepCommand('pnpm', ['install'], 'win32'), { command: 'pnpm "install"', args: [], shell: true, windowsHide: true })
+  assert.deepEqual(stepCommand('pnpm', ['install'], 'linux'), { command: 'pnpm', args: ['install'], shell: false, windowsHide: true })
   assert.throws(() => stepCommand('pnpm', ['view', '%x%'], 'win32'), /cannot quote/)
 })
 
 test('update-core starts git and node with no shell on any platform, so their arguments reach them as written', () => {
   const printf = ['submodule', 'foreach', '--quiet', 'printf "%s\\0" "$displaypath"']
   for (const platform of ['win32', 'linux', 'darwin']) {
-    assert.deepEqual(stepCommand('git', printf, platform), { command: 'git', args: printf, shell: false })
-    assert.deepEqual(stepCommand(process.execPath, ['cli.mjs'], platform), { command: process.execPath, args: ['cli.mjs'], shell: false })
+    assert.deepEqual(stepCommand('git', printf, platform), { command: 'git', args: printf, shell: false, windowsHide: true })
+    assert.deepEqual(stepCommand(process.execPath, ['cli.mjs'], platform), { command: process.execPath, args: ['cli.mjs'], shell: false, windowsHide: true })
   }
 })
 

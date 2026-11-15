@@ -17,7 +17,7 @@ import { packageManagerCommand } from '../../scripts/utils/package-manager.mjs'
 /** `pnpm` the way the code under test starts it: through cmd.exe, every argument quoted, on Windows (#450) */
 function pnpmCall<T extends object>(args: string[], options: T) {
   const call = packageManagerCommand('pnpm', args)
-  return [call.command, call.args, { ...options, shell: call.shell }] as const
+  return [call.command, call.args, { ...options, shell: call.shell, windowsHide: call.windowsHide }] as const
 }
 
 const CORE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
