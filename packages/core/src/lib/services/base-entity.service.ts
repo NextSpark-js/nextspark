@@ -30,6 +30,7 @@
  */
 
 import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '../db'
+import { LIKE_ESCAPE_CLAUSE, containsPattern } from '../utils/like-pattern'
 
 // ============================================
 // TYPES
@@ -165,12 +166,12 @@ export abstract class BaseEntityService<
     }
 
     const searchConditions = this.config.searchableFields
-      .map((f) => `${this.quoteField(f)} ILIKE $${paramIndex}`)
+      .map((f) => `${this.quoteField(f)} ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE}`)
       .join(' OR ')
 
     return {
       condition: `(${searchConditions})`,
-      param: `%${search}%`,
+      param: containsPattern(search),
     }
   }
 
@@ -275,7 +276,7 @@ export abstract class BaseEntityService<
       `SELECT ${this.buildSelectClause()}
        FROM ${this.config.tableName}
        ${fullWhereClause}
-       ORDER BY ${orderColumn} ${validOrderDir}
+       ORDER BY ${orderColumn} ${validOrderDir} NULLS LAST
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
       [...allParams, limit, offset],
       userId

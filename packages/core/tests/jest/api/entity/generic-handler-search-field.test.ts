@@ -130,7 +130,7 @@ describe('handleGenericList — ?searchField= with several fields (#462)', () =>
 
     expect(response.status).toBe(200)
     const [sql, params] = listSql()
-    expect(sql).toMatch(/\(t\."slug" ILIKE \$\d+ OR t\."content" ILIKE \$\d+ OR t\."callName" ILIKE \$\d+ OR t\."email" ILIKE \$\d+\)/)
+    expect(sql).toMatch(/\(t\."slug" ILIKE \$\d+ ESCAPE '\\' OR t\."content" ILIKE \$\d+ ESCAPE '\\' OR t\."callName" ILIKE \$\d+ ESCAPE '\\' OR t\."email" ILIKE \$\d+ ESCAPE '\\'\)/)
     expect(params.filter(param => param === '%ana%')).toHaveLength(1)
   })
 
@@ -147,7 +147,7 @@ describe('handleGenericList — ?searchField= with several fields (#462)', () =>
 
     const where = whereOf(listSql()[0])
     expect(where).toContain('"status"')
-    expect(where).toMatch(/AND \(t\."slug" ILIKE[^)]*t\."email" ILIKE \$\d+\)/)
+    expect(where).toMatch(/AND \(t\."slug" ILIKE[^)]*t\."email" ILIKE \$\d+ ESCAPE '\\'\)/)
   })
 
   it('refuses the whole request when one field of the list is outside the allowlist, naming it, and never queries', async () => {
@@ -182,6 +182,6 @@ describe('handleGenericList — ?searchField= with several fields (#462)', () =>
     use({ ...CONTACTS, fields: [field('callName', 'text'), field('email', 'email')] } as unknown as EntityConfig)
 
     expect((await list({ search: 'ana', searchField: 'callName,email' })).status).toBe(200)
-    expect(listSql()[0]).toMatch(/\(t\."callName" ILIKE \$\d+ OR t\."email" ILIKE \$\d+\)/)
+    expect(listSql()[0]).toMatch(/\(t\."callName" ILIKE \$\d+ ESCAPE '\\' OR t\."email" ILIKE \$\d+ ESCAPE '\\'\)/)
   })
 })

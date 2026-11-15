@@ -301,6 +301,10 @@ GET /api/v1/tasks?sort=priority&order=desc
 GET /api/v1/tasks?sort=status,priority&order=asc,desc
 ```
 
+### Empty values
+
+Rows whose sort field is empty (`NULL`) come **last** in both directions: `sortOrder=desc` on a date shows the newest dates first and the rows without one after them, not before.
+
 ### Default Sorting
 
 If no sort parameter provided, results are sorted by:
@@ -456,7 +460,7 @@ Full-text search across multiple text fields.
 }
 ```
 
-The generic handler searches `name`, `title`, `slug` and `content` (the ones the entity declares). `searchField` adds text fields of the entity to those (`searchField=firstName,lastName,email`, or the parameter repeated, at most 5; a row matches when any of them matches), for a record that is found by a label none of the four holds: a relation select sends its `titleField`. The name is checked against the entity's own fields (type `text`, `textarea`, `email`, `url`, `phone`, `markdown` or `richtext`, and not `api.searchable: false`); every name of the list is checked, and any other answers `400` `INVALID_SEARCH_FIELD` (`details.invalidKeys` lists them) and nothing is queried; more than 5 answers `400` `TOO_MANY_SEARCH_FIELDS`.
+The term is matched literally and case-insensitively as a substring: `%`, `_` and `\` in it stand for themselves (`search=50%` finds `50% off`, not `500 units`; a lone `%` finds only the rows that contain a `%`). A term longer than 200 characters (after trimming) answers `400` `SEARCH_TERM_TOO_LONG`. The generic handler searches `name`, `title`, `slug` and `content` (the ones the entity declares). `searchField` adds text fields of the entity to those (`searchField=firstName,lastName,email`, or the parameter repeated, at most 5; a row matches when any of them matches), for a record that is found by a label none of the four holds: a relation select sends its `titleField`. The name is checked against the entity's own fields (type `text`, `textarea`, `email`, `url`, `phone`, `markdown` or `richtext`, and not `api.searchable: false`); every name of the list is checked, and any other answers `400` `INVALID_SEARCH_FIELD` (`details.invalidKeys` lists them) and nothing is queried; more than 5 answers `400` `TOO_MANY_SEARCH_FIELDS`.
 
 ### Example
 

@@ -155,11 +155,11 @@ export const OPTIONS = handleGenericOptions // CORS
 | `page` | LIST | Page number (default: 1) |
 | `limit` | LIST | Items per page (default: 10, max: 100) |
 | `sortBy` | LIST | Field to sort by |
-| `sortOrder` | LIST | Sort direction (`asc` or `desc`) |
+| `sortOrder` | LIST | Sort direction (`asc` or `desc`); rows with an empty sort value come last in both |
 | `fields` | LIST, READ | Select specific fields |
 | `distinct` | LIST | Get distinct values (with `fields`) |
 | `ids` | LIST | Get specific IDs (comma-separated) |
-| `search` | LIST | Search `name`, `title`, `slug` and `content` (the ones the entity declares), and the fields `searchField` lists |
+| `search` | LIST | Literal text (`%`, `_` and `\` match themselves; at most 200 characters). Search `name`, `title`, `slug` and `content` (the ones the entity declares), and the fields `searchField` lists |
 | `searchField` | LIST | More fields to search with `search`, a comma-separated list (or the parameter repeated) of at most 5; a row matches when any matches. Each is a text field of the entity (`text`, `textarea`, `email`, `url`, `phone`, `markdown`, `richtext`; not `api.searchable: false`). A relation select sends its `titleField`, a people list `firstName,lastName,email`, so a record is found by the label it shows |
 | `from` / `to` | LIST | Date range filtering |
 | `dateField` | LIST | Field for date range |
@@ -179,6 +179,7 @@ ignored, so a typo never produces a plausible-looking but wrong result:
 | `search` on an entity with none of `name`/`title`/`slug`/`content` (and no `searchField`) | 400 | `SEARCH_NOT_SUPPORTED` |
 | `searchField` is not in the allowlist built from the entity's own config (not a field, not a text field, or `api.searchable: false`) | 400 | `INVALID_SEARCH_FIELD` — `details.allowedKeys` lists the accepted names and `details.invalidKeys` the refused ones (any name of a list refuses the request); the names never reach SQL |
 | `searchField` lists more than 5 fields | 400 | `TOO_MANY_SEARCH_FIELDS` |
+| `search` is longer than 200 characters (after trimming) | 400 | `SEARCH_TERM_TOO_LONG` — `details.maxLength` |
 | `fields=X&distinct=true` where `X` is not an entity field | 400 | `INVALID_FIELD` |
 
 Filtering a `date`/`datetime` field with a bare calendar day

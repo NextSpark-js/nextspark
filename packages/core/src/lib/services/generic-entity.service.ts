@@ -40,6 +40,7 @@ import { bindFieldValue, findInvalidRelationField } from '../entities/relation-r
 import { textValueIssue } from '../entities/portable/schema-generator'
 import { roleForFieldRules, hiddenFieldsForRole, deniedWriteFields, omitHiddenFields } from '../entities/field-access'
 import { checkPermission, declaredPublishPermission, publishPermissionFor } from '../permissions/check'
+import { LIKE_ESCAPE_CLAUSE, containsPattern } from '../utils/like-pattern'
 
 // ============================================
 // TYPES
@@ -211,12 +212,12 @@ function buildSearchCondition(
   }
 
   const searchConditions = searchableFields
-    .map(f => `${quoteField(f)} ILIKE $${paramIndex}`)
+    .map(f => `${quoteField(f)} ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE}`)
     .join(' OR ')
 
   return {
     condition: `(${searchConditions})`,
-    param: `%${search}%`,
+    param: containsPattern(search),
   }
 }
 
@@ -535,7 +536,7 @@ export class GenericEntityService {
       `SELECT ${selectClause}
        FROM ${tableName}
        ${fullWhereClause}
-       ORDER BY ${orderColumn} ${validOrderDir}
+       ORDER BY ${orderColumn} ${validOrderDir} NULLS LAST
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
       [...allParams, limit, offset],
       userId
