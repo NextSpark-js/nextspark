@@ -401,6 +401,9 @@ const TAXONOMY_FILTER_PARAMS = ['categoryId', 'taxonomyId', 'taxonomyType']
 /** Fields `?search=` matches against (any that the entity declares). */
 const SEARCHABLE_FIELDS = ['name', 'title', 'slug', 'content']
 
+/** Most fields one request may list in `?searchField=`. */
+const MAX_SEARCH_FIELDS = 5
+
 /** Field types whose value is text a person types: the ones `?searchField=` may add to the search. */
 const SEARCHABLE_TEXT_TYPES = ['text', 'textarea', 'email', 'url', 'phone', 'markdown', 'richtext']
 
@@ -1040,24 +1043,35 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       return addCorsHeaders(response, request)
     }
 
-    // `search` matches name/title/slug/content, and the one more field `searchField` names (a relation select asks for
-    // its titleField, the label a person types). The name is checked against the entity's own fields, and an entity with
+    // `search` matches name/title/slug/content, and the fields `searchField` names (a relation select asks for its
+    // titleField, a people list for first name, last name and email): a comma-separated list and/or a repeated
+    // parameter, at most MAX_SEARCH_FIELDS. Every name is checked against the entity's own fields, and an entity with
     // nothing to search says so instead of returning every row.
     const searchParam = url.searchParams.get('search')
-    const searchFieldParam = url.searchParams.get('searchField')
+    const searchFieldParams = [...new Set(url.searchParams.getAll('searchField').flatMap(value => value.split(',')).map(name => name.trim()).filter(Boolean))]
     const allowedSearchFields = searchFieldAllowlist(entityConfig).filter(name => !hiddenFields.has(name))
-    // the name written into SQL is the config's own, found by the caller's string, never the caller's string
-    const searchField = allowedSearchFields.find(name => name === searchFieldParam)
-    if (searchFieldParam && !searchField) {
+    if (searchFieldParams.length > MAX_SEARCH_FIELDS) {
       const response = createApiError(
-        `Unknown search field for ${entityConfig.slug}: ${searchFieldParam}`,
+        `searchField accepts at most ${MAX_SEARCH_FIELDS} fields, got ${searchFieldParams.length}`,
         400,
-        { invalidKeys: [searchFieldParam], allowedKeys: allowedSearchFields },
+        { maxFields: MAX_SEARCH_FIELDS, allowedKeys: allowedSearchFields },
+        'TOO_MANY_SEARCH_FIELDS'
+      )
+      return addCorsHeaders(response, request)
+    }
+    // the names written into SQL are the config's own, found by the caller's string, never the caller's string
+    const invalidSearchFields = searchFieldParams.filter(name => !allowedSearchFields.includes(name))
+    if (invalidSearchFields.length > 0) {
+      const response = createApiError(
+        `Unknown search field for ${entityConfig.slug}: ${invalidSearchFields.join(', ')}`,
+        400,
+        { invalidKeys: invalidSearchFields, allowedKeys: allowedSearchFields },
         'INVALID_SEARCH_FIELD'
       )
       return addCorsHeaders(response, request)
     }
-    const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name) && !hiddenFields.has(name)), ...(searchField ? [searchField] : [])])]
+    const extraSearchFields = allowedSearchFields.filter(name => searchFieldParams.includes(name))
+    const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name) && !hiddenFields.has(name)), ...extraSearchFields])]
     if (searchParam && searchParam.trim() !== '' && searchableFields.length === 0) {
       const response = createApiError(
         `Entity ${entityConfig.slug} has no searchable field (${SEARCHABLE_FIELDS.join(', ')}); the search parameter is not supported`,

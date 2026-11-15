@@ -35,8 +35,8 @@ const CONTACTS = {
 function use(entity: EntityConfig) {
   mocks.resolveEntityFromUrl.mockResolvedValue({ isValidEntity: true, entityConfig: entity, entityName: entity.slug })
 }
-const list = (params: Record<string, string>) =>
-  handleGenericList(makeRequest({ url: listUrl(params, 'contacts'), headers: TEAM_HEADERS })) as unknown as Promise<Res>
+const list = (params: Record<string, string>, extra = '') =>
+  handleGenericList(makeRequest({ url: listUrl(params, 'contacts') + extra, headers: TEAM_HEADERS })) as unknown as Promise<Res>
 const listSql = (): [string, unknown[]] => {
   const call = mocks.queryWithRLS.mock.calls.find(([sql]: [string]) => sql.includes('FROM "contacts"'))
   expect(call).toBeDefined()
@@ -88,7 +88,7 @@ describe('handleGenericList — ?searchField=', () => {
 
     expect(response.status).toBe(400)
     expect(response.body.code).toBe('INVALID_SEARCH_FIELD')
-    expect(response.body.details?.invalidKeys).toEqual([searchField])
+    expect(response.body.details?.invalidKeys).toEqual(searchField.split(',').map(name => name.trim())) // a crafted value is split like any list, and every piece is refused
     expect(response.body.details?.allowedKeys).toEqual(['callName', 'slug', 'content', 'email'])
     expect(mocks.queryWithRLS).not.toHaveBeenCalled()
   })
@@ -119,5 +119,69 @@ describe('handleGenericList — ?searchField=', () => {
     const plain = await list({ search: 'ana' })
     expect(plain.status).toBe(400)
     expect(plain.body.code).toBe('SEARCH_NOT_SUPPORTED')
+  })
+})
+
+describe('handleGenericList — ?searchField= with several fields (#462)', () => {
+  const whereOf = (sql: string) => sql.slice(sql.indexOf('WHERE'))
+
+  it('matches when any listed field matches: one parenthesised OR over the default fields and every listed one, one bound term', async () => {
+    const response = await list({ search: 'ana', searchField: 'callName,email' })
+
+    expect(response.status).toBe(200)
+    const [sql, params] = listSql()
+    expect(sql).toMatch(/\(t\."slug" ILIKE \$\d+ OR t\."content" ILIKE \$\d+ OR t\."callName" ILIKE \$\d+ OR t\."email" ILIKE \$\d+\)/)
+    expect(params.filter(param => param === '%ana%')).toHaveLength(1)
+  })
+
+  it('takes a repeated parameter too, mixed with a list, once each, ignoring blanks and spaces', async () => {
+    await list({ search: 'ana', searchField: ' callName , ,email,callName' }, '&searchField=email')
+
+    const [sql] = listSql()
+    expect(sql.match(/t\."callName" ILIKE/g)).toHaveLength(1)
+    expect(sql.match(/t\."email" ILIKE/g)).toHaveLength(1)
+  })
+
+  it('combines with another filter and the team with AND, the OR staying inside its parentheses', async () => {
+    await list({ search: 'ana', searchField: 'callName,email', status: 'active' })
+
+    const where = whereOf(listSql()[0])
+    expect(where).toContain('"status"')
+    expect(where).toMatch(/AND \(t\."slug" ILIKE[^)]*t\."email" ILIKE \$\d+\)/)
+  })
+
+  it('refuses the whole request when one field of the list is outside the allowlist, naming it, and never queries', async () => {
+    const response = await list({ search: 'ana', searchField: 'callName,status,email' })
+
+    expect(response.status).toBe(400)
+    expect(response.body.code).toBe('INVALID_SEARCH_FIELD')
+    expect(response.body.details?.invalidKeys).toEqual(['status'])
+    expect(mocks.queryWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('refuses the disallowed field also when it comes in a repeated parameter', async () => {
+    const response = await list({ search: 'ana', searchField: 'callName' }, '&searchField=internalNote')
+
+    expect(response.status).toBe(400)
+    expect(response.body.details?.invalidKeys).toEqual(['internalNote'])
+    expect(mocks.queryWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('accepts five fields and refuses six with 400 TOO_MANY_SEARCH_FIELDS', async () => {
+    use({ ...CONTACTS, fields: ['a', 'b', 'c', 'd', 'e', 'f'].map(name => field(name, 'text')) } as unknown as EntityConfig)
+
+    expect((await list({ search: 'x', searchField: 'a,b,c,d,e' })).status).toBe(200)
+    mocks.queryWithRLS.mockClear()
+    const response = await list({ search: 'x', searchField: 'a,b,c,d,e,f' })
+    expect(response.status).toBe(400)
+    expect(response.body.code).toBe('TOO_MANY_SEARCH_FIELDS')
+    expect(mocks.queryWithRLS).not.toHaveBeenCalled()
+  })
+
+  it('lets an entity with none of the default fields be searched by a list', async () => {
+    use({ ...CONTACTS, fields: [field('callName', 'text'), field('email', 'email')] } as unknown as EntityConfig)
+
+    expect((await list({ search: 'ana', searchField: 'callName,email' })).status).toBe(200)
+    expect(listSql()[0]).toMatch(/\(t\."callName" ILIKE \$\d+ OR t\."email" ILIKE \$\d+\)/)
   })
 })
