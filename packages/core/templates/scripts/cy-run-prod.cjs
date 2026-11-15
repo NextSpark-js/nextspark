@@ -35,6 +35,29 @@ const HEALTH_CHECK_INTERVAL = 1000 // Check every 1 second
 // Get arguments after script name
 const args = process.argv.slice(2)
 
+/**
+ * How to start pnpm: directly, except on Windows, where it is a .cmd shim that
+ * only a shell starts, so every argument is quoted for cmd.exe and one it
+ * cannot quote safely is refused (#450). A copy of
+ * node_modules/@nextsparkjs/core/scripts/utils/package-manager.mjs.
+ */
+function packageManagerCommand(command, args, platform = process.platform) {
+  if (platform !== 'win32') return { command, args, shell: false }
+  const quoted = args.map((arg) => {
+    if (/["%\r\n]/.test(arg)) {
+      throw new Error(`Cannot pass ${JSON.stringify(arg)} to ${command} on Windows: cmd.exe cannot quote " or % or a line break safely`)
+    }
+    // A backslash right before the closing quote would escape it for the program's own parser
+    return `"${arg.replace(/(\\+)$/, '$1$1')}"`
+  })
+  return { command: [command, ...quoted].join(' '), args: [], shell: true }
+}
+
+function spawnPnpm(spawner, pnpmArgs, options) {
+  const pnpm = packageManagerCommand('pnpm', pnpmArgs)
+  return spawner(pnpm.command, pnpm.args, { ...options, shell: pnpm.shell })
+}
+
 // Resolve the root-first project's Cypress configuration.
 function findCypressConfig() {
   const configPath = path.join(process.cwd(), 'tests', 'cypress.config.ts')
@@ -73,9 +96,8 @@ function killPort(port) {
 // Run production build
 function runBuild() {
   console.log('\n[cy:run:prod] Building production bundle...')
-  const result = spawnSync('pnpm', ['build'], {
+  const result = spawnPnpm(spawnSync, ['build'], {
     stdio: 'inherit',
-    shell: true,
     cwd: process.cwd(),
   })
 
@@ -89,9 +111,8 @@ function runBuild() {
 // Start production server
 function startServer() {
   console.log('\n[cy:run:prod] Starting production server...')
-  const server = spawn('pnpm', ['start'], {
+  const server = spawnPnpm(spawn, ['start'], {
     stdio: 'pipe',
-    shell: true,
     cwd: process.cwd(),
     detached: false,
   })
@@ -156,9 +177,8 @@ function runCypress(configFile) {
 
   console.log(`\n[cy:run:prod] Running: pnpm exec ${cypressArgs.join(' ')}`)
 
-  const result = spawnSync('pnpm', ['exec', ...cypressArgs], {
+  const result = spawnPnpm(spawnSync, ['exec', ...cypressArgs], {
     stdio: 'inherit',
-    shell: true,
     cwd: process.cwd(),
   })
 
@@ -232,18 +252,23 @@ async function main() {
   process.exit(exitCode)
 }
 
-// Handle signals
-process.on('SIGINT', () => {
-  console.log('\n[cy:run:prod] Interrupted, cleaning up...')
-  killPort(PORT)
-  process.exit(130)
-})
+// Required by core's tests: hand over the helper, run nothing
+if (require.main !== module) {
+  module.exports = { packageManagerCommand }
+} else {
+  // Handle signals
+  process.on('SIGINT', () => {
+    console.log('\n[cy:run:prod] Interrupted, cleaning up...')
+    killPort(PORT)
+    process.exit(130)
+  })
 
-process.on('SIGTERM', () => {
-  console.log('\n[cy:run:prod] Terminated, cleaning up...')
-  killPort(PORT)
-  process.exit(143)
-})
+  process.on('SIGTERM', () => {
+    console.log('\n[cy:run:prod] Terminated, cleaning up...')
+    killPort(PORT)
+    process.exit(143)
+  })
 
-// Run
-main()
+  // Run
+  main()
+}

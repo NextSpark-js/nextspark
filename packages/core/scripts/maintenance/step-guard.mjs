@@ -25,7 +25,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
-import path from 'node:path'
+import { stepCommand } from './core-updater.mjs'
 
 const windows = process.platform === 'win32'
 const [command, ...args] = process.argv.slice(2)
@@ -36,8 +36,9 @@ const GATE = 'IFS= read -r go <&3 && [ "$go" = go ] || exit 125; exec 3<&-; exec
 // Signals are update-core's to handle: it passes them on to the step's group
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => {})
 
-const step = windows
-  ? spawn(command, args, { stdio: ['ignore', 'inherit', 'inherit'], shell: !path.isAbsolute(command) })
+const windowsStep = windows ? stepCommand(command, args) : null
+const step = windowsStep
+  ? spawn(windowsStep.command, windowsStep.args, { stdio: ['ignore', 'inherit', 'inherit'], shell: windowsStep.shell })
   : spawn('/bin/sh', ['-c', GATE, 'update-core-step', command, ...args], { stdio: ['ignore', 'inherit', 'inherit', 'pipe'], detached: true })
 const gate = windows ? null : step.stdio[3]
 // EPIPE: the group was stopped before the gate opened
