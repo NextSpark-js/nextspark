@@ -8,6 +8,13 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildCli } from './built-cli.js'
+import { packageManagerCommand } from '../src/utils/package-manager.js'
+
+/** `pnpm` the way the code under test starts it: through cmd.exe, every argument quoted, on Windows (#450) */
+function pnpmCall<T extends object>(args: string[], options: T) {
+  const call = packageManagerCommand('pnpm', args)
+  return [call.command, call.args, { ...options, shell: call.shell }] as const
+}
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CORE_ROOT = join(PKG_ROOT, '..', 'core')
@@ -39,7 +46,7 @@ before(() => {
   cliEntry = buildCli()
   // The evaluator from core's source, bundled the way the check imports it from dist/
   const out = join(PKG_ROOT, 'node_modules', '.cache', `nextspark-auth-readiness-${process.pid}`)
-  execFileSync('pnpm', ['exec', 'tsup', join(CORE_ROOT, 'src/lib/auth/readiness.ts'), join(CORE_ROOT, 'src/lib/auth/e2e-fixed-otp.ts'), '--format', 'esm', '--outDir', out], { cwd: PKG_ROOT, stdio: 'ignore' })
+  execFileSync(...pnpmCall(['exec', 'tsup', join(CORE_ROOT, 'src/lib/auth/readiness.ts'), join(CORE_ROOT, 'src/lib/auth/e2e-fixed-otp.ts'), '--format', 'esm', '--outDir', out], { cwd: PKG_ROOT, stdio: 'ignore' }))
   process.once('exit', () => rmSync(out, { recursive: true, force: true }))
   evaluatorBundle = join(out, 'readiness.js')
 })

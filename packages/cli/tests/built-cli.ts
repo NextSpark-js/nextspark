@@ -2,6 +2,13 @@ import { execFileSync } from 'node:child_process'
 import { copyFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { packageManagerCommand } from '../src/utils/package-manager.js'
+
+/** `pnpm` the way the code under test starts it: through cmd.exe, every argument quoted, on Windows (#450) */
+function pnpmCall<T extends object>(args: string[], options: T) {
+  const call = packageManagerCommand('pnpm', args)
+  return [call.command, call.args, { ...options, shell: call.shell }] as const
+}
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -15,7 +22,7 @@ const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
  */
 export function buildCli(): string {
   const root = join(PKG_ROOT, 'node_modules', '.cache', `nextspark-cli-test-${process.pid}`)
-  execFileSync('pnpm', ['exec', 'tsup', 'src/cli.ts', '--format', 'esm', '--outDir', join(root, 'dist')], { cwd: PKG_ROOT, stdio: 'ignore' })
+  execFileSync(...pnpmCall(['exec', 'tsup', 'src/cli.ts', '--format', 'esm', '--outDir', join(root, 'dist')], { cwd: PKG_ROOT, stdio: 'ignore' }))
   copyFileSync(join(PKG_ROOT, 'package.json'), join(root, 'package.json'))
   process.once('exit', () => rmSync(root, { recursive: true, force: true }))
   return join(root, 'dist', 'cli.js')

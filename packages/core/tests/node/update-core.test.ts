@@ -12,6 +12,13 @@ import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { packageManagerCommand } from '../../scripts/utils/package-manager.mjs'
+
+/** `pnpm` the way the code under test starts it: through cmd.exe, every argument quoted, on Windows (#450) */
+function pnpmCall<T extends object>(args: string[], options: T) {
+  const call = packageManagerCommand('pnpm', args)
+  return [call.command, call.args, { ...options, shell: call.shell }] as const
+}
 
 const CORE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const UPDATE_CORE = path.join(CORE_DIR, 'scripts/maintenance/update-core.mjs')
@@ -1420,14 +1427,14 @@ test('a project created without an update-core script runs it through the bin co
     dependencies: { '@nextsparkjs/core': 'file:../core-package' },
   }, null, 2))
 
-  const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], { cwd: project, encoding: 'utf8', timeout: 120_000 })
+  const install = spawnSync(...pnpmCall(['install', '--offline', '--ignore-scripts'], { cwd: project, encoding: 'utf8', timeout: 120_000 }))
   assert.equal(install.status, 0, `${install.stdout}${install.stderr}`)
 
-  const help = spawnSync('pnpm', ['update-core', '--help'], { cwd: project, encoding: 'utf8', timeout: 60_000 })
+  const help = spawnSync(...pnpmCall(['update-core', '--help'], { cwd: project, encoding: 'utf8', timeout: 60_000 }))
   assert.equal(help.status, 0, `${help.stdout}${help.stderr}`)
   assert.match(help.stdout, /NextSpark Core Updater/)
 
-  const current = spawnSync('pnpm', ['update-core', '--current'], { cwd: project, encoding: 'utf8', timeout: 60_000 })
+  const current = spawnSync(...pnpmCall(['update-core', '--current'], { cwd: project, encoding: 'utf8', timeout: 60_000 }))
   assert.equal(current.status, 0, `${current.stdout}${current.stderr}`)
   assert.match(current.stdout, new RegExp(`@nextsparkjs/core ${manifest.version.replace(/\./g, '\\.')}`))
 })

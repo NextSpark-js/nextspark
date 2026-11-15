@@ -7,10 +7,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { installWorkspaceDependencies, dependencyInstallNotice } from '../src/lib/workspace-dependencies.js'
+import { packageManagerCommand } from '../src/utils/package-manager.js'
+
+/** `pnpm` the way the code under test starts it: through cmd.exe, every argument quoted, on Windows (#450) */
+function pnpmCall<T extends object>(args: string[], options: T) {
+  const call = packageManagerCommand('pnpm', args)
+  return [call.command, call.args, { ...options, shell: call.shell }] as const
+}
 
 const GENERATED_WORKSPACE = "packages:\n  - 'packages/widgets/*'\n  - 'packages/extensions/*'\n"
 
-const pnpmAvailable = spawnSync('pnpm', ['--version'], { stdio: 'ignore' }).status === 0
+const pnpmAvailable = spawnSync(...pnpmCall(['--version'], { stdio: 'ignore' })).status === 0
 
 /** A package directory with the manifest pnpm looks for. */
 async function pkg(dir: string, name: string): Promise<void> {
@@ -183,7 +190,7 @@ test('does not install when pnpm leaves a package out of the enclosing workspace
  * version pinned by packageManager.
  */
 function pnpmAcceptsWorkspace(root: string): boolean {
-  return spawnSync('pnpm', ['ls', '-r', '--depth', '-1', '--json'], { cwd: root, stdio: 'ignore' }).status === 0
+  return spawnSync(...pnpmCall(['ls', '-r', '--depth', '-1', '--json'], { cwd: root, stdio: 'ignore' })).status === 0
 }
 
 test('pnpm decides which packages a workspace takes in', { skip: !pnpmAvailable && 'pnpm is not installed' }, async () => {
@@ -355,7 +362,7 @@ test('climbs when the enclosing lockfile writes the nested importer as {}', asyn
 
 // The product runs pnpm inside the project (a temp dir here), so the version that counts is the one found
 // outside this repo's packageManager pin, not the one `pnpm` reports from the repo.
-const pnpmMajor = pnpmAvailable ? Number(spawnSync('pnpm', ['--version'], { cwd: tmpdir(), encoding: 'utf8' }).stdout.split('.')[0]) : 0
+const pnpmMajor = pnpmAvailable ? Number(spawnSync(...pnpmCall(['--version'], { cwd: tmpdir(), encoding: 'utf8' })).stdout.split('.')[0]) : 0
 // pnpm 12 talks to .pnpmfile.cjs over its stdout, so a hook that prints makes `pnpm ls` wait 30 s for the hook
 // and fail (measured on 12.9.1; 9.0.0, 10.12.1 and 11.28.4 list the projects behind the printed text).
 const pnpmfilePrintBreaksPnpm = pnpmMajor >= 12

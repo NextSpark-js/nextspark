@@ -17,12 +17,19 @@ import { join } from 'node:path'
 
 import { installProjectDependencies, setupAIWorkflow } from '../src/wizard/install-dependencies.js'
 import { silenceConsoleOutput } from './quiet-console.js'
+import { packageManagerCommand } from '../src/utils/package-manager.js'
+
+/** `pnpm` the way the code under test starts it: through cmd.exe, every argument quoted, on Windows (#450) */
+function pnpmCall<T extends object>(args: string[], options: T) {
+  const call = packageManagerCommand('pnpm', args)
+  return [call.command, call.args, { ...options, shell: call.shell }] as const
+}
 
 silenceConsoleOutput()
 // The install runs pnpm with inherited stdio: pnpm 12 prints "✓ Lockfile passes supply-chain policies" on the test child's stdout
 process.env.pnpm_config_reporter = 'silent'
 
-const pnpmAvailable = spawnSync('pnpm', ['--version'], { stdio: 'ignore' }).status === 0
+const pnpmAvailable = spawnSync(...pnpmCall(['--version'], { stdio: 'ignore' })).status === 0
 
 /** A project installed with `first` as its only dependency, then `added` written into package.json. */
 function installedProject(added: Record<string, string>) {
