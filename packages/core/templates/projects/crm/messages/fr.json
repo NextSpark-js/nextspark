@@ -317,7 +317,7 @@
         "add": "Ajouter un contact",
         "sendEmail": "Envoyer un e-mail",
         "deleteConfirm": "Supprimer {count, plural, one {# contact} other {# contacts}} ?",
-        "search": "Rechercher par nom de famille...",
+        "search": "Rechercher des contacts par nom ou e-mail...",
         "empty": "Aucun contact pour le moment",
         "emptyDescription": "Commencez à ajouter des contacts pour développer votre réseau.",
         "stats": {

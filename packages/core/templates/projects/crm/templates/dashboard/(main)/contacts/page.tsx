@@ -40,7 +40,7 @@ interface Contact {
     title?: string
     department?: string
     tags?: string[]
-    lastActivityAt?: string
+    lastContactedAt?: string
     createdAt: string
     updatedAt: string
 }
@@ -100,17 +100,18 @@ export default function ContactsPage() {
     const canDeleteContacts = usePermission('contacts.delete')
 
     // the API sends the id of the company, not its name
-    const { rows: contacts, total, isLoading, server } = useServerList<Contact>({
+    const { rows: contacts, isLoading, server } = useServerList<Contact>({
         endpoint: '/api/v1/contacts',
         pageSize: 15,
         enabled: !teamLoading && !!currentTeam,
-        sortFields: { name: 'lastName' },
-        searchField: 'lastName',
+        sortFields: { name: 'lastName', lastContactedAt: 'lastContactedAt' },
+        searchField: 'firstName,lastName,email',
         enrich: async rows => withCompanyName<Contact>(rows, await fetchRowsByIds<{ id: string; name?: string }>('/api/v1/companies', rows.map(row => row.companyId))),
     })
 
-    // the exact number of the recently active ones is asked of the API (by the date of the last contact); "with company" and "with email" have no filter there and are of the page
+    // the team's total (the list's own total follows the search) and the recently active ones are asked of the API (by the date of the last contact); "with company" and "with email" have no filter there and are of the page
     const counts = useExactCounts('/api/v1/contacts', !teamLoading && !!currentTeam, {
+        all: {},
         recentlyActive: { dateField: 'lastContactedAt', from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
     })
 
@@ -119,11 +120,11 @@ export default function ContactsPage() {
         const withCompany = contacts.filter(c => c.companyId || c.companyName).length
 
         return {
-            total,
+            total: counts.all,
             withCompany,
             withEmail: contacts.filter(c => c.email).length,
         }
-    }, [contacts, total])
+    }, [contacts, counts.all])
 
     // Column definitions
     const columns: Column<Contact>[] = [
@@ -189,7 +190,8 @@ export default function ContactsPage() {
             render: (value) => <ContactTags tags={value} />,
         },
         {
-            key: 'lastActivityAt',
+            key: 'lastContactedAt',
+            sortable: true,
             header: t('contacts.columns.lastActivity'),
             render: (value) => <RelativeTime date={value} />,
         },
@@ -264,7 +266,7 @@ export default function ContactsPage() {
                             <Users className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-foreground">{formatLocaleNumber(stats.total, locale)}</p>
+                            <p className="text-2xl font-bold text-foreground">{stats.total == null ? '-' : formatLocaleNumber(stats.total, locale)}</p>
                             <p className="text-xs text-muted-foreground">{t('contacts.stats.total')}</p>
                         </div>
                     </div>

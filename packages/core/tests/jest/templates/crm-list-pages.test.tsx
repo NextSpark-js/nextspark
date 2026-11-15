@@ -64,7 +64,7 @@ jest.mock('@nextsparkjs/core/lib/api/entities', () => ({
     // like the generic handler: `search` matches name (and the one `searchField`) with ILIKE, `sortBy`/`sortOrder` order the whole set
     if (params.get('search')) {
       const wanted = params.get('search')!.toLowerCase()
-      const fields = ['name', ...(params.get('searchField') ? [params.get('searchField')!] : [])]
+      const fields = ['name', ...(params.get('searchField') ? params.get('searchField')!.split(',') : [])]
       rows = rows.filter(row => fields.some(field => String((row as Record<string, unknown>)[field] ?? '').toLowerCase().includes(wanted)))
     }
     if (params.get('sortBy')) {
@@ -113,7 +113,7 @@ describe.each([['es'], ['de']])('contacts list in %s', locale => {
   test('the last activity is a date in the locale, and "never" is translated', async () => {
     mockRows = [
       { id: 'a', firstName: 'Ana', lastName: 'Ruiz', email: 'a@example.com' },
-      { id: 'b', firstName: 'Bo', lastName: 'Lee', email: 'b@example.com', lastActivityAt: new Date(Date.now() - 86_400_000).toISOString() },
+      { id: 'b', firstName: 'Bo', lastName: 'Lee', email: 'b@example.com', lastContactedAt: new Date(Date.now() - 86_400_000).toISOString() },
     ]
     render(<ContactsPage />)
     await waitFor(() => expect(screen.getByText(text(locale, 'common.never'))).toBeTruthy())
@@ -366,7 +366,28 @@ describe('the lists page on the server (#461)', () => {
     await waitFor(() => expect(listCalls('/api/v1/contacts').some(q => q.get('sortBy') === 'lastName' && q.get('search') === 'Last077')).toBe(true))
     const calls = listCalls('/api/v1/contacts')
     expect(calls.some(q => q.get('page') === '10')).toBe(true)
-    expect(calls.some(q => q.get('search') === 'Last077' && q.get('searchField') === 'lastName' && q.get('page') === '1')).toBe(true)
+    expect(calls.some(q => q.get('search') === 'Last077' && q.get('searchField') === 'firstName,lastName,email' && q.get('page') === '1')).toBe(true)
+    // the "Total" card is the team's (an unfiltered count), not the 1 row the search leaves
+    expect(screen.getByText('150')).toBeTruthy()
+    expect(calls.some(q => q.get('limit') === '1' && !q.has('search') && !q.has('dateField'))).toBe(true)
+  })
+
+  test('contacts: the search matches the first name and the email, and the last activity is the last contact date', async () => {
+    const contacts = [
+      { id: 'a', firstName: 'Ana', lastName: 'Zed', email: 'z@example.com', lastContactedAt: '2020-01-10T12:00:00.000Z' },
+      { id: 'b', firstName: 'Bob', lastName: 'Yu', email: 'ana.b@example.com' },
+      { id: 'c', firstName: 'Cy', lastName: 'Xu', email: 'c@example.com' },
+    ]
+    mockRows = contacts
+    mockOther = { '/api/v1/contacts': contacts }
+    render(<ContactsPage />)
+    await waitFor(() => expect(screen.getByText(/Cy Xu/)).toBeTruthy())
+    fireEvent.change(screen.getByPlaceholderText(text('es', 'contacts.search')), { target: { value: 'ana' } })
+    await waitFor(() => expect(screen.queryByText(/Cy Xu/)).toBeNull())
+    expect(screen.getByText(/Ana Zed/)).toBeTruthy()
+    expect(screen.getByText(/Bob Yu/)).toBeTruthy()
+    expect(screen.queryByText(text('es', 'common.never'))).toBeTruthy() // Bob has no last contact; Ana's date is shown, not "never"
+    expect(document.body.textContent).toContain('2020')
   })
 
   test('opportunities: page, search and order go to the server', async () => {

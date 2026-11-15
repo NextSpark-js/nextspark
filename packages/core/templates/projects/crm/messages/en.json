@@ -326,7 +326,7 @@
         "add": "Add Contact",
         "sendEmail": "Send Email",
         "deleteConfirm": "Delete {count, plural, one {# contact} other {# contacts}}?",
-        "search": "Search by last name...",
+        "search": "Search contacts by name or email...",
         "empty": "No contacts yet",
         "emptyDescription": "Start adding contacts to build your network.",
         "stats": {
