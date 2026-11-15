@@ -5,6 +5,7 @@ import { spawn, execFileSync } from 'child_process'
 import { existsSync, rmSync } from 'fs'
 import { join, relative, resolve } from 'path'
 import { findProjectRoot } from '../build/registry/project-mode.mjs'
+import { packageManagerCommand } from '../utils/package-manager.mjs'
 
 const projectRoot = findProjectRoot(process.cwd())
 let command = process.argv[2] || 'open'
@@ -29,7 +30,9 @@ if (command === 'tags') {
 if (command === 'e2e') {
   console.log('\x1b[36m🧪 Running project E2E tests\x1b[0m')
   execFileSync('node', [join(projectRoot, 'scripts/build-test-entities.mjs')], { cwd: projectRoot, stdio: 'inherit' })
-  execFileSync('pnpm', ['exec', 'start-server-and-test', 'pnpm dev', `http://localhost:${port}`, 'pnpm cy:run'], {
+  const pnpm = packageManagerCommand('pnpm', ['exec', 'start-server-and-test', 'pnpm dev', `http://localhost:${port}`, 'pnpm cy:run'])
+  execFileSync(pnpm.command, pnpm.args, {
+    shell: pnpm.shell,
     cwd: projectRoot,
     stdio: 'inherit',
   })
@@ -61,9 +64,10 @@ if (command === 'run' && existsSync(allureResultsPath)) {
 }
 
 const cliArgs = processSpecArgs([...extraArgs, ...process.argv.slice(3)])
-const child = spawn('pnpm', ['exec', 'cypress', command, '--config-file', configPath, ...cliArgs], {
+const pnpm = packageManagerCommand('pnpm', ['exec', 'cypress', command, '--config-file', configPath, ...cliArgs])
+const child = spawn(pnpm.command, pnpm.args, {
   cwd: projectRoot,
   stdio: 'inherit',
-  shell: process.platform === 'win32',
+  shell: pnpm.shell,
 })
 child.on('close', code => process.exit(code ?? 1))

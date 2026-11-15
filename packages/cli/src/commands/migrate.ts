@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
+import { packageManagerCommand } from '../utils/package-manager.js';
 import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, isStaticMetadataFile, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
@@ -700,7 +701,9 @@ async function templatesFromCoreArchive(archive: string, directory: string, vers
 
 function pnpmConfigValue(key: string, directory: string, environment: NodeJS.ProcessEnv, budget: NetworkBudget): string | null {
   try {
-    const value = execFileSync('pnpm', ['config', 'get', key, '--ignore-workspace'], {
+    const pnpm = packageManagerCommand('pnpm', ['config', 'get', key, '--ignore-workspace']);
+    const value = execFileSync(pnpm.command, pnpm.args, {
+      shell: pnpm.shell,
       cwd: directory,
       env: environment,
       encoding: 'utf8',
@@ -801,7 +804,9 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
     };
     let url: string;
     try {
-      url = execFileSync('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace'], {
+      const pnpm = packageManagerCommand('pnpm', ['view', `@nextsparkjs/core@${version}`, 'dist.tarball', '--ignore-workspace']);
+      url = execFileSync(pnpm.command, pnpm.args, {
+        shell: pnpm.shell,
         cwd: directory,
         env: environment,
         encoding: 'utf8',
@@ -810,6 +815,11 @@ async function previousCoreTemplates(version: string | null, currentVersion: str
       }).trim();
     } catch (viewError) {
       if (didProcessTimeOut(viewError)) throw new PreviousTemplateTimeoutError('running pnpm view', budget.total);
+      // pnpm is missing from PATH: ENOENT without a shell, cmd.exe's "not recognized" exit code 9009 on Windows
+      const { code, status } = viewError as { code?: unknown; status?: unknown };
+      if (code === 'ENOENT' || status === 9009) {
+        throw new PreviousTemplateLookupError('pnpm could not be started; check that pnpm is installed and on PATH', false);
+      }
       // The registry answered and said no: rerunning with network access will not change that. pnpm 12
       // words a 401/403 as a "client error" under ERR_PNPM_RESOLVING_NPM_RESOLVER_NETWORK_ERROR and a
       // missing version as ERR_PNPM_PACKAGE_NOT_FOUND; pnpm 9/10 hand `view` to npm (E401, E403, E404).

@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import throwaway from './throwaway-postgres.cjs'
 import { resolveProjectPaths } from '../build/registry/project-mode.mjs'
+import { packageManagerCommand } from '../utils/package-manager.mjs'
 import { describeDestination } from '../db/destination.mjs'
 import { selectsDatabaseProject, testDatabaseTarget, isOn, DATABASE_PROJECT, TEST_DATABASE_URL, ALLOW_REMOTE_DATABASE } from './test-database.mjs'
 
@@ -97,10 +98,11 @@ if (selectsDatabaseProject(jestArgs)) {
   }
 }
 
-child = spawn('pnpm', ['exec', 'jest', '--config', configPath, ...jestArgs], {
+const pnpm = packageManagerCommand('pnpm', ['exec', 'jest', '--config', configPath, ...jestArgs])
+child = spawn(pnpm.command, pnpm.args, {
   cwd: projectRoot,
   stdio: 'inherit',
-  shell: process.platform === 'win32',
+  shell: pnpm.shell,
   env,
 })
 if (signaled) child.kill(signaled)

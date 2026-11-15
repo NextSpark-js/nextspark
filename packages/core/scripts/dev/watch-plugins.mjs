@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { spawn } from 'node:child_process'
 import { loadNextSparkConfigSync } from '../build/config-loader.mjs'
 import { resolveProjectPaths } from '../build/registry/project-mode.mjs'
+import { packageManagerCommand } from '../utils/package-manager.mjs'
 
 const { projectRoot, pluginsDir } = resolveProjectPaths(process.cwd())
 const config = loadNextSparkConfigSync(projectRoot)
@@ -34,7 +35,8 @@ if (plugins.length === 0) {
   process.exit(0)
 }
 console.log(`🔍 Watching ${plugins.length} local plugin(s): ${plugins.map(({ name }) => name).join(', ')}`)
-const children = plugins.map(({ dir }) => spawn('pnpm', ['dev'], { cwd: dir, stdio: 'inherit', shell: false }))
+const pnpm = packageManagerCommand('pnpm', ['dev'])
+const children = plugins.map(({ dir }) => spawn(pnpm.command, pnpm.args, { cwd: dir, stdio: 'inherit', shell: pnpm.shell }))
 let exitCode = 0
 for (const child of children) child.on('exit', code => { if (code) exitCode = code })
 const stop = signal => {

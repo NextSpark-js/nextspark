@@ -4,6 +4,7 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { setupGitRepository } from './utils/git.js'
+import { packageManagerCommand } from './utils/package-manager.js'
 
 /**
  * Find local tarball for a package (for development testing)
@@ -256,7 +257,9 @@ ${exclusions}`
  */
 function getPnpmMajorVersion(projectPath: string): number | null {
   try {
-    const output = execFileSync('pnpm', ['--version'], {
+    const pnpm = packageManagerCommand('pnpm', ['--version'])
+    const output = execFileSync(pnpm.command, pnpm.args, {
+      shell: pnpm.shell,
       cwd: projectPath,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -266,16 +269,6 @@ function getPnpmMajorVersion(projectPath: string): number | null {
   } catch {
     return null
   }
-}
-
-/**
- * The arguments to hand `npx`. Windows needs `shell: true` to find npx.cmd, and with a
- * shell Node joins the arguments with spaces and no quoting, so `--name "My App"` would
- * reach the wizard as `--name My App`. Quote there; elsewhere they go through as-is.
- */
-export function wizardArgs(args: string[], platform: string = process.platform): string[] {
-  if (platform !== 'win32') return args
-  return args.map(arg => (/[\s"]/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg))
 }
 
 export interface ProjectOptions {
@@ -570,15 +563,20 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     initArgs.push('--yes')
   }
 
-  const result = spawnSync('pnpm', ['exec', ...wizardArgs(initArgs)], {
+  const pnpm = packageManagerCommand('pnpm', ['exec', ...initArgs])
+  const result = spawnSync(pnpm.command, pnpm.args, {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
-    shell: process.platform === 'win32',
+    shell: pnpm.shell,
     env: Object.keys(localPluginTarballs).length > 0
       ? { ...process.env, [LOCAL_PLUGIN_TARBALLS_ENV]: JSON.stringify(localPluginTarballs) }
       : process.env,
   })
 
+  // ENOENT without a shell, cmd.exe's "not recognized" exit code 9009 on Windows
+  if (result.error || result.status === 9009) {
+    throw new Error('pnpm could not be started; check that pnpm is installed and on PATH')
+  }
   if (result.status !== 0) {
     throw new Error(`Wizard failed with exit code ${result.status}`)
   }
