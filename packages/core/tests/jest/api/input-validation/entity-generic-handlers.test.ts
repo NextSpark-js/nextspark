@@ -304,8 +304,14 @@ describe('GET /api/v1/[entity] — query parameters', () => {
     expect(response.status).toBe(200)
   })
 
-  test('a long search string is answered normally and passed as a bound parameter', async () => {
-    const search = 'ñ'.repeat(10_000)
+  test('a very long search string is refused with 400 and never queried (#463)', async () => {
+    const response = await list(`?search=${encodeURIComponent('ñ'.repeat(10_000))}`)
+    expect(response.status).toBe(400)
+    expect(mocks.queryWithRLS).not.toHaveBeenCalled()
+  })
+
+  test('a search string at the cap is answered normally and passed as a bound parameter', async () => {
+    const search = 'ñ'.repeat(200)
     const response = await list(`?search=${encodeURIComponent(search)}`)
     expect(response.status).toBe(200)
     const [sql, params] = mocks.queryWithRLS.mock.calls[0] as [string, unknown[]]
