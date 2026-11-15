@@ -1406,11 +1406,12 @@ test('a project created without an update-core script runs it through the bin co
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-bin-project-'))
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
 
-  // The core package as far as the bin needs it: its manifest and the bin's directory
+  // The core package as far as the bin needs it: its manifest, the bin's directory and scripts/utils
   const core = path.join(root, 'core-package')
   const binDir = path.dirname(binPath)
   fs.mkdirSync(path.join(core, binDir), { recursive: true })
   fs.cpSync(path.join(CORE_DIR, binDir), path.join(core, binDir), { recursive: true })
+  fs.cpSync(path.join(CORE_DIR, 'scripts/utils'), path.join(core, 'scripts/utils'), { recursive: true })
   fs.writeFileSync(path.join(core, 'package.json'), JSON.stringify({
     name: manifest.name,
     version: manifest.version,
