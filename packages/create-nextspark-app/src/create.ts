@@ -4,7 +4,7 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { setupGitRepository } from './utils/git.js'
-import { isOnPath, packageManagerCommand } from './utils/package-manager.js'
+import { packageManagerCommand } from './utils/package-manager.js'
 
 /**
  * Find local tarball for a package (for development testing)
@@ -269,6 +269,19 @@ function getPnpmMajorVersion(projectPath: string): number | null {
   } catch {
     return null
   }
+}
+
+/**
+ * How to start the wizard (`nextspark init ...`, initArgs starting with `nextspark`) in projectPath.
+ * Elsewhere `pnpm exec`. On Windows that would run node_modules/.bin/nextspark.CMD, which cmd.exe
+ * reads from disk as it runs it: the wizard's own pnpm install rewrites that file, and cmd.exe then
+ * carries on in the new file from the old offset and starts the wizard a second time, which fails
+ * on the project the first run generated (#450). So there Node runs the CLI's entry itself.
+ */
+export function wizardCommand(projectPath: string, initArgs: string[], platform: string = process.platform) {
+  if (platform !== 'win32') return packageManagerCommand('pnpm', ['exec', ...initArgs], platform)
+  const entry = path.join(projectPath, 'node_modules', '@nextsparkjs', 'cli', 'bin', 'nextspark.js')
+  return { command: process.execPath, args: [entry, ...initArgs.slice(1)], shell: false, windowsHide: true }
 }
 
 export interface ProjectOptions {
@@ -563,19 +576,18 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     initArgs.push('--yes')
   }
 
-  const pnpm = packageManagerCommand('pnpm', ['exec', ...initArgs])
-  const result = spawnSync(pnpm.command, pnpm.args, {
+  const wizard = wizardCommand(projectPath, initArgs)
+  const result = spawnSync(wizard.command, wizard.args, {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
-    shell: pnpm.shell, windowsHide: pnpm.windowsHide,
+    shell: wizard.shell, windowsHide: wizard.windowsHide,
     env: Object.keys(localPluginTarballs).length > 0
       ? { ...process.env, [LOCAL_PLUGIN_TARBALLS_ENV]: JSON.stringify(localPluginTarballs) }
       : process.env,
   })
 
-  // pnpm never started: ENOENT without a shell; through cmd.exe on Windows it is not on PATH
-  if (result.error || (result.status !== 0 && !isOnPath('pnpm'))) {
-    throw new Error('pnpm could not be started; check that pnpm is installed and on PATH')
+  if (result.error) {
+    throw new Error(`Could not start the wizard (${wizard.command}): ${result.error.message}; check that pnpm is installed and on PATH`)
   }
   if (result.status !== 0) {
     throw new Error(`Wizard failed with exit code ${result.status}`)
