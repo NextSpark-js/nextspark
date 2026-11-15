@@ -11,6 +11,8 @@ import {
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern'
+import { searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response'
 import { memberListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamMemberService, MembershipService, TeamInvitationService } from '@nextsparkjs/core/lib/services'
 import type { TeamMember } from '@nextsparkjs/core/lib/teams/types'
@@ -76,6 +78,9 @@ export const GET = withRateLimitTier(withApiLogging(
       const { page, limit, role, search } = validatedQuery
       const offset = (page - 1) * limit
 
+      const tooLong = searchTermTooLongError(search)
+      if (tooLong) return addCorsHeaders(tooLong, req)
+
       // Build WHERE clause based on filters
       let whereClause = 'WHERE tm."teamId" = $1'
       const queryValues: unknown[] = [teamId]
@@ -88,8 +93,8 @@ export const GET = withRateLimitTier(withApiLogging(
       }
 
       if (search) {
-        whereClause += ` AND (u.name ILIKE $${paramCount} OR u.email ILIKE $${paramCount})`
-        queryValues.push(`%${search}%`)
+        whereClause += ` AND (u.name ILIKE $${paramCount} ${LIKE_ESCAPE_CLAUSE} OR u.email ILIKE $${paramCount} ${LIKE_ESCAPE_CLAUSE})`
+        queryValues.push(containsPattern(search))
         paramCount++
       }
 

@@ -98,9 +98,9 @@ describe('GET /api/v1/users — query parameters', () => {
     expect(response.status).toBeLessThan(500)
   })
 
-  test('a very long search string is bound as a parameter', async () => {
+  test('a search string at the cap is bound as a parameter', async () => {
     mocks.queryWithRLS.mockResolvedValue([{ count: 0 }])
-    const search = 'ñ'.repeat(20_000)
+    const search = 'ñ'.repeat(200)
     const response = await list(`?search=${encodeURIComponent(search)}`)
     expect(response.status).toBe(200)
     const [sql, params] = mocks.queryWithRLS.mock.calls[0] as [string, unknown[]]

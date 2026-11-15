@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
+import { createApiError, searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response';
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern';
 import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
@@ -50,6 +51,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const tab = searchParams.get('tab') || 'users'; // users, superadmins, all
     const { page, limit, offset } = parsePaginationParams(request, 20);
 
+    const tooLong = searchTermTooLongError(search);
+    if (tooLong) return tooLong;
+
     // Build WHERE conditions
     const buildWhereClause = (isSuperadmin: boolean) => {
       const conditions: string[] = [];
@@ -77,12 +81,12 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       // Search filter
       if (search) {
         conditions.push(`(
-          "firstName" ILIKE $${paramIndex} OR
-          "lastName" ILIKE $${paramIndex} OR
-          email ILIKE $${paramIndex} OR
-          CONCAT("firstName", ' ', "lastName") ILIKE $${paramIndex}
+          "firstName" ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE} OR
+          "lastName" ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE} OR
+          email ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE} OR
+          CONCAT("firstName", ' ', "lastName") ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE}
         )`);
-        params.push(`%${search}%`);
+        params.push(containsPattern(search));
         paramIndex++;
       }
 

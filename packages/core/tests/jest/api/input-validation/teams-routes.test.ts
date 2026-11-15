@@ -115,7 +115,7 @@ describe('GET /api/v1/teams — query parameters', () => {
     ['unknown parameters', '?colour=brown'],
     ['repeated parameters (the first is read)', '?page=1&page=9&limit=5&limit=50'],
     ['empty values', '?page=&limit=&search='],
-    ['a long search string', `?search=${encodeURIComponent('ñ'.repeat(20_000))}`],
+    ['a search string at the 200-character cap', `?search=${encodeURIComponent('ñ'.repeat(200))}`],
   ])('answers %s with a normal 200', async (_label, query) => {
     expect((await list(query)).status).toBe(200)
   })

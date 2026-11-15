@@ -8,6 +8,7 @@
  */
 
 import { query, queryOneWithRLS, queryWithRLS, mutateWithRLS, getTransactionClient } from '../db'
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '../utils/like-pattern'
 import type {
   Media,
   CreateMediaInput,
@@ -96,13 +97,13 @@ export class MediaService {
     if (search) {
       conditions.push(`(
         (m."searchVector" IS NOT NULL AND m."searchVector" @@ plainto_tsquery('english', $${paramIndex}))
-        OR lower(coalesce(m.title, '')) LIKE $${paramIndex + 1}
-        OR lower(m.filename) LIKE $${paramIndex + 1}
-        OR lower(coalesce(m.alt, '')) LIKE $${paramIndex + 1}
-        OR lower(coalesce(m.caption, '')) LIKE $${paramIndex + 1}
+        OR lower(coalesce(m.title, '')) LIKE $${paramIndex + 1} ${LIKE_ESCAPE_CLAUSE}
+        OR lower(m.filename) LIKE $${paramIndex + 1} ${LIKE_ESCAPE_CLAUSE}
+        OR lower(coalesce(m.alt, '')) LIKE $${paramIndex + 1} ${LIKE_ESCAPE_CLAUSE}
+        OR lower(coalesce(m.caption, '')) LIKE $${paramIndex + 1} ${LIKE_ESCAPE_CLAUSE}
       )`)
       params.push(search)
-      params.push(`%${search.toLowerCase()}%`)
+      params.push(containsPattern(search.toLowerCase()))
       paramIndex += 2
     }
 

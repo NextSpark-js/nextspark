@@ -20,6 +20,8 @@ import { hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
 import { ASSIGNABLE_USER_ROLES, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import * as z from 'zod';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern';
+import { searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response';
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -93,9 +95,11 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
       return addCorsHeaders(response, req);
     }
     const search = searchParams.get('search')?.trim();
+    const tooLong = searchTermTooLongError(search);
+    if (tooLong) return addCorsHeaders(tooLong, req);
     if (search) {
-      whereClause += ` AND (${USER_SEARCH_FIELDS.map(field => `"${field}" ILIKE $${paramCount}`).join(' OR ')})`;
-      queryParams.push(`%${search}%`);
+      whereClause += ` AND (${USER_SEARCH_FIELDS.map(field => `"${field}" ILIKE $${paramCount} ${LIKE_ESCAPE_CLAUSE}`).join(' OR ')})`;
+      queryParams.push(containsPattern(search));
       paramCount++;
     }
 

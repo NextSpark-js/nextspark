@@ -8,6 +8,7 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { withDisplayUrls } from '@nextsparkjs/core/lib/media/storage/display'
 import { mediaListQuerySchema } from '@nextsparkjs/core/lib/media/schemas'
+import { searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response'
 
 /**
  * GET /api/v1/media
@@ -54,6 +55,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         errors: parsed.error.issues,
       })
     }
+
+    const tooLong = searchTermTooLongError(parsed.data.search)
+    if (tooLong) return tooLong
 
     // 5. Query media list with team isolation
     const result = await MediaService.list(authResult.user!.id, teamId, parsed.data)

@@ -54,7 +54,7 @@ describe('GET /api/v1/users — search', () => {
 
     expect(status).toBe(200)
     const [sql, params] = listCall()
-    expect(sql).toContain('("email" ILIKE $1 OR "name" ILIKE $1 OR "firstName" ILIKE $1 OR "lastName" ILIKE $1)')
+    expect(sql).toContain(`("email" ILIKE $1 ESCAPE '\\' OR "name" ILIKE $1 ESCAPE '\\' OR "firstName" ILIKE $1 ESCAPE '\\' OR "lastName" ILIKE $1 ESCAPE '\\')`)
     expect(params).toEqual(['%ann@%', 10, 0])
   })
 
@@ -83,7 +83,7 @@ describe('GET /api/v1/users — search', () => {
 
     expect(status).toBe(200)
     const [sql, params] = listCall()
-    expect(sql).toContain('WHERE 1=1 AND role = $1 AND ("email" ILIKE $2 OR "name" ILIKE $2 OR "firstName" ILIKE $2 OR "lastName" ILIKE $2)')
+    expect(sql).toContain(`WHERE 1=1 AND role = $1 AND ("email" ILIKE $2 ESCAPE '\\' OR "name" ILIKE $2 ESCAPE '\\' OR "firstName" ILIKE $2 ESCAPE '\\' OR "lastName" ILIKE $2 ESCAPE '\\')`)
     expect(params).toEqual(['member', '%ann%', 10, 0])
   })
 

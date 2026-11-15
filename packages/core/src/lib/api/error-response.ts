@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { MAX_SEARCH_TERM_LENGTH, searchTermLength } from '../utils/like-pattern';
 
 // Kept apart from helpers.ts, which pulls in the database and auth: a route that only answers errors imports this one.
 
@@ -41,4 +42,15 @@ export async function readJsonObject(request: NextRequest): Promise<
     return { error: createApiError('Request body must be a JSON object', 400, undefined, 'INVALID_JSON') };
   }
   return { data: body as Record<string, unknown> };
+}
+
+/** The 400 SEARCH_TERM_TOO_LONG answer for a search term over MAX_SEARCH_TERM_LENGTH characters (trimmed), else null. */
+export function searchTermTooLongError(term: string | null | undefined): NextResponse | null {
+  if (!term || searchTermLength(term.trim()) <= MAX_SEARCH_TERM_LENGTH) return null;
+  return createApiError(
+    `The search term is too long: at most ${MAX_SEARCH_TERM_LENGTH} characters`,
+    400,
+    { maxLength: MAX_SEARCH_TERM_LENGTH },
+    'SEARCH_TERM_TOO_LONG'
+  );
 }

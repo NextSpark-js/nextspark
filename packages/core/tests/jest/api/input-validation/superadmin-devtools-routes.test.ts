@@ -60,7 +60,7 @@ const paging = (handler: (request: NextRequest, ctx?: never) => Promise<{ status
     ['a limit over the maximum', '?limit=100000'],
     ['repeated parameters', '?page=1&page=2&limit=5&limit=7'],
     ['unknown parameters', '?colour=brown'],
-    ['a very long search string', `?search=${encodeURIComponent('ñ'.repeat(20_000))}`],
+    ['a search string at the 200-character cap', `?search=${encodeURIComponent('ñ'.repeat(200))}`],
   ])('answers %s with a normal 200', async (_label, query) => {
     expect((await get(query)).status).toBe(200)
   })

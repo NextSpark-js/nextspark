@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createApiError } from '@nextsparkjs/core/lib/api/error-response';
+import { createApiError, searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response';
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern';
 import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
@@ -56,6 +57,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const type = searchParams.get('type') as 'user' | 'system' | null;
     const { page, limit, offset } = parsePaginationParams(request, 20);
 
+    const tooLong = searchTermTooLongError(search);
+    if (tooLong) return tooLong;
+
     // Build WHERE clause
     const whereConditions: string[] = [];
     const params: (string | number)[] = [];
@@ -73,8 +77,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     }
 
     if (search) {
-      whereConditions.push(`(t.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`);
-      params.push(`%${search}%`);
+      whereConditions.push(`(t.name ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE} OR u.email ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE})`);
+      params.push(containsPattern(search));
       paramIndex++;
     }
 

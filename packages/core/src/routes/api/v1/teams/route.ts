@@ -12,6 +12,8 @@ import {
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern'
+import { searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response'
 import { createTeamSchema, teamListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 import type { Team } from '@nextsparkjs/core/lib/teams/types'
@@ -54,6 +56,9 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const { page, limit, search, sort, order, scope } = validatedQuery
     const offset = (page - 1) * limit
 
+    const tooLong = searchTermTooLongError(search)
+    if (tooLong) return addCorsHeaders(tooLong, req)
+
     // Check if scope=all is requested (requires superadmin or developer)
     const requestAllTeams = scope === 'all'
     if (requestAllTeams && !isSuperAdmin(authResult)) {
@@ -76,8 +81,8 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     let paramCount = requestAllTeams ? 1 : 2
 
     if (search) {
-      whereClause += ` AND (t.name ILIKE $${paramCount} OR t.description ILIKE $${paramCount})`
-      queryValues.push(`%${search}%`)
+      whereClause += ` AND (t.name ILIKE $${paramCount} ${LIKE_ESCAPE_CLAUSE} OR t.description ILIKE $${paramCount} ${LIKE_ESCAPE_CLAUSE})`
+      queryValues.push(containsPattern(search))
       paramCount++
     }
 

@@ -68,7 +68,7 @@ describe('GET /api/v1/media — query parameters', () => {
     ['unknown parameters', '?colour=brown'],
     ['repeated parameters (the last is read)', '?limit=5&limit=7'],
     ['empty tag lists', '?tagIds=&tagSlugs='],
-    ['a long search string', `?search=${encodeURIComponent('ñ'.repeat(20_000))}`],
+    ['a search string at the 200-character cap', `?search=${encodeURIComponent('ñ'.repeat(200))}`],
   ])('answers %s with a normal 200', async (_label, query) => {
     expect((await list(query)).status).toBe(200)
   })

@@ -10,6 +10,7 @@
 import { APP_CONFIG_MERGED } from '../config/config-sync'
 import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getServiceTransactionClient, type RLSOptions } from '../db'
 import { TeamService } from './team.service'
+import { containsPattern, LIKE_ESCAPE_CLAUSE } from '../utils/like-pattern'
 import type { TeamMember, TeamRole } from '../teams/types'
 
 // ===========================================
@@ -631,7 +632,7 @@ export class TeamMemberService {
       return this.listByTeam(teamId, requestingUserId)
     }
 
-    const searchPattern = `%${query.trim().toLowerCase()}%`
+    const searchPattern = containsPattern(query.trim().toLowerCase())
 
     return queryWithRLS<TeamMemberWithUser>(
       `SELECT
@@ -642,7 +643,7 @@ export class TeamMemberService {
       FROM "team_members" tm
       INNER JOIN "users" u ON tm."userId" = u.id
       WHERE tm."teamId" = $1
-        AND (LOWER(u.name) LIKE $2 OR LOWER(u.email) LIKE $2)
+        AND (LOWER(u.name) LIKE $2 ${LIKE_ESCAPE_CLAUSE} OR LOWER(u.email) LIKE $2 ${LIKE_ESCAPE_CLAUSE})
       ORDER BY
         CASE tm.role
           WHEN 'owner' THEN 1
