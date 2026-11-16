@@ -14,13 +14,15 @@ jest.mock('@/core/lib/scheduled-actions', () => ({
   initializeRecurringActions: jest.fn(async () => {}),
 }))
 
-import { register } from '@/core/instrumentation'
-
 const env = process.env as Record<string, string | undefined>
 const saved = { NEXT_RUNTIME: env.NEXT_RUNTIME, STORAGE_DRIVER: env.STORAGE_DRIVER }
 
 describe('register() and the storage module (#478)', () => {
-  beforeEach(() => {
+  // Fresh module registry per case: a cached storage module would make storageLoads count only the first case
+  let register: () => Promise<void>
+  beforeEach(async () => {
+    jest.resetModules()
+    ;({ register } = await import('@/core/instrumentation'))
     env.NEXT_RUNTIME = 'nodejs'
     storageLoads.mockClear()
     logStorageAtStartup.mockClear()
@@ -46,6 +48,7 @@ describe('register() and the storage module (#478)', () => {
   test('loads storage and checks it when STORAGE_DRIVER is set', async () => {
     env.STORAGE_DRIVER = 'local'
     await register()
+    expect(storageLoads).toHaveBeenCalledTimes(1)
     expect(logStorageAtStartup).toHaveBeenCalledTimes(1)
   })
 })
