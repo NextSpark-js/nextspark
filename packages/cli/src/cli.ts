@@ -48,7 +48,9 @@ const program = new Command();
 program
   .name('nextspark')
   .description('NextSpark CLI - Professional SaaS Boilerplate')
-  .version(pkg.version);
+  .version(pkg.version)
+  // Root options only before the subcommand: otherwise `add:plugin <package> --version <x>` prints the CLI version and exits 0 (#474)
+  .enablePositionalOptions();
 
 // Dev command (Turbopack; regenerates src/app and the registries as sources change)
 program
