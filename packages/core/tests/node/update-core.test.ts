@@ -1865,7 +1865,7 @@ test('after a failed prepare is committed, running update-core again runs prepar
   const rerun = runUpdateCore(root, ['--version', TO])
 
   assert.equal(rerun.status, 0, rerun.output)
-  assert.match(rerun.stdout, /already on 0\.1\.0-beta\.189, but no finished generation of src\/app\/ is recorded in \.nextspark\/generation\.json: finishing the update/)
+  assert.match(rerun.stdout, /already on 0\.1\.0-beta\.189, but an earlier update to 0\.1\.0-beta\.189 stopped at nextspark prepare or after it: finishing the update/)
   assert.ok(rerun.calls.includes('nextspark prepare'), rerun.calls.join('\n'))
   const record = JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'))
   assert.deepEqual([record.version, record.previousVersion], [TO, FROM])
@@ -1910,4 +1910,28 @@ test('src/app generated from an older core, or an older plugin copy, with the pa
   assert.match(refreshed.stdout, /but plugin copies are older: finishing the update/)
   assert.deepEqual(copyFiles(withPlugin), pluginFiles(TO))
   assert.ok(refreshed.calls.includes('install') && refreshed.calls.includes('nextspark prepare'), refreshed.calls.join('\n'))
+})
+
+// The rollback leaves ignored files: a .nextspark/ generated from the target by a run that was rolled back stays (#473)
+test('a generation record that already names the target does not hide an update whose prepare failed: the rerun finishes it (#473)', (t) => {
+  const root = createProject(t, { files: { '.gitignore': 'node_modules\n.next\n.nextspark\n' } })
+  fs.mkdirSync(path.join(root, '.nextspark'), { recursive: true })
+  fs.writeFileSync(path.join(root, '.nextspark/generation.json'), JSON.stringify({ versions: { core: TO } }))
+  const failed = runUpdateCore(root, ['--version', TO], { syncExit: 1 })
+  assert.equal(failed.status, 1, failed.output)
+  git(root, 'add', '-A')
+  git(root, 'commit', '-q', '-m', 'Partial update')
+
+  const rerun = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(rerun.status, 0, rerun.output)
+  assert.match(rerun.stdout, /but an earlier update to 0\.1\.0-beta\.189 stopped at nextspark prepare or after it: finishing the update/)
+  assert.ok(rerun.calls.includes('nextspark prepare'), rerun.calls.join('\n'))
+  const record = JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'))
+  assert.deepEqual([record.version, record.previousVersion], [TO, FROM])
+
+  git(root, 'add', '-A')
+  git(root, 'commit', '-q', '-m', 'Update finished')
+  const third = runUpdateCore(root, ['--version', TO])
+  assert.match(third.stdout, /Already on 0\.1\.0-beta\.189/)
 })

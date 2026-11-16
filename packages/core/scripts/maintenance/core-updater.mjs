@@ -39,6 +39,12 @@ const FLOOR_FIELDS = ['dependencies', 'devDependencies', 'optionalDependencies',
 const VERSION_FILE = 'core.version.json'
 const LOCKFILE = 'pnpm-lock.yaml'
 const GENERATION_FILE = path.join('.nextspark', 'generation.json')
+/**
+ * Written just before nextspark prepare and removed once the version is recorded, so a later run knows an update to
+ * that target did not finish even when .nextspark/generation.json names it: the rollback leaves ignored files such as
+ * .nextspark/ as they are. node_modules is ignored everywhere, and the rollback removes it with the marker.
+ */
+const PENDING_FILE = path.join('node_modules', '.cache', 'nextspark-update-core.json')
 const PLUGINS_DIR = 'plugins'
 const PLUGIN_PREFIX = '@nextsparkjs/plugin-'
 const OS_FILES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini'])
@@ -1284,7 +1290,8 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
   if (packages.every(({ name, spec }) => spec === target && installedVersion(cwd, name) === target)) {
     // An update that stopped after the install (a prepare that failed) leaves the packages on the target: it is finished, not skipped
     const generated = generatedWith(cwd)
-    if (generated === target && refreshes.length === 0) {
+    const unfinished = readJson(path.join(cwd, PENDING_FILE))?.target === target
+    if (generated === target && !unfinished && refreshes.length === 0) {
       out(`\n   Already on ${target}: every @nextsparkjs package in package.json is pinned to it, node_modules holds it and src/app/ was generated from it. Nothing was changed.`)
       reportOtherPins(out, otherWorkspacePins(cwd, root, target), target, cwd, root)
       reportWorkspaceDependencies(out, cwd, root, reportDependenciesBelowCore(out, cwd, manifest), git.top, manifest)
@@ -1293,7 +1300,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
       return 0
     }
     out(`   The @nextsparkjs packages are already on ${target}, but ${[
-      ...(generated === target ? [] : [generated ? `src/app/ was generated from ${generated}` : `no finished generation of src/app/ is recorded in ${GENERATION_FILE.split(path.sep).join('/')}`]),
+      ...(unfinished ? [`an earlier update to ${target} stopped at nextspark prepare or after it`] : generated === target ? [] : [generated ? `src/app/ was generated from ${generated}` : `no finished generation of src/app/ is recorded in ${GENERATION_FILE.split(path.sep).join('/')}`]),
       ...(refreshes.length === 0 ? [] : ['plugin copies are older']),
     ].join(' and ')}: finishing the update.`)
   }
@@ -1463,6 +1470,11 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     if (!cli) return stopped({ reason: `node_modules has no nextspark CLI from ${CLI_PACKAGE}` })
     fs.rmSync(path.join(cwd, '.next'), { recursive: true, force: true })
     done.push('.next removed')
+    // A rerun that finds it keeps the version this update started from
+    const pending = readJson(path.join(cwd, PENDING_FILE))
+    const startedFrom = pending?.target === target && isVersion(pending.from) ? pending.from : installed
+    fs.mkdirSync(path.dirname(path.join(cwd, PENDING_FILE)), { recursive: true })
+    fs.writeFileSync(path.join(cwd, PENDING_FILE), `${JSON.stringify({ target, from: startedFrom })}\n`)
     if (await signalled()) return stopped({ started: false })
     const sync = await runStep(process.execPath, [cli, 'prepare'], { cwd, signals })
     if (signals.signal) return stopped({ started: sync.started, stop: sync.stop, leftRunning: sync.leftRunning })
@@ -1479,7 +1491,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     // record still names, and a record that already names the target (a fresh clone of an updated project) is kept
     const recorded = readJson(path.join(cwd, VERSION_FILE))
     const finishing = installed === target
-    const previous = !finishing ? installed : recorded?.version === target ? recorded.previousVersion ?? null : isVersion(recorded?.version) ? recorded.version : null
+    const previous = startedFrom !== target ? startedFrom : recorded?.version === target ? recorded.previousVersion ?? null : isVersion(recorded?.version) ? recorded.version : null
     if (finishing && recorded?.version === target) {
       out(`   ${VERSION_FILE} already records ${target}; left as it is`)
     } else {
@@ -1488,6 +1500,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
       out(`   ${VERSION_FILE}: ${previous ?? 'none'} -> ${target}`)
     }
 
+    fs.rmSync(path.join(cwd, PENDING_FILE), { force: true })
     const newMigrations = coreMigrations(cwd).filter((file) => !migrationsBefore.has(file))
 
     banner(out, 'Update Complete')
