@@ -1,6 +1,6 @@
 # Plugin System Introduction
 
-> **Stability:** `definePlugin` and the plugin system are stable. The five first-party plugins (ai, amplitude, langchain, social-media-publisher, walkme) are **experimental**: they are not part of the stable 1.0 surface and may change without a deprecation period.
+> **Stability:** `definePlugin` and the plugin system are stable. The six first-party plugins (ai, amplitude, langchain, marketplace-payments, social-media-publisher, walkme) are **experimental**: they are not part of the stable 1.0 surface and may change without a deprecation period.
 
 ## Introduction
 

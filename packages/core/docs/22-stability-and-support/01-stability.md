@@ -55,7 +55,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | `nextspark skills` | The offline skill catalog of the CLI. |
 | Billing (Stripe, Polar) | The create flow defaults to the `free` plan. See [Billing](../19-billing/01-overview.md). |
 | MCP server | MCP enabled by default in every web project is not part of 1.0. See [MCP server](../05-api/20-mcp-server.md). |
-| First-party plugins: `ai`, `amplitude`, `langchain`, `social-media-publisher`, `walkme` | `definePlugin` itself is stable. |
+| First-party plugins: `ai`, `amplitude`, `langchain`, `marketplace-payments`, `social-media-publisher`, `walkme` | `definePlugin` itself is stable. |
 | Templates `blog`, `crm`, `productivity` | See [Project themes](../07-theme-system/01-introduction.md). |
 | AI workflow: `@nextsparkjs/ai-workflow`, `setup:ai`, `sync:ai` | Legacy, opt-in. |
 | CLI: `add:theme`, `add:plugin`, `add:mobile`, and `@nextsparkjs/testing` | |

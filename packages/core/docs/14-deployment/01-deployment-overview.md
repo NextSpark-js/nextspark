@@ -287,6 +287,21 @@ At startup the server runs core's `register()` from `src/instrumentation.ts`: it
 - Run `pnpm db:migrate` from the project (or any checkout with the same `migrations/`) before starting a new database; the standalone directory does not migrate.
 - **Media uploads need a storage provider.** A production server does not write uploads to `public/` (Next serves `public/` from what it indexed at startup, so the file would answer 404 until a restart, and a container's disk is lost on redeploy). Set `STORAGE_DRIVER`: `s3` for any S3-compatible service (AWS S3, R2, MinIO, B2, Spaces), `local` for a directory on a persistent volume of a single server, or `vercel-blob` (`BLOB_READ_WRITE_TOKEN`, also used when `STORAGE_DRIVER` is unset). Without a driver `POST /api/v1/media/upload` answers `503` with code `STORAGE_NOT_CONFIGURED` and the media library shows that message. See `21-media-library/05-configuration.md`.
 
+### Test a production build locally
+
+To run `pnpm build` and `pnpm start` on your machine against a local PostgreSQL:
+
+1. Set `DATABASE_URL` in `.env` with `?sslmode=disable`. A production server requires SSL unless `sslmode=disable` is explicit; a local PostgreSQL without SSL needs it.
+2. Make a sign-in provider available. Unless you entered a provider's credentials in the wizard, a new project has none that works in production (the one-time-code email only prints to the console, which is development-only), so `pnpm build` stops with `Production auth readiness failed` until you either set `RESEND_API_KEY` and `EMAIL_FROM` (and/or `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`) in `.env`, or declare that your host injects them at runtime with `NEXTSPARK_AUTH_RUNTIME_ONLY=email,google`.
+3. Set `NEXT_PUBLIC_APP_URL="http://localhost:3000"` before `pnpm build`. Next.js inlines public variables at build time, so if the port of `pnpm start` differs, update the variable and build again.
+4. Build and start on the same URL:
+
+   ```bash
+   NEXTSPARK_AUTH_RUNTIME_ONLY=email,google pnpm build && PORT=3000 pnpm start
+   ```
+
+With `NEXTSPARK_AUTH_RUNTIME_ONLY` and no credentials the pages render but sign-in answers `503 AUTH_METHOD_UNAVAILABLE`; to sign in on a production build, set a real Resend key or Google credentials. `pnpm dev` is the mode that prints one-time codes to the server log.
+
 ---
 
 ## Troubleshooting
