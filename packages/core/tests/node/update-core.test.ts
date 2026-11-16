@@ -1935,3 +1935,61 @@ test('a generation record that already names the target does not hide an update 
   const third = runUpdateCore(root, ['--version', TO])
   assert.match(third.stdout, /Already on 0\.1\.0-beta\.189/)
 })
+
+test('a copy whose symlink points elsewhere, or whose entry changed type, is reported as changed and not replaced (#473)', async (t) => {
+  const published = (version: string): Record<string, PackEntry> => ({
+    ...pluginFiles(version),
+    'docs/latest.md': { link: '../plugin.config.ts' },
+    'docs/guide.md': '# Guide\n',
+    'templates/empty': { dir: true },
+  })
+  const state: FakeState = { ...FIRST_PARTY_STATE, packs: { [`${FIRST_PARTY_PLUGIN}@${FROM}`]: published(FROM), [`${FIRST_PARTY_PLUGIN}@${TO}`]: published(TO) } }
+  /** A copy as published at FROM but for `change`, committed */
+  const copyWith = (change: (dir: string) => void) => {
+    const root = createProject(t, { files: pluginCopy(pluginFiles(FROM)) })
+    const dir = path.join(root, 'plugins/social')
+    fs.mkdirSync(path.join(dir, 'docs'), { recursive: true })
+    fs.symlinkSync('../plugin.config.ts', path.join(dir, 'docs/latest.md'))
+    fs.writeFileSync(path.join(dir, 'docs/guide.md'), '# Guide\n')
+    fs.mkdirSync(path.join(dir, 'templates/empty'), { recursive: true })
+    change(dir)
+    git(root, 'add', '-A')
+    git(root, 'commit', '-q', '-m', 'Plugin copy')
+    return root
+  }
+  const cases: Array<[string, (dir: string) => void, RegExp]> = [
+    ['link target', (dir) => {
+      fs.rmSync(path.join(dir, 'docs/latest.md'))
+      fs.symlinkSync('../README.md', path.join(dir, 'docs/latest.md'))
+    }, /changed {2}docs\/latest\.md\n/],
+    ['file to link', (dir) => {
+      fs.rmSync(path.join(dir, 'docs/guide.md'))
+      fs.symlinkSync('latest.md', path.join(dir, 'docs/guide.md'))
+    }, /changed {2}docs\/guide\.md\n/],
+    ['directory to file', (dir) => {
+      fs.rmSync(path.join(dir, 'templates/empty'), { recursive: true })
+      fs.writeFileSync(path.join(dir, 'templates/empty'), '')
+    }, /changed {2}templates\/empty\n/],
+  ]
+  /** Every entry under `dir`, a symlink as its target and a directory as such, without following links */
+  const entries = (dir: string, base = dir): string[] => fs.readdirSync(dir).sort().flatMap((file) => {
+    const full = path.join(dir, file)
+    const stat = fs.lstatSync(full)
+    const key = path.relative(base, full)
+    if (stat.isSymbolicLink()) return [`${key} -> ${fs.readlinkSync(full)}`]
+    if (stat.isDirectory()) return [`${key}/`, ...entries(full, base)]
+    return [`${key} ${fs.readFileSync(full, 'base64')}`]
+  })
+  for (const [name, change, line] of cases) {
+    await t.test(name, () => {
+      const root = copyWith(change)
+      const copy = path.join(root, 'plugins/social')
+      const before = entries(copy)
+      const result = runUpdateCore(root, ['--version', TO], state)
+      assert.equal(result.status, 0, result.output)
+      assert.match(result.stdout, /Not replaced/)
+      assert.match(result.stdout, line, result.stdout)
+      assert.deepEqual(entries(copy), before)
+    })
+  }
+})
