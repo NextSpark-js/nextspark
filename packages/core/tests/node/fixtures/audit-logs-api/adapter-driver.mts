@@ -23,7 +23,8 @@ const ENTITY = process.env.SOCIAL_ENTITY_ID!
 const ASSIGNMENT = process.env.SOCIAL_ASSIGNMENT_ID!
 
 // A project's adapter: the entity and its assignment live in the project; the token comes from social_accounts, read
-// as the user
+// on the service connection (as a project whose assignment is shared by a team may), so the publish route can hold a
+// token whose row another user owns
 class TestAdapter extends SocialPlatformAdapter {
   constructor() {
     super({ entitySlug: 'projects', tableName: 'projects_social_platforms', parentIdColumn: 'projectId', permissionCheck: 'team' })
@@ -33,7 +34,7 @@ class TestAdapter extends SocialPlatformAdapter {
   }
   async getAssignments(entityId: string, userId: string) {
     const rows = await queryWithRLS<{ accessToken: string; tokenExpiresAt: string }>(
-      `SELECT "accessToken", "tokenExpiresAt" FROM social_accounts WHERE "platformAccountId" = 'page-1'`, [], userId)
+      `SELECT "accessToken", "tokenExpiresAt" FROM social_accounts WHERE "platformAccountId" = 'page-1'`, [])
     return rows.map(row => ({
       id: ASSIGNMENT, entityId, platform: 'facebook_page', platformAccountId: 'page-1', username: 'Page One',
       accessToken: row.accessToken, tokenExpiresAt: new Date(row.tokenExpiresAt), isActive: true, accountMetadata: {},

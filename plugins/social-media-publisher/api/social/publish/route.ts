@@ -416,7 +416,7 @@ async function refreshAccountToken(
 
     // 4. Update token in social_accounts table (plugin's central token storage)
     // Tokens are stored by platformAccountId (unique per account)
-    await mutateWithRLS(
+    const { rowCount } = await mutateWithRLS(
       `UPDATE "social_accounts"
        SET "accessToken" = $1,
            "tokenExpiresAt" = $2,
@@ -426,8 +426,14 @@ async function refreshAccountToken(
       userId
     )
 
-    console.log(`[social-publish] 🔐 Token refreshed and encrypted for platformAccountId ${platformAccountId}`)
-    console.log(`[social-publish] 📅 New expiration: ${newExpiresAt}`)
+    if (rowCount === 0) {
+      // Row-level security lets only the account's owner update it: another user's account, or a removed one, keeps
+      // its old token. This request still publishes with the fresh token.
+      console.warn(`[social-publish] Token refreshed for platformAccountId ${platformAccountId} but not stored: no social_accounts row of this user matched`)
+    } else {
+      console.log(`[social-publish] 🔐 Token refreshed and encrypted for platformAccountId ${platformAccountId}`)
+      console.log(`[social-publish] 📅 New expiration: ${newExpiresAt}`)
+    }
 
     // Return DECRYPTED token for immediate use in this request
     return {

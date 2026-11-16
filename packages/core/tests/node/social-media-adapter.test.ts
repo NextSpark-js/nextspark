@@ -101,32 +101,38 @@ test('social-media-publisher: 501 with the guide without an adapter, and the rou
     { route: 'accounts', key: keyB, adapter: true },
     { route: 'publish', key: keyA, adapter: true, body: publish },
   ]
-  const run = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'adapter-driver.mts')], {
-    cwd: CORE,
-    encoding: 'utf8',
-    timeout: 120000,
-    env: {
-      PATH: process.env.PATH,
-      HOME: process.env.HOME,
-      NODE_ENV: 'test',
-      TSX_TSCONFIG_PATH: path.join(FIXTURE, 'tsconfig.json'),
-      DATABASE_URL: appUrl,
-      DATABASE_SERVICE_URL: ownerUrl,
-      BETTER_AUTH_SECRET: 'social-adapter-secret-0123456789abcdef0',
-      BETTER_AUTH_URL: 'http://localhost:5173',
-      NEXT_PUBLIC_APP_URL: 'http://localhost:5173',
-      DISABLE_RATE_LIMITING: 'true',
-      OAUTH_ENCRYPTION_KEY: rawKey.toString('base64'),
-      FACEBOOK_CLIENT_ID: 'test-app',
-      FACEBOOK_CLIENT_SECRET: 'test-secret',
-      SOCIAL_ENTITY_ID: entity,
-      SOCIAL_ASSIGNMENT_ID: assignment,
-      SOCIAL_ADAPTER_STEPS: JSON.stringify(steps),
-    },
-  })
+  const runDriver = (driverSteps: Step[]) => {
+    const child = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'adapter-driver.mts')], {
+      cwd: CORE,
+      encoding: 'utf8',
+      timeout: 120000,
+      env: {
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        NODE_ENV: 'test',
+        TSX_TSCONFIG_PATH: path.join(FIXTURE, 'tsconfig.json'),
+        DATABASE_URL: appUrl,
+        DATABASE_SERVICE_URL: ownerUrl,
+        BETTER_AUTH_SECRET: 'social-adapter-secret-0123456789abcdef0',
+        BETTER_AUTH_URL: 'http://localhost:5173',
+        NEXT_PUBLIC_APP_URL: 'http://localhost:5173',
+        DISABLE_RATE_LIMITING: 'true',
+        OAUTH_ENCRYPTION_KEY: rawKey.toString('base64'),
+        FACEBOOK_CLIENT_ID: 'test-app',
+        FACEBOOK_CLIENT_SECRET: 'test-secret',
+        SOCIAL_ENTITY_ID: entity,
+        SOCIAL_ASSIGNMENT_ID: assignment,
+        SOCIAL_ADAPTER_STEPS: JSON.stringify(driverSteps),
+      },
+    })
+    const output = `${child.stdout}\n${child.stderr}`
+    const results = child.stdout.split('\n').filter(l => l.startsWith('RESULT ')).map(l => JSON.parse(l.slice(7)) as Result)
+    assert.equal(results.length, driverSteps.length, `the driver ran every step\n${output}`)
+    return { stdout: child.stdout, output, results }
+  }
+  const run = runDriver(steps)
   const lines = run.stdout.split('\n')
-  const results = lines.filter(l => l.startsWith('RESULT ')).map(l => JSON.parse(l.slice(7)) as Result)
-  assert.equal(results.length, steps.length, `the driver ran every step\n${run.stdout}\n${run.stderr}`)
+  const results = run.results
   const [noAccounts, noAssign, noPublish, ownAccounts, accounts, otherUser, otherList, published] = results
 
   // 1. Without an adapter: what needs one answers 501 with what is missing and the guide; the user's own accounts list
@@ -160,4 +166,13 @@ test('social-media-publisher: 501 with the guide without an adapter, and the rou
   const { rows: [row] } = await owner.query(`SELECT "accessToken", "tokenExpiresAt" > now() + interval '30 days' AS refreshed FROM social_accounts`)
   assert.notEqual(row.accessToken, stored, 'the refreshed token is stored')
   assert.equal(row.refreshed, true)
+  assert.match(run.stdout, /Token refreshed and encrypted for platformAccountId page-1/)
+
+  // 4. A token whose row another user owns: the refresh updates no row, says so, and does not claim it stored it
+  await owner.query(`UPDATE social_accounts SET "userId" = 'ub', "accessToken" = $1, "tokenExpiresAt" = now() + interval '5 minutes'`, [stored])
+  const foreign = runDriver([{ route: 'publish', key: keyA, adapter: true, body: publish }])
+  assert.equal(foreign.results[0].status, 200, JSON.stringify(foreign.results[0]))
+  assert.match(foreign.output, /Token refreshed for platformAccountId page-1 but not stored: no social_accounts row of this user matched/)
+  assert.doesNotMatch(foreign.output, /Token refreshed and encrypted/)
+  assert.equal((await owner.query(`SELECT "accessToken" FROM social_accounts`)).rows[0].accessToken, stored)
 })
