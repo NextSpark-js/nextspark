@@ -1045,7 +1045,9 @@ Authorization for them is enforced at the API/action layer, not by RLS.
 2. Set `DATABASE_SERVICE_URL` (Supabase: the `service_role` string, which has
    `BYPASSRLS`; self-hosted: the owner or a dedicated bypass role). **Required before step 3**:
    without it, sign-in and API-key lookups fall back to `DATABASE_URL`, see no rows under RLS
-   and answer 401.
+   and answer 401. A `BYPASSRLS` role that does not own the tables also needs grants on them
+   (without them the queries fail with `permission denied`, a 500, not a 401); Supabase's
+   `service_role` already has them.
 3. Point `DATABASE_URL` at the `nextspark_app` role (deploy-time LOGIN credential).
 4. Set `MIGRATE_DATABASE_URL` to the owner connection for future migrations.
 5. Verify: login works (Better Auth via service); a plain member's LIST/READ is

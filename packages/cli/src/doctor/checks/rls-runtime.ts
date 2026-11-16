@@ -39,7 +39,7 @@ export async function checkRlsRuntime(coreDir = getCoreDir()): Promise<HealthChe
         name,
         status: 'warn',
         message: `${output} but DATABASE_SERVICE_URL is not set: sign-in fails with 401 User not found`,
-        fix: 'Set DATABASE_SERVICE_URL to a role that skips RLS (the owner): see docs/10-backend/03-rls-policies.md (Runtime role + cutover)',
+        fix: 'Set DATABASE_SERVICE_URL to the owner or a BYPASSRLS role: see docs/10-backend/03-rls-policies.md (Runtime role + cutover)',
       }
     }
     return { name, status: 'pass', message: output }

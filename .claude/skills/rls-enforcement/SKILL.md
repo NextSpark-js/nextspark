@@ -98,7 +98,7 @@ any *user-scoped* sub-operation must re-introduce the resolved userId via
 - **GOTCHA:** post-cutover `DATABASE_URL` is a **non-owner** role — any op that assumed owner
   (raw DDL, seeds, `query()` expecting full access) behaves differently. Keep owner work on
   the migrate/service connection.
-- Cutover is **opt-in**: leave `DATABASE_SERVICE_URL` unset and nothing changes.
+- Cutover is **opt-in**: while `DATABASE_URL` is the owner, leave `DATABASE_SERVICE_URL` unset and nothing changes. Once `DATABASE_URL` is `nextspark_app`, `DATABASE_SERVICE_URL` is required (owner or `BYPASSRLS` role) or sign-in and API keys answer 401.
 
 ## 4. Fail-closed permission enforcement (`generic-handler.ts`)
 
