@@ -88,7 +88,7 @@ UPDATE "social_audit_logs" SET "teamId" = '<team id>' WHERE id = '<row id>';
 
 **accountId** (UUID, nullable)
 - Social media account involved
-- References `clients_social_platforms.id`
+- The id of the account the action used: a `social_accounts` row or the id of an assignment in your project's table (the publish route records the assignment id your adapter returned)
 - Null for actions not tied to specific account
 
 **action** (TEXT)

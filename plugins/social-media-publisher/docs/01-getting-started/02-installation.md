@@ -214,32 +214,34 @@ Run the plugin's migrations through `db:migrate`, not one file by hand: later fi
 -- Check if tables exist
 SELECT table_name 
 FROM information_schema.tables 
-WHERE table_name IN ('clients_social_platforms', 'social_audit_logs');
+WHERE table_name IN ('social_accounts', 'social_audit_logs');
 
 -- Should return:
--- clients_social_platforms
+-- social_accounts
 -- social_audit_logs
 ```
 
 ### 4.3 Database Schema Overview
 
-**clients_social_platforms (Child Entity):**
+**social_accounts (Plugin Table, user level):**
 ```sql
-CREATE TABLE "clients_social_platforms" (
+CREATE TABLE "social_accounts" (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "parentId" UUID NOT NULL REFERENCES "clients"(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL REFERENCES "users"(id) ON DELETE CASCADE,
   platform TEXT NOT NULL,
-  "platformAccountId" TEXT,
-  "platformAccountName" TEXT NOT NULL,
-  "accessToken" TEXT NOT NULL,
+  "platformAccountId" TEXT NOT NULL UNIQUE,
+  "username" TEXT NOT NULL,
+  "accessToken" TEXT NOT NULL,      -- encrypted:iv:keyId
   "tokenExpiresAt" TIMESTAMPTZ NOT NULL,
   permissions JSONB DEFAULT '[]',
   "accountMetadata" JSONB DEFAULT '{}',
   "isActive" BOOLEAN DEFAULT true,
-  "createdAt" TIMESTAMPTZ DEFAULT now(),
-  "updatedAt" TIMESTAMPTZ DEFAULT now()
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
+
+The link between an account and your entities (a client, a project) is not a plugin table: your project creates it and reads and writes it in its adapter (see [Adapter integration](../03-advanced-usage/04-adapter-integration.md)).
 
 **social_audit_logs (Plugin Entity):**
 ```sql
@@ -328,8 +330,8 @@ curl "https://graph.facebook.com/v18.0/{PAGE_ID}?fields=instagram_business_accou
 
 ### 7.1 Test OAuth Flow
 
-1. Navigate to a client detail page in your app
-2. Click "Add Social Platform"
+1. Navigate to the page of an entity your adapter handles (a client, say)
+2. Click your "Add Social Platform" control
 3. Select "Instagram Business"
 4. OAuth popup should open
 5. Authorize with Facebook
@@ -341,12 +343,12 @@ curl "https://graph.facebook.com/v18.0/{PAGE_ID}?fields=instagram_business_accou
 -- Check connected accounts
 SELECT 
   id, 
-  "parentId", 
+  "userId", 
   platform, 
-  "platformAccountName",
+  "username",
   "tokenExpiresAt",
   "isActive"
-FROM "clients_social_platforms"
+FROM "social_accounts"
 WHERE "isActive" = true;
 
 -- Check encrypted tokens (should have format: encrypted:iv:keyId)
@@ -354,8 +356,10 @@ SELECT
   id,
   LENGTH("accessToken") as token_length,
   "accessToken" LIKE '%:%:%' as is_encrypted
-FROM "clients_social_platforms";
+FROM "social_accounts";
 ```
+
+The entity assignments are in your project's table, the one your adapter writes.
 
 ### 7.3 Test Publishing
 
@@ -431,7 +435,7 @@ pnpm dev
 - Add users as "Testers" or "Developers" in App Roles
 - OR Switch app to Live mode (requires App Review)
 
-### Issue: "clients_social_platforms table does not exist"
+### Issue: "social_accounts table does not exist"
 
 **Cause:** Migrations not run
 

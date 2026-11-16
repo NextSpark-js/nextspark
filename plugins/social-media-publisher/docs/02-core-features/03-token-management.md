@@ -57,20 +57,20 @@ const storedToken = `${encrypted}:${iv}:${keyId}`
 
 ### 3. Token Storage
 
-**Where:** `clients_social_platforms` table  
+**Where:** the plugin's `social_accounts` table, one row per platform account of the user who connected it (your project's assignment table holds no tokens)  
 **Column:** `accessToken` (TEXT)  
 **Format:** `encrypted:iv:keyId`
 
 ```sql
-INSERT INTO "clients_social_platforms" (
-  "parentId",
+INSERT INTO "social_accounts" (
+  "userId",
   platform,
   "platformAccountId",
-  "platformAccountName",
+  "username",
   "accessToken",
   "tokenExpiresAt"
 ) VALUES (
-  '550e8400-e29b-41d4-a716-446655440000',
+  'user_123',
   'instagram_business',
   '17841401234567890',
   '@brandname',
@@ -94,10 +94,10 @@ INSERT INTO "clients_social_platforms" (
 
 ```typescript
 // Read encrypted token from database
-const account = await query(`
-  SELECT "accessToken" FROM "clients_social_platforms"
-  WHERE id = $1
-`, [accountId])
+const account = await queryOneWithRLS(`
+  SELECT "accessToken" FROM "social_accounts"
+  WHERE "platformAccountId" = $1
+`, [platformAccountId], userId)
 
 // Decrypt
 const [encrypted, iv, keyId] = account.accessToken.split(':')
@@ -150,14 +150,15 @@ if (minutesUntilExpiry < 10) {
   const newEncryptedToken = `${encrypted}:${iv}:${keyId}`
   const newExpiresAt = new Date(Date.now() + expires_in * 1000)
   
-  // Update database
-  await query(`
-    UPDATE "clients_social_platforms"
+  // Update database, as the user: row-level security lets only the account's owner update it, and no row updated
+  // means the token is not stored (the route logs a warning)
+  const { rowCount } = await mutateWithRLS(`
+    UPDATE "social_accounts"
     SET "accessToken" = $1,
         "tokenExpiresAt" = $2,
         "updatedAt" = NOW()
-    WHERE id = $3
-  `, [newEncryptedToken, newExpiresAt, accountId])
+    WHERE "platformAccountId" = $3
+  `, [newEncryptedToken, newExpiresAt, platformAccountId], userId)
   
   // Create audit log
   await recordAuditLog(request, {
@@ -313,7 +314,7 @@ if (minutesUntilExpiry < 10) {
 // Refresh all tokens expiring within 7 days
 async function refreshExpiringTokens() {
   const expiringAccounts = await query(`
-    SELECT * FROM "clients_social_platforms"
+    SELECT * FROM "social_accounts"
     WHERE "tokenExpiresAt" < NOW() + INTERVAL '7 days'
     AND "isActive" = true
   `)
@@ -406,7 +407,7 @@ const REFRESH_THRESHOLD_MINUTES = 1
    ```typescript
    // Mark account as inactive (requires reconnection)
    await query(`
-     UPDATE "clients_social_platforms"
+     UPDATE "social_accounts"
      SET "isActive" = false
      WHERE id = $1
    `, [accountId])
@@ -481,7 +482,7 @@ const decryptionKey = getKeyById(keyId)
    // Migrate old tokens to new key
    async function migrateTokens() {
      const oldTokens = await query(`
-       SELECT * FROM "clients_social_platforms"
+       SELECT * FROM "social_accounts"
        WHERE "accessToken" LIKE '%:key_2024_01'
      `)
      
@@ -498,7 +499,7 @@ const decryptionKey = getKeyById(keyId)
        
        // Update database
        await query(`
-         UPDATE "clients_social_platforms"
+         UPDATE "social_accounts"
          SET "accessToken" = $1
          WHERE id = $2
        `, [`${newEncrypted}:${newIv}:${newKeyId}`, account.id])
@@ -544,12 +545,10 @@ const token = await decrypt(account.accessToken)  // Might fail
 
 **4. Use RLS Policies:**
 ```sql
--- ✅ Good: Users can only access own clients' tokens
-CREATE POLICY "rls_social_platforms"
-ON "clients_social_platforms"
-USING ("parentId" IN (
-  SELECT id FROM "clients" WHERE "userId" = (SELECT public.get_auth_user_id())
-));
+-- ✅ Good: each user reads only the tokens they connected (migration 005 of the plugin)
+CREATE POLICY "social_accounts_select_own"
+ON public."social_accounts" FOR SELECT TO authenticated
+USING ((SELECT public.is_superadmin()) OR "userId" = (SELECT public.get_auth_user_id()));
 ```
 
 **5. Rotate Keys Periodically:**
@@ -632,7 +631,7 @@ SELECT
     ELSE 'Healthy'
   END as status,
   COUNT(*) as count
-FROM "clients_social_platforms"
+FROM "social_accounts"
 WHERE "isActive" = true
 GROUP BY status;
 ```

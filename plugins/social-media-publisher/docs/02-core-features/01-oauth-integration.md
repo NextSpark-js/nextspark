@@ -54,9 +54,9 @@ The Social Media Publisher plugin uses **Facebook OAuth 2.0** to connect Instagr
        │ 5. Encrypt tokens
        ↓
 ┌──────────────────────────────┐
-│  Database                    │
-│  clients_social_platforms    │
-│  (encrypted tokens stored)   │
+│  social_accounts (tokens,    │
+│  encrypted) + the adapter's  │
+│  saveAssignment (entity link)│
 └──────┬───────────────────────┘
        │ 6. Return success HTML
        ↓
@@ -243,25 +243,12 @@ error_description: Human-readable error
      )
      
      if (igAccount) {
-       await saveToDatabase({
-         parentId: clientId,
-         platform: 'instagram_business',
-         platformAccountId: igAccount.id,
-         platformAccountName: igAccount.username,
-         accessToken: await encrypt(page.accessToken),
-         ...
-       })
+       // the token in social_accounts, then the entity link through the adapter (step 5)
+       await saveAccount({ platform: 'instagram_business', platformAccountId: igAccount.id, username: igAccount.username, accessToken: page.accessToken })
      }
    } else {
      // Save Facebook Page directly
-     await saveToDatabase({
-       parentId: clientId,
-       platform: 'facebook_page',
-       platformAccountId: page.id,
-       platformAccountName: page.name,
-       accessToken: await encrypt(page.accessToken),
-       ...
-     })
+     await saveAccount({ platform: 'facebook_page', platformAccountId: page.id, username: page.name, accessToken: page.accessToken })
    }
    ```
 
@@ -274,13 +261,18 @@ error_description: Human-readable error
    // Calculate expiration (60 days for long-lived tokens)
    const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
    
-   // Store in database
-   await query(`
-     INSERT INTO "clients_social_platforms" (
-       "parentId", platform, "platformAccountId", 
-       "platformAccountName", "accessToken", "tokenExpiresAt"
+   // The token: the plugin's social_accounts, one row per platform account, as the user
+   const { rows: [{ id: socialAccountId }] } = await mutateWithRLS(`
+     INSERT INTO "social_accounts" (
+       "userId", platform, "platformAccountId", "username", "accessToken", "tokenExpiresAt"
      ) VALUES ($1, $2, $3, $4, $5, $6)
-   `, [clientId, platform, accountId, accountName, encryptedToken, expiresAt])
+     ON CONFLICT ("platformAccountId") DO UPDATE SET "accessToken" = EXCLUDED."accessToken", ...
+     RETURNING id
+   `, [userId, platform, accountId, accountName, encryptedToken, expiresAt], userId)
+
+   // The link to the entity: the project's table, through its adapter
+   await adapter.saveAssignment({ entityId, platform, platformAccountId: accountId, username: accountName,
+     accessToken, tokenExpiresAt: expiresAt, permissions, accountMetadata, socialAccountId }, userId)
    ```
 
 6. **Create Audit Log:**
@@ -467,26 +459,30 @@ if (error === 'access_denied') {
 ```typescript
 // User connects Instagram account @brand1
 // Then connects Instagram account @brand2
-// Both stored under same client
+// Both assigned to the same entity by the adapter
 ```
 
 **Database:**
 ```sql
-SELECT * FROM "clients_social_platforms" WHERE "parentId" = '{clientId}'
+SELECT platform, username, "isActive" FROM "social_accounts" WHERE "userId" = '{userId}'
 
 -- Results:
-id | platform | platformAccountName | isActive
----|----------|---------------------|----------
-1  | instagram_business | @brand1 | true
-2  | instagram_business | @brand2 | true
+platform | username | isActive
+---------|----------|----------
+instagram_business | @brand1 | true
+instagram_business | @brand2 | true
 ```
+
+The entity's assignments are in your project's table, the one your adapter writes.
 
 ### Preventing Duplicates
 
-**Unique Constraint:**
+**Unique Constraints:**
 ```sql
-UNIQUE("parentId", "platformAccountId") 
-WHERE "platformAccountId" IS NOT NULL
+-- social_accounts (plugin): one row per platform account
+UNIQUE("platformAccountId")
+-- your assignment table (project), as the adapter guide suggests: one link per entity and account
+UNIQUE("projectId", "platformAccountId") WHERE "platformAccountId" IS NOT NULL
 ```
 
 **On Duplicate:**

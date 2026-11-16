@@ -2,6 +2,8 @@
 
 ## Overview
 
+> **Example project tables.** The `clients` and `clients_social_platforms` tables in this page belong to an example project whose entity is `clients`; the plugin does not create them and its routes never query them. In your project they are your entity and your assignment table, read and written by your [adapter](./04-adapter-integration.md). The plugin's own tables are `social_accounts` and `social_audit_logs`.
+
 The Social Media Publisher plugin provides flexible building blocks that allow you to create custom publishing workflows, scheduled posts, analytics dashboards, and content management integrations. This guide shows you how to extend the plugin's capabilities.
 
 **What You Can Build:**

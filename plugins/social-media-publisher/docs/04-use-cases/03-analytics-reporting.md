@@ -2,6 +2,8 @@
 
 ## Overview
 
+> **Example project tables.** The `clients` and `clients_social_platforms` tables in this page belong to an example project whose entity is `clients`; the plugin does not create them and its routes never query them. In your project they are your entity and your assignment table, read and written by your [adapter](../03-advanced-usage/04-adapter-integration.md). The plugin's own tables are `social_accounts` and `social_audit_logs`.
+
 This guide covers how to leverage the Social Media Publisher plugin's analytics capabilities to track performance, generate reports, and make data-driven decisions for social media management.
 
 **Covered Topics:**

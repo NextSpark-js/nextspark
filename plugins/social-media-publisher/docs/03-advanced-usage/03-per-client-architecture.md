@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Social Media Publisher plugin implements a **per-client architecture** where social media accounts are managed as **child entities** of clients. This pattern provides clear ownership, better organization for agencies, and scalable multi-client management.
+> **Example project tables.** The `clients` and `clients_social_platforms` tables in this page belong to an example project whose entity is `clients`; the plugin does not create them and its routes never query them. In your project they are your entity and your assignment table, read and written by your [adapter](./04-adapter-integration.md). The plugin's own tables are `social_accounts` and `social_audit_logs`.
+
+This page shows a **per-client architecture** built on the plugin: a project whose adapter assigns the connected accounts to its `clients` entity, as child records. This pattern provides clear ownership, better organization for agencies, and scalable multi-client management.
 
 **Key Concept:** Social accounts belong to **clients**, not directly to users. Users access social accounts through their client relationships.
 

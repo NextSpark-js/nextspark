@@ -294,39 +294,27 @@ const newKey = process.env.OAUTH_ENCRYPTION_KEY
 
 ### Row-Level Security (RLS)
 
-**Purpose:** Ensure users can only access social platforms for clients they own.
+**Purpose:** Ensure each user reads and changes only the social accounts they connected.
 
-**Policy:**
+**Policy** (the plugin's migration `005_social_accounts_policies.sql` creates it; a superadmin bypasses, as in core's policies):
 ```sql
--- Users can only SELECT social platforms for their clients
-CREATE POLICY "clients_social_platforms_select_own"
-  ON "clients_social_platforms" FOR SELECT
-  USING (
-    "parentId" IN (
-      SELECT id FROM "clients"
-      WHERE "userId" = (SELECT public.get_auth_user_id())
-    )
-  );
+CREATE POLICY "social_accounts_select_own"
+  ON public."social_accounts"
+  FOR SELECT TO authenticated
+  USING ((SELECT public.is_superadmin()) OR "userId" = (SELECT public.get_auth_user_id()));
 
--- Users can only INSERT social platforms for their clients
-CREATE POLICY "clients_social_platforms_insert_own"
-  ON "clients_social_platforms" FOR INSERT
-  WITH CHECK (
-    "parentId" IN (
-      SELECT id FROM "clients"
-      WHERE "userId" = (SELECT public.get_auth_user_id())
-    )
-  );
-
--- Similar policies for UPDATE and DELETE
+-- The same for INSERT, UPDATE and DELETE
 ```
+
+The policies of your project's assignment table (which entities use an account) are yours: write them with the
+table, next to your adapter.
 
 **Verify RLS is Active:**
 ```sql
 -- Check RLS is enabled
 SELECT tablename, rowsecurity 
 FROM pg_tables 
-WHERE tablename = 'clients_social_platforms';
+WHERE tablename = 'social_accounts';
 
 -- Should return: rowsecurity = true
 ```

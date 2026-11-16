@@ -12,7 +12,7 @@ The plugin does not look for the adapter on its own: the project registers it wh
 
 | Route | Without an adapter |
 | --- | --- |
-| `GET .../social/accounts` | Lists the user's connected accounts (`alreadyAssignedToEntity: false`, no `connectedClients`, `entitySlug: null`). With `?entityId=` it answers 501 |
+| `GET .../social/accounts` | Lists the user's connected accounts (`alreadyAssignedToEntity: false`, `connectedClients: []`, `entitySlug: null`). With `?entityId=` it answers 501 |
 | `POST .../social/assign`, `POST .../social/publish` | 501 |
 | `GET .../social/connect/callback` | The OAuth popup shows an error saying the project has not registered its adapter |
 | `GET .../social/connect`, `POST .../social/disconnect`, `GET /api/v1/audit-logs` | Work: they use only the plugin's tables |
@@ -123,7 +123,7 @@ export async function register() {
 }
 ```
 
-The server logs `[social-media-publisher] Adapter registered for entity: projects` at startup. The registration lives on `globalThis`, so the routes see it even though Next.js bundles them apart from `instrumentation.ts`.
+The server logs `[social-media-publisher] Adapter registered for entity: projects` at startup. `register()` runs once per server start: under `next dev`, a change to the adapter or to this file takes effect when you restart the server, not on a hot reload. The registration lives on `globalThis`, so the routes see it even though Next.js bundles them apart from `instrumentation.ts`.
 
 The module also exports `getSocialPlatformAdapter`, `hasAdapter`, `ensureAdapter`, `clearAdapter` and `getAdapterInfo`, and `adapterRequiredResponse()`, the 501 above, for your own routes that need the adapter.
 

@@ -5,7 +5,7 @@
 The **Social Media Publisher Plugin** is a comprehensive OAuth-based solution for publishing content to Instagram Business and Facebook Pages. Built with enterprise-grade security and multi-client management in mind, it enables agencies and businesses to manage social media publishing for multiple clients from a single platform.
 
 **Key Characteristics:**
-- **Per-Client Management** - Social accounts belong to clients, not users
+- **Entity-agnostic** - A user connects an account once; the project's adapter assigns it to its own entities (a client, a project)
 - **Secure by Design** - AES-256-GCM encryption for all OAuth tokens
 - **Auto Token Refresh** - Automatic token renewal before expiration
 - **Complete Audit Trail** - Immutable logging for compliance
@@ -15,27 +15,27 @@ The **Social Media Publisher Plugin** is a comprehensive OAuth-based solution fo
 
 ### Primary Use Case: Agency Social Media Management
 
-The plugin is specifically designed for **agencies and businesses managing social media for multiple clients**. Unlike traditional social media management tools where accounts belong to individual users, this plugin implements a **per-client architecture** where social media accounts are child entities of client records.
+The plugin suits **agencies and businesses managing social media for several clients or brands**. The OAuth tokens belong to the user who connected the account (the plugin's `social_accounts` table); which of the project's entities uses each account is the project's business, kept in its own table behind the [adapter](../03-advanced-usage/04-adapter-integration.md).
 
 **This means:**
-- Each client can have multiple Instagram Business or Facebook Page accounts
-- Social accounts are managed within the client context
-- Users manage social platforms through client relationships
+- An entity (a client, say) can use several Instagram Business or Facebook Page accounts
+- One connected account can be assigned to several entities without connecting it again
+- The project decides who may manage an entity's accounts, in its adapter
 - Perfect for agencies serving multiple brands
 
 ## Key Features
 
 ### 1. Per-Client Multi-Account Support
 
-**Child Entity Architecture:**
-- Social platforms stored as `clients_social_platforms` (child entity)
-- Multiple Instagram Business accounts per client
-- Multiple Facebook Page accounts per client
-- Isolated per client (no cross-contamination)
+**Two levels:**
+- Tokens stored once per platform account in the plugin's `social_accounts` table (user level)
+- Assignments to the project's entities stored by the adapter in the project's own table (e.g. `{entity}_social_platforms`)
+- Multiple Instagram Business and Facebook Page accounts per entity
+- Isolated per entity by the project's adapter and row-level security
 
 **Benefits:**
-- Clear client-account ownership
-- Easy client offboarding (delete client = delete accounts)
+- Clear entity-account assignment, owned by the project
+- Easy offboarding (the project's assignment table can cascade on the entity)
 - Organized multi-client management
 - Scalable for agencies with hundreds of clients
 
@@ -81,7 +81,7 @@ Example: a3f9b2...c8d1:9f7e3a...b5c2:key_2024_01
 2. Encrypted with AES-256-GCM algorithm
 3. IV and keyId stored alongside encrypted data
 4. Format: `encrypted:iv:keyId`
-5. Stored in `clients_social_platforms.accessToken`
+5. Stored in `social_accounts.accessToken`
 
 ### 4. Automatic Token Refresh
 
@@ -160,21 +160,23 @@ Client (Parent Entity)
 
 **Database Structure:**
 ```sql
-clients
+social_accounts                 -- the plugin's table (user level)
   id UUID PRIMARY KEY
-
-clients_social_platforms
-  id UUID PRIMARY KEY
-  parentId UUID → clients(id)  -- Client owner
+  userId TEXT → users(id)       -- who connected the account
   platform TEXT                 -- 'instagram_business' | 'facebook_page'
-  platformAccountId TEXT        -- Instagram/Facebook account ID
-  platformAccountName TEXT      -- @username or Page name
+  platformAccountId TEXT        -- Instagram/Facebook account ID (unique)
+  username TEXT                 -- @username or Page name
   accessToken TEXT              -- Encrypted token
-  tokenExpiresAt TIMESTAMPTZ   -- Expiration date
+  tokenExpiresAt TIMESTAMPTZ    -- Expiration date
   permissions JSONB             -- OAuth scopes granted
   accountMetadata JSONB         -- Profile pic, follower count, etc.
   isActive BOOLEAN              -- Soft delete flag
+
+{entity}_social_platforms       -- the project's table, written by its adapter
+  "{entity}Id" → the entity, "socialAccountId" → social_accounts(id), no tokens
 ```
+
+The `Client` above is any entity of the project; see [Adapter integration](../03-advanced-usage/04-adapter-integration.md).
 
 ### OAuth Flow Architecture
 
@@ -206,7 +208,7 @@ Fetch connected Instagram/Facebook accounts
   ↓
 Encrypt tokens (AES-256-GCM)
   ↓
-Store in clients_social_platforms table
+Store tokens in social_accounts; the adapter assigns them to the entity
   ↓
 Return success HTML with postMessage
 ```
@@ -364,7 +366,7 @@ Never logged or stored in plain text
 
 **Access Control:**
 - Row-Level Security (RLS) policies
-- User can only see own clients' accounts
+- A user sees only the social accounts they connected; the adapter decides access to the project's entities
 - Postgres RLS enforcement
 - Session-based authentication
 
@@ -383,9 +385,9 @@ Never logged or stored in plain text
 - Timestamptz for accurate time tracking
 
 **Tables:**
-- `clients` - Parent entity
-- `clients_social_platforms` - Child entity (social accounts)
-- `social_audit_logs` - Immutable audit trail
+- `social_accounts` - The connected accounts and their encrypted tokens (plugin)
+- `social_audit_logs` - Immutable audit trail (plugin)
+- The project's assignment table (e.g. `{entity}_social_platforms`), behind the adapter
 
 ## Getting Started
 
@@ -406,12 +408,12 @@ Never logged or stored in plain text
 
 ## Key Concepts
 
-### Per-Client Architecture
+### Entity Assignments Through the Adapter
 
-Social accounts are **child entities** of clients, not global user accounts. This means:
-- Accounts belong to clients
-- Users access via client relationship
-- Clean separation of concerns
+A connected account belongs to the user who connected it; the project's adapter assigns it to its entities. This means:
+- Tokens live once, in the plugin's `social_accounts`
+- Entities use accounts through the project's assignment table
+- The plugin never queries the project's tables
 - Scalable for agencies
 
 ### Token Lifecycle
