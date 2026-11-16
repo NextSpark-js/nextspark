@@ -28,11 +28,11 @@
   "main": "./plugin.config.ts",
   "requiredPlugins": [],
   "dependencies": {
-    "@floating-ui/react": "^0.27.20"
+    "@floating-ui/react": "^0.27.20",
+    "@phosphor-icons/react": "^2.0.0"
   },
   "peerDependencies": {
     "@nextsparkjs/core": ">=0.1.0-beta.192",
-    "@phosphor-icons/react": "^2.0.0",
     "next": "~16.4.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

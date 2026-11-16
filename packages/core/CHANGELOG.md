@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Upgrading
+### Upgrading from 0.1.0-beta.203
 
 - **The superadmin area uses one name in messages, selectors and tests.** A project created before holds an older name for it in its copy of the starter's `messages/<locale>/dev.json` (the two keys that link to and describe the area are now `goToSuperadmin` and `goToSuperadminDescription`) and in the superadmin Cypress tests under `tests/cypress/e2e/_utils/superadmin` (titles, comments, one `data-cy` selector and the BDD tags now say `superadmin`, and the BDD files list the `data-cy` selectors the components have). Nothing in core reads the old keys; to get the new ones, copy those files from `node_modules/@nextsparkjs/core/templates/projects/starter`, merging your own changes.
 - **The LangChain observability page presets are at `@nextsparkjs/plugin-langchain/presets/templates/superadmin/ai-observability/page` (and `.../[traceId]/page`).** A project that imported them by a deep path changes the import to that one.
@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The READMEs of the repository and of the 13 published packages match the code and the documentation.** They use `pnpm`, state the supported versions (Node.js, PostgreSQL 15 to 18, Linux x64 and macOS arm64, no Windows) and the stability of what they describe, and every link resolves; the root README has a working logo, the six first-party plugins and all 13 packages. `@nextsparkjs/ui` and `@nextsparkjs/plugin-langchain` now have a README, the `@nextsparkjs/plugin-marketplace-payments` one is complete, and the READMEs of `@nextsparkjs/testing`, `@nextsparkjs/mobile`, `@nextsparkjs/plugin-ai`, `@nextsparkjs/plugin-amplitude` and `@nextsparkjs/plugin-social-media-publisher` no longer describe exports, files or auto-discovery that do not exist. Every published `package.json` has `homepage`, `repository` and `bugs`. The steps to test a production build locally moved from the README to the deployment guide, and the stability pages list `marketplace-payments` among the experimental first-party plugins. (#471)
+
+### Fixed
+
+- **A project with the `social-media-publisher` plugin builds again.** The plugin's `disconnect` route exported a `DELETE` handler that read an `accountId` path parameter the route does not have, which Next.js 16 rejects in its type check; the handler could not have been called, so it is removed (use `POST` with `accountId` in the body, as documented). The `walkme` plugin imports `@phosphor-icons/react`, which a project did not install with it: it is now a dependency of the plugin. A new CI step adds the six first-party plugins to a starter made from the packed packages and builds it. (#472)
 
 ## [0.1.0-beta.203] - 2026-11-16
 

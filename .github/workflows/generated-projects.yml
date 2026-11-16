@@ -391,7 +391,8 @@ jobs:
   # The plugin matrix (G0 decision 6) on a starter made from the tarballs: a local and a packaged plugin load and register
   # (build, and the local plugin's route answers), a name collision between two packaged plugins is refused, a core peer
   # range that cannot be met is reported, and removing both leaves the generated files of the untouched starter. The script
-  # is the one to run locally; no database is needed. Ordering and cycles are unit-tested in packages/core.
+  # is the one to run locally; no database is needed. Ordering and cycles are unit-tested in packages/core. The job then builds
+  # a second starter with the six first-party plugins added (scripts/plugins/verify-first-party-plugins.mjs, #472).
   plugin-matrix:
     needs: pack
     runs-on: ubuntu-24.04
@@ -414,12 +415,28 @@ jobs:
       - name: Check the plugin matrix
         run: node scripts/plugins/verify-plugin-matrix.mjs --app "$PROJECT/app" --packages "$PROJECT/.packages" --logs "$RUNNER_TEMP/plugin-matrix-logs" --serve
 
+      # Every first-party plugin added with `nextspark add:plugin` and one build: a type error in a plugin route, or a
+      # dependency a plugin imports but does not declare, stops here and not in a user's build (#472). It runs on a fresh
+      # starter, since the matrix leaves its own build behind.
+      - name: Create a second project for the first-party plugins
+        run: |
+          rm -rf "$PROJECT/app"
+          node "$GITHUB_WORKSPACE/packages/create-nextspark-app/dist/index.js" app --preset saas --theme starter --type web --name app --slug app --description "Template build" -y < /dev/null
+        working-directory: ${{ runner.temp }}/project
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+
+      - name: Build a project with every first-party plugin
+        run: node scripts/plugins/verify-first-party-plugins.mjs --app "$PROJECT/app" --packages "$PROJECT/.packages" --logs "$RUNNER_TEMP/first-party-plugins-logs"
+
       - name: Upload the logs
         if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: plugin-matrix-logs
-          path: ${{ runner.temp }}/plugin-matrix-logs
+          path: |
+            ${{ runner.temp }}/plugin-matrix-logs
+            ${{ runner.temp }}/first-party-plugins-logs
           if-no-files-found: ignore
           retention-days: 7
 
