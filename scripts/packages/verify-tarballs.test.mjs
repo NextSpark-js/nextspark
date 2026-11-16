@@ -524,3 +524,8 @@ test('a binary DER-like file with a key-like filename is a finding', () => {
     assert.equal(derFinding.file, 'fixtures/server.key')
   })
 })
+
+test('the CLI exits non-zero for a directory that does not exist, so its entry guard must run it', () => {
+  const run = spawnSync(process.execPath, [SCRIPT, join(tmpdir(), 'verify-tarballs-no-such-dir')], { encoding: 'utf8' })
+  assert.notEqual(run.status, 0, run.stdout)
+})

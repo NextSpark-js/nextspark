@@ -520,3 +520,8 @@ test('isInsideRoot compares parsed paths: a Windows root and the forward-slash p
   assert.equal(isInsideRoot('/repo', '/repo-other/b.ts', posix), false)
   assert.equal(isInsideRoot('/repo/a', '/repo/b.ts', posix), false)
 })
+
+test('isInsideRoot rejects the parent of the root, whose relative path is exactly ..', () => {
+  assert.equal(isInsideRoot('/repo/a', '/repo', posix), false)
+  assert.equal(isInsideRoot('G:\\repo\\a', 'G:/repo', win32), false)
+})
