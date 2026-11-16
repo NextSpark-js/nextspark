@@ -7,13 +7,13 @@ import fs, { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, type sy
 import { access, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire, syncBuiltinESMExports } from 'node:module'
 import { tmpdir } from 'node:os'
-import { dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
-import { assertWritable, canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
+import { assertWritable, canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment, simulationSignals } from '../src/commands/migrate.js'
 import { linkDirectory, loadCoreHost } from '../src/utils/app-tree.js'
 import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
@@ -1169,7 +1169,7 @@ test('the rollback of a migrate that was committed refuses to run instead of und
  * A module preloaded into the CLI that fails one fs call on `file` with EBUSY, as Windows does on a file another program
  * holds: `open` fails opening it for writing (migrate's check before it writes), `rename` fails moving it (partway).
  */
-async function lockedFileEnv(file: string, at: 'open' | 'rename'): Promise<{ env: NodeJS.ProcessEnv, dir: string }> {
+async function lockedFileEnv(file: string, at: 'open' | 'rename' | 'read'): Promise<{ env: NodeJS.ProcessEnv, dir: string }> {
   const dir = await mkdtemp(join(tmpdir(), 'nextspark-migrate-lock-'))
   const preload = join(dir, 'lock.mjs')
   await writeFile(preload, [
@@ -1180,7 +1180,9 @@ async function lockedFileEnv(file: string, at: 'open' | 'rename'): Promise<{ env
     "const busy = (syscall, path) => Object.assign(new Error(`EBUSY: resource busy or locked, ${syscall} '${path}'`), { code: 'EBUSY', errno: -16, syscall, path: String(path) })",
     at === 'open'
       ? "const open = fs.openSync\nfs.openSync = (path, flags, ...rest) => { if (locked(path) && flags === 'r+') throw busy('open', path); return open(path, flags, ...rest) }"
-      : "const rename = fs.renameSync\nfs.renameSync = (from, to) => { if (locked(from)) throw busy('rename', from); return rename(from, to) }",
+      : at === 'read'
+        ? "const read = fs.readFileSync\nfs.readFileSync = (path, ...rest) => { if (locked(path)) throw busy('open', path); return read(path, ...rest) }"
+        : "const rename = fs.renameSync\nfs.renameSync = (from, to) => { if (locked(from)) throw busy('rename', from); return rename(from, to) }",
     'syncBuiltinESMExports()',
     '',
   ].join('\n'))
@@ -1328,10 +1330,9 @@ for (const name of ['a$$b.ts', 'p$&q.ts', "x$`y$'z.ts"]) {
       assert.ok(recordedRollback(root).created.includes(`components/${name}`), 'the name is recorded as it is')
       runPrintedRollback(root, failed.stdout)
       assert.equal(git_status(root), '')
-      // the run leaves .nextspark itself behind, empty, as the rollback always did
-      const after = treeState(root)
-      if (!('.nextspark' in before) && after['.nextspark']?.startsWith('dir:') && readdirSync(join(root, '.nextspark')).length === 0) delete after['.nextspark']
-      assert.deepEqual(after, before)
+      // directories included: no emptied one is left, and .nextspark, which the run created, goes too
+      assert.equal('.nextspark' in before, false)
+      assert.deepEqual(treeState(root), before)
     } finally {
       await rm(root, { recursive: true, force: true })
     }
@@ -1380,6 +1381,51 @@ test('a rollback recorded in a repository without a commit refuses to run once t
     runPrintedRollback(root, run(root, []).stdout)
     assert.equal(git_status(root), '')
   } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a file another program holds while migrate reads it is named, and nothing is written (#469)', async () => {
+  const { root } = await moveFixture()
+  const lock = await lockedFileEnv('app/dashboard/page.tsx', 'read')
+  try {
+    await installConversionCore(root)
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await commitFixture(root)
+    for (const args of [['--dry-run'], ['--yes']]) {
+      const result = run(root, args, lock.env)
+      assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
+      assert.match(result.stderr, /app[/\\]dashboard[/\\]page\.tsx could not be read or written: another program has it open \(an editor, the development server or an antivirus\), or its permissions do not allow it\. Close that program, or fix the permissions, and run nextspark migrate again\. Nothing was written\./)
+      assert.doesNotMatch(result.stderr, /nextspark migrate: EBUSY/)
+      assert.equal(git_status(root), '')
+      await assert.rejects(access(join(root, '.nextspark')))
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(lock.dir, { recursive: true, force: true })
+  }
+})
+
+test('the recorded list of what a generated directory held is in code-unit order whatever the file system lists first (#469)', async () => {
+  const { root } = await moveFixture()
+  const preloadDir = await mkdtemp(join(tmpdir(), 'nextspark-migrate-order-'))
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, '.gitignore', 'contents/themes/acme/tests/output\n.nextspark/\n')
+    await commitFixture(root)
+    // one spelling per name: macOS and Windows ignore case
+    const names = ['zeta.json', 'Keep.json', '[slug]', 'alpha.json', '_x.json', 'B.json', '(group)', 'Zz.json']
+    for (const name of names) await write(root, `.nextspark/registries/${name}`, '{}\n')
+    // A file system that lists them in another order (macOS sorts, NTFS ignores case): here, reversed
+    await writeFile(join(preloadDir, 'reverse.mjs'), "import fs from 'node:fs'\nimport { syncBuiltinESMExports } from 'node:module'\nconst readdir = fs.readdirSync\nfs.readdirSync = (path, ...rest) => { const list = readdir(path, ...rest); return String(path).split('\\\\').join('/').includes('.nextspark/registries') ? list.reverse() : list }\nsyncBuiltinESMExports()\n")
+    const failed = run(root, ['--yes'], { NODE_OPTIONS: `--import=${pathToFileURL(join(preloadDir, 'reverse.mjs')).href}` })
+    assert.notEqual(failed.status, 0)
+    const recorded = recordedRollback(root).cleanups.find(cleanup => cleanup.root === '.nextspark/registries')?.preserved
+    assert.deepEqual(recorded, names.map(name => `.nextspark/registries/${name}`).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)))
+  } finally {
+    await rm(preloadDir, { recursive: true, force: true })
     await rm(root, { recursive: true, force: true })
   }
 })
@@ -4751,6 +4797,48 @@ test('a signal during the simulation removes the temporary copy', posixOnly(POSI
     rmSync(pidFile, { force: true })
     await rm(root, { recursive: true, force: true })
   }
+})
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  test(`${signal} during the simulation removes the copy and the temporary files of its children, on every platform (#469)`, async () => {
+    const ready = join(tmpdir(), `nextspark-migrate-ready-${process.pid}-${signal}`)
+    const seen = `${ready}.tmpdir`
+    // The child prepare records the temporary directory it was given and fills it, as a core lookup would
+    const root = await simulationFixture("import { mkdirSync, writeFileSync } from 'node:fs'\nimport { tmpdir } from 'node:os'\nimport { join } from 'node:path'\nmkdirSync(join(tmpdir(), 'nextspark-migrate-core-probe'), { recursive: true })\nwriteFileSync(join(tmpdir(), 'nextspark-migrate-core-probe', 'big'), 'x'.repeat(4096))\nwriteFileSync(process.env.NEXTSPARK_PROBE_SEEN, tmpdir())\nwriteFileSync(process.env.NEXTSPARK_PROBE_READY, 'ready')\nawait new Promise(resolve => setTimeout(resolve, 60000))\n")
+    const dir = await mkdtemp(join(tmpdir(), 'nextspark-migrate-signal-'))
+    // Preloaded into the CLI (not its simulation children): once the child prepare is ready, emit the signal the
+    // way the runtime delivers one, so the handler runs where no real signal can be sent (Windows)
+    const preload = join(dir, 'signal.mjs')
+    await writeFile(preload, [
+      "import { existsSync } from 'node:fs'",
+      "if (process.env.NEXTSPARK_MIGRATE_SIMULATION !== '1') {",
+      `  const timer = setInterval(() => { if (existsSync(process.env.NEXTSPARK_PROBE_READY)) { clearInterval(timer); process.emit(${JSON.stringify(signal)}, ${JSON.stringify(signal)}) } }, 50)`,
+      '  timer.unref()',
+      '}',
+      '',
+    ].join('\n'))
+    try {
+      await commitFixture(root)
+      const list = (prefix: string) => readdirSync(tmpdir()).filter(name => name.startsWith(prefix))
+      const before = new Set(list('nextspark-migrate-plan-'))
+      const result = await runAsync(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: '', NEXTSPARK_PROBE_READY: ready, NEXTSPARK_PROBE_SEEN: seen, NODE_OPTIONS: `--import=${pathToFileURL(preload).href}` })
+      assert.equal(result.status, signal === 'SIGINT' ? 130 : 143, result.stderr)
+      const childTmp = readFileSync(seen, 'utf8')
+      assert.match(basename(childTmp), /^nextspark-migrate-plan-.+-tmp$/, `the child got its own temporary directory: ${childTmp}`)
+      assert.equal(existsSync(childTmp), false, 'and it is gone, with what the child left in it')
+      assert.deepEqual(list('nextspark-migrate-plan-').filter(name => !before.has(name)), [])
+    } finally {
+      rmSync(ready, { force: true })
+      rmSync(seen, { force: true })
+      await rm(dir, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
+
+test('the dry run also listens for Ctrl-Break on Windows (#469)', () => {
+  assert.deepEqual(simulationSignals('win32'), ['SIGINT', 'SIGTERM', 'SIGBREAK'])
+  assert.deepEqual(simulationSignals('linux'), ['SIGINT', 'SIGTERM'])
 })
 
 // ---- round 7

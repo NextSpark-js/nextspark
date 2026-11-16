@@ -1573,9 +1573,12 @@ function simulationVerified(repository: string, nonce: string | undefined): bool
   if (!nonce || process.env.NEXTSPARK_MIGRATE_SIMULATION !== '1') return false;
   try {
     const real = realpathSync(repository);
+    // The simulation hands its children <copy>-tmp as their temp directory: the temp root is then its parent
+    const temp = realpathSync(tmpdir());
+    const root = basename(temp) === `${basename(real)}-tmp` ? dirname(temp) : temp;
     // the copy is a direct child of the temp directory: no nested path qualifies
     return readFileSync(join(repository, '.git', SIMULATION_MARKER), 'utf8') === nonce
-      && dirname(real) === realpathSync(tmpdir())
+      && dirname(real) === root
       && basename(real).startsWith('nextspark-migrate-plan-');
   } catch {
     return false;
@@ -3693,8 +3696,9 @@ const LOCK_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
 
 /** The path of a file another program holds open (Windows reports EBUSY, EPERM or EACCES), or null for any other error. */
 function lockedPath(error: unknown): string | null {
-  const { code, path } = (error ?? {}) as NodeJS.ErrnoException;
-  return code && LOCK_CODES.has(code) && path ? path : null;
+  const { code, path, syscall } = (error ?? {}) as NodeJS.ErrnoException;
+  // a program that could not be started (spawn EACCES) is not a file someone holds
+  return code && LOCK_CODES.has(code) && path && !syscall?.startsWith('spawn') ? path : null;
 }
 
 /**
@@ -3843,13 +3847,14 @@ function cleanNewEntriesState(repository: string, hostRoot: string, path: string
   if (existing.size === 0 || !lstatSync(root).isDirectory()) return null;
   return {
     root: pathFrom(repository, root),
-    preserved: [...existing].filter(file => file !== path).map(file => pathFrom(repository, join(hostRoot, file))),
+    // sorted by code unit: readdir order differs between file systems (NTFS ignores case)
+    preserved: [...existing].filter(file => file !== path).map(file => pathFrom(repository, join(hostRoot, file))).sort(),
   };
 }
 
 /** The only data a rollback is rebuilt from: repository-relative paths, never commands. */
 interface RollbackCleanup { root: string; preserved: string[] }
-interface RollbackState { version: 1; created: string[]; cleanups: RollbackCleanup[]; /** The commit migrate started from: the script refuses to run once the repository moved past it. */ head?: string | null }
+interface RollbackState { version: 1; created: string[]; cleanups: RollbackCleanup[]; /** The commit migrate started from: the script refuses to run once the repository moved past it. */ head?: string | null; /** .nextspark did not exist before the run, so the rollback removes it whole. */ createdNextspark?: boolean }
 
 function rollbackState(repository: string, hostRoot: string, plan: MovePlan, report: MigrateReport, hadLegacyApp: boolean, generatedHostSnapshot: Map<string, Set<string> | null> | null): RollbackState {
   // `checkout` restores tracked sources and edits.  Clean every path this
@@ -3905,7 +3910,7 @@ function rollbackState(repository: string, hostRoot: string, plan: MovePlan, rep
   } catch {
     // A repository without a commit has nothing for the script to compare
   }
-  return { version: 1, created: [...destinations].sort(), cleanups, head };
+  return { version: 1, created: [...destinations].sort(), cleanups, head, createdNextspark: !existsSync(join(hostRoot, '.nextspark')) && !isLink(join(hostRoot, '.nextspark')) };
 }
 
 /**
@@ -3971,6 +3976,8 @@ try {
   if (existsSync(files)) for (const name of readdirSync(files)) restore(join(files, name), join(host, name));
   rmSync(backup, { recursive: true, force: true });
   rmSync(self, { force: true });
+  // .nextspark did not exist before the run: all of it is the run's (the snapshot and this script included)
+  if (data.createdNextspark) rmSync(dirname(self), { recursive: true, force: true });
   console.log('The project is back as it was before nextspark migrate ran.');
 } catch (error) {
   console.error('Rollback failed: ' + (error instanceof Error ? error.message : String(error)));
@@ -3983,7 +3990,7 @@ function writeRollbackScript(repository: string, hostRoot: string, state: Rollba
   const file = join(hostRoot, MIGRATION_ROLLBACK_SCRIPT_PATH);
   assertContained(hostRoot, dirname(file));
   // head: null means the repository had no commit yet; an older CLI's record has none, and its script skips the check
-  const data = { repository: pathFrom(hostRoot, repository), ...(state.head !== undefined ? { head: state.head } : {}), created: state.created, cleanups: state.cleanups };
+  const data = { repository: pathFrom(hostRoot, repository), ...(state.head !== undefined ? { head: state.head } : {}), created: state.created, cleanups: state.cleanups, createdNextspark: state.createdNextspark === true };
   mkdirSync(dirname(file), { recursive: true });
   rmSync(file, { force: true });
   // A function, so that $$, $& and the like in a path are written as they are
@@ -4032,7 +4039,8 @@ function parseRollbackState(text: string, repository: string, hostRoot: string):
     }
     // An older CLI recorded no commit: its script then runs without that check
     if (data.head !== undefined && data.head !== null && (typeof data.head !== 'string' || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(data.head))) return null;
-    return { version: 1, created: data.created, cleanups: data.cleanups.map(({ root, preserved }) => ({ root, preserved })), ...(data.head !== undefined ? { head: data.head } : {}) };
+    if (data.createdNextspark !== undefined && typeof data.createdNextspark !== 'boolean') return null;
+    return { version: 1, created: data.created, cleanups: data.cleanups.map(({ root, preserved }) => ({ root, preserved })), ...(data.head !== undefined ? { head: data.head } : {}), createdNextspark: data.createdNextspark === true };
   } catch {
     return null;
   }
@@ -4230,6 +4238,11 @@ interface SimulationChild {
  * simulation reaches everything the migration started. On Windows a detached child has no console, and every console
  * program it starts (git, node, pnpm) opens a window of its own (#468): there it stays attached, its window hidden.
  */
+/** The signals that end a dry run while it simulates: Ctrl-Break arrives as SIGBREAK on Windows. */
+export function simulationSignals(platform: NodeJS.Platform = process.platform): NodeJS.Signals[] {
+  return platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGBREAK'] : ['SIGINT', 'SIGTERM'];
+}
+
 export function simulationSpawnOptions(platform: string = process.platform): { detached: boolean; windowsHide: boolean } {
   return { detached: platform !== 'win32', windowsHide: true };
 }
@@ -4268,19 +4281,24 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
   }
   process.stderr.write('Simulating the generated host on a converted copy of the project (--no-simulate skips this)...\n');
   const copy = mkdtempSync(join(tmpdir(), 'nextspark-migrate-plan-'));
+  // The temporary directory of every child: a child that is ended (taskkill on Windows) cannot remove its own
+  // nextspark-migrate-core-* or -next-* directories, so they live here and go with the copy
+  const scratch = `${copy}-tmp`;
+  mkdirSync(scratch);
   let running: ChildProcess | null = null;
   const track = (child: ChildProcess | null) => { running = child; };
   const cleanUp = () => {
     const child = running as ChildProcess | null;
     if (child) killProcessTree(child);
-    rmSync(copy, { recursive: true, force: true });
+    // retried: on Windows an ended child can hold its files for a moment
+    for (const directory of [copy, scratch]) rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   };
   const onSignal = (signal: NodeJS.Signals) => {
     cleanUp();
     process.exit(signal === 'SIGINT' ? 130 : 143);
   };
-  process.once('SIGINT', onSignal);
-  process.once('SIGTERM', onSignal);
+  const signals = simulationSignals();
+  for (const signal of signals) process.once(signal, onSignal);
   try {
     const git = (args: string[], cwd = copy) => runAndCollect('git', ['-c', 'user.email=plan@nextspark.local', '-c', 'user.name=plan', ...args], { cwd }, track);
     // No checkout at first: tracked env files must never land on disk, so only the other paths are checked out
@@ -4323,7 +4341,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     const prepareModule = copiedTemplates ? join(dirname(copiedTemplates), 'scripts', 'build', 'registry', 'host', 'prepare.mjs') : null;
     // The core the project uses decides: one that exports predictHost answers without running the registry build
     const hasPredict = prepareModule !== null && existsSync(prepareModule) && /export\s+(?:async\s+)?function\s+predictHost\b/.test(readFileSync(prepareModule, 'utf8'));
-    const simulationEnv = simulationEnvironment(projectPnpmPackageManager(resolve(repository, report.hostRoot.path)));
+    const simulationEnv = { ...simulationEnvironment(projectPnpmPackageManager(resolve(repository, report.hostRoot.path))), TMPDIR: scratch, TMP: scratch, TEMP: scratch };
     const nonce = randomBytes(16).toString('hex');
     writeFileSync(join(copy, '.git', SIMULATION_MARKER), nonce);
     const migrated = await runAndCollect(process.execPath, [process.argv[1], 'migrate', '--yes', '--simulation-nonce', nonce, ...(report.activeTheme.name ? ['--theme', report.activeTheme.name] : []), ...(hasPredict ? ['--no-prepare'] : [])], {
@@ -4374,8 +4392,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     report.hostPlan.unknown = true;
     report.hostPlan.reason = `not simulated: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`;
   } finally {
-    process.off('SIGINT', onSignal);
-    process.off('SIGTERM', onSignal);
+    for (const signal of signals) process.off(signal, onSignal);
     cleanUp();
   }
 }
@@ -4805,10 +4822,12 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     console.log(`  To undo the migration before you commit it, run: ${rollback[0]}`);
     console.log('  It runs git checkout -- . (which also discards any other uncommitted change in the repository) and removes what the run created; the ignored files the run overwrote do not come back once it has succeeded.');
   } catch (error) {
-    const locked = writesStarted ? lockedPath(error) : null;
-    const message = locked
+    const locked = lockedPath(error);
+    const message = locked && writesStarted
       ? `${locked} is open in another program, so migrate stopped partway: close the program that has it open (an editor, the development server or an antivirus), run the rollback printed below, then run nextspark migrate again.`
-      : error instanceof Error ? error.message : 'Could not analyze this project.';
+      : locked
+        ? `${locked} could not be read or written: another program has it open (an editor, the development server or an antivirus), or its permissions do not allow it. Close that program, or fix the permissions, and run nextspark migrate again. Nothing was written.`
+        : error instanceof Error ? error.message : 'Could not analyze this project.';
     console.error(`nextspark migrate: ${message}`);
     if ((writesStarted || printRollbackOnFailure) && rollback) printRollback(rollback);
     // --check: 0 clean, 1 findings, 2 the check could not run
