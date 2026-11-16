@@ -5804,6 +5804,8 @@ test('an alias to a native path with backslashes drops the trailing /index like 
   try {
     // on Windows the source is `...\DS\index.ts`; a file with that literal name stands in for it here
     const native = `${host}/DS\\index.ts`
+    // on Windows that path is DS/index.ts itself, whose directory has to exist
+    await mkdir(join(host, 'DS'), { recursive: true })
     await writeFile(native, '')
     assert.equal(canonicalAliasSpecifier(host, join(host, 'components', 'DS', 'index.ts'), native), '@/components/DS')
   } finally { await rm(host, { recursive: true, force: true }) }

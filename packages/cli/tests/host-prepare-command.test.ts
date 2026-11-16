@@ -206,6 +206,8 @@ test('dev and build without next installed stop first: exit 1, no host preparati
   const project = await hostProject()
   try {
     await rm(join(project.root, 'node_modules/.bin'), { recursive: true })
+    // and the Windows stand-in of Next's JS entry (windowsNextEntry), which exists only there
+    await rm(join(project.root, 'node_modules/next'), { recursive: true, force: true })
     for (const args of [['dev', '-p', '4394'], ['build']]) {
       const failed = run(project.root, args, { NEXTSPARK_AUTH_PREFLIGHT: 'off' })
       assert.equal(failed.status, 1, `${args.join(' ')}: ${failed.output}`)
