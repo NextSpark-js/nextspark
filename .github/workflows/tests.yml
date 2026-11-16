@@ -71,6 +71,6 @@ jobs:
 
       - name: Test package, performance, and security scripts
         if: matrix.suite == 'scripts'
-        run: node --test $NODE_TEST_FLAGS scripts/packages/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs scripts/accessibility/*.test.mjs scripts/auth/*.test.mjs scripts/consent/*.test.mjs scripts/seo/*.test.mjs
+        run: node --test $NODE_TEST_FLAGS scripts/packages/*.test.mjs scripts/lib/*.test.mjs scripts/performance/*.test.mjs scripts/security/*.test.mjs scripts/accessibility/*.test.mjs scripts/auth/*.test.mjs scripts/consent/*.test.mjs scripts/seo/*.test.mjs
         env:
           npm_config_registry: http://127.0.0.1:9
