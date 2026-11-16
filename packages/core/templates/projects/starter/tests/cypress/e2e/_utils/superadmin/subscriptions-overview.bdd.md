@@ -1,7 +1,7 @@
 ---
 feature: Superadmin Subscriptions Overview
 priority: high
-tags: [superadmin, superadmin, subscriptions, metrics]
+tags: [superadmin, subscriptions, metrics]
 grepTags: [uat, feat-superadmin, superadmin, subscriptions]
 coverage: 8
 ---

@@ -75,8 +75,8 @@ describe('Superadmin - All Teams Management', {
 
       // 2. Find and click first team row
       cy.get('body').then(($body) => {
-        if ($body.find('[data-cy^="superadmin-team-row"]').length > 0) {
-          cy.get('[data-cy^="superadmin-team-row"]').first().click()
+        if ($body.find('[data-cy^="superadmin-teams-row"]').length > 0) {
+          cy.get('[data-cy^="superadmin-teams-row"]').first().click()
 
           // 3. Validate team details view
           cy.url().should('include', '/superadmin/teams/')
@@ -121,7 +121,7 @@ describe('Superadmin - All Teams Management', {
 
       // 2. Check for member count display
       cy.get(superadmin.selectors.teamsContainer).within(() => {
-        cy.get('[data-cy^="superadmin-team-row"]').first().then(($team) => {
+        cy.get('[data-cy^="superadmin-teams-row"]').first().then(($team) => {
           // Check for member count indicator
           if ($team.find('[data-cy="team-member-count"]').length > 0) {
             cy.wrap($team).find('[data-cy="team-member-count"]').should('be.visible')

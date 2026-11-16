@@ -182,7 +182,7 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadm
 
     it('should have valid teamRow selector pattern', () => {
       const selector = superadmin.selectors.teamRow('test-id')
-      expect(selector).to.include('superadmin-team-row')
+      expect(selector).to.include('superadmin-teams-row')
     })
 
     it('should have valid subscriptionsPlanCount selector pattern', () => {

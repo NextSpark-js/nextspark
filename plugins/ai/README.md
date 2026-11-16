@@ -1,6 +1,6 @@
 # @nextsparkjs/plugin-ai
 
-Core AI utilities for NextSpark: text generation and embedding endpoints, a model selector, cost calculation, and an AI history entity that records each call. It supports OpenAI, Anthropic and Ollama (local models), The endpoints work as shipped, with authentication, an API key scope and rate limiting; its utilities also let you build your own endpoints and components.
+Core AI utilities for NextSpark: text generation and embedding endpoints, a model selector, cost calculation, and an AI history entity that records each call. It supports OpenAI, Anthropic and Ollama (local models). The endpoints work as shipped, with authentication, an API key scope and rate limiting; its utilities also let you build your own endpoints and components.
 
 > **Stability: experimental.** The first-party plugins are not part of the stable 1.0 surface and may change in a minor release without a deprecation period. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
 

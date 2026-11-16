@@ -84,7 +84,7 @@ And deberia encontrar el link de salir al dashboard
 - `superadmin.navigation.teams` selector exists (superadmin-nav-teams)
 - `superadmin.navigation.teamRoles` selector exists (superadmin-nav-team-roles)
 - `superadmin.navigation.subscriptions` selector exists (superadmin-nav-subscriptions)
-- `superadmin.navigation.exitToDashboard` selector exists (superadmin-sidebar-exit-to-dashboard)
+- `superadmin.navigation.exitToDashboard` selector exists (superadmin-sidebar-exit)
 
 ---
 
@@ -154,7 +154,7 @@ And deberia encontrar el input de busqueda de equipos
 ```
 
 ### Expected Results
-- `superadmin.teams.container` selector exists (superadmin-teams-container)
+- `superadmin.teams.container` selector exists (superadmin-teams)
 - `superadmin.teams.table` selector exists (superadmin-teams-table)
 - `superadmin.teams.search` selector exists (superadmin-teams-search)
 
@@ -233,7 +233,7 @@ And el selector subscriptionsPlanCount deberia retornar un patron valido
 ### Expected Results
 - `superadmin.users.row` pattern includes 'superadmin-user-row'
 - `superadmin.users.viewButton` pattern includes 'superadmin-user-view'
-- `superadmin.teams.row` pattern includes 'superadmin-team-row'
+- `superadmin.teams.row` pattern includes 'superadmin-teams-row'
 - `superadmin.subscriptions.planCount` pattern includes 'superadmin-subscriptions-plan-count'
 
 ### Notes
@@ -252,7 +252,7 @@ These tests validate that dynamic selector functions (those that accept paramete
 | TeamsPage | `packages/core/src/routes/superadmin/teams/page.tsx` | superadmin-teams-* |
 | SubscriptionsPage | `packages/core/src/routes/superadmin/subscriptions/page.tsx` | superadmin-subscriptions-* |
 | UsersTable | `packages/core/src/components/users/tables/UsersTable.tsx` | superadmin-users-table, superadmin-user-row-{id} |
-| TeamsTable | `packages/core/src/components/superadmin/tables/TeamsTable.tsx` | superadmin-teams-table, superadmin-team-row-{id} |
+| TeamsTable | `packages/core/src/components/superadmin/tables/TeamsTable.tsx` | superadmin-teams-table, superadmin-teams-row-{id} |
 
 ## Related POMs
 

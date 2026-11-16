@@ -61,7 +61,7 @@ describe('Authentication - SuperAdmin Flow', {
       cy.log('✅ Teams table loaded and visible')
 
       // 6. Exit Superadmin back to dashboard
-      cy.get('[data-cy="superadmin-sidebar-exit-to-dashboard"]').click()
+      cy.get('[data-cy="superadmin-sidebar-exit"]').click()
       cy.url().should('include', '/dashboard')
       cy.url().should('not.include', '/superadmin')
       cy.log('✅ Exited Superadmin')

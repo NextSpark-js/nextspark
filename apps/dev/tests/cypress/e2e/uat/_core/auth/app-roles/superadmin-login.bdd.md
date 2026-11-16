@@ -1,7 +1,7 @@
 ---
 feature: SuperAdmin Authentication Flow
 priority: critical
-tags: [authentication, superadmin, superadmin, security]
+tags: [authentication, superadmin, security]
 grepTags: [uat, feat-auth, security, regression]
 coverage: 1
 ---
@@ -105,7 +105,7 @@ Then deberia ser redirigido a /login
 | Superadmin Icon | `[data-cy="topnav-superadmin"]` | Superadmin access (SuperAdmin/Developer only) |
 | Users Nav | `[data-cy="superadmin-nav-users"]` | Navigate to Users management |
 | Teams Nav | `[data-cy="superadmin-nav-teams"]` | Navigate to Teams management |
-| Exit Button | `[data-cy="superadmin-sidebar-exit-to-dashboard"]` | Exit Superadmin to dashboard |
+| Exit Button | `[data-cy="superadmin-sidebar-exit"]` | Exit Superadmin to dashboard |
 | User Menu | `[data-cy="topnav-user-menu-trigger"]` | User dropdown menu trigger |
 | Sign Out | `[data-cy="topnav-menu-signOut"]` | Logout option |
 

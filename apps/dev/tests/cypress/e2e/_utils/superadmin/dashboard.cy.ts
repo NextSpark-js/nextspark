@@ -133,7 +133,7 @@ describe('Admin - Superadmin Dashboard', {
       superadmin.visitDashboard()
 
       // 2. Click exit button (using selector from DevAreaPOM pattern)
-      cy.get('[data-cy="superadmin-sidebar-exit-to-dashboard"]').click()
+      cy.get('[data-cy="superadmin-sidebar-exit"]').click()
 
       // 3. Validate redirect to main dashboard
       cy.url().should('include', '/dashboard')

@@ -1,7 +1,7 @@
 ---
 feature: Superadmin Dashboard (Admin Panel)
 priority: critical
-tags: [superadmin, superadmin, dashboard, navigation]
+tags: [superadmin, dashboard, navigation]
 grepTags: [uat, feat-superadmin, superadmin, dashboard]
 coverage: 6
 ---
@@ -217,9 +217,9 @@ And la URL no deberia incluir /admin
 | Nav Dashboard | `[data-cy="superadmin-nav-dashboard"]` | Dashboard nav item |
 | Nav Users | `[data-cy="superadmin-nav-users"]` | Users nav item |
 | Nav Teams | `[data-cy="superadmin-nav-teams"]` | Teams nav item |
-| Stats Users | `[data-cy="superadmin-stats-users"]` | Users count stat |
-| Stats Teams | `[data-cy="superadmin-stats-teams"]` | Teams count stat |
-| Exit Button | `[data-cy="superadmin-sidebar-exit-to-dashboard"]` | Exit to dashboard button |
+| Stats Users | `[data-cy="superadmin-metric-{name}"]` | Users count stat |
+| Stats Teams | `[data-cy="superadmin-metric-{name}"]` | Teams count stat |
+| Exit Button | `[data-cy="superadmin-sidebar-exit"]` | Exit to dashboard button |
 
 ---
 

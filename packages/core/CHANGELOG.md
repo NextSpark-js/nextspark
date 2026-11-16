@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
-- **The superadmin area uses one name in messages, selectors and tests.** A project created before holds an older name for it in its copy of the starter's `messages/<locale>/dev.json` (the two keys that link to and describe the area are now `goToSuperadmin` and `goToSuperadminDescription`) and in the superadmin Cypress tests under `tests/cypress/e2e/_utils/superadmin` (routes, `data-cy` selectors and tags now say `superadmin`). Nothing in core reads the old keys; to get the new ones, copy those files from `node_modules/@nextsparkjs/core/templates/projects/starter`, merging your own changes.
+- **The superadmin area uses one name in messages, selectors and tests.** A project created before holds an older name for it in its copy of the starter's `messages/<locale>/dev.json` (the two keys that link to and describe the area are now `goToSuperadmin` and `goToSuperadminDescription`) and in the superadmin Cypress tests under `tests/cypress/e2e/_utils/superadmin` (titles, comments, one `data-cy` selector and the BDD tags now say `superadmin`, and the BDD files list the `data-cy` selectors the components have). Nothing in core reads the old keys; to get the new ones, copy those files from `node_modules/@nextsparkjs/core/templates/projects/starter`, merging your own changes.
+- **The LangChain observability page presets are at `@nextsparkjs/plugin-langchain/presets/templates/superadmin/ai-observability/page` (and `.../[traceId]/page`).** A project that imported them by a deep path changes the import to that one.
 
 ### Changed
 

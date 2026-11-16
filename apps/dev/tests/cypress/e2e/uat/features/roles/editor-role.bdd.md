@@ -518,7 +518,7 @@ Then el boton Dev Zone NO deberia existir
 | Row Action View | `[data-cy="row-action-view"]` | View option in row menu |
 | Row Action Edit | `[data-cy="row-action-edit"]` | Edit option (should not exist) |
 | Row Action Delete | `[data-cy="row-action-delete"]` | Delete option (should not exist) |
-| Superadmin Button | `[data-cy="superadmin-button"]` | Superadmin access button |
+| Superadmin Button | `[data-cy="topnav-superadmin"]` | Superadmin access button |
 | Dev Zone Button | `[data-cy="dev-zone-button"]` | Dev Zone access button |
 | Admin Toolbar | `[data-cy="admin-toolbar"]` | Admin-only toolbar |
 

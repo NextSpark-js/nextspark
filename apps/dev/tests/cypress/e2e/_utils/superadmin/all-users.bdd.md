@@ -1,7 +1,7 @@
 ---
 feature: Superadmin All Users Management
 priority: high
-tags: [superadmin, superadmin, users, management]
+tags: [superadmin, users, management]
 grepTags: [uat, feat-superadmin, superadmin, users]
 coverage: 11
 ---

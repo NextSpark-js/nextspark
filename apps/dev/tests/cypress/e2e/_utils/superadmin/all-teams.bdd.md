@@ -1,7 +1,7 @@
 ---
 feature: Superadmin All Teams Management
 priority: high
-tags: [superadmin, superadmin, teams, management]
+tags: [superadmin, teams, management]
 grepTags: [uat, feat-superadmin, superadmin, teams]
 coverage: 7
 ---
@@ -237,10 +237,10 @@ Then cada team deberia mostrar su plan de facturacion (Free, Starter, Pro, Busin
 
 | Element | Selector | Description |
 |---------|----------|-------------|
-| Container | `[data-cy="superadmin-teams-container"]` | Teams page container |
-| Teams List | `[data-cy="superadmin-teams-list"]` | List/table of teams |
-| Team Row | `[data-cy="superadmin-team-row-{id}"]` | Individual team row |
-| Team Details | `[data-cy="superadmin-team-details"]` | Team details view |
+| Container | `[data-cy="superadmin-teams"]` | Teams page container |
+| Teams List | `[data-cy="superadmin-teams-table"]` | List/table of teams |
+| Team Row | `[data-cy="superadmin-teams-row-{id}"]` | Individual team row |
+| Team Details | `[data-cy="superadmin-team-detail"]` | Team details view |
 | Search | `[data-cy="superadmin-teams-search"]` | Search input |
 | Member Count | `[data-cy="team-member-count"]` | Member count display |
 | Team Plan | `[data-cy="team-plan-{planName}"]` | Plan indicator |
