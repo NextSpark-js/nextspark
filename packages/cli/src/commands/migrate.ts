@@ -3733,6 +3733,8 @@ export function assertWritable(root: string, rewritten: string[], moved: string[
   if (platform !== 'win32') return;
   for (const file of moved.flatMap(path => files(join(root, path)))) {
     const probe = `${file}.nextspark-lock-check`;
+    // a file already at that name would be overwritten: that file is not checked
+    if (existsSync(probe) || isLink(probe)) continue;
     try {
       renameSync(file, probe);
     } catch (error) {
@@ -3817,7 +3819,21 @@ function removeMigrationRollbackBackup(hostRoot: string): void {
   const backup = migrationRollbackBackup(hostRoot);
   // rm never follows a link inside the backup, but a link at .nextspark or at the backup itself is refused
   assertContained(hostRoot, backup);
+  makeDirectoriesWritable(backup);
   rmSync(backup, { recursive: true, force: true });
+}
+
+/** u+w on every directory below `path` (the snapshot keeps a read-only directory read-only), so that rm can empty it. */
+function makeDirectoriesWritable(path: string): void {
+  let entry;
+  try {
+    entry = lstatSync(path);
+  } catch {
+    return;
+  }
+  if (!entry.isDirectory()) return;
+  if ((entry.mode & 0o200) === 0) chmodSync(path, entry.mode | 0o200);
+  for (const child of readdirSync(path)) makeDirectoriesWritable(join(path, child));
 }
 
 /**
@@ -3935,16 +3951,25 @@ const host = resolve(dirname(self), '..');
 const repository = resolve(host, data.repository);
 const git = args => execFileSync('git', ['-C', repository, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
 const isDirectory = path => { try { return lstatSync(path).isDirectory(); } catch { return false; } };
+// u+w on every directory below path, so that rm can empty a read-only one
+const writable = path => {
+  if (!isDirectory(path)) return;
+  const mode = lstatSync(path).mode;
+  if ((mode & 0o200) === 0) chmodSync(path, mode | 0o200);
+  for (const name of readdirSync(path)) writable(join(path, name));
+};
 const currentHead = () => { try { return git(['rev-parse', '--verify', '--quiet', 'HEAD']).trim() || null; } catch { return null; } };
 // cp -pR: a link or a path whose type changed is replaced, modes and times are kept, links are copied as links
 const restore = (from, to) => {
   const entry = lstatSync(from);
   let existing = null;
   try { existing = lstatSync(to); } catch {}
-  if (existing && !(existing.isDirectory() && entry.isDirectory())) rmSync(to, { recursive: true, force: true });
+  if (existing && !(existing.isDirectory() && entry.isDirectory())) { writable(to); rmSync(to, { recursive: true, force: true }); }
   if (entry.isSymbolicLink()) return symlinkSync(readlinkSync(from), to);
   if (entry.isDirectory()) {
+    // writable while it is filled; its own mode comes back below
     if (!existing || !existing.isDirectory()) mkdirSync(to);
+    else chmodSync(to, existing.mode | 0o200);
     for (const name of readdirSync(from)) restore(join(from, name), join(to, name));
   } else copyFileSync(from, to);
   chmodSync(to, entry.mode & 0o7777);
@@ -3974,10 +3999,11 @@ try {
   const backup = join(host, '.nextspark', 'migrate-rollback');
   const files = join(backup, 'files');
   if (existsSync(files)) for (const name of readdirSync(files)) restore(join(files, name), join(host, name));
+  writable(backup);
   rmSync(backup, { recursive: true, force: true });
   rmSync(self, { force: true });
   // .nextspark did not exist before the run: all of it is the run's (the snapshot and this script included)
-  if (data.createdNextspark) rmSync(dirname(self), { recursive: true, force: true });
+  if (data.createdNextspark) { writable(dirname(self)); rmSync(dirname(self), { recursive: true, force: true }); }
   console.log('The project is back as it was before nextspark migrate ran.');
 } catch (error) {
   console.error('Rollback failed: ' + (error instanceof Error ? error.message : String(error)));
@@ -4820,7 +4846,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     }
     removeMigrationRollbackBackup(hostRoot);
     console.log(`  To undo the migration before you commit it, run: ${rollback[0]}`);
-    console.log('  It runs git checkout -- . (which also discards any other uncommitted change in the repository) and removes what the run created; the ignored files the run overwrote do not come back once it has succeeded.');
+    console.log('  Run it right away if you use it: it runs git checkout -- . (which also discards any other uncommitted change in the repository) and removes what the run created, whole: the top-level directories it created and .nextspark if it was not there before, with anything added to them since. The ignored files the run overwrote do not come back once it has succeeded.');
   } catch (error) {
     const locked = lockedPath(error);
     const message = locked && writesStarted

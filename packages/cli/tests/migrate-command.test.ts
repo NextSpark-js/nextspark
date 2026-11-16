@@ -1349,7 +1349,7 @@ test('after a successful run the rollback keeps what the project already had bel
     await write(root, '.nextspark/registries/keep.json', '{"keep":1}\n')
     const moved = run(root, ['--yes'])
     assert.equal(moved.status, 0, `${moved.stdout}\n${moved.stderr}`)
-    assert.match(moved.stdout, /It runs git checkout -- \. \(which also discards any other uncommitted change in the repository\) and removes what the run created; the ignored files the run overwrote do not come back once it has succeeded\./)
+    assert.match(moved.stdout, /Run it right away if you use it: it runs git checkout -- \. \(which also discards any other uncommitted change in the repository\) and removes what the run created, whole: the top-level directories it created and \.nextspark if it was not there before, with anything added to them since\. The ignored files the run overwrote do not come back once it has succeeded\./)
     // the snapshot is gone, so only the sweep's list of what was there decides
     await assert.rejects(access(join(root, '.nextspark/migrate-rollback')))
     await write(root, '.nextspark/registries/added.json', '{}\n')
@@ -1426,6 +1426,102 @@ test('the recorded list of what a generated directory held is in code-unit order
     assert.deepEqual(recorded, names.map(name => `.nextspark/registries/${name}`).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)))
   } finally {
     await rm(preloadDir, { recursive: true, force: true })
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+const chmodApplies = { skip: process.platform === 'win32' && 'Windows has no read-only bit on directories for chmod to set' }
+
+/** A project whose ignored .nextspark/registries holds a read-only directory with a file in it. */
+async function readOnlyDirectoryFixture(prepare: 'ok' | 'fail'): Promise<string> {
+  const { root } = await moveFixture()
+  await installConversionCore(root, { prepare })
+  await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+  if (prepare === 'fail') await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+  await write(root, '.gitignore', 'contents/themes/acme/tests/output\n.nextspark/\n')
+  await commitFixture(root)
+  await write(root, '.nextspark/registries/ro/kept.json', '{"kept":1}\n')
+  await chmod(join(root, '.nextspark/registries/ro'), 0o555)
+  return root
+}
+
+/** Give every directory below `root` u+w again, so the test can remove it. */
+function writableAgain(root: string): void {
+  if (!existsSync(root)) return
+  for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) if (entry.isDirectory()) fs.chmodSync(join(entry.parentPath, entry.name), 0o755)
+}
+
+test('a read-only directory in the snapshot does not keep a successful run from removing it (#469)', chmodApplies, async () => {
+  const root = await readOnlyDirectoryFixture('ok')
+  try {
+    const moved = run(root, ['--yes'])
+    assert.equal(moved.status, 0, `${moved.stdout}\n${moved.stderr}`)
+    assert.match(moved.stdout, /Migration complete|src\/app and the registries generated/)
+    await assert.rejects(access(join(root, '.nextspark/migrate-rollback')), 'the snapshot is gone, so the next run starts')
+    assert.equal((fs.statSync(join(root, '.nextspark/registries/ro')).mode & 0o777).toString(8), '555')
+  } finally {
+    writableAgain(root)
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the rollback restores into a read-only directory and gives it back its mode (#469)', chmodApplies, async () => {
+  const root = await readOnlyDirectoryFixture('fail')
+  try {
+    const before = treeState(root)
+    const failed = run(root, ['--yes'])
+    assert.notEqual(failed.status, 0)
+    runPrintedRollback(root, failed.stdout)
+    assert.equal(git_status(root), '')
+    assert.deepEqual(treeState(root), before)
+    assert.equal(before['.nextspark/registries/ro'], 'dir:555')
+  } finally {
+    writableAgain(root)
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('without .nextspark before the run, the clean of what it created never reaches the snapshot: ignored files come back (#469)', async () => {
+  const { root } = await moveFixture({ brokenImport: true })
+  try {
+    await installConversionCore(root)
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await rm(join(root, '.gitignore'))
+    await rm(join(root, 'tsconfig.json'))
+    await commitFixture(root)
+    await write(root, '.git/info/exclude', '.gitignore\ntsconfig.json\n')
+    await write(root, '.gitignore', '# ignored user rules\n')
+    await write(root, 'tsconfig.json', '{\n  "exclude": [\n    "pre-existing"\n  ]\n}\n')
+    const failed = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
+    assert.notEqual(failed.status, 0)
+    assert.notEqual(await readFile(join(root, '.gitignore'), 'utf8'), '# ignored user rules\n', 'the run rewrote it')
+    assert.equal(recordedRollback(root).created.includes('.nextspark'), false, '.nextspark is never on the clean list')
+    runPrintedRollback(root, failed.stdout)
+    assert.equal(await readFile(join(root, '.gitignore'), 'utf8'), '# ignored user rules\n')
+    assert.equal(await readFile(join(root, 'tsconfig.json'), 'utf8'), '{\n  "exclude": [\n    "pre-existing"\n  ]\n}\n')
+    await assert.rejects(access(join(root, '.nextspark')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the Windows lock check leaves alone a file whose probe name is taken (#469)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-probe-'))
+  const realRename = fs.renameSync
+  try {
+    await write(root, 'theme/a.ts', 'a\n')
+    await write(root, 'theme/a.ts.nextspark-lock-check', 'mine\n')
+    const renames: string[] = []
+    fs.renameSync = ((from: string, to: string) => { renames.push(String(from)); return realRename(from, to) }) as typeof fs.renameSync
+    syncBuiltinESMExports()
+    assertWritable(root, [], ['theme/a.ts'], 'win32')
+    assert.deepEqual(renames, [])
+    assert.equal(await readFile(join(root, 'theme/a.ts.nextspark-lock-check'), 'utf8'), 'mine\n')
+    assert.equal(await readFile(join(root, 'theme/a.ts'), 'utf8'), 'a\n')
+  } finally {
+    fs.renameSync = realRename
+    syncBuiltinESMExports()
     await rm(root, { recursive: true, force: true })
   }
 })
