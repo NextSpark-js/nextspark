@@ -22,7 +22,7 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
-import { getAdapter } from '../../../lib/adapter'
+import { getAdapter, ensureAdapter, adapterRequiredResponse } from '../../../lib/adapter'
 import { auditTeamId, recordAuditLog } from '../../../lib/audit-log'
 
 interface AccountToAssign {
@@ -73,6 +73,9 @@ const postHandler = async (request: NextRequest) => {
     }
 
     // 3. Get adapter and verify entity access
+    if (!(await ensureAdapter())) {
+      return adapterRequiredResponse()
+    }
     const adapter = await getAdapter()
     const accessResult = await adapter.checkEntityAccess(userId, entityId)
 

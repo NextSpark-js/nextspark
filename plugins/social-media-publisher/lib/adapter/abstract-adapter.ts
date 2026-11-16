@@ -22,7 +22,9 @@ import type {
   SocialPlatformAssignment,
   EntityAccessResult,
   SaveAssignmentResult,
-  AccountLookupResult
+  AccountLookupResult,
+  ConnectedEntity,
+  PublishedPost
 } from '../../types/adapter.types'
 
 /**
@@ -147,6 +149,34 @@ export abstract class SocialPlatformAdapter {
     platform: string,
     userId: string
   ): Promise<AccountLookupResult | null>
+
+  /**
+   * The project's entities that use each platform account the user can see, keyed by platformAccountId.
+   * The accounts route shows them next to each account (`connectedClients`).
+   *
+   * Optional: the default returns an empty map, so no account shows connected entities.
+   *
+   * @param userId - The authenticated user's ID (for RLS)
+   */
+  async getConnectedEntities(userId: string): Promise<Map<string, ConnectedEntity[]>> {
+    void userId
+    return new Map()
+  }
+
+  /**
+   * Called by the publish route after a successful post when the request names an `entityId` (the project's
+   * content record), to store the post's reference wherever the project keeps it. A failure is logged and does not
+   * fail the request, since the post is already published.
+   *
+   * Optional: the default stores nothing.
+   *
+   * @param post - The published post and the request's entityId
+   * @param userId - The authenticated user's ID (for RLS)
+   */
+  async recordPublishedPost(post: PublishedPost, userId: string): Promise<void> {
+    void post
+    void userId
+  }
 
   /**
    * Get the configuration for this adapter.

@@ -6,15 +6,22 @@
  *
  * ## Project Integration Convention
  *
- * Projects provide an adapter at:
- * 1. `lib/social-media/index.ts`
- *    - Export a `createAdapter()` factory function (recommended)
- *    - Or export default an adapter instance
+ * The plugin does not look for the adapter on its own. The project registers it at server startup, from the
+ * `register()` of its `src/instrumentation.ts`, next to core's register(): see ADAPTER_GUIDE_URL.
  *
  * The adapter class must extend `SocialPlatformAdapter` from this plugin.
  */
 
+import { NextResponse } from 'next/server'
 import type { SocialPlatformAdapter } from './abstract-adapter'
+
+/** The guide that says how a project writes and registers its adapter. */
+export const ADAPTER_GUIDE_URL =
+  'https://github.com/NextSpark-js/nextspark/blob/main/plugins/social-media-publisher/docs/03-advanced-usage/04-adapter-integration.md'
+
+const NO_ADAPTER_MESSAGE =
+  'No social platform adapter is registered. The project registers one with registerSocialPlatformAdapter() ' +
+  'from the register() of its src/instrumentation.ts.'
 
 /**
  * Global key for storing the adapter singleton.
@@ -80,12 +87,11 @@ async function tryLazyLoadAdapter(): Promise<void> {
 
   setLazyLoadAttempted(true)
 
-  console.log('[social-media-publisher] No adapter registered; register the project adapter at application startup')
+  console.log(`[social-media-publisher] ${NO_ADAPTER_MESSAGE} See ${ADAPTER_GUIDE_URL}`)
 }
 
 /**
  * Get the registered adapter.
- * Will attempt lazy loading from theme if not registered.
  *
  * @returns The registered adapter
  * @throws Error if no adapter has been registered or found
@@ -93,20 +99,7 @@ async function tryLazyLoadAdapter(): Promise<void> {
 export function getSocialPlatformAdapter(): SocialPlatformAdapter {
   const adapter = getRegisteredAdapter()
   if (!adapter) {
-    throw new Error(
-      '[social-media-publisher] No adapter registered.\n\n' +
-      'The social-media-publisher plugin requires the project to provide an adapter.\n\n' +
-      'To fix this, create and register a project social-media module:\n\n' +
-      '📁 lib/social-media/index.ts\n\n' +
-      'Option A - Factory function (recommended):\n' +
-      '  export function createAdapter() {\n' +
-      '    return new YourSocialPlatformAdapter()\n' +
-      '  }\n\n' +
-      'Option B - Default export:\n' +
-      '  export default new YourSocialPlatformAdapter()\n\n' +
-      'Your adapter class must extend SocialPlatformAdapter from this plugin.\n' +
-      'See plugin README.md for full implementation guide.'
-    )
+    throw new Error(`[social-media-publisher] ${NO_ADAPTER_MESSAGE} See ${ADAPTER_GUIDE_URL}`)
   }
 
   return adapter
@@ -165,4 +158,15 @@ export function getAdapterInfo(): { entitySlug: string; tableName: string } | nu
     entitySlug: adapter.getEntitySlug(),
     tableName: adapter.getTableName()
   }
+}
+
+/**
+ * The response of a route that needs the adapter when none is registered: 501, since the project has not provided
+ * the part of the feature the plugin cannot (which entity uses an account), with what is missing and the guide.
+ */
+export function adapterRequiredResponse(): NextResponse {
+  return NextResponse.json(
+    { error: NO_ADAPTER_MESSAGE, code: 'SOCIAL_ADAPTER_NOT_REGISTERED', guide: ADAPTER_GUIDE_URL },
+    { status: 501 }
+  )
 }

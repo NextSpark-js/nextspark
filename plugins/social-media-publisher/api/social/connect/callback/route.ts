@@ -119,7 +119,7 @@ const getHandler = async (request: NextRequest) => {
     if (!hasAdapterReady) {
       return renderOAuthError(
         'no_adapter',
-        'Social media publisher plugin not configured. Theme must register an adapter.'
+        'Social media publisher plugin not configured: the project has not registered its adapter (see the plugin\'s adapter integration guide).'
       )
     }
 

@@ -23,7 +23,7 @@ import { FacebookAPI } from '../../../lib/providers/facebook'
 import { InstagramAPI } from '../../../lib/providers/instagram'
 import { PublishPhotoSchema, validateImageUrl, validateCaption, platformRequiresImage } from '../../../lib/validation'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
-import { getAdapter } from '../../../lib/adapter'
+import { getAdapter, ensureAdapter, adapterRequiredResponse } from '../../../lib/adapter'
 import { auditTeamId, recordAuditLog } from '../../../lib/audit-log'
 
 const postHandler = async (request: NextRequest) => {
@@ -103,6 +103,9 @@ const postHandler = async (request: NextRequest) => {
     // 4. Get adapter and look up account by accountId
     // NOTE: entityId is the CONTENT ID (for updating after publish), not the parent entity ID
     // The adapter's getAccountById() returns the parent entity ID for access checks
+    if (!(await ensureAdapter())) {
+      return adapterRequiredResponse()
+    }
     const adapter = await getAdapter()
 
     // Look up account using the adapter (generic - no hardcoded table/column names)
@@ -176,7 +179,7 @@ const postHandler = async (request: NextRequest) => {
       console.log(`[social-publish] 🔄 Token expires in ${minutesUntilExpiry.toFixed(2)} minutes - refreshing...`)
 
       // Attempt to refresh the token (use platformAccountId to find token in social_accounts)
-      const refreshResult = await refreshAccountToken(account.platformAccountId, platform, decryptedToken)
+      const refreshResult = await refreshAccountToken(account.platformAccountId, platform, decryptedToken, userId)
 
       if (refreshResult.success && refreshResult.newAccessToken) {
         console.log(`[social-publish] ✅ Token refreshed successfully for ${platform}`)
@@ -276,29 +279,21 @@ const postHandler = async (request: NextRequest) => {
       },
     })
 
-    // 9. Update content entity with publish reference (if successful and entityId provided)
+    // 9. The project stores the post's reference on its content record, through the adapter (if successful and
+    // entityId provided)
     if (publishResult.success && entityId) {
       try {
-        await mutateWithRLS(
-          `UPDATE "contents"
-           SET "platformPostId" = $1,
-               "platformPostUrl" = $2,
-               "publishedAt" = $3,
-               status = 'published',
-               "updatedAt" = NOW()
-           WHERE id = $4`,
-          [
-            publishResult.postId,
-            publishResult.postUrl,
-            publishedAt,
-            entityId
-          ],
-          userId
-        )
-        console.log(`[social-publish] ✅ Updated content ${entityId} with platform reference`)
+        await adapter.recordPublishedPost({
+          entityId,
+          accountId,
+          platform,
+          postId: publishResult.postId,
+          postUrl: publishResult.postUrl,
+          publishedAt
+        }, userId)
       } catch (updateError) {
         // Log but don't fail the request - the publish was successful
-        console.error(`[social-publish] ⚠️ Failed to update content with publish reference:`, updateError)
+        console.error(`[social-publish] ⚠️ Failed to record the publish reference through the adapter:`, updateError)
       }
     }
 
@@ -356,12 +351,15 @@ export const POST = withRateLimitTier(postHandler, 'write')
  * @param platformAccountId - The platform's account ID (e.g., Instagram Business Account ID)
  * @param platform - Platform type ('instagram_business' | 'facebook_page')
  * @param currentToken - Current decrypted access token
+ * @param userId - The authenticated user's ID: the update runs as the user, so row-level security applies (the
+ *   account's owner updates it)
  * @returns Refresh result with new token (decrypted) and expiration
  */
 async function refreshAccountToken(
   platformAccountId: string,
   platform: string,
-  currentToken: string
+  currentToken: string,
+  userId: string
 ): Promise<{
   success: boolean
   newAccessToken?: string
@@ -425,7 +423,7 @@ async function refreshAccountToken(
            "updatedAt" = NOW()
        WHERE "platformAccountId" = $3`,
       [encryptedToken, newExpiresAt, platformAccountId],
-      'system'
+      userId
     )
 
     console.log(`[social-publish] 🔐 Token refreshed and encrypted for platformAccountId ${platformAccountId}`)

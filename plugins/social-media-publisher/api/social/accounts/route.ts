@@ -7,7 +7,8 @@
  * Accessible via: /api/plugins/social-media-publisher/social/accounts
  *
  * Query params:
- * - entityId: The entity ID to check which accounts are already assigned
+ * - entityId: (optional) The entity ID to check which accounts are already assigned; needs the project's adapter
+ *   (501 without one). Without it, the user's accounts are listed with alreadyAssignedToEntity false.
  * - platform: (optional) Filter by platform (instagram_business, facebook_page)
  *
  * Architecture:
@@ -24,7 +25,7 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { FacebookAPI } from '../../../lib/providers/facebook'
-import { getAdapter } from '../../../lib/adapter'
+import { getAdapter, ensureAdapter, adapterRequiredResponse, type ConnectedEntity } from '../../../lib/adapter'
 
 interface StoredSocialAccount {
   id: string
@@ -38,11 +39,6 @@ interface StoredSocialAccount {
   isActive: boolean
 }
 
-interface ConnectedClient {
-  id: string
-  name: string
-}
-
 interface AvailableAccount {
   platform: string
   platformAccountId: string
@@ -53,7 +49,7 @@ interface AvailableAccount {
   accountMetadata: Record<string, unknown>
   alreadyAssignedToEntity: boolean
   socialAccountId: string
-  connectedClients: ConnectedClient[]
+  connectedClients: ConnectedEntity[]
 }
 
 const getHandler = async (request: NextRequest) => {
@@ -68,15 +64,7 @@ const getHandler = async (request: NextRequest) => {
       platformFilter
     })
 
-    // 1. Validate entityId
-    if (!entityId) {
-      return NextResponse.json(
-        { error: 'entityId is required' },
-        { status: 400 }
-      )
-    }
-
-    // 2. Authentication; the API-key scope is declared at the entry point,
+    // 1. Authentication; the API-key scope is declared at the entry point,
     // which fails closed for keys that lack it (#93).
     const authResult = await authenticateRequest(request, { requiredScope: 'social:read' })
     if (!authResult.success) {
@@ -85,62 +73,41 @@ const getHandler = async (request: NextRequest) => {
 
     const userId = authResult.user!.id
 
-    // 3. Get adapter and verify entity access
-    const adapter = await getAdapter()
-    const accessResult = await adapter.checkEntityAccess(userId, entityId)
+    // 2. The project's side, through its adapter: the user's accounts are the plugin's own (social_accounts) and
+    // list without one; which of them an entity uses is the project's, so an entityId needs the adapter.
+    const adapter = (await ensureAdapter()) ? await getAdapter() : null
+    let assignedAccountIds = new Set<string>()
 
-    if (!accessResult.hasAccess) {
-      console.log('[social-accounts] Entity access check failed:', { entityId, userId })
-      return NextResponse.json(
-        { error: accessResult.reason || 'Entity not found or access denied' },
-        { status: 404 }
-      )
-    }
-
-    console.log('[social-accounts] Entity access verified:', {
-      entityId,
-      entitySlug: adapter.getEntitySlug(),
-      teamId: accessResult.teamId
-    })
-
-    // 4. Get accounts already assigned to this entity via adapter
-    const assignedAccountIds = await adapter.getAssignedPlatformIds(entityId, userId)
-
-    // 4.1 Get ALL entities that use each platformAccountId (for showing connected entities info)
-    // NOTE: This functionality should be moved into the adapter to avoid hardcoded assumptions
-    // TODO: Add adapter.getConnectedEntities() method for theme-agnostic queries
-    const clientsByPlatformAccountId = new Map<string, ConnectedClient[]>()
-
-    const connectedClientsResult = await queryWithRLS<{
-      platformAccountId: string
-      clientId: string
-      clientName: string
-    }>(
-      `SELECT DISTINCT
-        csp."platformAccountId",
-        c.id as "clientId",
-        c.name as "clientName"
-      FROM "clients_social_platforms" csp
-      INNER JOIN "clients" c ON c.id = csp."parentId"
-      INNER JOIN "team_members" tm ON tm."teamId" = c."teamId" AND tm."userId" = $1
-      WHERE csp."isActive" = true
-        AND csp."platformAccountId" IS NOT NULL`,
-      [userId],
-      userId
-    )
-
-    // Group by platformAccountId
-    for (const row of connectedClientsResult || []) {
-      if (!clientsByPlatformAccountId.has(row.platformAccountId)) {
-        clientsByPlatformAccountId.set(row.platformAccountId, [])
+    if (entityId) {
+      if (!adapter) {
+        return adapterRequiredResponse()
       }
-      clientsByPlatformAccountId.get(row.platformAccountId)!.push({
-        id: row.clientId,
-        name: row.clientName
+
+      const accessResult = await adapter.checkEntityAccess(userId, entityId)
+      if (!accessResult.hasAccess) {
+        console.log('[social-accounts] Entity access check failed:', { entityId, userId })
+        return NextResponse.json(
+          { error: accessResult.reason || 'Entity not found or access denied' },
+          { status: 404 }
+        )
+      }
+
+      console.log('[social-accounts] Entity access verified:', {
+        entityId,
+        entitySlug: adapter.getEntitySlug(),
+        teamId: accessResult.teamId
       })
+
+      // 3. Accounts already assigned to this entity
+      assignedAccountIds = await adapter.getAssignedPlatformIds(entityId, userId)
     }
 
-    console.log(`[social-accounts] Found connected clients for ${clientsByPlatformAccountId.size} platform accounts`)
+    // 4. The entities that use each platform account, from the adapter (the project's tables stay behind it)
+    const clientsByPlatformAccountId: Map<string, ConnectedEntity[]> = adapter
+      ? await adapter.getConnectedEntities(userId)
+      : new Map()
+
+    console.log(`[social-accounts] Found connected entities for ${clientsByPlatformAccountId.size} platform accounts`)
 
     // 5. Fetch user's social accounts from social_accounts table (plugin-owned)
     let query = `
@@ -339,7 +306,7 @@ const getHandler = async (request: NextRequest) => {
       accounts: availableAccounts,
       hasValidToken: storedAccounts.length > 0,
       assignedCount: assignedAccountIds.size,
-      entitySlug: adapter.getEntitySlug(),
+      entitySlug: adapter ? adapter.getEntitySlug() : null,
     })
 
   } catch (error) {

@@ -161,3 +161,39 @@ export interface AccountLookupResult {
   /** Whether assignment is active */
   isActive: boolean
 }
+
+/**
+ * An entity of the project that uses a platform account.
+ * Returned, grouped by platformAccountId, by adapter.getConnectedEntities().
+ */
+export interface ConnectedEntity {
+  /** Entity ID */
+  id: string
+
+  /** Display name */
+  name: string
+}
+
+/**
+ * A post the publish route has just published.
+ * Passed to adapter.recordPublishedPost().
+ */
+export interface PublishedPost {
+  /** The request's entityId: the project's content record the post was made from */
+  entityId: string
+
+  /** The assignment record ID the post was published with */
+  accountId: string
+
+  /** Platform type */
+  platform: string
+
+  /** The post's ID on the platform */
+  postId?: string
+
+  /** The post's URL on the platform */
+  postUrl?: string
+
+  /** When it was published (ISO 8601) */
+  publishedAt: string
+}

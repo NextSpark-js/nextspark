@@ -25,7 +25,9 @@ export {
   hasAdapter,
   ensureAdapter,
   clearAdapter,
-  getAdapterInfo
+  getAdapterInfo,
+  adapterRequiredResponse,
+  ADAPTER_GUIDE_URL
 } from './registry'
 
 // Type exports
@@ -35,5 +37,7 @@ export type {
   SocialPlatformAssignment,
   EntityAccessResult,
   SaveAssignmentResult,
-  AccountLookupResult
+  AccountLookupResult,
+  ConnectedEntity,
+  PublishedPost
 } from '../../types/adapter.types'
