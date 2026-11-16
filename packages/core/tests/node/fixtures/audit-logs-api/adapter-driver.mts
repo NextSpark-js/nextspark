@@ -1,14 +1,18 @@
 /**
- * Runs the requests of SOCIAL_ADAPTER_STEPS through social-media-publisher's real accounts, assign, publish and OAuth
- * callback routes
- * (real authentication and database access) and prints one `RESULT <json>` line per step. A step with `adapter: true`
- * runs with the test adapter below registered, as a project registers its own; without it no adapter is registered.
- * The Graph API is stubbed: no request leaves the process. The adapter prints `RECORDED <json>` for each post the
- * publish route hands it and `SAVED <json>` for each assignment it is asked to save. Started by social-media-adapter.test.ts under tsx with this folder's tsconfig.
+ * Runs the requests of SOCIAL_ADAPTER_STEPS through social-media-publisher's real accounts, assign, publish, connect
+ * (POST) and OAuth callback routes (real authentication and database access) and prints one `RESULT <json>` line per
+ * step. A step with `adapter: true` runs with the test adapter below registered, as a project registers its own;
+ * without it no adapter is registered. `team` is the request's x-team-id (team-a by default). The Graph API is
+ * stubbed: no request leaves the process. The adapter prints `RECORDED <json>` for each post the publish route hands
+ * it and `SAVED <json>` for each assignment it is asked to save. Started by social-media-adapter.test.ts under tsx
+ * with this folder's tsconfig.
  */
 import { NextRequest } from 'next/server'
 
-type Step = { route: 'accounts' | 'assign' | 'publish' | 'callback'; query?: string; key: string; adapter?: boolean; body?: unknown }
+type Step = {
+  route: 'accounts' | 'assign' | 'publish' | 'callback' | 'connect'
+  query?: string; key: string; adapter?: boolean; body?: unknown; team?: string
+}
 
 const CORE_SRC = new URL('../../../../src/', import.meta.url)
 const PLUGIN = new URL('../../../../../../plugins/social-media-publisher/', import.meta.url)
@@ -17,6 +21,7 @@ const routes = {
   assign: await import(new URL('api/social/assign/route.ts', PLUGIN).href),
   publish: await import(new URL('api/social/publish/route.ts', PLUGIN).href),
   callback: await import(new URL('api/social/connect/callback/route.ts', PLUGIN).href),
+  connect: await import(new URL('api/social/connect/route.ts', PLUGIN).href),
 }
 const { SocialPlatformAdapter, registerSocialPlatformAdapter, clearAdapter } = await import(new URL('lib/adapter/index.ts', PLUGIN).href)
 const { queryWithRLS } = await import(new URL('lib/db.ts', CORE_SRC).href)
@@ -84,7 +89,7 @@ async function run(step: Step) {
   const route = step.route === 'callback' ? 'connect/callback' : step.route
   const request = new NextRequest(`http://localhost/api/plugins/social-media-publisher/social/${route}${step.query ?? ''}`, {
     method,
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${step.key}`, 'x-team-id': 'team-a' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${step.key}`, 'x-team-id': step.team ?? 'team-a' },
     body: step.body === undefined ? undefined : JSON.stringify(step.body),
   })
   const response: Response = await routes[step.route][method](request)

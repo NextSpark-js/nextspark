@@ -44,8 +44,11 @@ test('social-media-publisher: the SQL of its routes and libraries names only the
   assert.deepEqual(found.filter(entry => !PLUGIN_TABLES.has(entry.split(': ')[1])), [], 'a project table belongs behind the adapter')
 })
 
-type Step = { route: 'accounts' | 'assign' | 'publish' | 'callback'; query?: string; key: string; adapter?: boolean; body?: unknown }
-type Account = { platformAccountId: string; alreadyAssignedToEntity: boolean; connectedClients: unknown[] }
+type Step = {
+  route: 'accounts' | 'assign' | 'publish' | 'callback' | 'connect'
+  query?: string; key: string; adapter?: boolean; body?: unknown; team?: string
+}
+type Account = { platformAccountId: string; alreadyAssignedToEntity: boolean; connectedClients: unknown[]; socialAccountId?: string }
 type Body = {
   accounts?: Account[]; entitySlug?: string | null; code?: string; guide?: string; error?: string; postId?: string
   results?: Array<{ platformAccountId: string; success: boolean; error?: string }>
@@ -114,7 +117,8 @@ test('social-media-publisher: 501 with the guide without an adapter, and the rou
     { route: 'accounts', key: keyB, adapter: true },
     { route: 'publish', key: keyA, adapter: true, body: publish },
   ]
-  const runDriver = (driverSteps: Step[]) => {
+  // On the app's connection (nextspark_app, row-level security) unless another URL is given: the owner's has none
+  const runDriver = (driverSteps: Step[], databaseUrl = appUrl) => {
     const child = spawnSync(process.execPath, ['--import', 'tsx', path.join(FIXTURE, 'adapter-driver.mts')], {
       cwd: CORE,
       encoding: 'utf8',
@@ -124,7 +128,7 @@ test('social-media-publisher: 501 with the guide without an adapter, and the rou
         HOME: process.env.HOME,
         NODE_ENV: 'test',
         TSX_TSCONFIG_PATH: path.join(FIXTURE, 'tsconfig.json'),
-        DATABASE_URL: appUrl,
+        DATABASE_URL: databaseUrl,
         DATABASE_SERVICE_URL: ownerUrl,
         BETTER_AUTH_SECRET: 'social-adapter-secret-0123456789abcdef0',
         BETTER_AUTH_URL: 'http://localhost:5173',
@@ -198,8 +202,9 @@ test('social-media-publisher: 501 with the guide without an adapter, and the rou
     { route: 'assign', key: keyA, adapter: true, body: { entityId: entity, accounts: [{ platformAccountId: 'page-2' }] } },
     { route: 'assign', key: keyB, adapter: true, body: { entityId: entityB, accounts: [{ platformAccountId: 'page-1' }] } },
     { route: 'callback', key: keyA, adapter: true, query: `?code=oauth-code&state=${encodeURIComponent(`s&platform=facebook_page&entityId=${entity}&mode=preview`)}` },
+    { route: 'accounts', key: keyA },
   ])
-  const [fromRow, fromGraph, foreignAssign, preview] = assigned.results
+  const [fromRow, fromGraph, foreignAssign, preview, listed] = assigned.results
   const saved = assigned.stdout.split('\n').filter(l => l.startsWith('SAVED ')).map(l => JSON.parse(l.slice(6)))
   for (const result of [fromRow, fromGraph]) {
     assert.equal(result.status, 200, JSON.stringify(result))
@@ -221,8 +226,36 @@ test('social-media-publisher: 501 with the guide without an adapter, and the rou
   assert.match(html, /oauth-preview/)
   assert.match(html, /"platformAccountId":"page-2"/)
   assert.ok(!html.includes('graph-page-token') && !/accessToken/.test(html), html)
+  // page-2 now has a row of A's, and Graph still returns it for page-1's token: it lists with its own row
+  const page2Id = (await owner.query(`SELECT id FROM social_accounts WHERE "platformAccountId" = 'page-2'`)).rows[0].id
+  assert.deepEqual(listed.body.accounts!.map(a => [a.platformAccountId, a.socialAccountId]).find(([id]) => id === 'page-2'), ['page-2', page2Id])
 
-  // 5. A token whose row another user owns: the refresh updates no row, says so, and does not claim it stored it
+  // 5. Another user's row is left as it is. B has a Meta account of its own (page-b) for which Graph returns page-2,
+  //    whose row is A's: B's assign, connect and OAuth callback change nothing in that row and tell B the account is
+  //    connected by another user, on the app's connection (row-level security) and on the owner's (none)
+  await owner.query(
+    `INSERT INTO social_accounts ("userId", platform, "platformAccountId", username, "accessToken", "tokenExpiresAt")
+     VALUES ('ub', 'facebook_page', 'page-b', 'Page B', $1, now() + interval '30 days')`, [await encrypt(rawKey, 'b-token')])
+  const page2Row = async () => (await owner.query(`SELECT * FROM social_accounts WHERE "platformAccountId" = 'page-2'`)).rows[0]
+  const before = await page2Row()
+  for (const databaseUrl of [appUrl, ownerUrl]) {
+    const taken = runDriver([
+      { route: 'assign', key: keyB, adapter: true, team: 'team-b', body: { entityId: entityB, accounts: [{ platformAccountId: 'page-2' }] } },
+      { route: 'connect', key: keyB, team: 'team-b', body: { code: 'oauth-code', state: 's', platform: 'facebook_page' } },
+      { route: 'callback', key: keyB, adapter: true, team: 'team-b', query: `?code=oauth-code&state=${encodeURIComponent(`s&platform=facebook_page&entityId=${entityB}`)}` },
+    ], databaseUrl)
+    const [takenAssign, takenConnect, takenCallback] = taken.results
+    const where = databaseUrl === appUrl ? 'app connection' : 'owner connection'
+    assert.deepEqual(takenAssign.body.results!.map(r => [r.platformAccountId, r.success, r.error]),
+      [['page-2', false, 'This account is already connected by another user']], `${where}: ${JSON.stringify(takenAssign)}`)
+    assert.equal(takenConnect.status, 409, `${where}: ${JSON.stringify(takenConnect)}`)
+    assert.equal(takenConnect.body.error, 'This account is already connected by another user')
+    assert.match(String(takenCallback.body), /This account is already connected by another user/, where)
+    assert.doesNotMatch(taken.stdout, /^SAVED /m, `${where}: nothing is assigned`)
+    assert.deepEqual(await page2Row(), before, `${where}: A's row is left as it was`)
+  }
+
+  // 6. A token whose row another user owns: the refresh updates no row, says so, and does not claim it stored it
   await owner.query(`UPDATE social_accounts SET "userId" = 'ub', "accessToken" = $1, "tokenExpiresAt" = now() + interval '5 minutes' WHERE "platformAccountId" = 'page-1'`, [stored])
   const foreign = runDriver([{ route: 'publish', key: keyA, adapter: true, body: publish }])
   assert.equal(foreign.results[0].status, 200, JSON.stringify(foreign.results[0]))

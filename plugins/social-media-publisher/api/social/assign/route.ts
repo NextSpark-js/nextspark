@@ -26,7 +26,7 @@ import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter, ensureAdapter, adapterRequiredResponse } from '../../../lib/adapter'
 import { auditTeamId, recordAuditLog } from '../../../lib/audit-log'
-import { listUserAccounts } from '../../../lib/user-accounts'
+import { ACCOUNT_CONNECTED_ELSEWHERE, listUserAccounts } from '../../../lib/user-accounts'
 
 interface AccountToAssign {
   platformAccountId: string
@@ -160,6 +160,7 @@ const postHandler = async (request: NextRequest) => {
                "accountMetadata" = EXCLUDED."accountMetadata",
                "isActive" = true,
                "updatedAt" = CURRENT_TIMESTAMP
+             WHERE "social_accounts"."userId" = EXCLUDED."userId"
              RETURNING id`,
             [
               userId,
@@ -174,14 +175,15 @@ const postHandler = async (request: NextRequest) => {
             userId
           )
 
+          // No row: the account's row is another user's, and the upsert left it as it is
           const rowId = socialAccountResult?.rows?.[0]?.id
           if (!rowId) {
-            console.error(`[assign-accounts] UPSERT failed for ${account.username}: no rows returned`)
+            console.warn(`[assign-accounts] ${account.platformAccountId} has a social_accounts row of another user: not assigned`)
             results.push({
               platformAccountId: account.platformAccountId,
               username: account.username,
               success: false,
-              error: 'Database operation failed'
+              error: ACCOUNT_CONNECTED_ELSEWHERE
             })
             continue
           }
@@ -233,7 +235,7 @@ const postHandler = async (request: NextRequest) => {
           platformAccountId: requested?.platformAccountId || 'unknown',
           username: 'unknown',
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: 'Failed to assign the account'
         })
       }
     }
@@ -260,10 +262,7 @@ const postHandler = async (request: NextRequest) => {
   } catch (error) {
     console.error('[assign-accounts] Error:', error)
     return NextResponse.json(
-      {
-        error: 'Failed to assign accounts',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Failed to assign accounts' },
       { status: 500 }
     )
   }

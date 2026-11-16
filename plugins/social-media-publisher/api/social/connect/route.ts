@@ -16,6 +16,7 @@ import { exchangeCodeForToken, getOAuthConfig, generateAuthorizationUrl } from '
 import type { SocialPlatform } from '../../../types/social.types'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { recordAuditLog } from '../../../lib/audit-log'
+import { ACCOUNT_CONNECTED_ELSEWHERE } from '../../../lib/user-accounts'
 
 /**
  * GET - Initiate OAuth flow
@@ -89,10 +90,7 @@ const getHandler = async (request: NextRequest) => {
   } catch (error) {
     console.error('❌ OAuth initiation error:', error)
     return NextResponse.json(
-      {
-        error: 'Failed to initiate OAuth',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Failed to initiate OAuth' },
       { status: 500 }
     )
   }
@@ -240,6 +238,7 @@ const postHandler = async (request: NextRequest) => {
 
     // 6. Encrypt tokens and save accounts
     const savedAccounts = []
+    const notConnected: Array<{ platformAccountId: string; accountName: string; error: string }> = []
 
     for (const account of accountsToConnect) {
       // Encrypt access token
@@ -262,6 +261,7 @@ const postHandler = async (request: NextRequest) => {
            "accountMetadata" = EXCLUDED."accountMetadata",
            "isActive" = EXCLUDED."isActive",
            "updatedAt" = CURRENT_TIMESTAMP
+         WHERE "social_accounts"."userId" = EXCLUDED."userId"
          RETURNING *`,
         [
           authResult.user!.id,
@@ -277,7 +277,13 @@ const postHandler = async (request: NextRequest) => {
         authResult.user!.id
       )
 
-      const savedAccount = result.rows[0]!
+      // No row: the account's row is another user's, and the upsert left it as it is
+      const savedAccount = result.rows[0]
+      if (!savedAccount) {
+        console.warn(`[social-connect] ${account.platformAccountId} has a social_accounts row of another user: not connected`)
+        notConnected.push({ platformAccountId: account.platformAccountId, accountName: account.username, error: ACCOUNT_CONNECTED_ELSEWHERE })
+        continue
+      }
       savedAccounts.push(savedAccount)
 
       // Create audit log entry
@@ -301,9 +307,14 @@ const postHandler = async (request: NextRequest) => {
       })
     }
 
+    if (savedAccounts.length === 0 && notConnected.length > 0) {
+      return NextResponse.json({ error: ACCOUNT_CONNECTED_ELSEWHERE, notConnected }, { status: 409 })
+    }
+
     return NextResponse.json({
       success: true,
       message: `Successfully connected ${savedAccounts.length} ${platform} account(s)`,
+      notConnected,
       accounts: savedAccounts.map((acc) => ({
         id: acc.id,
         platform: acc.platform,
@@ -317,10 +328,7 @@ const postHandler = async (request: NextRequest) => {
     console.error('❌ Social connect error:', error)
 
     return NextResponse.json(
-      {
-        error: 'Failed to connect social account',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Failed to connect social account' },
       { status: 500 }
     )
   }

@@ -124,8 +124,7 @@ const postHandler = async (request: NextRequest) => {
 
     return NextResponse.json(
       {
-        error: 'Failed to disconnect account',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to disconnect account'
       },
       { status: 500 }
     )

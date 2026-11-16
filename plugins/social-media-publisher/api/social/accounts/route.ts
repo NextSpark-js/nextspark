@@ -125,8 +125,7 @@ const getHandler = async (request: NextRequest) => {
     console.error('[social-accounts] Error:', error)
     return NextResponse.json(
       {
-        error: 'Failed to fetch accounts',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to fetch accounts'
       },
       { status: 500 }
     )

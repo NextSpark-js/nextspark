@@ -449,7 +449,6 @@ export class FacebookAPI {
     try {
       console.log('[FacebookAPI] Checking if Page has Instagram Business Account...')
       console.log('[FacebookAPI] Page ID:', pageId)
-      console.log('[FacebookAPI] Page Access Token (first 20 chars):', pageAccessToken.substring(0, 20) + '...')
 
       // Step 0: Check Page Access Token permissions
       console.log('[FacebookAPI] 🔍 Checking Page Access Token permissions...')

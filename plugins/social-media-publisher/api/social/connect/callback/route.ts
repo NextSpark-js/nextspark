@@ -35,6 +35,7 @@ import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import { getAdapter, ensureAdapter } from '../../../../lib/adapter'
 import { auditTeamId, recordAuditLog } from '../../../../lib/audit-log'
+import { ACCOUNT_CONNECTED_ELSEWHERE } from '../../../../lib/user-accounts'
 
 // Type for social account data
 interface SocialAccountData {
@@ -229,6 +230,8 @@ const getHandler = async (request: NextRequest) => {
     // This implements "Connect Once, Link Anywhere" - tokens are ALWAYS preserved
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000)
     const savedAccounts: Array<{ id: string; platform: string; username: string; socialAccountId?: string }> = []
+    const storedIds = new Map<string, string>()
+    let connectedElsewhere = 0
 
     for (const account of accountsToConnect) {
       // Encrypt access token
@@ -249,6 +252,7 @@ const getHandler = async (request: NextRequest) => {
            "accountMetadata" = EXCLUDED."accountMetadata",
            "isActive" = true,
            "updatedAt" = CURRENT_TIMESTAMP
+         WHERE "social_accounts"."userId" = EXCLUDED."userId"
          RETURNING id`,
         [
           userId,
@@ -263,11 +267,14 @@ const getHandler = async (request: NextRequest) => {
         userId
       )
 
+      // No row: the account's row is another user's, and the upsert left it as it is
       const socialAccountId = socialAccountResult.rows[0]?.id
       if (!socialAccountId) {
-        console.error('[oauth-callback] Failed to save social_account for', account.username)
+        console.warn(`[oauth-callback] ${account.platformAccountId} has a social_accounts row of another user: not connected`)
+        connectedElsewhere++
         continue
       }
+      storedIds.set(account.platformAccountId, socialAccountId)
 
       console.log(`[oauth-callback] ✅ Saved to social_accounts: ${account.username} (${socialAccountId})`)
 
@@ -324,19 +331,24 @@ const getHandler = async (request: NextRequest) => {
       })
     }
 
+    // Every account found already has another user's row: nothing was saved
+    if (storedIds.size === 0 && connectedElsewhere > 0) {
+      return renderOAuthError('account_connected_elsewhere', ACCOUNT_CONNECTED_ELSEWHERE)
+    }
+
     // 10. Return appropriate response based on mode
     if (mode === 'preview') {
-      // Preview mode: tokens saved, return accounts for frontend selection
+      // Preview mode: tokens saved, return the saved accounts for frontend selection
       // Frontend will use /social/assign to link selected accounts to entity, by platformAccountId: the account
       // details go to the page without tokens, and assign reads the token on the server
-      const previewData = accountsToConnect.map((account, index) => ({
+      const previewData = accountsToConnect.filter(account => storedIds.has(account.platformAccountId)).map(account => ({
         platform: account.platform,
         platformAccountId: account.platformAccountId,
         username: account.username,
         tokenExpiresAt: tokenExpiresAt.toISOString(),
         permissions: account.permissions,
         accountMetadata: account.metadata,
-        socialAccountId: savedAccounts[index]?.socialAccountId, // Include the saved ID
+        socialAccountId: storedIds.get(account.platformAccountId),
       }))
 
       console.log(`[oauth-callback] Preview mode: ${previewData.length} accounts saved, returning for selection`)
@@ -348,8 +360,7 @@ const getHandler = async (request: NextRequest) => {
 
   } catch (error: unknown) {
     console.error('❌ OAuth callback error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-    return renderOAuthError('callback_exception', errorMessage)
+    return renderOAuthError('callback_exception', 'The account could not be connected')
   }
 }
 

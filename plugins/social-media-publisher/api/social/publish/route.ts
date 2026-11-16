@@ -191,7 +191,6 @@ const postHandler = async (request: NextRequest) => {
         return NextResponse.json(
           {
             error: 'Token expired and refresh failed',
-            details: refreshResult.error,
             suggestion: 'Please reconnect your social media account'
           },
           { status: 403 }
@@ -328,8 +327,7 @@ const postHandler = async (request: NextRequest) => {
 
     return NextResponse.json(
       {
-        error: 'Failed to publish content',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to publish content'
       },
       { status: 500 }
     )
