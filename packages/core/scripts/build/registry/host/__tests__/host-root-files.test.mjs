@@ -66,7 +66,7 @@ test('prepare writes the list with the registries, from the plan and the host pu
     const file = run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts')
     assert.ok(file, 'root-files.ts is published')
     assert.equal(read(join(root, 'host'), '.nextspark/registries/root-files.ts'), file.content)
-    assert.match(file.content, /export const ROOT_FILES: readonly string\[\] = \[\n {2}"favicon\.ico",\n {2}"llms\.txt"\n\]/)
+    assert.match(file.content, /export const ROOT_FILES = \[\n {2}"favicon\.ico",\n {2}"llms\.txt"\n\] as readonly string\[\]/)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
