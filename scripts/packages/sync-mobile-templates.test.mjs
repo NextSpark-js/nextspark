@@ -23,6 +23,7 @@ function syncMobileTemplates() {
   return spawnSync('pnpm', ['run', 'sync:mobile-templates:sync'], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
+    shell: process.platform === 'win32', // pnpm is a .cmd there
   })
 }
 

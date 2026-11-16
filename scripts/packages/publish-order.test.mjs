@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { BASH } from '../lib/bash.mjs'
 import { computeOrder } from './publish-order.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -84,7 +85,7 @@ test('the CLI exits 1 on a cycle', () => {
   }
 })
 
-test('the CLI prints the order when run through a symlinked directory', () => {
+test('the CLI prints the order when run through a symlinked directory', { skip: process.platform === 'win32' ? 'creating symlinks needs elevated rights on Windows' : false }, () => {
   const dir = fixtureTarballs(set)
   const real = mkdtempSync(join(tmpdir(), 'order-real-'))
   const link = `${real}-link`
@@ -110,10 +111,10 @@ test('importing publish-order.mjs does not throw when argv[1] does not exist', (
 test('publish.sh refuses --skip-auth-check without --dry-run and an --also-tag equal to --tag', () => {
   const dir = fixtureTarballs([{ name: 'a' }])
   try {
-    const skip = spawnSync('bash', [PUBLISH, dir, '--skip-auth-check'], { encoding: 'utf8' })
+    const skip = spawnSync(BASH, [PUBLISH, dir, '--skip-auth-check'], { encoding: 'utf8' })
     assert.equal(skip.status, 1)
     assert.match(skip.stdout, /only valid with --dry-run/)
-    const same = spawnSync('bash', [PUBLISH, dir, '--tag', 'beta', '--also-tag', 'beta', '--dry-run'], { encoding: 'utf8' })
+    const same = spawnSync(BASH, [PUBLISH, dir, '--tag', 'beta', '--also-tag', 'beta', '--dry-run'], { encoding: 'utf8' })
     assert.equal(same.status, 1)
     assert.match(same.stdout, /must differ/)
   } finally {
@@ -138,9 +139,9 @@ test('publish.sh --dry-run lists the packages in dependency order and the dist-t
   // Fake npm: the real registry may already hold these versions (then every package would be skipped, not published)
   const fake = mkdtempSync(join(tmpdir(), 'fake-npm-dry-'))
   writeFileSync(join(fake, 'npm'), FAKE_NPM, { mode: 0o755 })
-  const r = spawnSync('bash', [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--also-tag', 'beta', '--dry-run', '--skip-auth-check'], {
+  const r = spawnSync(BASH, [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--also-tag', 'beta', '--dry-run', '--skip-auth-check'], {
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${fake}:${process.env.PATH}`, FAKE_NPM_LOG: join(fake, 'calls.log') },
+    env: { ...process.env, PATH: `${fake}${delimiter}${process.env.PATH}`, FAKE_NPM_LOG: join(fake, 'calls.log') },
   })
   rmSync(fake, { recursive: true, force: true })
   assert.equal(r.status, 0, r.stdout + r.stderr)
@@ -164,9 +165,9 @@ function runWithFakeNpm(env) {
   const log = join(dir, 'calls.log')
   writeFileSync(log, '')
   writeFileSync(join(dir, 'npm'), FAKE_NPM, { mode: 0o755 })
-  const r = spawnSync('bash', [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--also-tag', 'beta', '--no-cleanup'], {
+  const r = spawnSync(BASH, [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--also-tag', 'beta', '--no-cleanup'], {
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, FAKE_NPM_LOG: log, ...env },
+    env: { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}`, FAKE_NPM_LOG: log, ...env },
   })
   const calls = readFileSync(log, 'utf8').trim().split('\n')
   rmSync(dir, { recursive: true, force: true })
@@ -214,9 +215,9 @@ exec "${realNode}" "$@"
   writeFileSync(join(dir, 'npm'), FAKE_NPM, { mode: 0o755 })
   const log = join(dir, 'calls.log')
   writeFileSync(log, '')
-  const r = spawnSync('bash', [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--no-cleanup'], {
+  const r = spawnSync(BASH, [PUBLISH, process.env.PUBLISH_TEST_PACKS, '--tag', 'latest', '--no-cleanup'], {
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, FAKE_NPM_LOG: log, FAKE_ORDER_MODE: mode },
+    env: { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}`, FAKE_NPM_LOG: log, FAKE_ORDER_MODE: mode },
   })
   const calls = readFileSync(log, 'utf8').trim().split('\n')
   rmSync(dir, { recursive: true, force: true })

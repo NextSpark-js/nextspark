@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { isMainModule } from './mobile-verify.mjs'
@@ -24,17 +24,17 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const POSIX_ONLY = process.platform === 'win32' ? 'symlinks and sh wrappers are POSIX-only here' : false
 
 test('isMainModule matches a path with a space the way node actually invokes it', () => {
-  const argv1 = '/repo/scripts with space/mobile-verify.mjs'
+  const argv1 = resolve('/repo/scripts with space/mobile-verify.mjs')
   assert.equal(isMainModule(pathToFileURL(argv1).href, argv1), true)
 })
 
 test('isMainModule rejects a path it was not invoked from', () => {
-  const argv1 = '/repo/scripts/mobile-verify.mjs'
-  assert.equal(isMainModule(pathToFileURL('/repo/scripts/some-other-file.mjs').href, argv1), false)
+  const argv1 = resolve('/repo/scripts/mobile-verify.mjs')
+  assert.equal(isMainModule(pathToFileURL(resolve('/repo/scripts/some-other-file.mjs')).href, argv1), false)
 })
 
 test('isMainModule rejects a module imported without a script path, as from `node -e`', () => {
-  assert.equal(isMainModule(pathToFileURL('/repo/scripts/mobile-verify.mjs').href, undefined), false)
+  assert.equal(isMainModule(pathToFileURL(resolve('/repo/scripts/mobile-verify.mjs')).href, undefined), false)
 })
 
 // Node before 20.13 ignores the { windows } option and converts with this

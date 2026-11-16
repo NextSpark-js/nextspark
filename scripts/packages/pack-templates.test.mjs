@@ -5,13 +5,14 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { BASH } from '../lib/bash.mjs'
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const CORE_TEMPLATE_APP = join(REPO_ROOT, 'packages/core/templates/app')
 const PACK_SCRIPT = join(REPO_ROOT, 'scripts/packages/pack.sh')
 
 function packCore(outputDir) {
-  return spawnSync('bash', [PACK_SCRIPT, '--package', 'core', '--skip-build', '--output', outputDir], {
+  return spawnSync(BASH, [PACK_SCRIPT, '--package', 'core', '--skip-build', '--output', outputDir], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
   })
