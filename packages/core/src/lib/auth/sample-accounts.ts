@@ -14,8 +14,27 @@ export const SAMPLE_PASSWORD_HASHES = [
 type QueryRows = (text: string, params?: unknown[]) => Promise<Array<{ count: number }>>
 
 /**
+ * Why a query failed, for a log line: the error's code when it has one (`ECONNREFUSED`, `57P01`), otherwise its class
+ * name and message (#480): an error without a code, such as a connection the pool cut ("Connection terminated
+ * unexpectedly", "timeout exceeded when trying to connect"), said only `Error`. Only the plain words of the message are
+ * kept; any other token (a URL, a host, an address, a quoted name, a number) becomes `…`, so a connection string or a
+ * credential never reaches the log.
+ */
+export function queryFailureReason(error: unknown): string {
+  const safe = (value: unknown) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(value) ? value : undefined)
+  const code = safe((error as { code?: unknown } | null)?.code)
+  if (code) return code
+  const name = safe((error as Error | null)?.name)
+  const message = (error as Error | null)?.message
+  const words = typeof message === 'string'
+    ? message.split(/\s+/).filter(Boolean).map(word => (/^[A-Za-z][A-Za-z'-]*[,;]?$/.test(word) ? word : '…')).join(' ').replace(/…(?: …)+/g, '…').slice(0, 160)
+    : ''
+  return name ? (words ? `${name}: ${words}` : name) : 'unknown error'
+}
+
+/**
  * In production, logs one warning when accounts with a sample password exist.
- * Never throws. When the query fails it logs one line with the error code or class name only
+ * Never throws. When the query fails it logs one line with the reason `queryFailureReason` gives
  * (never the error object, which can carry the connection string).
  */
 export async function warnSampleAccountsAtStartup(
@@ -33,8 +52,6 @@ export async function warnSampleAccountsAtStartup(
       console.warn(`[auth-readiness] ${row.count} account(s) still have a sample-data password; pnpm db:migrate disables them once; if it already ran, see the CHANGELOG upgrade notes`)
     }
   } catch (error) {
-    const safe = (value: unknown) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(value) ? value : undefined)
-    const reason = safe((error as { code?: unknown } | null)?.code) ?? safe((error as Error | null)?.name) ?? 'unknown error'
-    console.warn(`[auth-readiness] could not check for sample-data passwords at startup (query failed: ${reason}); check DATABASE_URL, then run the read-only query in the 0.1.0-beta.196 CHANGELOG upgrade notes`)
+    console.warn(`[auth-readiness] could not check for sample-data passwords at startup (query failed: ${queryFailureReason(error)}); check DATABASE_URL, then run the read-only query in the 0.1.0-beta.196 CHANGELOG upgrade notes`)
   }
 }
