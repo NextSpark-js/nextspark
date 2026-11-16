@@ -74,7 +74,7 @@ DATABASE_URL="postgresql://postgres.xxxxx:password@aws-0-us-east-1.pooler.supaba
   `nextspark doctor` reports it, and a production server logs one warning at start. See
   [Runtime role + cutover](../10-backend/03-rls-policies.md#runtime-role--cutover).
 
-### DATABASE_SERVICE_URL (optional)
+### DATABASE_SERVICE_URL (optional until the cutover, then required)
 
 **Purpose:** Service connection that **bypasses RLS** for system operations (Better Auth
 login/verification, the scheduler/processor, payment webhooks, the superadmin bypass
@@ -86,7 +86,8 @@ check, and the privileged team/subscription bootstrap).
 DATABASE_SERVICE_URL="postgresql://postgres:password@db.xxxxx.supabase.co:5432/postgres"
 ```
 
-- Optional — **falls back to `DATABASE_URL`** when unset (pre-cutover behavior unchanged).
+- Optional only while `DATABASE_URL` is the owner role: unset, it falls back to `DATABASE_URL` and nothing changes.
+- **Required once `DATABASE_URL` is `nextspark_app`.** Point it at the owner or a role with `BYPASSRLS`. Without it, sign-in and API-key lookups run on the RLS-evaluated connection, see no rows and answer 401 (`nextspark doctor` warns about it).
 - Setting it is part of the RLS cutover. See
   [Backend → RLS Policies → Enforcement Layer](../10-backend/03-rls-policies.md#enforcement-layer-beta167).
 

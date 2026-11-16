@@ -78,9 +78,11 @@ design: an explicit value always wins.
 # connects as the non-owner role `nextspark_app` so RLS is actually evaluated.
 DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
 
-# Optional — SERVICE connection (RLS-bypass) for system operations: Better Auth,
+# SERVICE connection (RLS-bypass) for system operations: Better Auth,
 # scheduler/processor, payment webhooks, superadmin bypass, team/subscription
-# bootstrap. Supabase: the service_role string. Falls back to DATABASE_URL if unset.
+# bootstrap. Supabase: the service_role string. Optional only while DATABASE_URL is the
+# owner (falls back to it); REQUIRED once DATABASE_URL is nextspark_app, or sign-in and
+# API keys answer 401.
 # DATABASE_SERVICE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
 
 # Optional — connection used to RUN MIGRATIONS/seeds (must be the table OWNER).
@@ -92,8 +94,10 @@ Optional query limits for every pool core creates (see
 [Environment Configuration](../02-getting-started/05-environment-configuration.md#db_query_timeout_ms--db_statement_timeout_ms-optional)):
 `DB_QUERY_TIMEOUT_MS` (default `60000`, `0` disables) and `DB_STATEMENT_TIMEOUT_MS` (default off; direct connections only).
 
-> The RLS cutover is **opt-in and backward-compatible**: leave `DATABASE_SERVICE_URL`
-> unset and the app behaves as before. See
+> The RLS cutover is **opt-in and backward-compatible**: while `DATABASE_URL` is the owner,
+> leave `DATABASE_SERVICE_URL` unset and the app behaves as before. Once `DATABASE_URL` is
+> `nextspark_app`, `DATABASE_SERVICE_URL` is required (owner or `BYPASSRLS` role); without it
+> sign-in and API keys answer 401. See
 > [Backend → RLS Policies → Enforcement Layer](../10-backend/03-rls-policies.md#enforcement-layer-beta167).
 
 ### Authentication

@@ -17,7 +17,7 @@ Core's row-level security (RLS) is only evaluated for a role that does not own t
 | Connection | Variable | Role it needs |
 | --- | --- | --- |
 | Application | `DATABASE_URL` | A role that **does not own the tables and does not have `BYPASSRLS`**. Core creates `nextspark_app` for this (below). |
-| Service | `DATABASE_SERVICE_URL` | A role that bypasses RLS, for work that has no user: sign-in, the scheduler, payment webhooks, the superadmin check. Unset, it falls back to `DATABASE_URL`. |
+| Service | `DATABASE_SERVICE_URL` | A role that bypasses RLS, for work that has no user: sign-in, the scheduler, payment webhooks, the superadmin check. Unset, it falls back to `DATABASE_URL`, which is only correct while that is the owner: **required** once `DATABASE_URL` is `nextspark_app`, or sign-in and API keys answer 401. |
 | Migration | `MIGRATE_DATABASE_URL` | The table **owner**. Unset, it falls back to `DATABASE_URL`. |
 
 ### The application role

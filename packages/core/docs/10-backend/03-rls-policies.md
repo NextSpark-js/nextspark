@@ -1009,7 +1009,7 @@ connecting as the owner behaves exactly as before; the "cutover" is enabled via 
 | Pool | Env var | Used for | RLS |
 |---|---|---|---|
 | **app** | `DATABASE_URL` | user requests (carry a `userId`) | evaluated (`SET LOCAL app.user_id`) |
-| **service** | `DATABASE_SERVICE_URL` (falls back to `DATABASE_URL`) | system ops without a user | **bypass** |
+| **service** | `DATABASE_SERVICE_URL` (falls back to `DATABASE_URL` only while that is the owner; required after the cutover) | system ops without a user | **bypass** |
 
 Routing is by **presence of `userId`**:
 
@@ -1043,7 +1043,9 @@ Authorization for them is enforced at the API/action layer, not by RLS.
 1. Run migrations (creates `nextspark_app`): `pnpm db:reset` (in-place migration edits
    require a fresh DB — the runner tracks by filename, not content hash).
 2. Set `DATABASE_SERVICE_URL` (Supabase: the `service_role` string, which has
-   `BYPASSRLS`; self-hosted: a dedicated owner/bypass role).
+   `BYPASSRLS`; self-hosted: the owner or a dedicated bypass role). **Required before step 3**:
+   without it, sign-in and API-key lookups fall back to `DATABASE_URL`, see no rows under RLS
+   and answer 401.
 3. Point `DATABASE_URL` at the `nextspark_app` role (deploy-time LOGIN credential).
 4. Set `MIGRATE_DATABASE_URL` to the owner connection for future migrations.
 5. Verify: login works (Better Auth via service); a plain member's LIST/READ is
@@ -1052,7 +1054,7 @@ Authorization for them is enforced at the API/action layer, not by RLS.
 **Where the default comes from.** Migrations run as the owner, and `DATABASE_URL` is the
 only connection a fresh project has, so the application connects as the owner too. An
 owner, a superuser and a role with `BYPASSRLS` skip every policy, and
-`DATABASE_SERVICE_URL` falls back to `DATABASE_URL`. Before the cutover nothing
+`DATABASE_SERVICE_URL` falls back to `DATABASE_URL` (a fallback that stops working after the cutover). Before the cutover nothing
 changes, and RLS filters nothing. Application checks that
 rely on it (for example, which related records a user can see) let everything through.
 
