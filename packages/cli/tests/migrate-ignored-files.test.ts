@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path'
 
 import { buildCli } from './built-cli.js'
 import { checkIgnore } from '../src/commands/migrate.js'
+import { POSIX_REASONS, posixOnly } from './platform.js'
 
 // migrate asks git which files are ignored (#391): a long answer is still an answer, and a failed question is not "nothing is ignored"
 
@@ -93,7 +94,7 @@ function failingGit(readsInput: boolean, exit = 2): string {
   return `${bin}:${process.env.PATH}`
 }
 
-test('any other git failure stops migrate with a message instead of treating everything as unignored', () => {
+test('any other git failure stops migrate with a message instead of treating everything as unignored', posixOnly(POSIX_REASONS.shFake), () => {
   // the fake reads its input first, so the answer never depends on whether migrate finished writing it
   const result = check(project(), { PATH: failingGit(true) })
   assert.notEqual(result.status, 0)
@@ -101,7 +102,7 @@ test('any other git failure stops migrate with a message instead of treating eve
   assert.match(`${result.stdout}${result.stderr}`, /git check-ignore failed \(exit 2\): fatal: fake failure/)
 })
 
-test('a git that fails before reading all of its input is reported by its exit and message, not by the broken pipe', () => {
+test('a git that fails before reading all of its input is reported by its exit and message, not by the broken pipe', posixOnly(POSIX_REASONS.shFake), () => {
   // far more input than a pipe holds: writing it to a git that has already exited always breaks the pipe
   const result = check(project(5_000), { PATH: failingGit(false) })
   assert.notEqual(result.status, 0)
@@ -109,7 +110,7 @@ test('a git that fails before reading all of its input is reported by its exit a
   assert.match(`${result.stdout}${result.stderr}`, /git check-ignore failed \(exit 2\): fatal: fake failure/)
 })
 
-test('"nothing is ignored" (exit 1) from a git that did not read all of its input is not an answer: migrate stops', () => {
+test('"nothing is ignored" (exit 1) from a git that did not read all of its input is not an answer: migrate stops', posixOnly(POSIX_REASONS.shFake), () => {
   // exit 1 is only true of every path when git read every path; with the pipe broken, some were never asked about
   const result = check(project(5_000), { PATH: failingGit(false, 1) })
   assert.notEqual(result.status, 0, result.stdout.slice(0, 300))

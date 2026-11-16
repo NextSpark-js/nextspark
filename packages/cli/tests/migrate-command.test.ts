@@ -17,7 +17,7 @@ import { canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, si
 import { linkDirectory, loadCoreHost } from '../src/utils/app-tree.js'
 import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
-import { slashes } from './platform.js'
+import { POSIX_REASONS, posixOnly, slashes } from './platform.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -1027,7 +1027,7 @@ test('migrate moves only the selected monorepo host and rewrites sibling helper 
   }
 })
 
-test('migrate rebases and deduplicates relative stylesheet references from a legacy theme', async () => {
+test('migrate rebases and deduplicates relative stylesheet references from a legacy theme', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture()
   const originalCss = [
     '@source "../../../**/*.{js,ts,jsx,tsx}";',
@@ -1110,7 +1110,7 @@ test('migrate refuses a moved stylesheet dependency absent from the project pack
   }
 })
 
-test('migrate refuses a dirty tree and its documented rollback restores tracked and untracked move output', async () => {
+test('migrate refuses a dirty tree and its documented rollback restores tracked and untracked move output', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture()
   try {
     await write(root, 'untracked.txt', 'dirty\n')
@@ -1199,7 +1199,7 @@ test('migrate reads plugins from the legacy config/theme.config.ts shape', async
   }
 })
 
-test('migrate handles a nested real-shape workspace with only historical previous-core evidence', async () => {
+test('migrate handles a nested real-shape workspace with only historical previous-core evidence', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root, host } = await moveFixture({ monorepo: true })
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-real-shape-'))
   let server: Awaited<ReturnType<typeof tarballServer>> | null = null
@@ -1690,7 +1690,7 @@ test('migrate removes the emptied legacy app root and records the route-root gua
   }
 })
 
-test('migrate fails the post-migration route-root guard and its rollback restores app', async () => {
+test('migrate fails the post-migration route-root guard and its rollback restores app', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root)
@@ -1710,7 +1710,7 @@ test('migrate fails the post-migration route-root guard and its rollback restore
   }
 })
 
-test('migrate reports the generator failure and its printed rollback restores the app tree', async () => {
+test('migrate reports the generator failure and its printed rollback restores the app tree', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root, { prepare: 'fail' })
@@ -1751,7 +1751,7 @@ test('migrate refuses a project that has both app/ and a src/app no generation o
   }
 })
 
-test('migrate late failure rollback restores all newly-created migration paths to git HEAD', async () => {
+test('migrate late failure rollback restores all newly-created migration paths to git HEAD', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -1782,7 +1782,7 @@ test('migrate late failure rollback restores all newly-created migration paths t
   }
 })
 
-test('migrate late failure rollback removes the src/instrumentation.ts prepare moved the root template to', async () => {
+test('migrate late failure rollback removes the src/instrumentation.ts prepare moved the root template to', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -1809,7 +1809,7 @@ test('migrate late failure rollback removes the src/instrumentation.ts prepare m
   }
 })
 
-test('migrate late failure rollback keeps the user-owned state that already lived in .nextspark', async () => {
+test('migrate late failure rollback keeps the user-owned state that already lived in .nextspark', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -1835,7 +1835,7 @@ test('migrate late failure rollback keeps the user-owned state that already live
   }
 })
 
-test('migrate late-failure rollback restores ignored sync state and in-place config edits byte-for-byte', async () => {
+test('migrate late-failure rollback restores ignored sync state and in-place config edits byte-for-byte', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -2038,7 +2038,7 @@ test('migrate treats a CRLF-only difference from the generated file as generated
   }
 })
 
-test('migrate byte-matches an unmodified beta.183 app file from the version in git history', async () => {
+test('migrate byte-matches an unmodified beta.183 app file from the version in git history', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-old-core-'))
   let server: Awaited<ReturnType<typeof tarballServer>> | null = null
@@ -2095,7 +2095,7 @@ else process.exit(2)
   }
 })
 
-test('the previous core lookup runs the pnpm the project pins, not the default Corepack fetches in an empty directory', async () => {
+test('the previous core lookup runs the pnpm the project pins, not the default Corepack fetches in an empty directory', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-pinned-pnpm-'))
   let server: Awaited<ReturnType<typeof tarballServer>> | null = null
@@ -2175,7 +2175,7 @@ test('the simulation hands the project pnpm pin to the migrate it runs in a copy
   assert.equal('NEXTSPARK_MIGRATE_PNPM_PACKAGE_MANAGER' in simulationEnvironment(null), false)
 })
 
-test('a dry run in a simulation takes the pnpm pin from the variable the real run hands over, and a real run does not', async () => {
+test('a dry run in a simulation takes the pnpm pin from the variable the real run hands over, and a real run does not', posixOnly(POSIX_REASONS.shFake), async () => {
   for (const simulation of [true, false]) {
     const { root } = await moveFixture()
     const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-pin-env-'))
@@ -2229,7 +2229,7 @@ else process.exit(2)
   }
 })
 
-test('a project pinned to another package manager gets no package.json in the previous core lookup', async () => {
+test('a project pinned to another package manager gets no package.json in the previous core lookup', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-yarn-pin-'))
   try {
@@ -2265,7 +2265,7 @@ process.exit(1)
   }
 })
 
-test('migrate sends host-scoped tarball auth without exposing the token', async () => {
+test('migrate sends host-scoped tarball auth without exposing the token', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root, support, archive } = await historicalCoreFixture()
   const server = await tarballServer(archive)
   const token = 'token-that-must-never-appear-in-output'
@@ -2304,7 +2304,7 @@ else process.exit(2)
   }
 })
 
-test('migrate does not send a configured tarball token to a different host', async () => {
+test('migrate does not send a configured tarball token to a different host', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root, support, archive } = await historicalCoreFixture()
   const tokenServer = await tarballServer(archive)
   const tarballServerForDifferentHost = await tarballServer(archive)
@@ -2344,7 +2344,7 @@ else process.exit(2)
   }
 })
 
-test('migrate accepts only an http tarball whose host matches the configured registry', async () => {
+test('migrate accepts only an http tarball whose host matches the configured registry', posixOnly(POSIX_REASONS.shFake), async () => {
   const matching = await historicalCoreFixture()
   const matchingServer = await tarballServer(matching.archive)
   const mismatched = await historicalCoreFixture()
@@ -2398,7 +2398,7 @@ else process.exit(2)
   }
 })
 
-test('migrate says pnpm could not be started when it is not on PATH', async () => {
+test('migrate says pnpm could not be started when it is not on PATH', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-no-pnpm-'))
   try {
@@ -2463,7 +2463,7 @@ test('migrate keeps unmatched files as customizations and reports when the previ
   }
 })
 
-test('migrate falls back conservatively when fetching the previous core times out', async () => {
+test('migrate falls back conservatively when fetching the previous core times out', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-timeout-'))
   try {
@@ -2510,7 +2510,7 @@ async function previousCoreFixture(root: string) {
   await commitFixture(root)
 }
 
-test('the network wait for the previous core defaults to 10 s in total, without the env override', async () => {
+test('the network wait for the previous core defaults to 10 s in total, without the env override', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-default-timeout-'))
   try {
@@ -2536,7 +2536,7 @@ test('the network wait for the previous core defaults to 10 s in total, without 
   }
 })
 
-test('a registry that refuses the package is reported as such, not as a network problem', async () => {
+test('a registry that refuses the package is reported as such, not as a network problem', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-e404-'))
   try {
@@ -2627,7 +2627,7 @@ test('a dead registry does not hold migrate past the default network wait', asyn
   }
 })
 
-test('migrate finds the previous core in the repository lockfile host importer', async () => {
+test('migrate finds the previous core in the repository lockfile host importer', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root, host } = await moveFixture({ monorepo: true })
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-lock-core-'))
   let server: Awaited<ReturnType<typeof tarballServer>> | null = null
@@ -2674,7 +2674,7 @@ else process.exit(2)
   }
 })
 
-test('migrate uses the dry-run previous-core classification during --yes with an isolated pnpm invocation', async () => {
+test('migrate uses the dry-run previous-core classification during --yes with an isolated pnpm invocation', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-isolated-core-'))
   let server: Awaited<ReturnType<typeof tarballServer>> | null = null
@@ -2732,7 +2732,7 @@ else process.exit(2)
 })
 
 
-test('migrate preserves npm_config_registry for the isolated previous-core pnpm lookup', async () => {
+test('migrate preserves npm_config_registry for the isolated previous-core pnpm lookup', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture()
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-custom-registry-'))
   let server: Awaited<ReturnType<typeof tarballServer>> | null = null
@@ -2782,7 +2782,7 @@ else process.exit(2)
   }
 })
 
-test('migrate removes root proxy files proven by the previous core and rollback restores them', async () => {
+test('migrate removes root proxy files proven by the previous core and rollback restores them', posixOnly(POSIX_REASONS.shFake), async () => {
   const { root } = await moveFixture({ brokenImport: true })
   const support = await mkdtemp(join(tmpdir(), 'nextspark-migrate-root-proxy-'))
   let server: Awaited<ReturnType<typeof tarballServer>> | null = null
@@ -4375,7 +4375,7 @@ test('a package.json under an AI-workflow directory is not a workspace member', 
   }
 })
 
-test('the rollback leaves the files of an existing packages/contracts directory alone', async () => {
+test('the rollback leaves the files of an existing packages/contracts directory alone', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root, { prepare: 'fail' })
@@ -4429,7 +4429,7 @@ test('packages/contracts is only planned where nextspark prepare will look for i
   assert.match(deep.skipped ?? '', /nextspark prepare only looks for it at ..\/packages\/contracts, ..\/..\/packages\/contracts, packages\/contracts/)
 })
 
-test('the printed rollback removes a packages/contracts that migrate created', async () => {
+test('the printed rollback removes a packages/contracts that migrate created', posixOnly(POSIX_REASONS.shRollback), async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root, { prepare: 'fail' })
@@ -4480,7 +4480,7 @@ test('the simulated copy holds no env file, tracked or not, and --no-simulate sk
   }
 })
 
-test('a signal during the simulation removes the temporary copy', async () => {
+test('a signal during the simulation removes the temporary copy', posixOnly(POSIX_REASONS.signals), async () => {
   const pidFile = join(tmpdir(), `nextspark-migrate-grandchild-${process.pid}`)
   const root = await simulationFixture("import { spawn } from 'node:child_process'\nimport { writeFileSync } from 'node:fs'\nconst grandchild = spawn('sleep', ['60'], { stdio: 'ignore' })\nwriteFileSync(process.env.NEXTSPARK_PROBE_PID_FILE, String(grandchild.pid))\nawait new Promise(resolve => setTimeout(resolve, 60000))\n")
   try {
@@ -4527,7 +4527,7 @@ export async function predictHost(config) {
 }
 `
 
-test('migrate --dry-run asks the installed core\'s predictHost about the converted copy and reports diagnostics, notices and checks', async () => {
+test('migrate --dry-run asks the installed core\'s predictHost about the converted copy and reports diagnostics, notices and checks', posixOnly(POSIX_REASONS.committedSymlinks), async () => {
   const root = await simulationFixture("console.error('prepare must not run when predictHost exists')\nprocess.exit(1)\n")
   try {
     await write(root, 'node_modules/@nextsparkjs/core/scripts/build/registry/host/prepare.mjs', PREDICT_MODULE(`{
@@ -4617,7 +4617,7 @@ test('workspace yaml reading: a leading BOM, negations, ? in globs, and the - - 
   for (const odd of ["packages:\n  - - web\n", "packages:\n  - ? web\n", "packages: [? web]\n"]) assert.ok('error' in addWorkspaceGlob(odd), odd)
 })
 
-test('the simulated copy survives glob-named, non-ASCII-named and dirty-submodule entries and still leaves no env file', async () => {
+test('the simulated copy survives glob-named, non-ASCII-named and dirty-submodule entries and still leaves no env file', posixOnly(POSIX_REASONS.globName), async () => {
   const root = await simulationFixture("import { existsSync } from 'node:fs'\nconsole.error(`NS_HOST_PROBE env=${existsSync('.env')} japanese=${existsSync('日本語.txt')} star=${existsSync('*')} sub=${existsSync('vendor/sub/inner.txt')}`)\nprocess.exit(1)\n")
   const submodule = await mkdtemp(join(tmpdir(), 'nextspark-migrate-submodule-'))
   try {
@@ -5531,7 +5531,7 @@ function runOnTerminal(root: string, args: string[], answer: string): { status: 
   return result.error ? null : { status: result.status ?? -1, output: result.stdout }
 }
 
-test('on a terminal, migrate asks before renaming an underscore slug: yes renames, anything else does not', async () => {
+test('on a terminal, migrate asks before renaming an underscore slug: yes renames, anything else does not', posixOnly(POSIX_REASONS.tty), async () => {
   for (const [answer, renamed] of [['y', true], ['n', false]] as const) {
     const root = await rootFirstFixture({
       'entities/campaign_members/campaign_members.config.ts': MEMBERS_CONFIG,

@@ -7,7 +7,7 @@ import { join } from 'node:path'
 
 import { buildCli } from './built-cli.js'
 import { runHostPreparation } from '../src/utils/preparation.js'
-import { slashes, windowsNextEntry } from './platform.js'
+import { POSIX_REASONS, posixOnly, slashes, windowsNextEntry } from './platform.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -181,7 +181,7 @@ test('build --no-registry preserves the opt-out: only the freshness check runs, 
   }
 })
 
-test('prepare and generate watch exit successfully after SIGTERM cleans up a watcher that does not trap SIGTERM', { timeout: 15_000 }, async () => {
+test('prepare and generate watch exit successfully after SIGTERM cleans up a watcher that does not trap SIGTERM', { timeout: 15_000, ...posixOnly(POSIX_REASONS.signals) }, async () => {
   const project = await fixture(`
 console.log('watcher ready')
 setInterval(() => {}, 1000)
@@ -223,7 +223,7 @@ setTimeout(() => process.exit(7), 100)
   }
 })
 
-test('prepare watch does not hide a watcher failure that occurs during requested cleanup', { timeout: 15_000 }, async () => {
+test('prepare watch does not hide a watcher failure that occurs during requested cleanup', { timeout: 15_000, ...posixOnly(POSIX_REASONS.signals) }, async () => {
   const project = await fixture(`
 process.on('SIGTERM', () => process.exit(7))
 console.log('watcher ready')
