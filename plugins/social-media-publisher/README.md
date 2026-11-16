@@ -37,7 +37,7 @@ Routes accept a session or an API key with the `social:read` or `social:write` s
    | Variable | Purpose |
    | --- | --- |
    | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` | The Facebook app. `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` are read as aliases |
-   | `OAUTH_ENCRYPTION_KEY` | 32 bytes in hex that encrypt the stored tokens: `openssl rand -hex 32` |
+   | `OAUTH_ENCRYPTION_KEY` | 32 bytes, base64-encoded, that encrypt the stored tokens: `openssl rand -base64 32` |
    | `CRON_SECRET` | Read by the plugin for scheduled publishing requests; no route of the plugin uses it yet |
 
    Register `<your app URL>/api/plugins/social-media-publisher/social/connect/callback` as a valid OAuth redirect URI in the Facebook app. The [installation guide](./docs/01-getting-started/02-installation.md) walks through the Facebook app and its permissions.

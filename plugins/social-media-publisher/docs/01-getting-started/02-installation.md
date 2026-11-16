@@ -97,7 +97,7 @@ FACEBOOK_CLIENT_SECRET=your_app_secret_here
 # App URL (important for OAuth redirects)
 NEXT_PUBLIC_APP_URL=http://localhost:5173
 
-# OAuth Token Encryption (32-byte hex key)
+# OAuth Token Encryption (32 bytes, base64)
 OAUTH_ENCRYPTION_KEY=your_encryption_key_here
 ```
 
@@ -108,20 +108,20 @@ The `OAUTH_ENCRYPTION_KEY` is used to encrypt OAuth tokens in the database.
 **Generate a secure key:**
 
 ```bash
-# Using Node.js
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# Using OpenSSL
+openssl rand -base64 32
 
 # Output example:
-# a7f9b2c8d1e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9
+# p/m6yNHj9KW2x9jp8KGyw9Tl9qe4ydDh8qO0xdbn+Kk=
 ```
 
 **Add to `.env`:**
 ```bash
-OAUTH_ENCRYPTION_KEY=a7f9b2c8d1e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9
+OAUTH_ENCRYPTION_KEY=p/m6yNHj9KW2x9jp8KGyw9Tl9qe4ydDh8qO0xdbn+Kk=
 ```
 
 **Security Notes:**
-- ✅ Key must be exactly 32 bytes (64 hex characters)
+- ✅ Key must be exactly 32 bytes, base64-encoded (44 characters ending in `=`); a hex key is refused
 - ✅ Generate unique key for each environment
 - ✅ Never commit to version control
 - ✅ Store securely in production (e.g., AWS Secrets Manager)
@@ -155,9 +155,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:5173
 # SECURITY
 # ==============================================
 
-# 32-byte encryption key for OAuth tokens (64 hex chars)
-# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-OAUTH_ENCRYPTION_KEY=your_32_byte_key_in_hex_format
+# 32-byte encryption key for OAuth tokens, base64-encoded
+# Generate with: openssl rand -base64 32
+OAUTH_ENCRYPTION_KEY=your_32_byte_key_in_base64
 
 # ==============================================
 # DATABASE (if not already configured)
@@ -395,9 +395,9 @@ curl -X POST http://localhost:5173/api/plugins/social-media-publisher/social/pub
 **Solution:**
 ```bash
 # Generate new key
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+openssl rand -base64 32
 
-# Add to .env (must be exactly 64 hex characters)
+# Add to .env (32 bytes, base64-encoded)
 OAUTH_ENCRYPTION_KEY=generated_key_here
 
 # Restart server

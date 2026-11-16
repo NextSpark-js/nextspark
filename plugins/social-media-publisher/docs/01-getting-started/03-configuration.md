@@ -30,7 +30,7 @@ NEXT_PUBLIC_APP_URL=https://yourdomain.com
 # SECURITY
 # ==============================================
 
-# 32-byte encryption key for tokens (64 hex characters)
+# 32-byte encryption key for tokens, base64-encoded (openssl rand -base64 32)
 OAUTH_ENCRYPTION_KEY=your_encryption_key_here
 ```
 
@@ -104,20 +104,20 @@ NEXT_PUBLIC_APP_URL=https://yourapp.com
 
 **Purpose:** Encrypt OAuth tokens before storing in database
 
-**Format:** 64 hexadecimal characters (32 bytes)
+**Format:** 32 bytes, base64-encoded (44 characters)
 
 **Generate:**
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+openssl rand -base64 32
 ```
 
 **Example:**
 ```bash
-OAUTH_ENCRYPTION_KEY=a7f9b2c8d1e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9
+OAUTH_ENCRYPTION_KEY=p/m6yNHj9KW2x9jp8KGyw9Tl9qe4ydDh8qO0xdbn+Kk=
 ```
 
 **Security:**
-- ✅ Must be exactly 64 hex characters
+- ✅ Must decode from base64 to exactly 32 bytes (a hex key is refused)
 - ✅ Generate unique key per environment
 - ✅ Never commit to git
 - ✅ Store securely
@@ -446,14 +446,13 @@ OAUTH_ENCRYPTION_KEY=prod_key_here
 ### Token Encryption Failures
 
 **Check:**
-1. `OAUTH_ENCRYPTION_KEY` is exactly 64 hex characters
+1. `OAUTH_ENCRYPTION_KEY` decodes from base64 to exactly 32 bytes (the error says `OAUTH_ENCRYPTION_KEY must be 32 bytes encoded as base64` otherwise)
 2. Key hasn't changed since accounts were connected
-3. Key is valid hexadecimal
 
 **Validate Key:**
 ```bash
 # Should output 32
-echo -n "your_key_here" | wc -c | awk '{print $1/2}'
+printf %s "your_key_here" | base64 -d | wc -c
 ```
 
 ### Permission Errors

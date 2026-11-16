@@ -205,71 +205,21 @@ return NextResponse.json({
 - ✅ **Parallel Processing** - Can decrypt in parallel
 - ✅ **NIST Approved** - Industry standard
 
-**Encryption Process:**
-```typescript
-import crypto from 'crypto'
+**Encryption Process:** `TokenEncryption` in `@nextsparkjs/core/lib/oauth/encryption` (Web Crypto API):
 
-export class TokenEncryption {
-  static async encrypt(plainText: string): Promise<{
-    encrypted: string
-    iv: string
-    keyId: string
-  }> {
-    // Get encryption key from environment
-    const encryptionKey = Buffer.from(process.env.OAUTH_ENCRYPTION_KEY!, 'hex')
-    
-    // Generate random IV (96 bits)
-    const iv = crypto.randomBytes(12)
-    
-    // Create cipher
-    const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey, iv)
-    
-    // Encrypt
-    let encrypted = cipher.update(plainText, 'utf8', 'hex')
-    encrypted += cipher.final('hex')
-    
-    // Get authentication tag
-    const authTag = cipher.getAuthTag()
-    
-    // Combine encrypted + authTag
-    const combined = encrypted + authTag.toString('hex')
-    
-    return {
-      encrypted: combined,
-      iv: iv.toString('hex'),
-      keyId: 'key_2024_01'  // Version identifier
-    }
-  }
-  
-  static async decrypt(
-    encryptedWithTag: string,
-    ivHex: string,
-    keyId: string
-  ): Promise<string> {
-    // Get encryption key
-    const encryptionKey = Buffer.from(process.env.OAUTH_ENCRYPTION_KEY!, 'hex')
-    
-    // Separate encrypted data and auth tag
-    const authTag = Buffer.from(encryptedWithTag.slice(-32), 'hex')
-    const encrypted = encryptedWithTag.slice(0, -32)
-    
-    // Create decipher
-    const decipher = crypto.createDecipheriv(
-      'aes-256-gcm',
-      encryptionKey,
-      Buffer.from(ivHex, 'hex')
-    )
-    
-    // Set auth tag
-    decipher.setAuthTag(authTag)
-    
-    // Decrypt
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-    
-    return decrypted
-  }
-}
+- The key is `OAUTH_ENCRYPTION_KEY`, 32 bytes encoded as base64 (`openssl rand -base64 32`). Any other value (a hex
+  key, a key of another length) fails with `OAUTH_ENCRYPTION_KEY must be 32 bytes encoded as base64`
+- A random 96-bit IV per token, and a 128-bit authentication tag appended to the ciphertext
+- The ciphertext and the IV are stored base64-encoded, with the key id (`OAUTH_ENCRYPTION_KEY_ID`, default `v1`)
+
+```typescript
+import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
+
+const { encrypted, iv, keyId } = await TokenEncryption.encrypt(accessToken)
+const stored = `${encrypted}:${iv}:${keyId}`
+
+const [e, i, k] = stored.split(':')
+const plain = await TokenEncryption.decrypt(e, i, k)
 ```
 
 ### Token Format Breakdown
@@ -282,10 +232,10 @@ a3f9b2c8d1e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9:9f7e3ab5c2d4e6:
 
 Part 1: encrypted (variable length)
   - Encrypted token + authentication tag
-  - Hex encoded
+  - Base64 encoded
   - Length depends on token length
 
-Part 2: iv (24 hex characters)
+Part 2: iv (16 base64 characters)
   - Initialization Vector (96 bits)
   - Unique per encryption
   - Required for decryption
@@ -442,7 +392,7 @@ const decryptionKey = getKeyById(keyId)
 
 1. **Generate New Key:**
    ```bash
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   openssl rand -base64 32
    ```
 
 2. **Add to Environment:**

@@ -18,6 +18,10 @@ import { EncryptedToken, OAuthError, OAuthErrorType } from './types';
 /**
  * Encryption configuration
  */
+/** What a misformatted OAUTH_ENCRYPTION_KEY gets, from encrypt() and decrypt() alike. */
+export const OAUTH_KEY_FORMAT_MESSAGE =
+  'OAUTH_ENCRYPTION_KEY must be 32 bytes encoded as base64; generate one with: openssl rand -base64 32';
+
 const ENCRYPTION_CONFIG = {
   algorithm: 'AES-GCM',
   keyLength: 256,
@@ -49,10 +53,19 @@ export class TokenEncryption {
       );
     }
 
+    // 32 bytes as base64 (`openssl rand -base64 32`): a hex key, or any other length, fails here with what to fix, not
+    // as a generic encryption failure. Fixed text: never the value
+    let keyData: ArrayBuffer;
     try {
-      // Convert base64 key string to ArrayBuffer
-      const keyData = this.base64ToBuffer(keyString);
+      keyData = this.base64ToBuffer(keyString.trim());
+    } catch {
+      keyData = new ArrayBuffer(0);
+    }
+    if (keyData.byteLength !== 32) {
+      throw new OAuthError(OAuthErrorType.ENCRYPTION_FAILED, OAUTH_KEY_FORMAT_MESSAGE);
+    }
 
+    try {
       // Import the key for AES-GCM
       const key = await crypto.subtle.importKey(
         'raw',
@@ -126,6 +139,7 @@ export class TokenEncryption {
         keyId: this.currentKeyId,
       };
     } catch (error) {
+      if (error instanceof OAuthError) throw error; // the key's own error says what to fix
       throw new OAuthError(
         OAuthErrorType.ENCRYPTION_FAILED,
         'Failed to encrypt token',
@@ -173,6 +187,7 @@ export class TokenEncryption {
       const decoder = new TextDecoder();
       return decoder.decode(decryptedBuffer);
     } catch (error) {
+      if (error instanceof OAuthError) throw error; // the key's own error says what to fix
       throw new OAuthError(
         OAuthErrorType.DECRYPTION_FAILED,
         'Failed to decrypt token',
