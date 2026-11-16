@@ -18,7 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **A project with the `social-media-publisher` plugin builds again.** The plugin's `disconnect` route exported a `DELETE` handler that read an `accountId` path parameter the route does not have, which Next.js 16 rejects in its type check; the handler could not have been called, so it is removed (use `POST` with `accountId` in the body, as documented). The `walkme` plugin imports `@phosphor-icons/react`, which a project did not install with it: it is now a dependency of the plugin. A new CI step adds the six first-party plugins to a starter made from the packed packages and builds it. (#472)
+- **A project with the `social-media-publisher` plugin builds again.** The plugin's `disconnect` route exported a `DELETE` handler that read an `accountId` path parameter the route does not have, which Next.js 16 rejects in its type check; the handler received empty params and answered 400 to every request, so it is removed (use `POST` with `accountId` in the body, as documented) and a `DELETE` now gets 405. The `walkme` plugin imports `@phosphor-icons/react`, which a project did not install with it: it is now a dependency of the plugin. A new CI step adds the six first-party plugins to a starter made from the packed packages and builds it. (#472)
+
+### Upgrading from 0.1.0-beta.203
+
+- **A project with the `social-media-publisher` or `walkme` copy of 0.1.0-beta.203 refreshes it:** `pnpm exec nextspark add:plugin @nextsparkjs/plugin-<name> -v <version> --force` replaces `plugins/<name>` and overwrites your own changes in it. By hand instead, delete the `DELETE` export from `api/social/disconnect/route.ts` (social-media-publisher) or run `pnpm add @phosphor-icons/react` (walkme). (#472)
 
 ## [0.1.0-beta.203] - 2026-11-16
 

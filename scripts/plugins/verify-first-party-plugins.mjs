@@ -2,8 +2,8 @@
 /**
  * Every first-party plugin enabled at once on a created starter (#472). A route of a plugin that Next's type check rejects
  * (a handler that declares a path parameter its route does not have, say) only shows in `next build` of a project that
- * has the plugin, and the plugin matrix loads fixtures and walkme only. Run it in a project made from the packed tarballs
- * (.github/actions/create-project):
+ * has the plugin, and the plugin matrix loads fixtures and walkme only. Run it in a starter made from the packed tarballs
+ * (the plugin-matrix job of .github/workflows/generated-projects.yml creates one inline):
  *
  *   1. every plugin tarball is added with `nextspark add:plugin`, the command a user runs;
  *   2. `nextspark build` runs: the registries are generated and Next type-checks every plugin route.
@@ -40,6 +40,10 @@ function run(label, command, args) {
   const result = spawnSync(command, args, { cwd: app, env, encoding: 'utf8', maxBuffer: 1 << 28 })
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
   writeFileSync(path.join(logs, `${label}.log`), `$ ${command} ${args.join(' ')}\n${output}\nexit ${result.status}\n`)
+  if (result.status === null) {
+    console.log(`FAIL  ${label}: the command did not run to the end (${result.error?.message ?? `signal ${result.signal}`})`)
+    process.exit(2)
+  }
   if (result.status !== 0) {
     console.log(`FAIL  ${label}\n${output.split('\n').slice(-30).join('\n')}`)
     process.exit(1)
