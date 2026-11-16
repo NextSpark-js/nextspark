@@ -3,9 +3,9 @@ import { execFileSync, execSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { after, before, test } from 'node:test'
 import { createServer } from 'node:http'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, type symlinkSync, writeFileSync } from 'node:fs'
+import fs, { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, type symlinkSync, writeFileSync } from 'node:fs'
 import { access, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises'
-import { createRequire } from 'node:module'
+import { createRequire, syncBuiltinESMExports } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -13,7 +13,7 @@ import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
-import { canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
+import { assertWritable, canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
 import { linkDirectory, loadCoreHost } from '../src/utils/app-tree.js'
 import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
@@ -1189,11 +1189,11 @@ async function lockedFileEnv(file: string, at: 'open' | 'rename'): Promise<{ env
 
 test('a file another program holds stops migrate before it writes anything, naming the file (#469)', async () => {
   const { root } = await moveFixture()
-  const lock = await lockedFileEnv('contents/themes/acme/components/Button.ts', 'open')
+  const lock = await lockedFileEnv('tsconfig.json', 'open')
   try {
     const result = run(root, ['--yes'], lock.env)
     assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
-    assert.match(result.stderr, /contents\/themes\/acme\/components\/Button\.ts cannot be written: another program has it open \(an editor, the development server or an antivirus\)/)
+    assert.match(result.stderr, /tsconfig\.json cannot be written: another program has it open \(an editor, the development server or an antivirus\)/)
     assert.match(result.stderr, /Nothing was written\./)
     assert.doesNotMatch(result.stdout, /Rollback after migration failure/)
     assert.equal(git_status(root), '')
@@ -1220,6 +1220,167 @@ test('a file locked partway says so and points at the rollback, which restores t
   } finally {
     await rm(root, { recursive: true, force: true })
     await rm(lock.dir, { recursive: true, force: true })
+  }
+})
+
+test('a read-only file that migrate only moves is not refused: it moves as before (#469)', async () => {
+  const { root } = await moveFixture()
+  try {
+    // git records no read-only bit, so the tree stays clean
+    await chmod(join(root, 'contents/themes/acme/components/Button.ts'), 0o444)
+    const moved = run(root, ['--yes'])
+    assert.equal(moved.status, 0, `${moved.stdout}\n${moved.stderr}`)
+    assert.equal(await readFile(join(root, 'components/Button.ts'), 'utf8'), 'export const Button = true\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('on Windows a file migrate only moves is checked by renaming it and back; elsewhere it is not checked (#469)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-movable-'))
+  const realRename = fs.renameSync
+  try {
+    await write(root, 'theme/a.ts', 'a\n')
+    await write(root, 'package.json', '{}\n')
+    const renames: string[] = []
+    fs.renameSync = ((from: string, to: string) => {
+      renames.push(`${relative(root, String(from))} -> ${relative(root, String(to))}`)
+      if (String(from).endsWith('a.ts')) throw Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY', path: String(from) })
+      return realRename(from, to)
+    }) as typeof fs.renameSync
+    syncBuiltinESMExports()
+    // off Windows a file that is only moved is not touched
+    assertWritable(root, ['package.json'], ['theme'], 'linux')
+    assert.deepEqual(renames, [])
+    assert.throws(() => assertWritable(root, ['package.json'], ['theme'], 'win32'), /theme\/a\.ts cannot be moved: another program has it open \(an editor, the development server or an antivirus\)\. Close that program and run nextspark migrate again\. Nothing was written\./)
+    assert.deepEqual(renames, ['theme/a.ts -> theme/a.ts.nextspark-lock-check'])
+    // an unlocked file goes next to itself and back
+    fs.renameSync = ((from: string, to: string) => { renames.push(`${relative(root, String(from))} -> ${relative(root, String(to))}`); return realRename(from, to) }) as typeof fs.renameSync
+    syncBuiltinESMExports()
+    renames.length = 0
+    assertWritable(root, [], ['theme'], 'win32')
+    assert.deepEqual(renames, ['theme/a.ts -> theme/a.ts.nextspark-lock-check', 'theme/a.ts.nextspark-lock-check -> theme/a.ts'])
+    assert.equal(await readFile(join(root, 'theme/a.ts'), 'utf8'), 'a\n')
+  } finally {
+    fs.renameSync = realRename
+    syncBuiltinESMExports()
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+/** Every path below `root` but .git and node_modules: its type, mode, content hash, link target and, for ignored files, mtime. */
+function treeState(root: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  const walk = (dir: string) => {
+    for (const name of readdirSync(join(root, dir))) {
+      const rel = dir ? `${dir}/${name}` : name
+      if (rel === '.git' || rel === 'node_modules') continue
+      const entry = fs.lstatSync(join(root, rel))
+      if (entry.isSymbolicLink()) out[rel] = `link:${fs.readlinkSync(join(root, rel))}`
+      else if (entry.isDirectory()) { out[rel] = `dir:${(entry.mode & 0o777).toString(8)}`; walk(rel) }
+      else out[rel] = `file:${(entry.mode & 0o777).toString(8)}:${createHash('sha256').update(readFileSync(join(root, rel))).digest('hex').slice(0, 12)}${rel.startsWith('.nextspark/') || rel.endsWith('.local') ? `:mtime=${Math.round(entry.mtimeMs)}` : ''}`
+    }
+  }
+  walk('')
+  return out
+}
+
+test('the rollback after a failed run restores the tree byte for byte, ignored files, modes, mtimes and links included (#469)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await write(root, '.gitignore', 'contents/themes/acme/tests/output\n.nextspark/\n*.local\n')
+    await commitFixture(root)
+    // ignored and already there: generated-host state with an old mtime and a link the sweep keeps, plus an unrelated file
+    await write(root, '.nextspark/registries/keep.json', '{"keep":1}\n')
+    await write(root, '.nextspark/registries/[slug]/x.json', '{}\n')
+    await symlink('keep.json', join(root, '.nextspark/registries/link.json'))
+    await write(root, '.nextspark/sync-state.json', '{"old":true}\n')
+    await write(root, 'notes.local', 'user notes\n')
+    const old = new Date('2020-01-02T03:04:05Z')
+    for (const file of ['.nextspark/registries/keep.json', '.nextspark/sync-state.json', 'notes.local']) fs.utimesSync(join(root, file), old, old)
+    const before = treeState(root)
+    const failed = run(root, ['--yes'])
+    assert.notEqual(failed.status, 0, failed.stdout)
+    assert.notDeepEqual(treeState(root), before, 'the run changed the tree')
+    runPrintedRollback(root, failed.stdout)
+    assert.equal(git_status(root), '')
+    assert.deepEqual(treeState(root), before)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+for (const name of ['a$$b.ts', 'p$&q.ts', "x$`y$'z.ts"]) {
+  test(`a moved file named ${name} gets a script that parses and a rollback that restores the tree (#469)`, async () => {
+    const { root } = await moveFixture()
+    try {
+      await installConversionCore(root, { prepare: 'fail' })
+      await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+      await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+      await write(root, `contents/themes/acme/components/${name}`, 'export const x = 1\n')
+      await commitFixture(root)
+      const before = treeState(root)
+      const failed = run(root, ['--yes'])
+      assert.notEqual(failed.status, 0, failed.stdout)
+      assert.ok(recordedRollback(root).created.includes(`components/${name}`), 'the name is recorded as it is')
+      runPrintedRollback(root, failed.stdout)
+      assert.equal(git_status(root), '')
+      // the run leaves .nextspark itself behind, empty, as the rollback always did
+      const after = treeState(root)
+      if (!('.nextspark' in before) && after['.nextspark']?.startsWith('dir:') && readdirSync(join(root, '.nextspark')).length === 0) delete after['.nextspark']
+      assert.deepEqual(after, before)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
+
+test('after a successful run the rollback keeps what the project already had below a generated directory and removes the rest (#469)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root)
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, '.gitignore', 'contents/themes/acme/tests/output\n.nextspark/\n')
+    await commitFixture(root)
+    await write(root, '.nextspark/registries/keep.json', '{"keep":1}\n')
+    const moved = run(root, ['--yes'])
+    assert.equal(moved.status, 0, `${moved.stdout}\n${moved.stderr}`)
+    assert.match(moved.stdout, /It runs git checkout -- \. \(which also discards any other uncommitted change in the repository\) and removes what the run created; the ignored files the run overwrote do not come back once it has succeeded\./)
+    // the snapshot is gone, so only the sweep's list of what was there decides
+    await assert.rejects(access(join(root, '.nextspark/migrate-rollback')))
+    await write(root, '.nextspark/registries/added.json', '{}\n')
+    runPrintedRollback(root, moved.stdout)
+    assert.equal(await readFile(join(root, '.nextspark/registries/keep.json'), 'utf8'), '{"keep":1}\n')
+    await assert.rejects(access(join(root, '.nextspark/registries/added.json')))
+    assert.equal(git_status(root), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a rollback recorded in a repository without a commit refuses to run once there is one (#469)', async () => {
+  const { root } = await moveFixture()
+  try {
+    await installConversionCore(root, { prepare: 'fail' })
+    await write(root, 'app/layout.tsx', facadeOf(routeOf('layout.tsx')))
+    await write(root, 'app/dashboard/page.tsx', CUSTOM_DASHBOARD)
+    await commitFixture(root)
+    const failed = run(root, ['--yes'])
+    assert.notEqual(failed.status, 0)
+    const marker = join(root, '.nextspark/migrate-rollback/rollback.json')
+    await writeFile(marker, JSON.stringify({ ...JSON.parse(await readFile(marker, 'utf8')), head: null }))
+    const again = run(root, [])
+    assert.throws(() => runPrintedRollback(root, again.stdout), (error: { stderr: Buffer }) => /Rollback failed: the repository has commits made after the migrate/.test(String(error.stderr)))
+    // and a record of an older CLI, without head, is not checked
+    const { head: _head, ...older } = JSON.parse(await readFile(marker, 'utf8'))
+    await writeFile(marker, JSON.stringify(older))
+    runPrintedRollback(root, run(root, []).stdout)
+    assert.equal(git_status(root), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })
 
@@ -5006,7 +5167,7 @@ test('the printed rollback says it restores the migrate-time snapshot and must r
     await commitFixture(root)
     const result = run(root, ['--yes'])
     assert.notEqual(result.status, 0)
-    assert.match(result.stdout, /They restore the snapshot taken when migrate started \(git checkout plus \.nextspark\/migrate-rollback\), so run them right away, before editing or committing anything else/)
+    assert.match(result.stdout, /Run this command from any directory, in sh, cmd or PowerShell, to restore the pre-migration tree\. It restores the snapshot taken when migrate started \(git checkout plus \.nextspark\/migrate-rollback\), so run it right away, before editing or committing anything else/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5029,8 +5190,14 @@ test('a run killed after it started writing is named on the next run, with the r
       assert.notEqual(again.status, 0)
       assert.match(again.stderr, /A previous nextspark migrate did not finish: \.nextspark\/migrate-rollback exists/)
       assert.match(again.stderr, /Refusing to overwrite migration rollback backup/)
-      for (const line of recorded.trimEnd().split('\n')) assert.ok(again.stdout.includes(line), `missing: ${line.slice(0, 120)}\n${again.stdout.slice(-1500)}`)
       assert.doesNotMatch(again.stdout, /App tree conversion/, 'no report of the half-converted tree')
+      if (args[0] === '--dry-run') {
+        // A dry run writes nothing, so it cannot vouch for the script and prints no command
+        assert.match(again.stderr, /Run nextspark migrate without --dry-run: it writes the rollback script again/)
+        assert.doesNotMatch(again.stdout, /migrate-rollback\.mjs/)
+      } else {
+        for (const line of recorded.trimEnd().split('\n')) assert.ok(again.stdout.includes(line), `missing: ${line.slice(0, 120)}\n${again.stdout.slice(-1500)}`)
+      }
     }
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -5094,9 +5261,13 @@ test('rollback.txt is never echoed: a crafted copy or marker prints no commands 
     const good = await readFile(json, 'utf8')
     // A crafted rollback.txt, even a command-shaped one, is not read
     await writeFile(txt, "git -C '/' checkout -- .\n(cd '/' && if [ -d 'x' ]; then find 'x' -depth -mindepth 1 -delete; fi)\n")
-    // and so is a script left at the rollback's path: the next run writes it again from the marker
+    // and so is a script left at the rollback's path: the next run writes it again from the marker, a dry run leaves it
     await writeFile(script, "console.log('EVIL-MARKER')\n")
-    const again = run(root, ['--dry-run'])
+    const dry = run(root, ['--dry-run'])
+    assert.notEqual(dry.status, 0)
+    assert.equal(await readFile(script, 'utf8'), "console.log('EVIL-MARKER')\n", 'a dry run writes nothing')
+    assert.doesNotMatch(dry.stdout, /migrate-rollback\.mjs/, 'and prints no command to run what it did not write')
+    const again = run(root, [])
     assert.notEqual(again.status, 0)
     assert.doesNotMatch(again.stdout, /git -C '\/'|cd '\/'/)
     // The live run recorded the selective cleanup, with a dynamic-route name kept as a literal path

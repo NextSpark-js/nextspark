@@ -1,5 +1,5 @@
 import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { closeSync, copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readSync, openSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readSync, openSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash, randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -3624,6 +3624,8 @@ function copyForMigrationRollback(root: string, source: string, destination: str
     for (const child of readdirSync(source, { withFileTypes: true })) {
       copyForMigrationRollback(root, join(source, child.name), join(destination, child.name));
     }
+    chmodSync(destination, entry.mode & 0o7777);
+    utimesSync(destination, entry.atime, entry.mtime);
     return;
   }
   mkdirSync(dirname(destination), { recursive: true });
@@ -3633,6 +3635,7 @@ function copyForMigrationRollback(root: string, source: string, destination: str
   }
   if (entry.isFile()) {
     copyFileSync(source, destination);
+    utimesSync(destination, entry.atime, entry.mtime);
     return;
   }
   throw new MigrateAnalysisError(`Refusing to back up unsupported path type: ${source}`);
@@ -3695,30 +3698,49 @@ function lockedPath(error: unknown): string | null {
 }
 
 /**
- * Open every file below `paths` (relative to `root`) for writing and close it again, which writes nothing: on Windows a
- * file another program holds fails here, before migrate has moved or rewritten anything.
+ * Check, before migrate writes anything, that another program holds none of the files it will touch (relative to
+ * `root`). A file it rewrites is opened for writing and closed again, which writes nothing. A file it only moves or
+ * deletes needs no write access to itself, so off Windows it is not checked at all (a read-only one moves as before);
+ * on Windows, where a program that has a file open usually keeps it from being renamed, it is renamed next to itself
+ * and back.
  */
-function assertWritable(root: string, paths: string[]): void {
-  const visit = (file: string) => {
+export function assertWritable(root: string, rewritten: string[], moved: string[] = [], platform: NodeJS.Platform = process.platform): void {
+  const files = (path: string): string[] => {
     let entry;
     try {
-      entry = lstatSync(file);
+      entry = lstatSync(path);
     } catch {
-      return;
+      return [];
     }
-    if (entry.isDirectory()) {
-      for (const child of readdirSync(file)) visit(join(file, child));
-      return;
-    }
-    if (!entry.isFile()) return;
+    if (entry.isDirectory()) return readdirSync(path).flatMap(child => files(join(path, child)));
+    return entry.isFile() ? [path] : [];
+  };
+  const refuse = (file: string, error: unknown, reason: string) => {
+    if (!lockedPath(error)) throw error;
+    throw new MigrateAnalysisError(`${pathFrom(root, file)} cannot be ${reason}: another program has it open (an editor, the development server or an antivirus)${reason === 'written' ? ', or it is read-only' : ''}. Close that program${reason === 'written' ? ', or make the file writable,' : ''} and run nextspark migrate again. Nothing was written.`);
+  };
+  for (const file of rewritten.flatMap(path => files(join(root, path)))) {
     try {
       closeSync(openSync(file, 'r+'));
     } catch (error) {
-      if (!lockedPath(error)) throw error;
-      throw new MigrateAnalysisError(`${pathFrom(root, file)} cannot be written: another program has it open (an editor, the development server or an antivirus), or it is read-only. Close that program, or make the file writable, and run nextspark migrate again. Nothing was written.`);
+      refuse(file, error, 'written');
     }
-  };
-  for (const path of paths) visit(join(root, path));
+  }
+  if (platform !== 'win32') return;
+  for (const file of moved.flatMap(path => files(join(root, path)))) {
+    const probe = `${file}.nextspark-lock-check`;
+    try {
+      renameSync(file, probe);
+    } catch (error) {
+      refuse(file, error, 'moved');
+    }
+    // Put straight back; should that fail, say where the file is rather than leave it unexplained
+    try {
+      renameSync(probe, file);
+    } catch (error) {
+      throw new MigrateAnalysisError(`${pathFrom(root, file)} could not be renamed back from ${pathFrom(root, probe)} after a lock check (${error instanceof Error ? error.message : String(error)}): rename it back by hand. Nothing else was written.`);
+    }
+  }
 }
 
 function isLink(path: string): boolean {
@@ -3739,7 +3761,7 @@ const MIGRATION_ROLLBACK_STATE_FILE = 'rollback.json';
  * `migrate --yes` leaves behind is the only trace of an unfinished run. Say so before analysing,
  * because analysing a half-converted tree reports unrelated blockers.
  */
-function unfinishedMigration(roots: string[], repository: string): { message: string; rollback: string[] | null } | null {
+function unfinishedMigration(roots: string[], repository: string, dryRun: boolean): { message: string; rollback: string[] | null } | null {
   for (const root of new Set(roots)) {
     const backup = migrationRollbackBackup(root);
     if (!existsSync(backup) && !isLink(backup)) continue;
@@ -3763,6 +3785,10 @@ function unfinishedMigration(roots: string[], repository: string): { message: st
       : null;
     if (!state) {
       return { message: `${head} Its ${MIGRATION_ROLLBACK_STATE_FILE} is missing, tracked by git or not what nextspark writes (a run of an older nextspark leaves only ${MIGRATION_ROLLBACK_COMMANDS_FILE}, which is never trusted), so no commands are printed. ${inspect}, run the rollback that run printed or restore with git.`, rollback: null };
+    }
+    // A dry run writes nothing, so it cannot vouch for the script at that path: it prints no command
+    if (dryRun) {
+      return { message: `${head} Run nextspark migrate without --dry-run: it writes the rollback script again from ${MIGRATION_ROLLBACK_STATE_FILE} and prints the command that restores the tree.`, rollback: null };
     }
     // Written again from the validated record, so what runs is never a script found in the tree
     writeRollbackScript(repository, root, state);
@@ -3862,6 +3888,17 @@ function rollbackState(repository: string, hostRoot: string, plan: MovePlan, rep
       if (cleanup) cleanups.push(cleanup);
     }
   }
+  // A created path below directories that do not exist yet: the clean takes the topmost of them, which the run
+  // creates whole, so that no emptied directory is left behind. Never .nextspark or above it: the snapshot lives there
+  const snapshotHome = pathFrom(repository, join(hostRoot, '.nextspark'));
+  for (const path of [...destinations]) {
+    let top: string | null = null;
+    for (let directory = dirname(path); directory !== '.' && directory !== ''; directory = dirname(directory)) {
+      if (directory === snapshotHome || snapshotHome.startsWith(`${directory}/`)) break;
+      if (!existsSync(join(repository, directory)) && !isLink(join(repository, directory))) top = directory;
+    }
+    if (top) destinations.add(top);
+  }
   let head: string | null = null;
   try {
     head = gitOutput(repository, ['rev-parse', 'HEAD']).trim();
@@ -3874,7 +3911,8 @@ function rollbackState(repository: string, hostRoot: string, plan: MovePlan, rep
 /**
  * The rollback, kept next to the snapshot rather than in it, so that it still undoes a run that succeeded until that
  * run is committed. It needs only node and git (no shell, no installed CLI), so the one command that starts it reads the
- * same in sh, cmd and PowerShell, and no command line it starts gets near cmd's limit.
+ * same in sh, cmd and PowerShell (except for the paths commandArgument names), and no command line it starts gets near
+ * cmd's limit.
  */
 const MIGRATION_ROLLBACK_SCRIPT_PATH = '.nextspark/migrate-rollback.mjs';
 
@@ -3883,7 +3921,7 @@ const ROLLBACK_SCRIPT = `// Written by nextspark migrate. Run it with node from 
 // .nextspark/migrate-rollback. It then deletes that snapshot and itself. Run it right away: files changed since come
 // back as the older copies.
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, lstatSync, readdirSync, rmSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync, utimesSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -3892,13 +3930,30 @@ const host = resolve(dirname(self), '..');
 const repository = resolve(host, data.repository);
 const git = args => execFileSync('git', ['-C', repository, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
 const isDirectory = path => { try { return lstatSync(path).isDirectory(); } catch { return false; } };
+const currentHead = () => { try { return git(['rev-parse', '--verify', '--quiet', 'HEAD']).trim() || null; } catch { return null; } };
+// cp -pR: a link or a path whose type changed is replaced, modes and times are kept, links are copied as links
+const restore = (from, to) => {
+  const entry = lstatSync(from);
+  let existing = null;
+  try { existing = lstatSync(to); } catch {}
+  if (existing && !(existing.isDirectory() && entry.isDirectory())) rmSync(to, { recursive: true, force: true });
+  if (entry.isSymbolicLink()) return symlinkSync(readlinkSync(from), to);
+  if (entry.isDirectory()) {
+    if (!existing || !existing.isDirectory()) mkdirSync(to);
+    for (const name of readdirSync(from)) restore(join(from, name), join(to, name));
+  } else copyFileSync(from, to);
+  chmodSync(to, entry.mode & 0o7777);
+  utimesSync(to, entry.atime, entry.mtime);
+};
 try {
-  if (data.head && git(['rev-parse', 'HEAD']).trim() !== data.head) {
+  if ('head' in data && currentHead() !== data.head) {
     throw new Error('the repository has commits made after the migrate this rollback belongs to, so it would undo more than that run. Restore with git instead.');
   }
   git(['checkout', '--', '.']);
   // In batches, so that no command line gets near the Windows limit; --literal-pathspecs: app/[slug] must not match app/s
-  for (let index = 0; index < data.created.length; index += 50) git(['--literal-pathspecs', 'clean', '-fdx', '--', ...data.created.slice(index, index + 50)]);
+  // A path below another one on the list is left out: given both, git clean keeps the directory it empties
+  const created = data.created.filter(path => !data.created.some(other => path.startsWith(other + '/')));
+  for (let index = 0; index < created.length; index += 50) git(['--literal-pathspecs', 'clean', '-fdx', '--', ...created.slice(index, index + 50)]);
   // Below a generated-host directory the project already had, only what was not there before goes
   for (const cleanup of data.cleanups) {
     const preserved = new Set(cleanup.preserved);
@@ -3913,7 +3968,7 @@ try {
   }
   const backup = join(host, '.nextspark', 'migrate-rollback');
   const files = join(backup, 'files');
-  if (existsSync(files)) cpSync(files, host, { recursive: true, force: true, preserveTimestamps: true, verbatimSymlinks: true });
+  if (existsSync(files)) for (const name of readdirSync(files)) restore(join(files, name), join(host, name));
   rmSync(backup, { recursive: true, force: true });
   rmSync(self, { force: true });
   console.log('The project is back as it was before nextspark migrate ran.');
@@ -3927,17 +3982,30 @@ try {
 function writeRollbackScript(repository: string, hostRoot: string, state: RollbackState): void {
   const file = join(hostRoot, MIGRATION_ROLLBACK_SCRIPT_PATH);
   assertContained(hostRoot, dirname(file));
-  const data = { repository: pathFrom(hostRoot, repository), head: state.head ?? null, created: state.created, cleanups: state.cleanups };
+  // head: null means the repository had no commit yet; an older CLI's record has none, and its script skips the check
+  const data = { repository: pathFrom(hostRoot, repository), ...(state.head !== undefined ? { head: state.head } : {}), created: state.created, cleanups: state.cleanups };
   mkdirSync(dirname(file), { recursive: true });
   rmSync(file, { force: true });
-  writeFileSync(file, ROLLBACK_SCRIPT.replace('\nconst self', `\nconst data = ${JSON.stringify(data)};\nconst self`), { flag: 'wx' });
+  // A function, so that $$, $& and the like in a path are written as they are
+  writeFileSync(file, ROLLBACK_SCRIPT.replace('\nconst self', () => `\nconst data = ${JSON.stringify(data)};\nconst self`), { flag: 'wx' });
 }
 
-/** One argument that sh, cmd and PowerShell read the same: bare when plain, else in double quotes. */
+/**
+ * One argument that sh, cmd and PowerShell read the same: bare when plain, else in double quotes. No quoting reads the
+ * same in all three for a value with $ ` " % or !: such a value gets the quoting of this platform's usual shell
+ * (sh quoting off Windows, double quotes for cmd on Windows), and `rollbackShells` stops promising the other two.
+ */
 function commandArgument(value: string): string {
   if (/^[\w@+=:,./\\-]+$/.test(value)) return value;
-  // $ ` " % ! mean something inside double quotes to one of them; only a POSIX path can hold one, so it gets sh quoting
-  return /[$`"%!]/.test(value) ? shellQuote(value) : `"${value}"`;
+  if (!/[$`"%!]/.test(value)) return `"${value}"`;
+  return process.platform === 'win32' ? `"${value}"` : shellQuote(value);
+}
+
+/** The shells the printed lines run in as printed. */
+function rollbackShells(lines: string[]): string {
+  // Plain double quotes are commandArgument's own; sh quoting (') or one of $ ` % ! means a path it could not quote for all three
+  if (!lines.some(line => /[$`%!']/.test(line))) return 'sh, cmd or PowerShell';
+  return process.platform === 'win32' ? 'cmd (the path holds a character PowerShell would expand)' : 'sh (the path holds a character cmd or PowerShell would read differently)';
 }
 
 function rollbackCommand(hostRoot: string): string {
@@ -3964,7 +4032,7 @@ function parseRollbackState(text: string, repository: string, hostRoot: string):
     }
     // An older CLI recorded no commit: its script then runs without that check
     if (data.head !== undefined && data.head !== null && (typeof data.head !== 'string' || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(data.head))) return null;
-    return { version: 1, created: data.created, cleanups: data.cleanups.map(({ root, preserved }) => ({ root, preserved })), head: data.head ?? null };
+    return { version: 1, created: data.created, cleanups: data.cleanups.map(({ root, preserved }) => ({ root, preserved })), ...(data.head !== undefined ? { head: data.head } : {}) };
   } catch {
     return null;
   }
@@ -3972,7 +4040,7 @@ function parseRollbackState(text: string, repository: string, hostRoot: string):
 
 function printRollback(rollback: string[]): void {
   section('Rollback after migration failure', [
-    'Run what follows from any directory, in sh, cmd or PowerShell, to restore the pre-migration tree. They restore the snapshot taken when migrate started (git checkout plus .nextspark/migrate-rollback), so run them right away, before editing or committing anything else: files you changed since come back as the older copies.',
+    `Run ${rollback.length === 1 ? 'this command' : 'these commands'} from any directory, in ${rollbackShells(rollback)}, to restore the pre-migration tree. ${rollback.length === 1 ? 'It restores' : 'They restore'} the snapshot taken when migrate started (git checkout plus .nextspark/migrate-rollback), so run ${rollback.length === 1 ? 'it' : 'them'} right away, before editing or committing anything else: files you changed since come back as the older copies.`,
     ...rollback,
   ]);
 }
@@ -4473,7 +4541,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     } catch {
       // Not resolvable yet: cwd and the repository root are still checked
     }
-    const unfinished = unfinishedMigration([process.cwd(), earlyRepository, ...(earlyHost ? [earlyHost] : [])], earlyRepository);
+    const unfinished = unfinishedMigration([process.cwd(), earlyRepository, ...(earlyHost ? [earlyHost] : [])], earlyRepository, Boolean(options.dryRun));
     if (unfinished) {
       rollback = unfinished.rollback;
       printRollbackOnFailure = true;
@@ -4568,7 +4636,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       const fixRollback = [...(editedFiles.length > 0 ? [`${git} checkout -- ${list(editedFiles)}`] : []), ...cleanCreated];
       const rollbackLines = renameSlugs ? renameRollback : fixRollback;
       // A file another program holds stops the run here, before anything is written
-      assertWritable(repository, [...editedFiles, ...(renameSlugs ? report.entitySlugs.renames : []).map(rename => pathFrom(repository, join(hostRoot, 'entities', rename.oldSlug)))]);
+      assertWritable(repository, editedFiles, (renameSlugs ? report.entitySlugs.renames : []).map(rename => pathFrom(repository, join(hostRoot, 'entities', rename.oldSlug))));
       if (renameSlugs || fixes.lines.length > 0) {
         // set before the first write: a run that fails partway still prints it
         rollback = rollbackLines;
@@ -4642,7 +4710,10 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const brokenBeforeMove = aliasesBeforeMove ? brokenImports(hostRoot, beforeFiles, aliasesBeforeMove) : [];
     if (!appTreeOnly) preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
     // A file another program holds stops the run here, before anything is written
-    assertWritable(hostRoot, migrationRollbackPaths(hostRoot, plan, report, hadLegacyApp));
+    // The sources of the move and the app tree are moved or deleted; everything else on the snapshot list is rewritten
+    const movedOnly = new Set([...[...plan.moves, ...plan.duplicates].map(item => pathFrom(hostRoot, item.source)), 'app']);
+    const snapshotPaths = migrationRollbackPaths(hostRoot, plan, report, hadLegacyApp);
+    assertWritable(hostRoot, snapshotPaths.filter(path => !movedOnly.has(path)), snapshotPaths.filter(path => movedOnly.has(path)));
     snapshotMigrationRollback(hostRoot, plan, report, hadLegacyApp);
     writeFileSync(join(migrationRollbackBackup(hostRoot), MIGRATION_ROLLBACK_STATE_FILE), `${JSON.stringify(state)}\n`);
     writeRollbackScript(repository, hostRoot, state);
@@ -4732,6 +4803,7 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     }
     removeMigrationRollbackBackup(hostRoot);
     console.log(`  To undo the migration before you commit it, run: ${rollback[0]}`);
+    console.log('  It runs git checkout -- . (which also discards any other uncommitted change in the repository) and removes what the run created; the ignored files the run overwrote do not come back once it has succeeded.');
   } catch (error) {
     const locked = writesStarted ? lockedPath(error) : null;
     const message = locked
