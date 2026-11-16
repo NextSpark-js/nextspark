@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * OAUTH_ENCRYPTION_KEY is 32 bytes as base64. A hex key (what the plugin docs used to ask for) decodes to 48 bytes and
+ * OAUTH_ENCRYPTION_KEY is 32 bytes as base64 (16 and 24 still work). A hex key (what the plugin docs used to ask for) decodes to 48 bytes and
  * failed as a generic "Failed to encrypt token"; it now says what the key must be (#476).
  */
 import { randomBytes, webcrypto } from 'node:crypto'
@@ -31,15 +31,16 @@ afterAll(() => {
 })
 
 describe('TokenEncryption and the OAUTH_ENCRYPTION_KEY format (#476)', () => {
-  test('a base64 key of 32 bytes encrypts and decrypts', async () => {
-    const { TokenEncryption } = await freshEncryption(randomBytes(32).toString('base64'))
+  // 32 bytes is what the docs ask for; 16 and 24 (AES-128/192) keep working for keys already in use
+  test.each([32, 24, 16])('a base64 key of %i bytes encrypts and decrypts', async bytes => {
+    const { TokenEncryption } = await freshEncryption(randomBytes(bytes).toString('base64'))
     const { encrypted, iv, keyId } = await TokenEncryption.encrypt('page-token')
     await expect(TokenEncryption.decrypt(encrypted, iv, keyId)).resolves.toBe('page-token')
   })
 
   test.each([
     ['a hex key of 32 bytes', randomBytes(32).toString('hex')],
-    ['a base64 key of 16 bytes', randomBytes(16).toString('base64')],
+    ['a base64 key of 20 bytes', randomBytes(20).toString('base64')],
     ['a value that is not base64', 'not a key!'],
   ])('%s fails encrypt and decrypt with what the key must be, never the value', async (_label, key) => {
     const { TokenEncryption, OAUTH_KEY_FORMAT_MESSAGE } = await freshEncryption(key)

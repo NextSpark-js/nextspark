@@ -53,15 +53,16 @@ export class TokenEncryption {
       );
     }
 
-    // 32 bytes as base64 (`openssl rand -base64 32`): a hex key, or any other length, fails here with what to fix, not
-    // as a generic encryption failure. Fixed text: never the value
+    // Base64 of an AES key: 32 bytes (`openssl rand -base64 32`), or 16 or 24, which existing keys may use (AES-128/192)
+    // and their stored tokens need. A hex key (48 bytes for 32), or any other length, fails here with what to fix, not as
+    // a generic encryption failure. Fixed text: never the value
     let keyData: ArrayBuffer;
     try {
       keyData = this.base64ToBuffer(keyString.trim());
     } catch {
       keyData = new ArrayBuffer(0);
     }
-    if (keyData.byteLength !== 32) {
+    if (![16, 24, 32].includes(keyData.byteLength)) {
       throw new OAuthError(OAuthErrorType.ENCRYPTION_FAILED, OAUTH_KEY_FORMAT_MESSAGE);
     }
 
