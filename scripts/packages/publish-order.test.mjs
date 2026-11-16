@@ -4,9 +4,10 @@ import { spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { BASH } from '../lib/bash.mjs'
 import { computeOrder } from './publish-order.mjs'
+import { tarCreate } from '../lib/tar.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ORDER_CLI = join(HERE, 'publish-order.mjs')
@@ -55,7 +56,7 @@ function fixtureTarballs(manifests) {
     const pkgDir = join(dir, 'src', m.name.replace(/\W/g, '_'), 'package')
     mkdirSync(pkgDir, { recursive: true })
     writeFileSync(join(pkgDir, 'package.json'), JSON.stringify({ version: '1.0.0', ...m }))
-    const tar = spawnSync('tar', ['czf', join(dir, `${m.name.replace(/\W/g, '-')}-1.0.0.tgz`), '-C', join(pkgDir, '..'), 'package'])
+    const tar = tarCreate(join(dir, `${m.name.replace(/\W/g, '-')}-1.0.0.tgz`), ['-C', join(pkgDir, '..'), 'package'])
     assert.equal(tar.status, 0)
   }
   return dir
@@ -103,7 +104,7 @@ test('the CLI prints the order when run through a symlinked directory', { skip: 
 })
 
 test('importing publish-order.mjs does not throw when argv[1] does not exist', () => {
-  const code = `process.argv[1] = '/nonexistent/entry.mjs'; await import(${JSON.stringify(ORDER_CLI)})`
+  const code = `process.argv[1] = '/nonexistent/entry.mjs'; await import(${JSON.stringify(pathToFileURL(ORDER_CLI).href)})`
   const r = spawnSync('node', ['--input-type=module', '-e', code], { encoding: 'utf8' })
   assert.equal(r.status, 0, r.stderr)
 })

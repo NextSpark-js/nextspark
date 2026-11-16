@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, sep } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 /**
  * The conformance fixture's generated host comes from the production generator
@@ -16,8 +16,8 @@ import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const FIXTURE = join(REPO_ROOT, 'packages/core/tests/fixtures/host-conformance')
-const { fixtureHostConfig } = await import(join(FIXTURE, 'plan.mjs'))
-const { checkHost, prepareHost } = await import(join(REPO_ROOT, 'packages/core/scripts/build/registry/host/prepare.mjs'))
+const { fixtureHostConfig } = await import(pathToFileURL(join(FIXTURE, 'plan.mjs')).href)
+const { checkHost, prepareHost } = await import(pathToFileURL(join(REPO_ROOT, 'packages/core/scripts/build/registry/host/prepare.mjs')).href)
 
 function files(root) {
   return readdirSync(root, { recursive: true })

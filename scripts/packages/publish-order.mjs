@@ -8,7 +8,7 @@
  * Exits 1 with a message naming the packages involved on a dependency cycle.
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, realpathSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -39,7 +39,7 @@ export function readManifests(dir) {
     .filter((f) => f.endsWith('.tgz'))
     .map((f) => {
       const file = join(dir, f)
-      const r = spawnSync('tar', ['xzOf', file, 'package/package.json'], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
+      const r = spawnSync('tar', ['xzOf', '-', 'package/package.json'], { input: readFileSync(file), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
       if (r.status !== 0) throw new Error(`Cannot read package.json from ${file}: ${r.stderr}`)
       return { file, ...JSON.parse(r.stdout) }
     })

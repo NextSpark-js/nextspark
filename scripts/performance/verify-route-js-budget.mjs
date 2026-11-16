@@ -8,6 +8,7 @@
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from 'node:url'
 
 const MEASUREMENT_KIND = "browser-route-measurement";
 const SUPPORTED_MEASUREMENT_SCHEMA_VERSIONS = new Set([2, 3]);
@@ -310,7 +311,7 @@ export async function main(argv = process.argv.slice(2)) {
   return checks;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     process.stderr.write(`route-js-budget failed: ${error.message}\n`);
     process.exitCode = 1;

@@ -50,7 +50,8 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, sep } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { tarRead } from '../lib/tar.mjs'
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const SCRIPT_DIR = join(dirname(fileURLToPath(import.meta.url)))
@@ -151,7 +152,7 @@ function listTarballs(dir) {
 
 function extractTarball(tgzPath) {
   const dest = mkdtempSync(join(tmpdir(), 'verify-tarballs-'))
-  const result = spawnSync('tar', ['xzf', tgzPath, '-C', dest], { encoding: 'utf8' })
+  const result = tarRead(tgzPath, 'xz', ['-C', dest], { encoding: 'utf8' })
   if (result.status !== 0) {
     rmSync(dest, { recursive: true, force: true })
     throw new Error(`Failed to extract ${tgzPath}: ${result.stderr || result.stdout}`)
@@ -616,7 +617,7 @@ function humanSize(bytes) {
 }
 
 function readPackedVersion(tgzPath) {
-  const result = spawnSync('tar', ['xzOf', tgzPath, 'package/package.json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  const result = tarRead(tgzPath, 'xzO', ['package/package.json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
   if (result.status !== 0) return null
   try {
     const pkg = JSON.parse(result.stdout)
@@ -884,6 +885,6 @@ function printManifestFindings() {
 
 // Run only when invoked directly (so tests can import the helpers above
 // without triggering a real verification run).
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main()
 }

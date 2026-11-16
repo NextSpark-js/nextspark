@@ -8,7 +8,7 @@
 import { createRequire } from 'node:module'
 import { readdir, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
@@ -96,7 +96,7 @@ export async function verifyNoDevCredentials(buildDir) {
   }
 
   if (matches.length > 0) {
-    throw new Error(`Dev credentials found in production static assets (${matches.length} file${matches.length === 1 ? '' : 's'}): ${matches.map((file) => file.slice(resolvedBuildDir.length + 1)).join(', ')}`)
+    throw new Error(`Dev credentials found in production static assets (${matches.length} file${matches.length === 1 ? '' : 's'}): ${matches.map((file) => file.slice(resolvedBuildDir.length + 1).split(sep).join('/')).join(', ')}`)
   }
   return { credentialsChecked: credentials.length, staticFilesChecked: files.length }
 }

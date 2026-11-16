@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { BASH } from '../lib/bash.mjs'
+import { tarRead } from '../lib/tar.mjs'
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const CORE_TEMPLATE_APP = join(REPO_ROOT, 'packages/core/templates/app')
@@ -32,11 +33,11 @@ test('the core tarball ships the route modules and no templates/app', () => {
 
     const archive = readdirSync(outputDir).find((file) => /^nextsparkjs-core-.*\.tgz$/.test(file))
     assert.ok(archive, `expected a core tarball in ${outputDir}`)
-    const listed = spawnSync('tar', ['tzf', join(outputDir, archive)], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    const listed = tarRead(join(outputDir, archive), 'tz', [], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     assert.equal(listed.status, 0, listed.stderr || listed.stdout)
     assert.doesNotMatch(listed.stdout, /package\/(dist\/)?templates\/app\//, 'the core tarball must not include templates/app')
 
-    const unpacked = spawnSync('tar', ['xzf', join(outputDir, archive), '-C', outputDir], { encoding: 'utf8' })
+    const unpacked = tarRead(join(outputDir, archive), 'xz', ['-C', outputDir], { encoding: 'utf8' })
     assert.equal(unpacked.status, 0, unpacked.stderr || unpacked.stdout)
 
     // With --skip-build there may be no dist to ship, so the route logic is read from the module
@@ -83,7 +84,7 @@ test('pack.sh drops a stale dist/templates/app instead of packing it', () => {
     assert.equal(result.status, 0, result.stderr || result.stdout)
     assert.equal(existsSync(staleDir), false, 'pack.sh must remove the stale dist/templates/app')
     const archive = readdirSync(outputDir).find((file) => /^nextsparkjs-core-.*\.tgz$/.test(file))
-    const listed = spawnSync('tar', ['tzf', join(outputDir, archive)], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    const listed = tarRead(join(outputDir, archive), 'tz', [], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     assert.doesNotMatch(listed.stdout, /package\/dist\/templates\/app\//)
   } finally {
     rmSync(staleDir, { recursive: true, force: true })

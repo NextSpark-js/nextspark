@@ -308,8 +308,13 @@ function exec(command, args, cwd, {
     // inherited: a child left running would otherwise hold a copy of this
     // script's own output, and whatever reads it to the end (a CI step,
     // `| cat`) would keep waiting for as long as that child lives.
-    const child = spawn(command, args, {
+    // pnpm is a .cmd on Windows, which spawn only starts through a shell, and a shell
+    // takes the arguments as one line, so those with a space or a metacharacter are quoted.
+    const viaShell = process.platform === 'win32' && command === 'pnpm'
+    const spawnArgs = viaShell ? args.map((arg) => (/[\s"&|<>^%]/.test(arg) ? `"${arg.replace(/"/g, '""')}"` : arg)) : args
+    const child = spawn(command, spawnArgs, {
       cwd,
+      shell: viaShell,
       stdio: ['inherit', 'pipe', 'pipe'],
       env: env ? { ...process.env, ...env } : process.env,
       detached: true,

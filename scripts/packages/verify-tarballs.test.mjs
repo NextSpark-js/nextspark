@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { tarCreate } from '../lib/tar.mjs'
 
 import {
   expectedPublishedPackageNames,
@@ -34,7 +35,7 @@ function buildFixtureTarball(outputDir, tarballName, files) {
     writeFileSync(abs, content)
   }
   const outputPath = join(outputDir, tarballName)
-  const result = spawnSync('tar', ['czf', outputPath, '-C', stageDir, 'package'], { encoding: 'utf8' })
+  const result = tarCreate(outputPath, ['-C', stageDir, 'package'])
   assert.equal(result.status, 0, result.stderr || result.stdout)
   rmSync(stageDir, { recursive: true, force: true })
   return outputPath

@@ -97,7 +97,7 @@ while [[ $# -gt 0 ]]; do
             fi
             OUTPUT_DIR="$2"
             # Convert to absolute path if relative
-            if [[ "$OUTPUT_DIR" != /* ]]; then
+            if [[ "$OUTPUT_DIR" != /* && ! "$OUTPUT_DIR" =~ ^[A-Za-z]:[\\/] ]]; then
                 OUTPUT_DIR="$REPO_ROOT/$OUTPUT_DIR"
             fi
             shift 2

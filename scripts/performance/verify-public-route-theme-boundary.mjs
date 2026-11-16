@@ -12,6 +12,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
+import { pathToFileURL } from 'node:url'
 
 export const FORBIDDEN_MARKERS = [
   { label: 'full theme registry', value: 'hasDashboardConfig' },
@@ -98,7 +99,7 @@ function parseArgs(argv) {
   throw new Error('Usage: node scripts/performance/verify-public-route-theme-boundary.mjs [--next-dir apps/dev/.next]')
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   verifyPublicRouteThemeBoundary(parseArgs(process.argv.slice(2)))
   console.log('Public route theme boundary: no full registry, dashboard config, or development config found.')
 }
