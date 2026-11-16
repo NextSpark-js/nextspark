@@ -379,7 +379,8 @@ function relativeReferences(source: string, extension: string, fromFile: string)
   return { known, unprovable: [...new Set(unprovable)] };
 }
 
-const RESOLVE_SUFFIXES = ['', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.css', '.json', '/index.ts', '/index.tsx', '/index.js', '/index.jsx'];
+// Native separator: the moved-file map holds native paths, so on Windows a '/index.ts' suffix never matched
+const RESOLVE_SUFFIXES = ['', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.css', '.json', ...['index.ts', 'index.tsx', 'index.js', 'index.jsx'].map(file => `${sep}${file}`)];
 
 interface ImportResolution {
   /** Absolute path of what the specifier names, without the moved-file mapping applied. */
