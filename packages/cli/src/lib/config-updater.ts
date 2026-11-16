@@ -9,8 +9,12 @@ export async function updateTsConfig(name: string, type: 'plugin' | 'theme'): Pr
     return
   }
 
+  const pathKey = '@/plugins/*'
+  const edit = `add "${pathKey}": ["./plugins/*"] to compilerOptions.paths in tsconfig.json`
   try {
     const content = readFileSync(tsconfigPath, 'utf-8')
+    // The tsconfig.json core ships has comments, which JSON.parse rejects, and already maps the plugins
+    if (type === 'plugin' && content.includes(`"${pathKey}"`)) return
     const tsconfig = JSON.parse(content)
 
     if (!tsconfig.compilerOptions) {
@@ -21,7 +25,6 @@ export async function updateTsConfig(name: string, type: 'plugin' | 'theme'): Pr
     }
 
     if (type === 'theme') return
-    const pathKey = '@/plugins/*'
     const pathValue = ['./plugins/*']
 
     // Solo añadir si no existe
@@ -31,7 +34,8 @@ export async function updateTsConfig(name: string, type: 'plugin' | 'theme'): Pr
       console.log(`  Updated tsconfig.json with ${pathKey} path`)
     }
   } catch (error) {
-    console.log('  Warning: Could not update tsconfig.json')
+    const reason = error instanceof Error ? error.message : String(error)
+    console.log(`  Warning: Could not update tsconfig.json (${reason}). For imports from @/plugins/ to resolve, ${edit}.`)
   }
 }
 

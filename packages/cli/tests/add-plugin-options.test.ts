@@ -1,4 +1,4 @@
-import { test, before } from 'node:test'
+import { test, before, type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { buildCli } from './built-cli.js'
+import { updateTsConfig } from '../src/lib/config-updater.js'
 
 const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
 let CLI_ENTRY = ''
@@ -49,4 +50,34 @@ test('a subcommand without a --version option rejects it, and nextspark --versio
     assert.equal(printed.status, 0, printed.output)
     assert.equal(printed.output.trim(), VERSION)
   }
+})
+
+/** What updateTsConfig prints and leaves in tsconfig.json for a project whose tsconfig.json is `content`. */
+async function tsconfigRun(t: TestContext, content: string) {
+  const root = project({ 'tsconfig.json': content })
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const printed: string[] = []
+  t.mock.method(console, 'log', (...args: unknown[]) => { printed.push(args.join(' ')) })
+  const previous = process.cwd()
+  process.chdir(root)
+  try {
+    await updateTsConfig('example', 'plugin')
+  } finally {
+    process.chdir(previous)
+  }
+  return { printed: printed.join('\n'), after: readFileSync(join(root, 'tsconfig.json'), 'utf8') }
+}
+
+test('a tsconfig.json with comments that already maps @/plugins/* is left as it is, without a warning (#474)', async (t) => {
+  const content = '{\n  // core ships comments\n  "compilerOptions": { "paths": { "@/plugins/*": ["./plugins/*"] } }\n}\n'
+  const { printed, after } = await tsconfigRun(t, content)
+  assert.equal(printed, '')
+  assert.equal(after, content)
+})
+
+test('a tsconfig.json that cannot be read as JSON gets a warning with the cause and the edit to make (#474)', async (t) => {
+  const content = '{\n  // a comment\n  "compilerOptions": {}\n}\n'
+  const { printed, after } = await tsconfigRun(t, content)
+  assert.match(printed, /Could not update tsconfig\.json \(.*JSON.*\)\. For imports from @\/plugins\/ to resolve, add "@\/plugins\/\*": \["\.\/plugins\/\*"\] to compilerOptions\.paths in tsconfig\.json\./)
+  assert.equal(after, content)
 })
