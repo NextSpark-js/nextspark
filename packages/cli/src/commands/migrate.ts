@@ -6,7 +6,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
 import { isOnPath, packageManagerCommand } from '../utils/package-manager.js';
-import { apiUrlMoves, applyAppConversion, assertContained, exitAfterSignalCleanup, terminationSignals, declareWebhookExtensions, isStaticMetadataFile, linkDirectory, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
+import { apiUrlMoves, applyAppConversion, assertContained, onTermination, terminationSignals, declareWebhookExtensions, isStaticMetadataFile, linkDirectory, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
@@ -4317,12 +4317,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     // retried: on Windows an ended child can hold its files for a moment
     for (const directory of [copy, scratch]) rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   };
-  const onSignal = (signal: NodeJS.Signals) => {
-    cleanUp();
-    exitAfterSignalCleanup(signal);
-  };
-  const signals = simulationSignals();
-  for (const signal of signals) process.once(signal, onSignal);
+  const off = onTermination(cleanUp);
   try {
     const git = (args: string[], cwd = copy) => runAndCollect('git', ['-c', 'user.email=plan@nextspark.local', '-c', 'user.name=plan', ...args], { cwd }, track);
     // No checkout at first: tracked env files must never land on disk, so only the other paths are checked out
@@ -4416,7 +4411,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
     report.hostPlan.unknown = true;
     report.hostPlan.reason = `not simulated: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`;
   } finally {
-    for (const signal of signals) process.off(signal, onSignal);
+    off();
     cleanUp();
   }
 }

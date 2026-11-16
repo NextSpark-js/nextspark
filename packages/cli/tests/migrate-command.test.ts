@@ -4896,9 +4896,9 @@ test('a signal during the simulation removes the temporary copy', posixOnly(POSI
   }
 })
 
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  test(`${signal} during the simulation removes the copy and the temporary files of its children, on every platform (#469)`, async () => {
-    const ready = join(tmpdir(), `nextspark-migrate-ready-${process.pid}-${signal}`)
+for (const [signal, foreign] of [['SIGINT', false], ['SIGTERM', false], ['SIGINT', true]] as const) {
+  test(`${signal} during the simulation removes the copy and the temporary files of its children, on every platform${foreign ? ', with a listener of someone else that does not exit' : ''} (#469)`, async () => {
+    const ready = join(tmpdir(), `nextspark-migrate-ready-${process.pid}-${signal}-${foreign}`)
     const seen = `${ready}.tmpdir`
     // The child prepare records the temporary directory it was given and fills it, as a core lookup would
     const root = await simulationFixture("import { mkdirSync, writeFileSync } from 'node:fs'\nimport { tmpdir } from 'node:os'\nimport { join } from 'node:path'\nmkdirSync(join(tmpdir(), 'nextspark-migrate-core-probe'), { recursive: true })\nwriteFileSync(join(tmpdir(), 'nextspark-migrate-core-probe', 'big'), 'x'.repeat(4096))\nwriteFileSync(process.env.NEXTSPARK_PROBE_SEEN, tmpdir())\nwriteFileSync(process.env.NEXTSPARK_PROBE_READY, 'ready')\nawait new Promise(resolve => setTimeout(resolve, 60000))\n")
@@ -4909,6 +4909,8 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     await writeFile(preload, [
       "import { existsSync, writeFileSync } from 'node:fs'",
       "if (process.env.NEXTSPARK_MIGRATE_SIMULATION !== '1') {",
+      // registered before any of the CLI's own: a listener that does nothing must not keep the signal from ending the run
+      ...(foreign ? [`  process.on(${JSON.stringify(signal)}, () => {})`] : []),
       `  const timer = setInterval(() => { if (existsSync(process.env.NEXTSPARK_PROBE_READY)) { clearInterval(timer); writeFileSync(process.env.NEXTSPARK_PROBE_READY + '.listeners', String(process.listenerCount(${JSON.stringify(signal)}))); process.emit(${JSON.stringify(signal)}, ${JSON.stringify(signal)}) } }, 50)`,
       '  timer.unref()',
       '}',
@@ -4926,7 +4928,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
       const before = new Set(list('nextspark-migrate-plan-'))
       const result = await runAsync(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: '', NEXTSPARK_PROBE_READY: ready, NEXTSPARK_PROBE_SEEN: seen, NODE_OPTIONS: `--import=${pathToFileURL(preload).href}` })
       assert.equal(result.status, signal === 'SIGINT' ? 130 : 143, result.stderr)
-      assert.ok(Number(readFileSync(`${ready}.listeners`, 'utf8')) >= 2, 'the stand-in and the simulation were both listening')
+      assert.equal(Number(readFileSync(`${ready}.listeners`, 'utf8')), foreign ? 2 : 1, 'one listener of the CLI, next to the foreign one')
       const childTmp = readFileSync(seen, 'utf8')
       assert.match(basename(childTmp), /^nextspark-migrate-plan-.+-tmp$/, `the child got its own temporary directory: ${childTmp}`)
       assert.equal(existsSync(childTmp), false, 'and it is gone, with what the child left in it')

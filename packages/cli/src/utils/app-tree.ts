@@ -82,7 +82,7 @@ function classificationRoot(emitter: { resolveNextPackage(root: string): { root:
       const remove = () => rmSync(directory, { recursive: true, force: true });
       process.once('exit', remove);
       // an interrupted run must not leave it either (the exit event does not fire on a default signal)
-      for (const signal of terminationSignals()) process.once(signal, () => { remove(); exitAfterSignalCleanup(signal); });
+      onTermination(remove);
       stand = directory;
     } catch {
       stand = null;
@@ -97,12 +97,32 @@ export function terminationSignals(platform: NodeJS.Platform = process.platform)
   return platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGBREAK'] : ['SIGINT', 'SIGTERM'];
 }
 
+const cleanups = new Set<() => void>();
+let listening = false;
+
 /**
- * The last call of a `once` signal listener that cleans something up: it ends the process only when no other listener
- * for that signal is left, so every cleanup runs whatever order they were registered in, and the last one exits.
+ * Run `cleanup` when a termination signal ends the CLI. One listener per signal, installed the first time, runs every
+ * registered cleanup (the latest first, each on its own) and then exits, so neither the order of registration nor a
+ * listener of someone else that does not exit can keep the process alive. Returns the function that unregisters it.
  */
-export function exitAfterSignalCleanup(signal: NodeJS.Signals): void {
-  if (process.listenerCount(signal) === 0) process.exit(signal === 'SIGINT' ? 130 : 143);
+export function onTermination(cleanup: () => void): () => void {
+  if (!listening) {
+    listening = true;
+    for (const signal of terminationSignals()) {
+      process.on(signal, (received: NodeJS.Signals) => {
+        for (const run of [...cleanups].reverse()) {
+          try {
+            run();
+          } catch {
+            // one cleanup that fails does not keep the others from running
+          }
+        }
+        process.exit(received === 'SIGINT' ? 130 : 143);
+      });
+    }
+  }
+  cleanups.add(cleanup);
+  return () => { cleanups.delete(cleanup); };
 }
 
 /** Load the route manifest and the facade emitter from the core installed in the project. */
