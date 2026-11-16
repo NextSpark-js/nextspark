@@ -31,7 +31,7 @@ Guided tours and onboarding for NextSpark applications: declarative tour definit
 
 - `@nextsparkjs/core` `>=0.1.0-beta.192`, with Next.js `~16.4.2` and React `^19.2.0`
 - Peer dependencies: `@phosphor-icons/react` `^2` and `zod` `^4.6.6`
-- Node.js 22.14.0 or later (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
+- Node.js 22.x (22.14.0 or later) or 24.x (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
 - The App Router: cross-page steps navigate with `router.push()` from `next/navigation`
 
 ## Quick Start

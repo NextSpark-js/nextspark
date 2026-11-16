@@ -16,7 +16,7 @@ pnpm add @nextsparkjs/mobile
 
 ## Requirements
 
-- Node.js 22.14.0 or later, and a NextSpark web project as the backend.
+- Node.js 22.x (22.14.0 or later) or 24.x, and a NextSpark web project as the backend.
 - Expo SDK 58 with React Native 0.88 is the only pair tested. The peer ranges are wider (`expo >=54.0.0`, `react-native >=0.75.0`) and still accept SDK 54 and later.
 - Peer dependencies: `react` ^19.1.0, `@tanstack/react-query` ^5, `expo-constants` >=18, `expo-device` >=8, `expo-secure-store` >=15 and, optional, `@preeternal/react-native-cookie-manager` >=6.3.0 (see [Sign-out and native cookies](#sign-out-and-native-cookies)).
 

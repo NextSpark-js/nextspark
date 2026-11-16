@@ -37,7 +37,7 @@ NextSpark is a SaaS framework built on Next.js 16. It provides everything you ne
 > **Stability:** NextSpark is in beta (`0.1.0-beta`). The [stability page](./packages/core/docs/22-stability-and-support/01-stability.md) labels each surface; some stable labels there depend on review gates.
 >
 > - **Stable:** the generated host, entities and the `/api/v1` REST API, authentication (email one-time code, Google OAuth, API keys), teams, permissions and RLS, `definePlugin`, the `starter` template, the public rendering of the page builder, `next start`, and standalone output (a `standalone` job in CI builds and runs it on Linux).
-> - **Experimental** (no deprecation promise): billing (Stripe, Polar), the MCP server, the page builder dashboard editor, the media library, scheduled actions, mobile (Expo SDK 58, until a sign-in from a simulator is verified), the six first-party plugins, the `blog`, `crm` and `productivity` templates, Vercel deployment, `nextspark skills`, and the `add:theme`, `add:plugin`, `add:mobile`, `setup:ai` and `sync:ai` helpers.
+> - **Experimental** (no deprecation promise): billing (Stripe, Polar), the MCP server, the page builder dashboard editor, the media library, scheduled actions, mobile (Expo SDK 58, until a sign-in from a simulator is verified), the six first-party plugins, the `blog`, `crm` and `productivity` templates, Vercel deployment, `nextspark skills`, and the `add:plugin`, `add:mobile`, `setup:ai` and `sync:ai` helpers.
 >
 > See also the [support matrix](./packages/core/docs/22-stability-and-support/02-support-matrix.md) and the [versioning policy](./packages/core/docs/22-stability-and-support/03-versioning-policy.md).
 

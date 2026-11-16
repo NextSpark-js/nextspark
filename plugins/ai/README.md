@@ -57,7 +57,7 @@ The routes accept a session or an API key with the `ai:write` scope, and are rat
 
 - `@nextsparkjs/core` `>=0.1.0-beta.192`, with Next.js `~16.4.2` and React `^19.2.0`
 - Peer dependencies: `@tanstack/react-query` `^5`, `lucide-react` `^0.539.0` and `zod` `^4.6.6`
-- Node.js 22.14.0 or later
+- Node.js 22.x (22.14.0 or later) or 24.x
 - Standard PostgreSQL 15 to 18 (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
 - A provider: an API key for Anthropic or OpenAI, or a running Ollama server
 

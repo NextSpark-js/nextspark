@@ -105,7 +105,7 @@ See [Upgrading a 0.x project](https://github.com/NextSpark-js/nextspark/blob/mai
 
 ## Requirements
 
-- Node.js 22.14.0 or later
+- Node.js 22.x (22.14.0 or later) or 24.x
 - pnpm 10 (10.34.6 or later), 11 or 12; npm, yarn and bun are not supported. See the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md).
 
 ## Documentation

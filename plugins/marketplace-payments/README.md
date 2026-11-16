@@ -37,7 +37,7 @@ Split a payment between the platform and a connected seller: the buyer pays, the
 
 - `@nextsparkjs/core` `>=0.1.0-beta.201`, with Next.js `~16.4.2` and React `^19.2.0`
 - Peer dependencies: `@tanstack/react-query` `^5.85.0`, `next-intl` `^4.3.4` and `zod` `^4.6.6`
-- Node.js 22.14.0 or later
+- Node.js 22.x (22.14.0 or later) or 24.x
 - Standard PostgreSQL 15 to 18 (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
 - A Stripe account with Connect, or a MercadoPago application, with test credentials for the sandbox run
 - Team roles with the `team.billing.manage` permission: the seller page and its routes answer 403 without it

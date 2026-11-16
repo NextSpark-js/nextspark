@@ -58,7 +58,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | First-party plugins: `ai`, `amplitude`, `langchain`, `marketplace-payments`, `social-media-publisher`, `walkme` | `definePlugin` itself is stable. |
 | Templates `blog`, `crm`, `productivity` | See [Project themes](../07-theme-system/01-introduction.md). |
 | AI workflow: `@nextsparkjs/ai-workflow`, `setup:ai`, `sync:ai` | Legacy, opt-in. |
-| CLI: `add:theme`, `add:plugin`, `add:mobile`, and `@nextsparkjs/testing` | |
+| CLI: `add:plugin`, `add:mobile`, and `@nextsparkjs/testing` | `add:theme` is not supported: it fails with "add:theme is not supported". |
 | Vercel deployment | See [Vercel deployment](../14-deployment/03-vercel-deployment.md). |
 
 ## Plugins in CI

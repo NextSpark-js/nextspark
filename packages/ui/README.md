@@ -16,7 +16,7 @@ A project created with `pnpm create nextspark-app` already has it, because `@nex
 
 ## Requirements
 
-- Node.js 22.14.0 or later
+- Node.js 22.x (22.14.0 or later) or 24.x
 - React `^19.1.0` (peer dependency)
 - **Web:** a Tailwind CSS setup that defines shadcn/ui-style color tokens (`bg-primary`, `text-muted-foreground`, `border-input` and so on); a NextSpark project has it. The web build starts with `"use client"` for Next.js.
 - **React Native:** React Native `>=0.75.0` and `react-native-reanimated` `>=4.0.0` (optional peer dependencies). The support matrix tests Expo SDK 58 with React Native 0.88, see [Mobile](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md#mobile).

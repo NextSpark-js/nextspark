@@ -30,7 +30,7 @@ node node_modules/@nextsparkjs/ai-workflow/scripts/setup.mjs [editor]
 
 ## Requirements
 
-- A NextSpark project and Node.js 22.14.0 or later.
+- A NextSpark project and Node.js 22.x (22.14.0 or later) or 24.x.
 - Claude Code, to use what it installs.
 
 ## What gets copied

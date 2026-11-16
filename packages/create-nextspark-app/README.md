@@ -88,7 +88,7 @@ After `pnpm install --frozen-lockfile --ignore-scripts`, the whole sequence is `
 
 ## Requirements
 
-- Node.js 22.14.0 or later
+- Node.js 22.x (22.14.0 or later) or 24.x
 - Linux x64 or macOS arm64. Windows is not supported.
 - Standard PostgreSQL 15, 16, 17 or 18, for the project's database (see the [PostgreSQL requirements](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/04-postgresql-requirements.md))
 - pnpm 10 (10.34.6 or later), 11 or 12. npm, yarn and bun are not supported (pnpm 9 is only for contributing to the NextSpark repository)

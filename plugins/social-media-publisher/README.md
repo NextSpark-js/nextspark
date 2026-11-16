@@ -50,7 +50,7 @@ Routes accept a session or an API key with the `social:read` or `social:write` s
 
 - `@nextsparkjs/core` `>=0.1.0-beta.199`, with Next.js `~16.4.2` and React `^19.2.0`
 - Peer dependencies: `lucide-react` `^0.539.0` and `zod` `^4.6.6`
-- Node.js 22.14.0 or later
+- Node.js 22.x (22.14.0 or later) or 24.x
 - Standard PostgreSQL 15 to 18 (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
 - A Facebook developer account and app; for Instagram, an Instagram Business account linked to a Facebook Page
 

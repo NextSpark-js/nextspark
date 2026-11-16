@@ -12,7 +12,7 @@ pnpm add -D @nextsparkjs/testing
 
 ## Requirements
 
-- Node.js 22.14.0 or later
+- Node.js 22.x (22.14.0 or later) or 24.x
 - Cypress 13 or later (peer dependency)
 - A NextSpark project: the selectors these helpers work with ship in `@nextsparkjs/core`. See the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md) for supported versions.
 
