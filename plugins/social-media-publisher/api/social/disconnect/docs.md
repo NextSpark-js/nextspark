@@ -5,8 +5,7 @@ Disconnect (deactivate) a social media account.
 ## Endpoint
 
 ```
-POST   /api/plugins/social-media-publisher/social/disconnect
-DELETE /api/plugins/social-media-publisher/social/disconnect/:accountId
+POST /api/plugins/social-media-publisher/social/disconnect
 ```
 
 ## Authentication
@@ -49,26 +48,11 @@ Marks a social media account as inactive (soft delete).
 }
 ```
 
-## DELETE - Disconnect Account (Alternative)
-
-Alternative method using account ID in URL path.
-
-### Example Request
-
-```
-DELETE /api/plugins/social-media-publisher/social/disconnect/123e4567-e89b-12d3-a456-426614174000
-```
-
-### Success Response (200)
-
-Same as POST method.
-
 ## Error Responses
 
 | Status | Error | Description |
 |--------|-------|-------------|
 | 400 | Validation failed | Invalid request body |
-| 400 | Invalid account ID format | UUID format invalid |
 | 400 | Account already disconnected | Account is already inactive |
 | 401 | Authentication required | Not authenticated |
 | 404 | Account not found | Account doesn't exist or no access |

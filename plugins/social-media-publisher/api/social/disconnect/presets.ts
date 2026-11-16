@@ -19,16 +19,6 @@ export default defineApiEndpoint({
         accountId: '{{accountId}}'
       },
       tags: ['write', 'disconnect']
-    },
-    {
-      id: 'disconnect-delete',
-      title: 'Disconnect Account (DELETE)',
-      description: 'Disconnect account using DELETE method with path param',
-      method: 'DELETE',
-      pathParams: {
-        accountId: '{{accountId}}'
-      },
-      tags: ['write', 'disconnect']
     }
   ]
 })
