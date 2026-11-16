@@ -1,0 +1,73 @@
+/**
+ * The root files of a host (#480): `nextspark prepare` lists the files of public/'s root and the root routes with a dot
+ * in `.nextspark/registries/root-files.ts`, which `createProxy({ rejectUnknownRootFiles: true })` reads.
+ *
+ * Run: node --test packages/core/scripts/build/registry/host/__tests__/host-root-files.test.mjs
+ */
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { rootFileNames } from '../root-files.mjs'
+import { prepareHost } from '../prepare.mjs'
+import { PAGE, ROUTE, hostConfig, read, write } from './host-helpers.mjs'
+
+const route = (kind, target) => ({ kind, target })
+
+test('public/ root files, root metadata routes and root routes with a dot are listed; folders, nested and dynamic ones are not', () => {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-root-files-'))
+  try {
+    write(root, 'public/favicon.ico', '')
+    write(root, 'public/ads.txt', '')
+    write(root, 'public/images/logo.png', '')
+    write(root, 'public/LICENSE', '')
+    mkdirSync(join(root, 'public/assets.v2'))
+    symlinkSync(join(root, 'public/ads.txt'), join(root, 'public/app-ads.txt'))
+    const names = rootFileNames({
+      hostRoot: root,
+      routes: [
+        route('robots', 'robots.ts'),
+        route('sitemap', 'sitemap.ts'),
+        route('manifest', 'manifest.ts'),
+        route('icon', 'icon.tsx'),
+        route('route', 'llms.txt/route.ts'),
+        route('route', '(public)/feed.xml/route.ts'),
+        route('page', '(public)/[slug]/page.tsx'),
+        route('page', '(public)/blog/[...slug]/page.tsx'),
+        route('route', 'api/v1/data.json/route.ts'),
+        route('sitemap', 'blog/sitemap.ts'),
+        route('page', '(public)/page.tsx'),
+      ],
+    })
+    assert.deepEqual(names, ['ads.txt', 'app-ads.txt', 'favicon.ico', 'feed.xml', 'llms.txt', 'manifest.webmanifest', 'robots.txt', 'sitemap.xml'])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('a host without public/ lists only its routes', () => {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-root-files-'))
+  try {
+    assert.deepEqual(rootFileNames({ hostRoot: root, routes: [route('robots', 'robots.ts')] }), ['robots.txt'])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('prepare writes the list with the registries, from the plan and the host public/', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-root-files-host-'))
+  try {
+    write(root, 'source/templates/pricing/page.tsx', PAGE('Pricing'))
+    write(root, 'source/templates/llms.txt/route.ts', ROUTE)
+    write(root, 'host/public/favicon.ico', '')
+    const run = await prepareHost(hostConfig(root))
+    const file = run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts')
+    assert.ok(file, 'root-files.ts is published')
+    assert.equal(read(join(root, 'host'), '.nextspark/registries/root-files.ts'), file.content)
+    assert.match(file.content, /export const ROOT_FILES: readonly string\[\] = \[\n {2}"favicon\.ico",\n {2}"llms\.txt"\n\]/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})

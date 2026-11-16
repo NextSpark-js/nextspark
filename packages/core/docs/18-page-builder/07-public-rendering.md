@@ -120,6 +120,24 @@ The destination is a path no route matches, so Next answers it the way it answer
 
 Keep the lookup cheap (the proxy runs on every request). The reserved list above is a starting point: add every top-level route your project defines (a page, a route handler, a metadata file), because anything that is not in the list and not a published slug becomes a 404. The recipe covers `/not-a-page` only; `/blog/[slug]` (two segments) is not covered, so give that route its own check in the same hook. This snippet is a recipe, not covered by the repository's tests: after adding it, confirm with `curl -I https://your-host/not-a-page` that the status is 404.
 
+**Requests for files that do not exist.** The recipe skips any segment with a dot, so `/meta.json`, `/ads.txt` or `/wp-login.php` still reach the root item route, which renders the whole not-found page with a 200 each time (crawlers and scanners ask for such files all day). The framework proxy can answer them itself, with an empty 404 before any route renders (#480). It is off by default; turn it on in `src/proxy.ts`:
+
+```typescript
+// src/proxy.ts
+import { createProxy } from '@nextsparkjs/core/proxy'
+export const proxy = createProxy({ rejectUnknownRootFiles: true })
+export const config = { matcher: ['/((?!_next/static/|_next/image$|favicon\\.ico$).*)'] }
+```
+
+- It covers one-segment paths with the extension of a static file (`.json`, `.txt`, `.xml`, `.webmanifest`, `.png`, `.jpg`, `.svg`, `.ico`, `.js`, `.css`, `.map`, `.woff2` and the others the item route treats as no item) or `.php`. Other extensions are left to the routes, because a slug may have a dot (`release-1.0`).
+- What exists passes: the files directly in `public/` and the root routes whose URL has a dot (core's `robots.txt` and `sitemap.xml`, a `templates/manifest.ts`, a `templates/llms.txt/route.ts`). `nextspark prepare`, which `nextspark build` runs, lists them in `.nextspark/registries/root-files.ts`.
+- A file added to `public/` after the build is not in the list, and Next does not serve it either: in production Next serves only the files `public/` had at build time. `next dev` serves `public/` as it is, so the option does nothing there.
+- Only the site root: `/images/missing.png`, `/api/...` and any path of several segments go on as before. Under a `basePath`, the root is the base path (`/<base>/meta.json`).
+- A request the project's hook (`config/hooks/proxy.ts`) redirects, rewrites or answers is not refused, so a hook can still serve a file of its own.
+- Leave it off if a dynamic root route of your own (not the item route) serves file names: their names are not known at build time.
+
+Check it after a build with `curl -I https://your-host/meta.json` (404, no body) and `curl -I https://your-host/robots.txt` (200).
+
 **Why the route does not check the slug before its Suspense boundary.** Reading the cached item outside the boundary and calling `notFound()` there was evaluated against Next.js 16.4 and kept out of core (#423):
 
 - The boundary of the item route is not the only one. The Cache Components root layout and the `(public)` group layout each put the page behind a Suspense boundary, for every public page and every project page of the group; without them the build fails. Taking the item route's boundary away changes nothing while those two stand.

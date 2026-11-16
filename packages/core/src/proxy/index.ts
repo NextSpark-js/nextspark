@@ -37,6 +37,8 @@ import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '../
 import { isDocsPublic, legacyDocsAccessMessage } from '../lib/docs/access'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { FEATURES } from '@nextsparkjs/registries/features'
+import { ROOT_FILES } from '@nextsparkjs/registries/root-files'
+import { STATIC_FILE_EXTENSION } from '../lib/entities/public-item-slug'
 
 /**
  * Session type for proxy (inline definition)
@@ -166,6 +168,27 @@ function rewriteToNotFound(
     headers: themeResponseHeaders(themeResponse),
     request: { headers: requestHeaders },
   }))
+}
+
+const ROOT_FILE_NAMES = new Set(ROOT_FILES)
+
+/**
+ * Whether a request is for a file at the site root that the build did not list (#480): one segment, with an extension
+ * of a static file (the ones the item route already treats as no item) or `.php`, and not a file of public/'s root or a
+ * root route with a dot (`.nextspark/registries/root-files.ts`). A page slug may have a dot (`release-1.0`), so other
+ * extensions are left to the routes.
+ */
+function isUnknownRootFile(request: NextRequest, pathname: string): boolean {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return false
+  const match = /^\/([^/]+)$/.exec(pathname)
+  if (!match) return false
+  let name: string
+  try {
+    name = decodeURIComponent(match[1])
+  } catch {
+    return false
+  }
+  return (STATIC_FILE_EXTENSION.test(name) || /\.php$/i.test(name)) && !ROOT_FILE_NAMES.has(name)
 }
 
 /**
@@ -480,7 +503,13 @@ function warnLegacyDocsAccess(docsConfig: Parameters<typeof legacyDocsAccessMess
   console.warn(`[NextSpark] ${message}`)
 }
 
-async function handle(request: NextRequest, authenticatedPaths: readonly string[], hookTimeoutMs: number): Promise<NextResponse> {
+interface HandleOptions {
+  authenticatedPaths: readonly string[]
+  hookTimeoutMs: number
+  rejectUnknownRootFiles: boolean
+}
+
+async function handle(request: NextRequest, { authenticatedPaths, hookTimeoutMs, rejectUnknownRootFiles }: HandleOptions): Promise<NextResponse> {
   const originalTarget = requestTarget(request)
   const sanitizedHeaders = sanitizeRequestHeaders(request)
   // The project hook is an extension hook, not a replacement security
@@ -608,6 +637,12 @@ async function handle(request: NextRequest, authenticatedPaths: readonly string[
 
   const { pathname } = target
 
+  // A file the build did not list, when the hook left the request as it came: an empty 404 before any route renders.
+  // Next serves public/ as of the build only in production, so `next dev` is left to serve what is there now.
+  if (rejectUnknownRootFiles && !rewriteDestination && process.env.NODE_ENV !== 'development' && isUnknownRootFile(request, pathname)) {
+    return finishCoreResponse(new NextResponse(null, { status: 404 }))
+  }
+
   // Redirect historical 3-level docs URLs (/docs/<core|theme>/<section>/<page>)
   // to the current route. That split predates this app's history: `core` and
   // `theme` were the only two categories ever generated (a third, `plugins`,
@@ -717,6 +752,17 @@ export interface ProxyOptions {
    * outbound calls their own `AbortSignal.timeout`.
    */
   hookTimeoutMs?: number
+  /**
+   * Answer a request for a file at the site root that the build did not list with an empty 404, before any route
+   * renders (#480). It covers one-segment paths with the extension of a static file (`.json`, `.txt`, `.xml`, `.png`,
+   * `.ico`, `.js`, `.css`, ... and `.php`), such as `/meta.json` or `/wp-login.php`, which otherwise reach the root item
+   * route and render its not-found page. A file directly in `public/`, and a root route with a dot (`robots.txt`,
+   * `sitemap.xml`, `manifest.webmanifest`, a `templates/llms.txt/route.ts`), are listed by `nextspark prepare` and pass;
+   * so do paths of several segments, `/api/...` included, and a request the project's hook redirects, rewrites or
+   * answers. A file added to `public/` after the build is not listed, and Next would not serve it either. Not applied
+   * by `next dev`. Default false. Leave it off when a dynamic root route of your own serves file names.
+   */
+  rejectUnknownRootFiles?: boolean
 }
 
 /**
@@ -748,9 +794,13 @@ export function createProxy(options: ProxyOptions = {}): (request: NextRequest) 
   if (!Number.isFinite(hookTimeoutMs) || hookTimeoutMs <= 0 || hookTimeoutMs > MAX_HOOK_TIMEOUT_MS) {
     throw new Error(`createProxy: hookTimeoutMs is a number of milliseconds above 0 and at most ${MAX_HOOK_TIMEOUT_MS}. Got ${JSON.stringify(options.hookTimeoutMs)}`)
   }
-  const authenticatedPaths = [...AUTHENTICATED_PATHS, ...extra]
+  const handleOptions: HandleOptions = {
+    authenticatedPaths: [...AUTHENTICATED_PATHS, ...extra],
+    hookTimeoutMs,
+    rejectUnknownRootFiles: options.rejectUnknownRootFiles === true,
+  }
   return function proxy(request: NextRequest) {
-    return handle(request, authenticatedPaths, hookTimeoutMs)
+    return handle(request, handleOptions)
   }
 }
 

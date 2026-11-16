@@ -108,7 +108,7 @@ const METADATA_FILE_KINDS = new Set(['sitemap', 'robots', 'manifest', 'icon', 'a
  * The URL a route file serves, as segments: route groups and slots dropped, and an intercepting segment
  * (`(.)x`, `(..)x`, `(..)(..)x`, `(...)x`) resolved to the path it intercepts.
  */
-function servedUrlSegments(target) {
+export function servedUrlSegments(target) {
   const served = []
   for (const segment of urlSegments(target)) {
     const markers = /^((?:\(\.{1,3}\))+)(.*)$/.exec(segment)

@@ -53,6 +53,7 @@ import { featureConfigDiagnostics } from './features.mjs'
 import { coreRouteRateLimit } from './rate-limit.mjs'
 import { proxyAreaNotices } from './proxy-areas.mjs'
 import { proxyPathDiagnostics } from './proxy-paths.mjs'
+import { rootFilesRegistry } from './root-files.mjs'
 import { ENTRY_NOT_REPLACED, INSTRUMENTATION_MOVED, INSTRUMENTATION_NOT_LOADED, projectEntryNotices, upgradeProjectEntries } from './project-entries.mjs'
 import { HostPlanError, PLAN_NOTICES, compareTargets, planHost } from './plan.mjs'
 import { findQueryHooksWithoutProvider, queryHookNotice } from '../../../maintenance/query-providers.mjs'
@@ -273,7 +274,8 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
     const contracts = await planContractsStep(config)
     // The typed entity client (#277) is generated from the same contracts and published as registry files
     const clientFiles = planClientStep(config, contracts)
-    const files = [...appFiles, ...registryFiles, ...clientFiles]
+    // The root files the proxy may answer 404 for without them (#480): written with the registries, from the same plan
+    const files = [...appFiles, ...registryFiles, ...clientFiles, rootFilesRegistry({ routes, hostRoot: config.hostRoot })]
     const invalid = await validateFiles(files, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
     if (invalid.length > 0) throw new PrepareError(invalid)
 

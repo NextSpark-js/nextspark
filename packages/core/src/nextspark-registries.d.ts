@@ -470,6 +470,11 @@ declare module '@nextsparkjs/registries/features' {
   export const FEATURES: { readonly billing: boolean; readonly superadmin: boolean }
 }
 
+declare module '@nextsparkjs/registries/root-files' {
+  /** The names with a dot the host serves at its root (public/'s files, root routes such as robots.txt), for createProxy({ rejectUnknownRootFiles }) (#480). */
+  export const ROOT_FILES: readonly string[]
+}
+
 declare module '@nextsparkjs/registries/request-locale' {
   /** `i18n.requestLocale.auth`: the `(auth)` group renders in the request's locale. */
   export const REQUEST_LOCALE_AUTH: boolean
