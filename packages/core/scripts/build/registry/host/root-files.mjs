@@ -4,9 +4,10 @@
  * With that option the proxy answers a one-segment request for a file (`/meta.json`, `/wp-login.php`) with an empty 404
  * before any route renders, unless the name is here: a file directly in the project's `public/`, or a root route whose
  * URL has a dot (core's `robots.ts` and `sitemap.ts`, a project's `manifest.ts`, a `templates/llms.txt/route.ts`).
- * Next serves only the `public/` files that were there at build time, so a list taken by `nextspark prepare` (which
- * `nextspark build` runs) matches what the server can serve. Written with the registries as
- * `.nextspark/registries/root-files.ts`.
+ * The list is taken by `nextspark prepare` (which `nextspark build` runs before `next build`), so it does not know a file
+ * written into public/ during or after the build (a serwist or next-pwa service worker, next-sitemap's postbuild
+ * sitemaps), nor the sources of next.config `rewrites`, which run after the proxy: with the option on, those get the
+ * 404 too. Written with the registries as `.nextspark/registries/root-files.ts`.
  *
  * @module core/scripts/build/registry/host/root-files
  */

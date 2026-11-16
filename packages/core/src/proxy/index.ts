@@ -144,8 +144,10 @@ function isMissingDocsPage(pathname: string): boolean {
  * to `/_not-found`, Next's own not-found route, is answered 404 by `next start` but is served as a static page with
  * 200 on Vercel. A path no route matches is answered 404 with the not-found page by both, the way any unknown URL
  * is. The first segment starts with `_`, a private folder in the App Router, so no static route can match it, and
- * the path has two segments, so the root item route (`[slug]`) does not match it either; only a root catch-all
- * (`[...slug]`) a project writes itself would.
+ * the path has two segments, so the root item route (`[slug]`) does not match it either. A two-segment dynamic route
+ * at the root does match it: the root item route of a builder entity with basePath `/` and `allowNestedSlugs: true`
+ * (`(public)/[...slug]`, which core generates), a root catch-all a project writes, or `[a]/[b]`. There the route
+ * answers (under Cache Components, 200 with `noindex`), so this rewrite does not give the 404.
  */
 const NOT_FOUND_REWRITE_PATH = '/_ns/not-found'
 
@@ -759,8 +761,11 @@ export interface ProxyOptions {
    * route and render its not-found page. A file directly in `public/`, and a root route with a dot (`robots.txt`,
    * `sitemap.xml`, `manifest.webmanifest`, a `templates/llms.txt/route.ts`), are listed by `nextspark prepare` and pass;
    * so do paths of several segments, `/api/...` included, and a request the project's hook redirects, rewrites or
-   * answers. A file added to `public/` after the build is not listed, and Next would not serve it either. Not applied
-   * by `next dev`. Default false. Leave it off when a dynamic root route of your own serves file names.
+   * answers. The list is taken by `nextspark prepare`, before `next build`: a file written into `public/` during or after
+   * the build (a serwist or next-pwa service worker, next-sitemap's postbuild sitemaps) is not listed, nor is the source
+   * of a next.config `rewrites` entry (it runs after the proxy), and both get the 404. A page slug ending in `.php` is
+   * not reachable. Not applied by `next dev`. Default false. Leave it off when any of those, or a dynamic root route of
+   * your own that serves file names, serves a root file.
    */
   rejectUnknownRootFiles?: boolean
 }

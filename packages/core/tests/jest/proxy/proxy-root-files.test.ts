@@ -2,7 +2,7 @@
  * createProxy({ rejectUnknownRootFiles }) (#480)
  *
  * A one-segment request for a file the build did not list gets an empty 404 before any route renders. The root files
- * come from the registries mock (root-files.ts): favicon.ico, llms.txt, logo.png, robots.txt, sitemap.xml.
+ * come from the registries mock (root-files.ts): favicon.ico, llms.txt, logo.png, 'my logo.png', robots.txt, sitemap.xml.
  * Next's real NextRequest/NextResponse, as in proxy-theme-composition.test.ts, so the status and body are the real ones.
  */
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
@@ -87,6 +87,21 @@ describe('createProxy({ rejectUnknownRootFiles }) (#480)', () => {
     const response = await rejecting(request(path))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
+  test('a listed name is compared decoded: /my%20logo.png is "my logo.png"', async () => {
+    expect((await rejecting(request('/my%20logo.png'))).headers.get('x-middleware-next')).toBe('1')
+    expect((await rejecting(request('/my%20other.png'))).status).toBe(404)
+  })
+
+  test('a hook rewrite to an unlisted one-segment name goes to that destination, not to the 404', async () => {
+    mockHasProjectMiddleware.mockReturnValue(true)
+    mockExecuteProjectMiddleware.mockReturnValueOnce(NextResponse.rewrite(new URL('http://localhost:3000/generated.json')))
+
+    const response = await rejecting(request('/feed.json'))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-middleware-rewrite')).toBe('http://localhost:3000/generated.json')
   })
 
   test('a POST is left to the app', async () => {
