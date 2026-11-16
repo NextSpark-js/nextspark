@@ -73,9 +73,9 @@ function classificationRoot(emitter: { resolveNextPackage(root: string): { root:
       const manifest = JSON.parse(readFileSync(join(installed.root, 'package.json'), 'utf8')) as Record<string, unknown>;
       writeFileSync(join(directory, 'package.json'), '{}');
       writeFileSync(join(next, 'package.json'), JSON.stringify({ ...manifest, version: emitter.ROUTE_EXPORT_TABLE.next }));
-      symlinkSync(join(installed.root, 'dist'), join(next, 'dist'), 'dir');
+      linkDirectory(join(installed.root, 'dist'), join(next, 'dist'));
       try {
-        symlinkSync(dirname(createRequire(join(hostRoot, 'package.json')).resolve('typescript/package.json')), join(directory, 'node_modules', 'typescript'), 'dir');
+        linkDirectory(dirname(createRequire(join(hostRoot, 'package.json')).resolve('typescript/package.json')), join(directory, 'node_modules', 'typescript'));
       } catch {
         // core brings its own TypeScript
       }
@@ -1002,4 +1002,9 @@ export function apiUrlMoves(files: readonly string[], hostRoot: string): ApiUrlM
     });
   }
   return moves;
+}
+
+/** Windows only links a directory without elevated rights as a junction; elsewhere `dir` is a plain symlink. */
+export function linkDirectory(target: string, link: string, symlink: typeof symlinkSync = symlinkSync, platform: NodeJS.Platform = process.platform): void {
+  symlink(target, link, platform === 'win32' ? 'junction' : 'dir');
 }

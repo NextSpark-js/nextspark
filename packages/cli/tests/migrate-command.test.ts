@@ -3,7 +3,7 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { after, before, test } from 'node:test'
 import { createServer } from 'node:http'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, type symlinkSync } from 'node:fs'
 import { access, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -14,7 +14,7 @@ import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
 import { canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
-import { loadCoreHost } from '../src/utils/app-tree.js'
+import { linkDirectory, loadCoreHost } from '../src/utils/app-tree.js'
 import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
 
@@ -5799,4 +5799,12 @@ test('an alias to a native path with backslashes drops the trailing /index like 
     await writeFile(native, '')
     assert.equal(canonicalAliasSpecifier(host, join(host, 'components', 'DS', 'index.ts'), native), '@/components/DS')
   } finally { await rm(host, { recursive: true, force: true }) }
+})
+
+test("a directory is linked as a junction on Windows, which asks no privilege, and as a dir symlink elsewhere (#467)", () => {
+  const calls: unknown[][] = []
+  const fake = ((...args: unknown[]) => { calls.push(args) }) as unknown as typeof symlinkSync
+  linkDirectory("/a", "/b", fake, "win32")
+  linkDirectory("/a", "/b", fake, "linux")
+  assert.deepEqual(calls, [["/a", "/b", "junction"], ["/a", "/b", "dir"]])
 })

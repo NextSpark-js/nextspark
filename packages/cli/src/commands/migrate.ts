@@ -6,7 +6,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
 import { isOnPath, packageManagerCommand } from '../utils/package-manager.js';
-import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, isStaticMetadataFile, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
+import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, isStaticMetadataFile, linkDirectory, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
@@ -1905,7 +1905,7 @@ async function analyze(cwd: string, themeFlag?: string): Promise<{ report: Migra
       proxyNotices.push(`root ${file} holds project code and is left where it is: there is no app tree to convert, so migrate does not touch it. Make sure it only imports APIs the installed core still exports.`);
       continue;
     }
-    const occupied = [...['proxy.ts', 'middleware.ts'].map(name => join('src', name)).filter(name => existsSync(join(host.root, name))), ...(file === rootProxyFiles.customizations[0] ? [] : [`src/${rootProxyFiles.customizations[0]}`])];
+    const occupied = [...['proxy.ts', 'middleware.ts'].map(name => `src/${name}`).filter(name => existsSync(join(host.root, name))), ...(file === rootProxyFiles.customizations[0] ? [] : [`src/${rootProxyFiles.customizations[0]}`])];
     if (occupied.length > 0) {
       blockers.push(`root ${file} holds project code and cannot move to src/${file}: Next loads only one proxy file and ${occupied.join(', ')} is taken (it exists, or is where the other root file goes). Merge ${file} into ${occupied[0]} by hand, delete the root file, commit, and run migrate again`);
       continue;
@@ -4157,7 +4157,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
       const modules = join(dirname(manifest), 'node_modules');
       const link = join(copy, pathFrom(repository, modules));
       // a project that tracks its node_modules already has them in the copy
-      if (existsSync(modules) && !lstatExists(link)) symlinkSync(modules, link);
+      if (existsSync(modules) && !lstatExists(link)) linkDirectory(modules, link);
     }
     await git(['add', '-A']);
     await git(['commit', '--quiet', '--no-verify', '--allow-empty', '-m', 'plan']);

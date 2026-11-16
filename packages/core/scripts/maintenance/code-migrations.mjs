@@ -29,6 +29,11 @@ function readText(file) {
   }
 }
 
+/** A relative path as shown to the user: always with `/`, whatever the platform's separator */
+export function displayPath(file, separator = path.sep) {
+  return file.split(separator).join('/')
+}
+
 /**
  * Code files of the project at `root`, relative to it. A directory that cannot be read (a database volume owned by
  * another user, say) is skipped: it is not the project's code.
@@ -46,7 +51,7 @@ export function projectSourceFiles(root, dir = root, found = []) {
       if (SKIPPED_DIRS.has(entry.name) || entry.name.startsWith('.') || path.relative(root, full) === path.join('src', 'app')) continue
       projectSourceFiles(root, full, found)
     } else if (entry.isFile() && SOURCE_FILE.test(entry.name) && !SKIPPED_FILE.test(entry.name)) {
-      found.push(path.relative(root, full))
+      found.push(displayPath(path.relative(root, full)))
     }
   }
   return found

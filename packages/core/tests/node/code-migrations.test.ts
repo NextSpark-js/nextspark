@@ -9,7 +9,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { CODE_MIGRATIONS, classifyMainLayout, findNextThemesImports, nextThemesLines, projectSourceFiles, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
+import { CODE_MIGRATIONS, classifyMainLayout, displayPath, findNextThemesImports, nextThemesLines, projectSourceFiles, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
 
 const CORE = '@nextsparkjs/core/providers/theme-provider'
 
@@ -273,4 +273,9 @@ test('what the 0.1.0-beta.202 migration writes is within what it declares (#441)
       if (before.get(file) !== content) assert.ok(entityRegistryMigration().writes.includes(file), `${file} was written and is not in writes`)
     }
   }
+})
+
+test("a path shown to the user has / whatever separator the platform uses (#467)", () => {
+  assert.equal(displayPath("src\\lib\\theme.tsx", "\\"), "src/lib/theme.tsx")
+  assert.equal(displayPath("src/lib/theme.tsx", "/"), "src/lib/theme.tsx")
 })
