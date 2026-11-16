@@ -4070,10 +4070,18 @@ interface SimulationChild {
   output: string;
 }
 
+/**
+ * How the simulation starts its children. Off Windows each runs in a process group of its own, so a signal to the
+ * simulation reaches everything the migration started. On Windows a detached child has no console, and every console
+ * program it starts (git, node, pnpm) opens a window of its own (#468): there it stays attached, its window hidden.
+ */
+export function simulationSpawnOptions(platform: string = process.platform): { detached: boolean; windowsHide: boolean } {
+  return { detached: platform !== 'win32', windowsHide: true };
+}
+
 function runAndCollect(command: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv; timeoutMs?: number }, track: (child: ChildProcess | null) => void): Promise<SimulationChild> {
   return new Promise(resolvePromise => {
-    // its own process group, so a signal to the simulation reaches everything the migration started
-    const child = spawn(command, args, { cwd: options.cwd, env: options.env ?? process.env, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    const child = spawn(command, args, { cwd: options.cwd, env: options.env ?? process.env, stdio: ['ignore', 'pipe', 'pipe'], ...simulationSpawnOptions() });
     track(child);
     let output = '';
     // whole characters, however a chunk splits a multi-byte name
