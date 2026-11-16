@@ -44,7 +44,11 @@ Routes accept a session or an API key with the `social:read` or `social:write` s
 
 3. Run `pnpm db:migrate`; if your app connects as `nextspark_app`, run it as the tables' owner (`MIGRATE_DATABASE_URL`). `GET /api/v1/audit-logs` checks the permissions `audit-logs.list` and `audit-logs.read`, which only your project's `config/permissions.config.ts` declares: add them under `entities` with the roles that may read the logs (see the [core changelog](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/CHANGELOG.md), 0.1.0-beta.203).
 
-4. Write and register the adapter: [Adapter integration](./docs/03-advanced-usage/04-adapter-integration.md). The routes throw `No adapter registered` until the project registers one.
+4. Write the adapter and register it from the `register()` of your `src/instrumentation.ts`, after core's: [Adapter integration](./docs/03-advanced-usage/04-adapter-integration.md). The adapter says which of your entities uses each account (access, assignments, the entities shown next to an account, where a published post is recorded); the plugin's routes query only its own tables.
+
+## Without an adapter
+
+Until the project registers an adapter, `connect`, `disconnect`, the audit log and `GET .../social/accounts` without `entityId` (the user's connected accounts) work. `GET .../social/accounts?entityId=...`, `assign` and `publish` answer `501` with `code: "SOCIAL_ADAPTER_NOT_REGISTERED"` and a link to the adapter guide, and the OAuth callback's popup shows that the adapter is missing.
 
 ## Requirements
 

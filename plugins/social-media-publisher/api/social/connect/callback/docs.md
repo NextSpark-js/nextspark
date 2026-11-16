@@ -120,9 +120,8 @@ Fetches Facebook Pages the user manages:
 
 ## Database Storage
 
-Accounts stored in `clients_social_platforms` table:
-- Linked to client via `parentId`
-- Upsert on `platformAccountId` conflict
+- Tokens stored in the plugin's `social_accounts` table (upsert on `platformAccountId` conflict)
+- The link to the entity saved by the project's adapter (`saveAssignment`), in the project's own table
 - Audit log entry created for each connection
 
 ## Frontend Integration

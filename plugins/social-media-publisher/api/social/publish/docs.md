@@ -29,8 +29,11 @@ x-team-id: <team-id>
 | `imageUrl` | string | No* | Single image URL |
 | `imageUrls` | string[] | No* | Multiple image URLs for carousel (2-10) |
 | `caption` | string | No | Post caption/message |
+| `entityId` | string (UUID) | No | Your content record: after a successful post the plugin passes it, with the post's id and URL, to the adapter's `recordPublishedPost` |
 
 *Instagram requires at least one image. Facebook supports text-only posts.
+
+Without a registered adapter the route answers `501` (`code: "SOCIAL_ADAPTER_NOT_REGISTERED"`), see [Adapter integration](../../../docs/03-advanced-usage/04-adapter-integration.md).
 
 ### Example: Single Image Post
 
