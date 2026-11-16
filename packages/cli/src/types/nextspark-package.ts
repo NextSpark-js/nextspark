@@ -115,6 +115,8 @@ export interface PostinstallContext {
   coreVersion: string
   timestamp: number
   installingPlugins: Set<string>
+  /** The version the plugin being installed was fetched at; its required `@nextsparkjs/*` plugins install at it too. */
+  pluginVersion?: string
   /**
    * Present when an outer command installs dependencies once for everything it
    * adds; a nested add records its own here instead of installing.

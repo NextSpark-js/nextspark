@@ -508,3 +508,13 @@ test('without local plugin tarballs the wizard is started as before', async () =
   const created = await create({ callerPnpm: '9.0.0', projectPnpm: '9.0.0' })
   assert.equal(created.wizardPluginTarballs, '')
 })
+
+// #475: the wizard (the CLI) installs the plugins at its own version, so what makes them match this installer is that
+// the CLI it runs is this installer's version and not `latest`
+test('without local tarballs the project installs core, the CLI and ui at the installer\'s own version (#475)', async () => {
+  const own = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
+  const { added } = await create({ callerPnpm: '9.0.0', projectPnpm: '9.0.0', tarballs: [] })
+  for (const name of ['core', 'cli', 'ui']) {
+    assert.ok(added.includes(`@nextsparkjs/${name}@${own}`), `expected @nextsparkjs/${name}@${own} in: ${added.join(' ')}`)
+  }
+})

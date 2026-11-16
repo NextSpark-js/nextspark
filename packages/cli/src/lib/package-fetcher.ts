@@ -107,6 +107,9 @@ async function fetchNpmPackage(
     // read to tell a missing package or a network failure from anything else.
     if (isSubprocessError(error)) {
       const output = `${error.stderr ?? ''}\n${error.stdout ?? ''}`
+      if (version && /ETARGET|No match(ing)?( version)? found|No matching version/i.test(output)) {
+        throw new Error(`Version ${version} of ${packageName} was not found on npm. It may not be published yet; pass -v <version> of a published release, or the path to a .tgz.`)
+      }
       if (/\b404\b|not found/i.test(output)) {
         throw new Error(`Package not found: ${spec}. Verify the package name exists on npm.`)
       }

@@ -49,9 +49,10 @@ export async function addPlugin(
 
     // Fetch package
     spinner.text = 'Downloading package...'
+    const version = options.version ?? lockstepVersion(packageSpec)
     const { packageJson, extractedPath, cleanup: cleanupFn } = await fetchPackage(
       packageSpec,
-      options.version
+      version
     )
     cleanup = cleanupFn
 
@@ -83,7 +84,8 @@ export async function addPlugin(
         coreVersion,
         timestamp: Date.now(),
         installingPlugins: options.installingPlugins || new Set([packageSpec]),
-        pendingDependencies
+        pendingDependencies,
+        pluginVersion: isLockstepSpec(packageSpec) ? version : undefined
       }
 
       await runPostinstall(packageJson, result.installedPath, context)
@@ -115,6 +117,25 @@ export async function addPlugin(
   } finally {
     if (cleanup) cleanup()
   }
+}
+
+/** An unversioned `@nextsparkjs/*` npm name: these packages release in lockstep with core. */
+export function isLockstepSpec(packageSpec: string): boolean {
+  return packageSpec.startsWith('@nextsparkjs/') && !packageSpec.slice(1).includes('@') &&
+    !packageSpec.endsWith('.tgz') && !packageSpec.startsWith('/') && !packageSpec.startsWith('./')
+}
+
+/**
+ * The version an unversioned `@nextsparkjs/*` package installs at: the core installed in the project, never the
+ * `latest` tag (#475). Anything else (a path, a name with a version, another scope) is left as it was given.
+ */
+function lockstepVersion(packageSpec: string): string | undefined {
+  if (!isLockstepSpec(packageSpec)) return undefined
+  const core = getCoreVersion()
+  if (core === '0.0.0') {
+    throw new Error(`Could not read the version of @nextsparkjs/core installed in this project, so ${packageSpec} cannot be matched to it. Install the project's dependencies, or pass --version.`)
+  }
+  return core
 }
 
 function getCoreVersion(): string {

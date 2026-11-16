@@ -34,9 +34,11 @@ export async function runPostinstall(
         context.installingPlugins.add(plugin)
 
         // Importar dinamicamente para evitar dependencia circular
-        const { addPlugin } = await import('../../commands/add-plugin.js')
+        const { addPlugin, isLockstepSpec } = await import('../../commands/add-plugin.js')
         await addPlugin(plugin, {
           installingPlugins: context.installingPlugins,
+          // only a lockstep package follows the plugin being installed; a third-party or versioned name is left as given
+          version: isLockstepSpec(plugin) ? context.pluginVersion : undefined,
           pendingDependencies: context.pendingDependencies
         })
       }

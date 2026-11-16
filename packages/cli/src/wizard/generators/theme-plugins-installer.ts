@@ -1,6 +1,6 @@
 /** Root-first project-template and local-plugin selection for the wizard. */
 
-import { cpSync, existsSync, mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import chalk from '../../utils/colors.js'
 import ora from 'ora'
@@ -36,6 +36,19 @@ function localPluginTarballs(): Record<string, string> {
   }
   console.log(chalk.yellow(`  ⚠ ${LOCAL_PLUGIN_TARBALLS_ENV} is not a JSON object of package name -> tarball path; ignoring it, plugins come from the registry.`))
   return {}
+}
+
+/** The CLI's own version; the file is one level up from the bundle (dist/) and three up from the source. */
+function cliVersion(): string {
+  for (const relative of ['../package.json', '../../../package.json']) {
+    try {
+      const pkg = JSON.parse(readFileSync(new URL(relative, import.meta.url), 'utf-8'))
+      if (pkg.name === '@nextsparkjs/cli' && pkg.version) return pkg.version
+    } catch {
+      // try the next location
+    }
+  }
+  throw new Error('Could not read the version of @nextsparkjs/cli.')
 }
 
 function choices(options: readonly string[], includeNone = false): string {
@@ -92,12 +105,12 @@ async function copyLocalPlugin(name: string, sourceDir: string): Promise<void> {
   cpSync(sourceDir, targetDir, { recursive: true })
 }
 
-async function installPluginViaCli(packageSpec: string): Promise<boolean> {
+async function installPluginViaCli(packageSpec: string, version?: string): Promise<boolean> {
   const originalCwd = process.cwd()
   const target = appDir()
   if (target !== originalCwd) process.chdir(target)
   try {
-    await addPlugin(packageSpec, { pendingDependencies: [] })
+    await addPlugin(packageSpec, { pendingDependencies: [], version })
     return true
   } catch {
     return false
@@ -131,7 +144,9 @@ export async function installPlugins(plugins: PluginChoice[]): Promise<boolean> 
         continue
       }
       const packageName = PLUGIN_PACKAGES[plugin as Exclude<PluginChoice, 'starter'>]
-      const success = await installPluginViaCli(localPluginTarballs()[packageName] ?? packageName)
+      // The plugin is the CLI's own version, which is core's (lockstep), not the registry's `latest` (#475)
+      const tarball = localPluginTarballs()[packageName]
+      const success = await installPluginViaCli(tarball ?? packageName, tarball ? undefined : cliVersion())
       if (success) spinner.succeed(chalk.green(`Plugin ${plugin} installed!`))
       else {
         spinner.fail(chalk.red(`Failed to install plugin: ${plugin}`))
