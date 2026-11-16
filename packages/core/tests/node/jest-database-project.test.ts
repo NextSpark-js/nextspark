@@ -37,7 +37,7 @@ function project(t: Cleanup, extra: Record<string, string> = {}) {
     fs.mkdirSync(path.dirname(path.join(root, relative)), { recursive: true })
     fs.writeFileSync(path.join(root, relative), content)
   }
-  write('package.json', JSON.stringify({ name: 'project', private: true, dependencies: { next: '16.4.2' } }))
+  write('package.json', JSON.stringify({ name: 'project', private: true, dependencies: { next: '16.4.5' } }))
   write('nextspark.config.ts', 'export default { plugins: [] }\n')
   write('config/theme.config.ts', "export const themeConfig = { name: 'fixture' }\n")
   write('migrations/001_widgets.sql', 'CREATE TABLE widgets (id int PRIMARY KEY);')

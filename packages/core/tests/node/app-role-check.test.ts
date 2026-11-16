@@ -50,7 +50,7 @@ function migrate(t: TestContext, url: string) {
   fs.writeFileSync(path.join(root, 'entities/widgets/migrations/100_widgets.sql'), 'CREATE TABLE IF NOT EXISTS widgets (id int PRIMARY KEY);')
   fs.copyFileSync(path.join(CORE, 'migrations/022_rls_runtime_roles.sql'), path.join(root, 'packages/core/migrations/022_rls_runtime_roles.sql'))
   fs.writeFileSync(path.join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.2' } }))
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.5' } }))
   fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
   fs.writeFileSync(path.join(root, 'config/theme.config.ts'), "export const themeConfig = { name: 'fixture' }\n")
   const env = { ...process.env, DATABASE_URL: url }

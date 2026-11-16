@@ -525,7 +525,7 @@
   },
   "peerDependencies": {
     "aws4fetch": "^1.0.20",
-    "next": "~16.4.2",
+    "next": "~16.4.5",
     "nodemailer": "^10.1.2",
     "pg-boss": "^12.37.1",
     "react": "^19.2.0",

@@ -22,7 +22,7 @@ const ERROR = /teams\.appRoleBypass in config\/app\.config\.ts must be one of 'n
 function project(appConfig) {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-app-role-bypass-'))
   writeFileSync(join(root, 'nextspark.config.ts'), 'export default {}\n')
-  writeFileSync(join(root, 'package.json'), '{"dependencies":{"next":"16.4.2"}}')
+  writeFileSync(join(root, 'package.json'), '{"dependencies":{"next":"16.4.5"}}')
   mkdirSync(join(root, 'src', 'app'), { recursive: true })
   if (appConfig !== undefined) {
     mkdirSync(join(root, 'config'))

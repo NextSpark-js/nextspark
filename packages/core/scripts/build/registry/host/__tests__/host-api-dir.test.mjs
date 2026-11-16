@@ -20,7 +20,7 @@ import { PAGE, ROUTE, read, write } from './host-helpers.mjs'
 function project(apiDir) {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-host-api-dir-'))
   write(root, 'nextspark.config.ts', `export default { plugins: []${apiDir ? `, apiDir: '${apiDir}'` : ''} }\n`)
-  write(root, 'package.json', JSON.stringify({ name: 'host-api-dir', dependencies: { next: '16.4.2' } }))
+  write(root, 'package.json', JSON.stringify({ name: 'host-api-dir', dependencies: { next: '16.4.5' } }))
   write(root, 'templates/pricing/page.tsx', PAGE('Pricing'))
   write(root, `${apiDir ?? 'api'}/ping/route.ts`, ROUTE)
   return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) }

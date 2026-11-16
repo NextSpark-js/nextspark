@@ -227,7 +227,7 @@ async function flatFixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-flat-'))
   await startRepository(root)
   await write(root, 'package.json', JSON.stringify({
-    name: 'flat', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.2', '@nextsparkjs/core': '0.1.0-beta.192' },
+    name: 'flat', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.5', '@nextsparkjs/core': '0.1.0-beta.192' },
   }))
   await write(root, 'packages/tool/package.json', JSON.stringify({
     name: '@flat/tool', dependencies: { '@nextsparkjs/cli': '^0.1.0-beta.192', '@nextsparkjs/ui': '~0.1.0-beta.192' },
@@ -247,12 +247,12 @@ async function monorepoFixture(): Promise<string> {
   await startRepository(root)
   await write(root, 'package.json', JSON.stringify({
     name: 'repo', packageManager: 'pnpm@9.0.0',
-    devDependencies: { next: '~16.4.2', '@nextsparkjs/ai-workflow': '0.1.0-beta.167' },
+    devDependencies: { next: '~16.4.5', '@nextsparkjs/ai-workflow': '0.1.0-beta.167' },
   }))
   await write(root, 'pnpm-workspace.yaml', "packages:\n  - 'web'\n  - 'packages/*'\n")
   await write(root, 'next.config.mjs', 'export default {}\n')
   await write(root, 'web/package.json', JSON.stringify({
-    name: 'web', dependencies: { next: '~16.4.2', '@nextsparkjs/core': '0.1.0-beta.192', '@nextsparkjs/cli': '0.1.0-beta.192' },
+    name: 'web', dependencies: { next: '~16.4.5', '@nextsparkjs/core': '0.1.0-beta.192', '@nextsparkjs/cli': '0.1.0-beta.192' },
     scripts: { theme: 'node scripts/check.mjs contents/themes/acme' },
   }))
   await write(root, 'web/pnpm-workspace.yaml', "packages:\n  - '../packages/*'\n")
@@ -293,7 +293,7 @@ async function ambiguousHostsFixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-ambiguous-'))
   await startRepository(root)
   for (const directory of ['app', 'dashboard']) {
-    await write(root, `${directory}/package.json`, JSON.stringify({ name: directory, dependencies: { next: '~16.4.2' } }))
+    await write(root, `${directory}/package.json`, JSON.stringify({ name: directory, dependencies: { next: '~16.4.5' } }))
     await write(root, `${directory}/next.config.mjs`, 'export default {}\n')
   }
   await commitFixture(root)
@@ -591,7 +591,7 @@ async function moveFixture({
   await startRepository(root)
   const host = monorepo ? 'web' : '.'
   const atHost = (file: string) => host === '.' ? file : join(host, file)
-  await write(root, atHost('package.json'), JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.2' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
+  await write(root, atHost('package.json'), JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.5' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
   await write(root, atHost('next.config.mjs'), 'export default {}\n')
   await write(root, atHost('nextspark.config.ts'), "export default { theme: 'acme', plugins: ['local'] }\n")
   await write(root, atHost('.env.example'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
@@ -683,7 +683,7 @@ async function symlinkedMoveFixture(link: 'themes' | 'plugins'): Promise<{ root:
   await startRepository(root)
   const host = join(root, 'apps/dev')
   await write(root, 'package.json', JSON.stringify({ name: 'repo', packageManager: 'pnpm@9.0.0' }))
-  await write(root, 'apps/dev/package.json', JSON.stringify({ name: 'dev', dependencies: { next: '~16.4.2' } }))
+  await write(root, 'apps/dev/package.json', JSON.stringify({ name: 'dev', dependencies: { next: '~16.4.5' } }))
   await write(root, 'apps/dev/next.config.mjs', 'export default {}\n')
   await write(root, 'apps/dev/.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
   await write(root, 'themes/acme/components/Button.ts', 'export const Button = true\n')
@@ -709,7 +709,7 @@ async function symlinkedMoveFixture(link: 'themes' | 'plugins'): Promise<{ root:
 async function customRootDirectoriesFixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-custom-roots-'))
   await startRepository(root)
-  await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.2' } }))
+  await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.5' } }))
   await write(root, 'next.config.mjs', 'export default {}\n')
   await write(root, '.env.example', 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
   await write(root, 'contents/themes/acme/services/load.ts', "import { run } from '@/contents/themes/acme/workers/run'\nexport const load = run\n")
@@ -1533,7 +1533,7 @@ test('migrate creates a missing root-first config from required local and packag
     await rm(join(root, 'nextspark.config.ts'))
     await write(root, 'package.json', JSON.stringify({
       name: 'fixture', packageManager: 'pnpm@9.0.0',
-      dependencies: { next: '~16.4.2', '@nextsparkjs/plugin-langchain': '^1.0.0' },
+      dependencies: { next: '~16.4.5', '@nextsparkjs/plugin-langchain': '^1.0.0' },
     }))
     await write(root, 'contents/themes/acme/package.json', JSON.stringify({ requiredPlugins: ['local', '@nextsparkjs/plugin-langchain', 'missing'] }))
     await write(root, 'next.config.mjs', "export default { transpilePackages: ['@nextsparkjs/core', '@nextsparkjs/plugin-langchain'] }\n")
@@ -1556,7 +1556,7 @@ test('migrate stops before writing when a packaged plugin it enables is not in t
     await rm(join(root, 'nextspark.config.ts'))
     await write(root, 'package.json', JSON.stringify({
       name: 'fixture', packageManager: 'pnpm@9.0.0',
-      dependencies: { next: '~16.4.2', '@nextsparkjs/plugin-langchain': '^1.0.0' },
+      dependencies: { next: '~16.4.5', '@nextsparkjs/plugin-langchain': '^1.0.0' },
     }))
     await write(root, 'contents/themes/acme/package.json', JSON.stringify({ requiredPlugins: ['@nextsparkjs/plugin-langchain'] }))
     await write(root, 'next.config.mjs', "export default { transpilePackages: ['@nextsparkjs/core'] }\n")
@@ -3340,7 +3340,7 @@ export const POST = async (request: Request) => handleStripeWebhook(request, awa
 async function rootFirstFixture(files: Record<string, string> = {}): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-migrate-root-first-'))
   await startRepository(root)
-  await write(root, 'package.json', JSON.stringify({ name: 'root-first', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.2', '@nextsparkjs/core': '0.1.0-beta.192' } }))
+  await write(root, 'package.json', JSON.stringify({ name: 'root-first', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.5', '@nextsparkjs/core': '0.1.0-beta.192' } }))
   await write(root, 'next.config.mjs', 'export default {}\n')
   await write(root, 'nextspark.config.ts', "import { defineConfig } from '@nextsparkjs/core/lib/config'\n\nexport default defineConfig({\n  plugins: [],\n})\n")
   await write(root, '.gitignore', 'node_modules\n')
@@ -3453,7 +3453,7 @@ test('migrate ignores node_modules/ and .next/ when missing, and names only what
 test('migrate moves a legacy pnpm.onlyBuiltDependencies into pnpm-workspace.yaml, keeps the user entries and reports it in the plan', async () => {
   const root = await rootFirstFixture({
     'src/app/dashboard/page.tsx': CUSTOM_DASHBOARD,
-    'package.json': JSON.stringify({ name: 'legacy', packageManager: 'pnpm@9.0.0', pnpm: { onlyBuiltDependencies: ['@nextsparkjs/core', 'my-native-dep'], overrides: { foo: '1.0.0' } }, dependencies: { next: '~16.4.2', '@nextsparkjs/core': '0.1.0-beta.192' } }, null, 2) + '\n',
+    'package.json': JSON.stringify({ name: 'legacy', packageManager: 'pnpm@9.0.0', pnpm: { onlyBuiltDependencies: ['@nextsparkjs/core', 'my-native-dep'], overrides: { foo: '1.0.0' } }, dependencies: { next: '~16.4.5', '@nextsparkjs/core': '0.1.0-beta.192' } }, null, 2) + '\n',
     'pnpm-workspace.yaml': "packages: []\n\nallowBuilds:\n  'my-native-dep': true\n",
   })
   try {
@@ -4384,29 +4384,35 @@ test('migrate stops before writing when it cannot edit next.config, and prints t
   }
 })
 
-test('migrate reports the Next.js range and --yes sets ~16.4.2, skipping prepare until install', async () => {
+test('migrate reports the Next.js range and --yes sets ~16.4.5, skipping prepare until install', async () => {
   const { root } = await moveFixture()
   try {
     await write(root, 'package.json', JSON.stringify({ name: 'fixture', packageManager: 'pnpm@9.0.0', dependencies: { next: '^16.2.11' }, devDependencies: { 'eslint-config-next': '16.2.11' }, scripts: { check: 'node scripts/check.mjs contents/themes/acme' } }, null, 2))
     await commitFixture(root)
     const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
-    assert.equal(report.nextRange.required, '~16.4.2')
+    assert.equal(report.nextRange.required, '~16.4.5')
     assert.deepEqual(report.nextRange.members.map((member: { name: string, action: string }) => [member.name, member.action]), [['next', 'update'], ['eslint-config-next', 'update']])
 
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
-    assert.equal(pkg.dependencies.next, '~16.4.2')
-    assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.2')
-    assert.match(result.stdout, /set to ~16\.4\.2\. Run your package manager's install, then nextspark prepare/)
+    assert.equal(pkg.dependencies.next, '~16.4.5')
+    assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.5')
+    assert.match(result.stdout, /set to ~16\.4\.5\. Run your package manager's install, then nextspark prepare/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
 
+test('an earlier 16.4 patch of next and eslint-config-next is out of the range and is updated', () => {
+  const actions = (spec: string) => checkNextRange({ dependencies: { next: spec }, devDependencies: { 'eslint-config-next': spec } }).members.map(member => member.action)
+  for (const below of ['16.4.2', '~16.4.2', '=16.4.4', '16.4.0']) assert.deepEqual(actions(below), ['update', 'update'], below)
+  for (const inside of ['16.4.5', '~16.4.5', '~16.4.6', '16.4.12']) assert.deepEqual(actions(inside), ['ok', 'ok'], inside)
+})
+
 test('a next spec migrate cannot change is a warning, and a catalog that already pins the range is fine', async () => {
-  const yaml = "packages:\n  - web\ncatalog:\n  next: '~16.4.3'\n  react: 19.2.0\ncatalogs:\n  legacy:\n    next: ^15.0.0\n"
-  assert.equal(catalogVersion(yaml, null, 'next'), '~16.4.3')
+  const yaml = "packages:\n  - web\ncatalog:\n  next: '~16.4.5'\n  react: 19.2.0\ncatalogs:\n  legacy:\n    next: ^15.0.0\n"
+  assert.equal(catalogVersion(yaml, null, 'next'), '~16.4.5')
   assert.equal(catalogVersion(yaml, 'legacy', 'next'), '^15.0.0')
   assert.equal(catalogVersion(yaml, 'other', 'next'), null)
   const lookup = (catalog: string | null, dependency: string) => catalogVersion(yaml, catalog, dependency)
@@ -4738,10 +4744,10 @@ test('the workspace yaml is edited only in shapes migrate is certain about, and 
 })
 
 test('catalogVersion reads catalog:default, CRLF, quoted keys and any indent', () => {
-  assert.equal(catalogVersion("catalog:\n  next: '~16.4.2'\n", 'default', 'next'), '~16.4.2')
-  assert.equal(catalogVersion("catalogs:\n  default:\n    next: ~16.4.2\n", 'default', 'next'), '~16.4.2')
-  assert.equal(catalogVersion("catalogs:\n  default:\n    next: ~16.4.2\n", null, 'next'), '~16.4.2')
-  assert.equal(catalogVersion("catalog:\r\n  \"next\": \"~16.4.2\"\r\n", null, 'next'), '~16.4.2')
+  assert.equal(catalogVersion("catalog:\n  next: '~16.4.5'\n", 'default', 'next'), '~16.4.5')
+  assert.equal(catalogVersion("catalogs:\n  default:\n    next: ~16.4.5\n", 'default', 'next'), '~16.4.5')
+  assert.equal(catalogVersion("catalogs:\n  default:\n    next: ~16.4.5\n", null, 'next'), '~16.4.5')
+  assert.equal(catalogVersion("catalog:\r\n  \"next\": \"~16.4.5\"\r\n", null, 'next'), '~16.4.5')
   assert.equal(catalogVersion("catalogs:\n    react19:\n        next: '16.3.5'\n    other:\n        next: 15.0.0\n", 'react19', 'next'), '16.3.5')
   assert.equal(catalogVersion("catalogs:\n    react19:\n        next: '16.3.5'\n", 'missing', 'next'), null)
 })
@@ -4997,7 +5003,7 @@ test('the dry-run simulation gets the theme as --theme, not the variable, and sa
       ok: false,
       routes: [],
       notices: [{ code: 'NS_PROBE', message: 'theme=' + process.env.NEXT_PUBLIC_ACTIVE_THEME }],
-      diagnostics: [{ code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'the project resolves next@16.2.11 (/x/package.json) but the table applies to next@~16.4.2 only' }],
+      diagnostics: [{ code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'the project resolves next@16.2.11 (/x/package.json) but the table applies to next@~16.4.5 only' }],
       checks: { plan: 'passed', emission: 'failed', grammar: 'skipped', ownership: 'skipped', registries: 'skipped' },
     }`))
     // two themes and no .env.example: the copy can only be converted with the theme the flag named
@@ -5019,12 +5025,12 @@ test('the dry-run simulation gets the theme as --theme, not the variable, and sa
       ok: false,
       routes: [],
       notices: [],
-      diagnostics: [{ code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'Next.js is not resolvable from /x; the route export table is for next@16.4.2' }],
+      diagnostics: [{ code: 'NS_HOST_UNSUPPORTED_NEXT_VERSION', message: 'Next.js is not resolvable from /x; the route export table is for next@16.4.5' }],
       checks: { plan: 'passed', emission: 'failed', grammar: 'skipped', ownership: 'skipped', registries: 'skipped' },
     }`))
     await commitFixture(root)
     const unresolvable = JSON.parse(run(root, ['--dry-run', '--json', '--theme', 'acme'], { NEXTSPARK_MIGRATE_NO_SIMULATION: undefined }).stdout)
-    assert.equal(unresolvable.hostPlan.checks.emission, 'not checked (Next.js is not resolvable from /x; the route export table is for next@16.4.2; see Next.js range)')
+    assert.equal(unresolvable.hostPlan.checks.emission, 'not checked (Next.js is not resolvable from /x; the route export table is for next@16.4.5; see Next.js range)')
     assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -5200,7 +5206,7 @@ test('migrate --yes works end to end on a project whose Next is older than the o
 
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
-    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.4.2')
+    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.4.5')
     assert.equal(await readFile(join(root, 'templates/pricing/page.tsx'), 'utf8'), 'export default function Pricing() { return null }\n')
     assert.match(result.stdout, /Skipped generating src\/app: the installed next is not the one just set in package.json/)
     await assert.rejects(access(join(root, 'app')))
@@ -5314,13 +5320,13 @@ test('workspace members get peer ranges the host satisfies, and a duplicate copy
     await commitFixture(root)
 
     const report = JSON.parse(run(root, ['--dry-run', '--json']).stdout)
-    assert.deepEqual(report.memberPeers, [{ path: 'contents/plugins/local/package.json', updates: [{ name: 'next', from: '^15.0.0', to: '~16.4.2' }, { name: 'react', from: '19.0.0', to: '^19.1.0' }], kept: [] }])
+    assert.deepEqual(report.memberPeers, [{ path: 'contents/plugins/local/package.json', updates: [{ name: 'next', from: '^15.0.0', to: '~16.4.5' }, { name: 'react', from: '19.0.0', to: '^19.1.0' }], kept: [] }])
     assert.equal(report.duplicateCopies.length, 1)
     assert.deepEqual([report.duplicateCopies[0].member, report.duplicateCopies[0].name, report.duplicateCopies[0].version], ['contents/plugins/local', 'next', '15.5.12'])
 
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
-    assert.deepEqual(JSON.parse(await readFile(join(root, 'plugins/local/package.json'), 'utf8')).peerDependencies, { next: '~16.4.2', react: '^19.1.0', 'react-dom': '>=18' })
+    assert.deepEqual(JSON.parse(await readFile(join(root, 'plugins/local/package.json'), 'utf8')).peerDependencies, { next: '~16.4.5', react: '^19.1.0', 'react-dom': '>=18' })
     assert.match(result.stdout, /next \/ react \/ react-dom copies/)
     assert.match(result.stdout, /pnpm why next react react-dom/)
     // L9: installed dependencies are not "not moved" project files
@@ -5540,15 +5546,15 @@ test('a converted override whose core import the installed core no longer export
 // S16 round 2
 
 test('peer ranges: only a range whose every version is below the target is raised; the rest is reported (L8)', () => {
-  assert.equal(rangeAccepts('>16', '16.4.2'), false)
-  assert.equal(rangeAccepts('>=16', '16.4.2'), true)
-  assert.equal(rangeAccepts('15.0.0 - 17.0.0', '16.4.2'), true)
-  assert.equal(rangeAccepts('^15 || ^16.4.0', '16.4.2'), true)
-  assert.equal(rangeAccepts('~16.4.2', '16.4.2'), true)
-  assert.equal(rangeAccepts('~16.4.2', '16.4.0'), false)
+  assert.equal(rangeAccepts('>16', '16.4.5'), false)
+  assert.equal(rangeAccepts('>=16', '16.4.5'), true)
+  assert.equal(rangeAccepts('15.0.0 - 17.0.0', '16.4.5'), true)
+  assert.equal(rangeAccepts('^15 || ^16.4.0', '16.4.5'), true)
+  assert.equal(rangeAccepts('~16.4.5', '16.4.5'), true)
+  assert.equal(rangeAccepts('~16.4.5', '16.4.0'), false)
   assert.equal(rangeAccepts('^0.2.1', '0.3.0'), false)
-  for (const below of ['^15.0.0', '15.5.12', '~15.2', '15.0.0 - 15.9.9', '>=14 <16', '<16', '^14 || ^15', '16.2.4']) assert.equal(rangeAllBelow(below, '16.4.2'), true, below)
-  for (const reaches of ['^17.0.0', '>=15', '>16', '*', '^15 || ^17', '~16.4.2', '^19.2.4', 'not a range']) assert.equal(rangeAllBelow(reaches, '16.4.2'), false, reaches)
+  for (const below of ['^15.0.0', '15.5.12', '~15.2', '15.0.0 - 15.9.9', '>=14 <16', '<16', '^14 || ^15', '16.2.4']) assert.equal(rangeAllBelow(below, '16.4.5'), true, below)
+  for (const reaches of ['^17.0.0', '>=15', '>16', '*', '^15 || ^17', '~16.4.5', '^19.2.4', 'not a range']) assert.equal(rangeAllBelow(reaches, '16.4.5'), false, reaches)
   assert.equal(rangeAllBelow('^19.2.4', '19.1.0'), false)
   assert.equal(rangeAllBelow('19.0.0', '19.1.0'), true)
 })
@@ -6003,17 +6009,17 @@ test('migrate on a root-first project on an earlier Next.js sets next and eslint
   try {
     const without = run(root, [])
     assert.notEqual(without.status, 0)
-    assert.match(`${without.stdout}\n${without.stderr}`, /rerun with --yes to set next and eslint-config-next to ~16\.4\.2/)
+    assert.match(`${without.stdout}\n${without.stderr}`, /rerun with --yes to set next and eslint-config-next to ~16\.4\.5/)
     assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '16.3.8')
 
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
-    assert.match(result.stdout, /next and eslint-config-next set to ~16\.4\.2\. Run your package manager's install, then nextspark prepare/)
+    assert.match(result.stdout, /next and eslint-config-next set to ~16\.4\.5\. Run your package manager's install, then nextspark prepare/)
     assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- package\.json/)
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
-    assert.equal(pkg.dependencies.next, '~16.4.2')
-    assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.2')
+    assert.equal(pkg.dependencies.next, '~16.4.5')
+    assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.5')
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -6033,9 +6039,9 @@ test('migrate on a root-first project lists the package.json range next to the p
   try {
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
-    assert.match(result.stdout, /Root-first project\n {2}src\/proxy\.ts: an unchanged copy of an earlier core template, replaced with the current one\n {2}package\.json: next and eslint-config-next set to ~16\.4\.2/)
+    assert.match(result.stdout, /Root-first project\n {2}src\/proxy\.ts: an unchanged copy of an earlier core template, replaced with the current one\n {2}package\.json: next and eslint-config-next set to ~16\.4\.5/)
     assert.equal(await readFile(join(root, 'src/proxy.ts'), 'utf8'), facade)
-    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.4.2')
+    assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.4.5')
     assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- src\/proxy\.ts package\.json\n/)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -6043,7 +6049,7 @@ test('migrate on a root-first project lists the package.json range next to the p
 })
 
 // #265: the fixes the report lists for --yes are not reserved for a project that moves files; a root-first project gets them too
-const ROOT_FIRST_PACKAGE = (extra: Record<string, unknown> = {}, dependencies: Record<string, string> = {}) => JSON.stringify({ name: 'root-first', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.2', '@nextsparkjs/core': '0.1.0-beta.192', ...dependencies }, ...extra }, null, 2) + '\n'
+const ROOT_FIRST_PACKAGE = (extra: Record<string, unknown> = {}, dependencies: Record<string, string> = {}) => JSON.stringify({ name: 'root-first', packageManager: 'pnpm@9.0.0', dependencies: { next: '~16.4.5', '@nextsparkjs/core': '0.1.0-beta.192', ...dependencies }, ...extra }, null, 2) + '\n'
 
 test('migrate on a root-first project moves pnpm.onlyBuiltDependencies into pnpm-workspace.yaml and asks for --yes without a terminal', async () => {
   const root = await rootFirstFixture({
@@ -6101,7 +6107,7 @@ test('migrate on a root-first project updates the peer ranges of a workspace mem
     const result = run(root, ['--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
-    assert.deepEqual(JSON.parse(await readFile(join(root, 'packages/kit/package.json'), 'utf8')).peerDependencies, { next: '~16.4.2' })
+    assert.deepEqual(JSON.parse(await readFile(join(root, 'packages/kit/package.json'), 'utf8')).peerDependencies, { next: '~16.4.5' })
     assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- packages\/kit\/package\.json/)
   } finally {
     await rm(root, { recursive: true, force: true })

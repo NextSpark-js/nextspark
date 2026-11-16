@@ -43,7 +43,7 @@ function project(t: TestContext, nested: boolean | string | ((config: string) =>
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
   fs.mkdirSync(path.join(root, 'config'), { recursive: true })
   fs.writeFileSync(path.join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.2' } }))
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.5' } }))
   fs.writeFileSync(path.join(root, 'config/theme.config.ts'), "export const themeConfig = { name: 'fixture' }\n")
   const entity = path.join(root, 'entities/pages')
   fs.cpSync(path.join(PAGES, 'migrations'), path.join(entity, 'migrations'), { recursive: true })

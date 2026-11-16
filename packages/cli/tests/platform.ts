@@ -24,7 +24,7 @@ export function windowsNextEntry(projectRoot: string, script: string): void {
   if (process.platform !== 'win32') return
   const next = join(projectRoot, 'node_modules', 'next')
   mkdirSync(join(next, 'dist', 'bin'), { recursive: true })
-  writeFileSync(join(next, 'package.json'), JSON.stringify({ name: 'next', version: '16.4.2' }))
+  writeFileSync(join(next, 'package.json'), JSON.stringify({ name: 'next', version: '16.4.5' }))
   writeFileSync(join(next, 'dist', 'bin', 'next'), script)
 }
 

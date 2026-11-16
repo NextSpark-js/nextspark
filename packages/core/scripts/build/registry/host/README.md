@@ -28,7 +28,7 @@ const { target, content } = await emitFacade({
 Every problem is a `FacadeEmitError` carrying all diagnostics (`code`, `file`, `line`, `exportName`,
 `message`); nothing is dropped silently.
 
-## Export table (Next.js 16.4.2)
+## Export table (Next.js 16.4.5)
 
 Source of truth: `next-route-exports.json`. The tests fail when the installed Next.js version differs,
 when Next's `AppSegmentConfigSchemaKeys` or `HTTP_METHODS` change, and when this rendering is stale.

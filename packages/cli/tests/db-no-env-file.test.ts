@@ -27,7 +27,7 @@ async function run(args: string[], exported: Record<string, string>, local?: str
     await mkdir(join(root, 'node_modules/@nextsparkjs'), { recursive: true })
     await symlink(CORE_ROOT, join(root, 'node_modules/@nextsparkjs/core'))
     await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-    await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.2' } }))
+    await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.5' } }))
     await writeFile(join(root, '.env'), `DATABASE_URL=${ENV_URL}\n`)
     if (local !== undefined) await writeFile(join(root, '.env.local'), local)
     const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '0', ...exported }

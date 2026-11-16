@@ -26,12 +26,12 @@ extraction. `nextspark.config.ts` may retain `template.name` and
 `template.version` as provenance only.
 
 If catalog metadata includes a `package.json`, keep its Next.js compatibility
-explicit so validation checks it against the supported Next.js range (`~16.4.2`):
+explicit so validation checks it against the supported Next.js range (`~16.4.5`):
 
 ```json
 {
   "peerDependencies": {
-    "next": "~16.4.2"
+    "next": "~16.4.5"
   }
 }
 ```

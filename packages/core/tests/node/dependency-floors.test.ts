@@ -14,7 +14,7 @@ const semver = createRequire(path.join(CORE_DIR, '../cli/package.json'))('semver
 
 const core = {
   dependencies: { 'better-auth': '~1.7.7', '@better-fetch/fetch': '1.3.2', zod: '^4.5.4', '@nextsparkjs/ui': '0.1.0-beta.199' },
-  peerDependencies: { next: '~16.4.2', react: '^18.2.0 || ^19.0.0' },
+  peerDependencies: { next: '~16.4.5', react: '^18.2.0 || ^19.0.0' },
 }
 
 test('a .198 project is behind on all three dependencies core raised', () => {
@@ -74,7 +74,7 @@ test('workspaceFloors raises a dependency by its lowest version, in all four fie
   const { below, protocols } = workspaceFloors(manifest, core, semver)
   assert.deepEqual(below.map(({ name, field, declared, required }) => [name, field, declared, required]), [
     ['better-auth', 'devDependencies', '~1.6.33', '~1.7.7'],
-    ['next', 'optionalDependencies', '~16.3.0', '~16.4.2'],
+    ['next', 'optionalDependencies', '~16.3.0', '~16.4.5'],
     ['react', 'peerDependencies', '^17.0.0', '^18.2.0 || ^19.0.0'],
     ['zod', 'dependencies', '4.3.6', '^4.5.4'],
   ])
@@ -85,7 +85,7 @@ test('workspaceFloors keeps a peer range that allows core\'s version or sits abo
   const peers = { next: '>=16', zod: '^4.7.0', react: '*', 'better-auth': '~1.8.0' }
   assert.deepEqual(workspaceFloors({ peerDependencies: peers }, core, semver).below, [])
   // a peer that does not allow core's version and is below it moves
-  assert.deepEqual(workspaceFloors({ peerDependencies: { next: '~16.3.8' } }, core, semver).below.map(({ required }) => required), ['~16.4.2'])
+  assert.deepEqual(workspaceFloors({ peerDependencies: { next: '~16.3.8' } }, core, semver).below.map(({ required }) => required), ['~16.4.5'])
 })
 
 test('workspaceFloors lists a workspace:, link:, file: or catalog: spec as a protocol and writes nothing for it', () => {
@@ -107,7 +107,7 @@ test('workspaceAddCommands names the target and a flag per field, with --save-pe
   assert.deepEqual(workspaceAddCommands('--filter acme-foo', below), [
     "pnpm add --filter acme-foo 'zod@^4.5.4'",
     "pnpm add --filter acme-foo -D 'better-auth@~1.7.7'",
-    "pnpm add --filter acme-foo --save-peer 'next@~16.4.2'",
+    "pnpm add --filter acme-foo --save-peer 'next@~16.4.5'",
   ])
   assert.deepEqual(workspaceAddCommands('-w', below.filter(({ name }) => name === 'zod')), ["pnpm add -w 'zod@^4.5.4'"])
 })

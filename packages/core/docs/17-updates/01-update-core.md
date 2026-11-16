@@ -264,9 +264,9 @@ With the option, the same lines are printed for the project's other workspace pa
 
 ```
   Not moved: these dependencies in packages of the project's workspace are below what @nextsparkjs/core 0.1.0-beta.200 needs, ...:
-    plugins/foo/package.json: next ~16.3.8 in peerDependencies (core needs ~16.4.2)
+    plugins/foo/package.json: next ~16.3.8 in peerDependencies (core needs ~16.4.5)
   Move them, from this directory (--save-peer also adds the package to devDependencies):
-    pnpm add --filter acme-foo --save-peer 'next@~16.4.2'
+    pnpm add --filter acme-foo --save-peer 'next@~16.4.5'
 ```
 
 A package that does not declare `@nextsparkjs/core` and that the project does not reach through `workspace:` or `link:` (another app of the monorepo, `mobile/`), and a package of the workspace outside the git repository, is never written, with or without the option. Its `next`, `better-auth` or `zod` below core's is listed with the `pnpm add` that moves it; its `react` is not looked at.

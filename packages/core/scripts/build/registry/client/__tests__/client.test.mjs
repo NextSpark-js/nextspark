@@ -69,7 +69,7 @@ const PLUGIN_ENTITY = `export const noteEntityConfig = {
 function project(extra = {}) {
   const root = temp()
   write(root, 'nextspark.config.ts', "export default { plugins: ['local-notes'] }\n")
-  write(root, 'package.json', JSON.stringify({ name: 'client-project', dependencies: { next: '16.4.2' } }))
+  write(root, 'package.json', JSON.stringify({ name: 'client-project', dependencies: { next: '16.4.5' } }))
   write(root, 'config/theme.config.ts', "export const clientThemeConfig = { name: 'client' }\n")
   write(root, 'entities/tasks/tasks.config.ts', TASKS_CONFIG)
   write(root, 'entities/orders/orders.config.ts', ORDERS_CONFIG)

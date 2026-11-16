@@ -59,7 +59,7 @@ the same path in `templates/` (pages, layouts) or `api/` (Route Handlers).
 #### Choosing the bundler
 
 `dev` and `build` both accept `--webpack` and `--turbopack`. The choice is
-spelled for the project's Next.js version. NextSpark supports Next.js ~16.4.2,
+spelled for the project's Next.js version. NextSpark supports Next.js ~16.4.5,
 where Turbopack is the default and Webpack is opt-in (Webpack is deferred, not
 a supported bundler for 1.0). `nextspark build --webpack` is what a project with
 a custom `webpack()` in `next.config` needs in order to build.

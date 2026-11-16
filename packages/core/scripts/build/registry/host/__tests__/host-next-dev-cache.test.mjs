@@ -161,7 +161,7 @@ test('prepare (the CLI): a route removed deletes .next/dev and prints the line; 
       writeFileSync(join(root, path), content)
     }
     put('nextspark.config.ts', 'export default { plugins: [] }\n')
-    put('package.json', JSON.stringify({ name: 'devcache', dependencies: { next: '16.4.2' } }))
+    put('package.json', JSON.stringify({ name: 'devcache', dependencies: { next: '16.4.5' } }))
     put('templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
     const prepare = () => spawnSync(process.execPath, [join(import.meta.dirname, '../prepare-cli.mjs')], { cwd: root, encoding: 'utf8', timeout: 240_000 })
     const first = prepare()

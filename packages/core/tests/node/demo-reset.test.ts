@@ -28,7 +28,7 @@ function project(t: { after: (fn: () => void) => void }) {
   fs.mkdirSync(path.join(root, 'config'))
   fs.mkdirSync(path.join(root, 'uploads'))
   fs.writeFileSync(path.join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.2' } }))
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.5' } }))
   fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
   fs.writeFileSync(path.join(root, 'config/theme.config.ts'), "export const themeConfig = { name: 'fixture' }\n")
   return root

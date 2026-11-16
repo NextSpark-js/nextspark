@@ -1526,7 +1526,7 @@ test('raises only core\'s peer dependencies and better-auth and zod; every other
   const root = createProject(t, { pins })
   const coreManifest = {
     dependencies: { ...CORE_NEEDS.dependencies, stripe: '^18.5.0', 'lucide-react': '^0.539.0', sonner: '^2.0.0', 'tailwind-merge': '^3.0.0' },
-    peerDependencies: { next: '~16.4.2', react: '^19.2.0' },
+    peerDependencies: { next: '~16.4.5', react: '^19.2.0' },
   }
   delete (coreManifest.dependencies as Record<string, string>).next
 
@@ -1537,7 +1537,7 @@ test('raises only core\'s peer dependencies and better-auth and zod; every other
   const declared = { ...after.dependencies, ...after.devDependencies }
   assert.deepEqual(
     ['next', 'react', 'better-auth', 'zod'].map((name) => declared[name]),
-    ['~16.4.2', '^19.2.0', '~1.7.7', '^4.5.4'],
+    ['~16.4.5', '^19.2.0', '~1.7.7', '^4.5.4'],
   )
   assert.deepEqual(
     ['stripe', 'lucide-react', 'sonner', 'tailwind-merge'].map((name) => declared[name]),
@@ -1560,7 +1560,7 @@ test('prints nothing about dependencies when the project is aligned with the new
 
 // #374: the floors are raised in the packages of the project's workspace too, before the install, so the lockfile keeps one copy
 
-const CORE_WITH_NEXT_PEER = { dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' }, peerDependencies: { next: '~16.4.2', react: '>=18', nodemailer: '^7.0.0' } }
+const CORE_WITH_NEXT_PEER = { dependencies: { 'better-auth': '~1.7.7', zod: '^4.5.4' }, peerDependencies: { next: '~16.4.5', react: '>=18', nodemailer: '^7.0.0' } }
 const PLUGIN_FILE = 'plugins/foo/package.json'
 const PLUGIN = {
   name: 'acme-foo',
@@ -1586,7 +1586,7 @@ const MEMBERS: Record<string, string> = {
 
 function workspaceWithMembers(t: Parameters<typeof createProject>[0]) {
   return createProject(t, {
-    pins: { ...ALIGNED, next: '~16.4.2', 'acme-shared': 'workspace:*' },
+    pins: { ...ALIGNED, next: '~16.4.5', 'acme-shared': 'workspace:*' },
     files: MEMBERS,
     importers: ['plugins/foo', 'plugins/bar', 'libs/shared', 'apps/other', 'mobile'],
   })
@@ -1600,24 +1600,24 @@ test('raises next and zod in the packages of the project\'s workspace, keeping t
   const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER, snapshot: PLUGIN_FILE })
 
   assert.equal(result.status, 0, result.output)
-  const raised = { ...PLUGIN, dependencies: { ...PLUGIN.dependencies, zod: '^4.5.4' }, peerDependencies: { ...PLUGIN.peerDependencies, next: '~16.4.2' } }
+  const raised = { ...PLUGIN, dependencies: { ...PLUGIN.dependencies, zod: '^4.5.4' }, peerDependencies: { ...PLUGIN.peerDependencies, next: '~16.4.5' } }
   // zod in dependencies is raised, next as a peer moves to core's range; a broad peer, an optional peer of core and a workspace: spec stay
   assert.equal(read(root, PLUGIN_FILE), JSON.stringify(raised, null, 4))
   assert.equal(read(root, 'libs/shared/package.json'), json({ name: 'acme-shared', dependencies: { zod: '^4.5.4' } }))
   for (const file of ['plugins/bar/package.json', 'apps/other/package.json', 'mobile/package.json', 'plugins/fixtures/package.json']) assert.equal(read(root, file), MEMBERS[file], file)
-  assert.match(result.stdout, /Raising the dependencies below[^\n]*\n(?:.*\n)*? {3}plugins\/foo\/package\.json:\n {5}next ~16\.3\.8 -> ~16\.4\.2 \(peerDependencies\)\n {5}zod 4\.3\.6 -> \^4\.5\.4 \(dependencies\)\n/)
+  assert.match(result.stdout, /Raising the dependencies below[^\n]*\n(?:.*\n)*? {3}plugins\/foo\/package\.json:\n {5}next ~16\.3\.8 -> ~16\.4\.5 \(peerDependencies\)\n {5}zod 4\.3\.6 -> \^4\.5\.4 \(dependencies\)\n/)
   // The second install sees the new ranges; the first one, the old ones
   assert.deepEqual(result.snapshots, [PLUGIN_TEXT, JSON.stringify(raised, null, 4)])
   assert.ok(result.calls.lastIndexOf('install') < result.calls.indexOf('nextspark prepare'), result.calls.join('\n'))
   // the workspace: spec is listed with its explanation; the app that is not the project's is listed, without react
   assert.match(result.stdout, /not a semver range[^\n]*\n {4}plugins\/foo\/package\.json: better-auth workspace:\^ in dependencies\n/)
-  assert.match(result.stdout, /never writes[^\n]*\n {4}apps\/other\/package\.json: next 15\.5\.0 in dependencies \(core needs ~16\.4\.2\)\n {2}Move them[^\n]*\n {4}pnpm add --filter acme-other 'next@~16\.4\.2'\n/)
+  assert.match(result.stdout, /never writes[^\n]*\n {4}apps\/other\/package\.json: next 15\.5\.0 in dependencies \(core needs ~16\.4\.5\)\n {2}Move them[^\n]*\n {4}pnpm add --filter acme-other 'next@~16\.4\.5'\n/)
   assert.doesNotMatch(result.stdout, /nodemailer|react 19|mobile\/package\.json: react/)
 })
 
 test('follows workspace: and link: along the whole chain from the project to a package that does not declare core', (t) => {
   const root = createProject(t, {
-    pins: { ...ALIGNED, next: '~16.4.2', 'acme-a': 'workspace:*' },
+    pins: { ...ALIGNED, next: '~16.4.5', 'acme-a': 'workspace:*' },
     files: {
       'libs/a/package.json': json({ name: 'acme-a', dependencies: { 'acme-b': 'link:../b' } }),
       'libs/b/package.json': json({ name: 'acme-b', dependencies: { zod: '4.3.6' } }),
@@ -1642,18 +1642,18 @@ test('--no-dependency-floors writes no workspace manifest and lists the pnpm add
   assert.equal(result.status, 0, result.output)
   for (const [file, text] of Object.entries(MEMBERS)) assert.equal(read(root, file), text, file)
   assert.match(result.stdout, /^ {4}plugins\/foo\/package\.json: zod 4\.3\.6 in dependencies \(core needs \^4\.5\.4\)$/m)
-  assert.match(result.stdout, /^ {4}plugins\/foo\/package\.json: next ~16\.3\.8 in peerDependencies \(core needs ~16\.4\.2\)$/m)
+  assert.match(result.stdout, /^ {4}plugins\/foo\/package\.json: next ~16\.3\.8 in peerDependencies \(core needs ~16\.4\.5\)$/m)
   assert.match(result.stdout, /^ {4}pnpm add --filter acme-foo 'zod@\^4\.5\.4'$/m)
-  assert.match(result.stdout, /^ {4}pnpm add --filter acme-foo --save-peer 'next@~16\.4\.2'$/m)
+  assert.match(result.stdout, /^ {4}pnpm add --filter acme-foo --save-peer 'next@~16\.4\.5'$/m)
   assert.match(result.stdout, /^ {4}pnpm add --filter acme-shared 'zod@\^4\.5\.4'$/m)
-  assert.match(result.stdout, /^ {4}pnpm add --filter acme-other 'next@~16\.4\.2'$/m)
+  assert.match(result.stdout, /^ {4}pnpm add --filter acme-other 'next@~16\.4\.5'$/m)
   assert.doesNotMatch(result.stdout, /acme-bar|acme-fixture|acme-mobile|react/)
   assert.equal(result.calls.filter((call) => call === 'install').length, 1)
 })
 
 test('a package without a name is listed with the --filter path from where the command runs', (t) => {
   const root = createProject(t, {
-    pins: { ...ALIGNED, next: '~16.4.2' },
+    pins: { ...ALIGNED, next: '~16.4.5' },
     files: { 'libs/anon/package.json': json({ peerDependencies: { '@nextsparkjs/core': '*', next: '~16.3.8' } }) },
     importers: ['libs/anon'],
   })
@@ -1661,7 +1661,7 @@ test('a package without a name is listed with the --filter path from where the c
   const result = runUpdateCore(root, ['--version', TO, '--no-dependency-floors'], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
 
   assert.equal(result.status, 0, result.output)
-  assert.match(result.stdout, /^ {4}pnpm add --filter \.\/libs\/anon --save-peer 'next@~16\.4\.2'$/m)
+  assert.match(result.stdout, /^ {4}pnpm add --filter \.\/libs\/anon --save-peer 'next@~16\.4\.5'$/m)
 })
 
 test('a package of the workspace outside the git repository is listed, not written', (t) => {
@@ -1670,7 +1670,7 @@ test('a package of the workspace outside the git repository is listed, not writt
   const file = path.join(outside, 'package.json')
   const text = json({ name: 'acme-outside', peerDependencies: { '@nextsparkjs/core': '*', next: '~16.3.8' } })
   fs.writeFileSync(file, text)
-  const root = createProject(t, { pins: { ...ALIGNED, next: '~16.4.2' } })
+  const root = createProject(t, { pins: { ...ALIGNED, next: '~16.4.5' } })
   const id = path.relative(root, outside)
   const lock = path.join(root, 'pnpm-lock.yaml')
   fs.writeFileSync(lock, `${fs.readFileSync(lock, 'utf8')}\n  ${id}:\n    dependencies: {}\n`)
@@ -1681,12 +1681,12 @@ test('a package of the workspace outside the git repository is listed, not writt
 
   assert.equal(result.status, 0, result.output)
   assert.equal(fs.readFileSync(file, 'utf8'), text)
-  assert.match(result.stdout, /pnpm add --filter acme-outside --save-peer 'next@~16\.4\.2'/)
+  assert.match(result.stdout, /pnpm add --filter acme-outside --save-peer 'next@~16\.4\.5'/)
 })
 
 test('a package of the project that is aligned, with a peer range above the floor or broad, is not touched and not listed', (t) => {
   const root = createProject(t, {
-    pins: { ...ALIGNED, next: '~16.4.2' },
+    pins: { ...ALIGNED, next: '~16.4.5' },
     files: { [PLUGIN_FILE]: json({ name: 'acme-foo', dependencies: { zod: '^4.6.0' }, peerDependencies: { '@nextsparkjs/core': '*', next: '>=16', zod: '^4.7.0', 'react-dom': '*' } }) },
     importers: ['plugins/foo'],
   })

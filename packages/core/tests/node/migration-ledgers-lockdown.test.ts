@@ -98,7 +98,7 @@ function project() {
     fs.writeFileSync(path.join(root, relative), content)
   }
   write('nextspark.config.ts', 'export default { plugins: [] }\n')
-  write('package.json', JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.2' } }))
+  write('package.json', JSON.stringify({ name: 'fixture', private: true, dependencies: { next: '16.4.5' } }))
   write('pnpm-workspace.yaml', 'packages: []\n')
   write('config/theme.config.ts', "export const themeConfig = { name: 'fixture' }\n")
   write('migrations/001_project.sql', 'CREATE TABLE project_log (file text); INSERT INTO project_log VALUES (\'001\');')

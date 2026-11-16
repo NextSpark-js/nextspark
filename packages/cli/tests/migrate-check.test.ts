@@ -20,7 +20,7 @@ const OLD_PROXY = "import { auth } from '@nextsparkjs/core/lib/auth'\nexport asy
 const FACADE = "export { proxy } from '@nextsparkjs/core/proxy'\nexport const config = { matcher: ['/dashboard/:path*'] }\n"
 
 const BASE: Record<string, string> = {
-  'package.json': JSON.stringify({ name: 'project', private: true, dependencies: { next: '16.4.2', '@nextsparkjs/core': '0.1.0-beta.200' } }),
+  'package.json': JSON.stringify({ name: 'project', private: true, dependencies: { next: '16.4.5', '@nextsparkjs/core': '0.1.0-beta.200' } }),
   'next.config.mjs': 'export default {}\n',
   'src/proxy.ts': FACADE,
   '.gitignore': 'node_modules\nsrc/app\n',

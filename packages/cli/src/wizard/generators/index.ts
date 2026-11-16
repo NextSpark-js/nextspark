@@ -324,7 +324,7 @@ export async function updatePackageJson(
     // create.ts for the full rationale. better-auth is deliberately tilde-ranged
     // (not caret): core is tested against one minor line, and its migrations
     // (038) and `db:migrate`'s auth schema check follow that line's schema.
-    'next': '~16.4.2',
+    'next': '~16.4.5',
     'react': '^19.2.0',
     'react-dom': '^19.2.0',
     // Auth
@@ -404,7 +404,7 @@ export async function updatePackageJson(
     '@tailwindcss/postcss': '^4.0.0',
     // ESLint
     'eslint': '^9.18.0',
-    'eslint-config-next': '~16.4.2',
+    'eslint-config-next': '~16.4.5',
     // Database
     'drizzle-kit': '^0.31.4',
     // Jest

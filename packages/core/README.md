@@ -23,7 +23,7 @@ To add NextSpark to an existing project, install `@nextsparkjs/core` and `@nexts
 ## Requirements
 
 - Node.js 22.x (22.14.0 or later) or 24.x
-- Next.js `~16.4.2` and React `^19.2.0` (peer dependencies)
+- Next.js `~16.4.5` and React `^19.2.0` (peer dependencies)
 - Standard PostgreSQL 15, 16, 17 or 18
 - Linux x64 or macOS arm64. Windows is not supported.
 - pnpm 10 (10.34.6 or later), 11 or 12. npm, yarn and bun are not supported.

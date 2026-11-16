@@ -26,7 +26,7 @@ async function run(args: string[]) {
     await mkdir(join(root, 'node_modules/@nextsparkjs'), { recursive: true })
     await symlink(CORE_ROOT, join(root, 'node_modules/@nextsparkjs/core'))
     await writeFile(join(root, 'nextspark.config.ts'), 'export default { plugins: [] }\n')
-    await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.2' } }))
+    await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.5' } }))
     const result = spawnSync(process.execPath, [CLI_ENTRY, ...args], {
       cwd: root, timeout: 60_000, killSignal: 'SIGKILL', encoding: 'utf-8', env: { ...process.env, FORCE_COLOR: '0', DATABASE_URL: URL_1 },
     })
