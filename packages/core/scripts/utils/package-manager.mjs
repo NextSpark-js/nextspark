@@ -18,7 +18,7 @@
  * The CLI and create-nextspark-app keep TypeScript copies of this function;
  * their tests check they agree with this one.
  *
- * @param {string} command `pnpm` or `npx`
+ * @param {string} command `pnpm`, `npm` or `npx`
  * @param {string[]} args
  * @param {string} [platform]
  * @returns {{ command: string, args: string[], shell: boolean, windowsHide: boolean }}
@@ -36,10 +36,10 @@ export function packageManagerCommand(command, args, platform = process.platform
 }
 
 /**
- * How update-core starts `command`: pnpm through packageManagerCommand (a `.cmd`
- * shim on Windows, #450), anything else (git, node) directly, with no shell to
+ * How update-core starts `command`: pnpm and npm through packageManagerCommand (a `.cmd`
+ * shim on Windows, #450), anything else (git, node, tar) directly, with no shell to
  * read its arguments.
  */
 export function stepCommand(command, args, platform = process.platform) {
-  return command === 'pnpm' ? packageManagerCommand(command, args, platform) : { command, args, shell: false, windowsHide: true }
+  return command === 'pnpm' || command === 'npm' ? packageManagerCommand(command, args, platform) : { command, args, shell: false, windowsHide: true }
 }

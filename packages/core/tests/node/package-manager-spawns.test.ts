@@ -13,6 +13,8 @@ const AWKWARD = ['exec', 'cypress', 'run', '--spec', 'tests/My Specs/a&b.cy.ts',
 test('update-core starts pnpm through the helper: quoted for cmd.exe on Windows, directly elsewhere', () => {
   assert.deepEqual(stepCommand('pnpm', ['install'], 'win32'), { command: 'pnpm "install"', args: [], shell: true, windowsHide: true })
   assert.deepEqual(stepCommand('pnpm', ['install'], 'linux'), { command: 'pnpm', args: ['install'], shell: false, windowsHide: true })
+  // update-core downloads a plugin copy's package with npm pack (#473), also a .cmd shim on Windows
+  assert.deepEqual(stepCommand('npm', ['pack', '@nextsparkjs/plugin-ai@1.0.0'], 'win32'), { command: 'npm "pack" "@nextsparkjs/plugin-ai@1.0.0"', args: [], shell: true, windowsHide: true })
   assert.throws(() => stepCommand('pnpm', ['view', '%x%'], 'win32'), /cannot quote/)
 })
 
