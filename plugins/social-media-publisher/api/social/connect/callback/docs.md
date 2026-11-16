@@ -48,17 +48,17 @@ Returns HTML page that:
 
 ### Preview Mode Response
 
-When `mode=preview` in state, returns account data without saving:
+When `mode=preview` in state, saves the tokens in `social_accounts` without linking the accounts to the entity, and sends the account details (no tokens) for the user to choose; the page links the chosen ones with [assign](../../assign/docs.md), by `platformAccountId`:
 ```javascript
 {
   type: 'oauth-preview',
   platform: 'instagram_business',
+  tokensSaved: true,
   accounts: [
     {
       platform: 'instagram_business',
       platformAccountId: 'ig_123',
       username: '@myaccount',
-      accessToken: '...',
       tokenExpiresAt: '2024-03-15T10:30:00Z',
       permissions: ['instagram_basic', 'instagram_content_publish'],
       accountMetadata: {

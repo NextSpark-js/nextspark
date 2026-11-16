@@ -29,6 +29,8 @@ The 501 body says what is missing and links here:
 
 The plugin's routes query only the plugin's tables (`social_accounts`, `social_audit_logs`). Everything about your entities (access, assignments, which entities use an account, where a published post is recorded) goes through the adapter.
 
+Tokens stay on the server: `GET .../social/accounts` and the OAuth callback's preview list account details without them, and your UI links an account with `POST .../social/assign` and `{ entityId, accounts: [{ platformAccountId }] }`. The plugin reads the account's token from the user's `social_accounts` row (or from Graph, for a Page found through a stored Meta token) and passes it to `saveAssignment()` in `data.accessToken`, as before.
+
 ## 1. Create the adapter
 
 ```typescript
