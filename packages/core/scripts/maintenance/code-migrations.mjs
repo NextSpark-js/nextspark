@@ -141,7 +141,7 @@ const PUBLISHED_LAYOUTS = {
 }
 
 /** Every file the 0.1.0-beta.202 migration can create or replace; its upgrade note in the CHANGELOG names each one */
-const ENTITY_REGISTRY_LAYOUT_WRITES = [MAIN_LAYOUT, ...new Set(Object.values(PUBLISHED_LAYOUTS).map((entry) => path.join('templates', 'shared', entry.shared)))]
+const ENTITY_REGISTRY_LAYOUT_WRITES = [MAIN_LAYOUT, ...new Set(Object.values(PUBLISHED_LAYOUTS).map((entry) => path.join('templates', 'shared', entry.shared)))].map((file) => displayPath(file))
 
 /** Line endings, a BOM, indentation, runs of spaces between words and empty lines do not tell two texts apart; what is inside a line does */
 const normalize = (text) => text.replace(/^﻿/, '').replace(/\r/g, '').split('\n').map((line) => line.trim().replace(/\s+/g, ' ')).filter(Boolean).join('\n')
@@ -162,30 +162,33 @@ export function classifyMainLayout(text) {
  * 0.1.0-beta.202: a dashboard layout of the project replaces core's DashboardShell, which fills the client entity
  * registry; one that does not leaves the entity detail and edit pages answering "not found in the registry" (#417)
  */
-function entityRegistryLayout(root) {
-  const file = path.join(root, MAIN_LAYOUT)
+export function entityRegistryLayout(root, pathApi = path) {
+  // `pathApi` is only there for the test to run the Windows flavor; the files are read and written with the platform's own path
+  const shown = (...parts) => displayPath(pathApi.join(...parts), pathApi.sep)
+  const mainLayout = shown('templates', 'dashboard', '(main)', 'layout.tsx')
+  const file = path.join(root, mainLayout)
   const text = readText(file)
   if (text === null) return { changed: [], notes: [] }
   const found = classifyMainLayout(text)
   if (found.kind === 'ok') return { changed: [], notes: [] }
   const how = `Make it a server component that renders its content inside <EntityRegistryHydrator entities={...}> (from @nextsparkjs/core/components/dashboard/layouts/EntityRegistryHydrator), moving its current body to a client component: node_modules/@nextsparkjs/core/templates/projects/crm/templates/dashboard/(main)/layout.tsx shows how to build the entities list.`
-  const own = `${MAIN_LAYOUT} does not fill the client entity registry (it uses neither EntityRegistryHydrator nor DashboardShell), so /dashboard/<entity>/<id> answers "Entity not found in the registry". It was left as it is: it is not a layout a template published. ${how}`
+  const own = `${mainLayout} does not fill the client entity registry (it uses neither EntityRegistryHydrator nor DashboardShell), so /dashboard/<entity>/<id> answers "Entity not found in the registry". It was left as it is: it is not a layout a template published. ${how}`
   if (found.kind === 'own') return { changed: [], notes: [own] }
   const source = path.join(TEMPLATES, found.template, 'templates')
   const layout = readText(path.join(source, 'dashboard', '(main)', 'layout.tsx'))
   const client = readText(path.join(source, 'shared', found.shared))
-  const clientFile = path.join('templates', 'shared', found.shared)
+  const clientFile = shown('templates', 'shared', found.shared)
   if (layout === null || client === null) return { changed: [], notes: [own] }
   const existing = readText(path.join(root, clientFile))
   if (existing !== null && normalize(existing) !== normalize(client)) {
-    return { changed: [], notes: [`${MAIN_LAYOUT} is the old ${found.template} template layout, but ${clientFile} already exists and differs from the template's, so nothing was written. ${how}`] }
+    return { changed: [], notes: [`${mainLayout} is the old ${found.template} template layout, but ${clientFile} already exists and differs from the template's, so nothing was written. ${how}`] }
   }
   if (existing === null) {
     fs.mkdirSync(path.dirname(path.join(root, clientFile)), { recursive: true })
     fs.writeFileSync(path.join(root, clientFile), client)
   }
   fs.writeFileSync(file, layout)
-  return { changed: existing === null ? [clientFile, MAIN_LAYOUT] : [MAIN_LAYOUT], notes: [] }
+  return { changed: existing === null ? [clientFile, mainLayout] : [mainLayout], notes: [] }
 }
 
 export const CODE_MIGRATIONS = [
@@ -198,7 +201,7 @@ export const CODE_MIGRATIONS = [
   {
     version: '0.1.0-beta.202',
     title: 'the dashboard layout of a crm or productivity project fills the client entity registry',
-    run: entityRegistryLayout,
+    run: (root) => entityRegistryLayout(root),
     /** The files it can create or replace (`null`: not fixed, as in the 0.1.0-beta.200 one, which rewrites any file that imports next-themes) */
     writes: ENTITY_REGISTRY_LAYOUT_WRITES,
   },

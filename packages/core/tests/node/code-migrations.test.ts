@@ -9,7 +9,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { CODE_MIGRATIONS, classifyMainLayout, displayPath, findNextThemesImports, nextThemesLines, projectSourceFiles, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
+import { CODE_MIGRATIONS, classifyMainLayout, displayPath, entityRegistryLayout, findNextThemesImports, nextThemesLines, projectSourceFiles, rewriteNextThemesImports } from '../../scripts/maintenance/code-migrations.mjs'
 
 const CORE = '@nextsparkjs/core/providers/theme-provider'
 
@@ -267,10 +267,10 @@ test('what the 0.1.0-beta.202 migration writes is within what it declares (#441)
     const snapshot = () => new Map(fs.readdirSync(root, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).map((e) => { const f = path.join(e.parentPath, e.name); return [path.relative(root, f), fs.readFileSync(f, 'utf8')] as const }))
     const before = snapshot()
     const { changed } = entityRegistryMigration().run(root, {})
-    assert.ok(changed.includes(path.join('templates', 'shared', shared)), name)
+    assert.ok(changed.includes(`templates/shared/${shared}`), name)
     for (const file of changed) assert.ok(entityRegistryMigration().writes.includes(file), file)
     for (const [file, content] of snapshot()) {
-      if (before.get(file) !== content) assert.ok(entityRegistryMigration().writes.includes(file), `${file} was written and is not in writes`)
+      if (before.get(file) !== content) assert.ok(entityRegistryMigration().writes.includes(displayPath(file)), `${file} was written and is not in writes`)
     }
   }
 })
@@ -278,4 +278,14 @@ test('what the 0.1.0-beta.202 migration writes is within what it declares (#441)
 test("a path shown to the user has / whatever separator the platform uses (#467)", () => {
   assert.equal(displayPath("src\\lib\\theme.tsx", "\\"), "src/lib/theme.tsx")
   assert.equal(displayPath("src/lib/theme.tsx", "/"), "src/lib/theme.tsx")
+})
+
+test('the files the layout migration reports use / even where the platform joins paths with \\ (the Windows flavor of path, #469)', (t) => {
+  for (const [name, shared] of [['crm-1', 'CRMDashboardLayout.tsx'], ['productivity-1', 'ProductivityDashboardLayout.tsx']]) {
+    const root = project(t, { [MAIN_LAYOUT]: oldLayout(name) })
+    assert.deepEqual(entityRegistryLayout(root, path.win32).changed, [`templates/shared/${shared}`, MAIN_LAYOUT], name)
+  }
+  const own = project(t, { [MAIN_LAYOUT]: "'use client'\nexport default function L() { return null }\n" })
+  const { notes } = entityRegistryLayout(own, path.win32)
+  assert.ok(notes[0].startsWith(`${MAIN_LAYOUT} does not fill`), notes[0])
 })
