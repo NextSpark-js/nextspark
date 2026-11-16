@@ -109,7 +109,7 @@ if [ ! -f "$CORE_PACKAGE" ]; then
     exit 1
 fi
 
-CURRENT_VERSION=$(node -e "console.log(require('$CORE_PACKAGE').version)")
+CURRENT_VERSION=$(node -e "console.log(require('$(node_path "$CORE_PACKAGE")').version)")
 echo -e "Current version: ${YELLOW}$CURRENT_VERSION${NC}"
 echo -e "Increment type:  ${YELLOW}$VERSION_TYPE${NC}"
 echo ""
@@ -199,8 +199,8 @@ done
 
 echo -e "${CYAN}Packages to update:${NC}"
 for pkg in "${PACKAGES[@]}"; do
-    pkg_name=$(node -e "console.log(require('$pkg/package.json').name)")
-    pkg_version=$(node -e "console.log(require('$pkg/package.json').version)")
+    pkg_name=$(node -e "console.log(require('$(node_path "$pkg/package.json")').name)")
+    pkg_version=$(node -e "console.log(require('$(node_path "$pkg/package.json")').version)")
     echo -e "  - $pkg_name: ${YELLOW}$pkg_version${NC} -> ${GREEN}$NEW_VERSION${NC}"
 done
 echo ""
@@ -222,12 +222,12 @@ echo -e "${CYAN}Updating versions...${NC}"
 updated_count=0
 for pkg in "${PACKAGES[@]}"; do
     pkg_json="$pkg/package.json"
-    pkg_name=$(node -e "console.log(require('$pkg_json').name)")
+    pkg_name=$(node -e "console.log(require('$(node_path "$pkg_json")').name)")
 
     # Use node to update the version in package.json
     node -e "
 const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('$pkg_json', 'utf8'));
+const pkg = JSON.parse(fs.readFileSync('$(node_path "$pkg_json")', 'utf8'));
 pkg.version = '$NEW_VERSION';
 // An @nextsparkjs range written >=X.Y.Z-0 follows the release it ships in: a
 // range admits prereleases only for its own X.Y.Z, so 0.1.1-beta.0 needs >=0.1.1-0.
@@ -239,7 +239,7 @@ for (const section of ['dependencies', 'peerDependencies', 'devDependencies']) {
     }
   }
 }
-fs.writeFileSync('$pkg_json', JSON.stringify(pkg, null, 2) + '\n');
+fs.writeFileSync('$(node_path "$pkg_json")', JSON.stringify(pkg, null, 2) + '\n');
 "
 
     if [ $? -eq 0 ]; then
@@ -256,7 +256,7 @@ LOCKFILE="$REPO_ROOT/pnpm-lock.yaml"
 if [ -f "$LOCKFILE" ]; then
     node -e "
 const fs = require('fs');
-const file = '$LOCKFILE';
+const file = '$(node_path "$LOCKFILE")';
 const base = '$NEW_VERSION'.split('-')[0];
 const specifier = /^(\s+'@nextsparkjs\/[^']+':\n\s+specifier: )'>=\d+\.\d+\.\d+-0'/gm;
 const text = fs.readFileSync(file, 'utf8');
