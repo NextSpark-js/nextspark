@@ -40,7 +40,6 @@ export function corepackCommand(): { command: string; args: string[] } {
 /** The reasons the suite skips tests on Windows, shared so each one reads the same wherever it applies. */
 export const POSIX_REASONS = {
   shFake: 'the test puts an sh script on a colon-separated PATH in place of pnpm, git or next',
-  shRollback: 'the test runs the rollback migrate prints, a POSIX shell command, with /bin/sh',
   signals: 'the test sends SIGTERM or SIGINT and checks how the process handles it; Windows ends a process without delivering a signal',
   globName: 'the test creates a file named *, which Windows does not allow',
   tty: 'the test drives a prompt through a pseudo-terminal (script), which Windows does not have',

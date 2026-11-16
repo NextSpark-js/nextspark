@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawn, spawnSync } from 'node:child_process'
+import { execFileSync, execSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { after, before, test } from 'node:test'
 import { createServer } from 'node:http'
@@ -146,6 +146,31 @@ function run(root: string, args: string[], env: NodeJS.ProcessEnv = {}) {
     // (a CI runner) `pnpm view` retries for about a minute.
     env: { ...process.env, ...offlineMigrateEnv(), ...env },
   })
+}
+
+/**
+ * The one rollback command migrate printed: a node command short enough for cmd (8,191 characters) with nothing in it
+ * that only sh reads (&&, single quotes, /dev/null), so it runs as printed in sh, cmd and PowerShell.
+ */
+function printedRollback(stdout: string): string {
+  const commands = [...new Set(stdout.split('\n').map(line => line.trim().replace(/^To undo the migration before you commit it, run: /, '')).filter(line => line.startsWith('node ')))]
+  assert.equal(commands.length, 1, stdout.slice(-1500))
+  const [command] = commands
+  assert.ok(command.length <= 8191, `${command.length} characters`)
+  assert.doesNotMatch(command, /&&|'|\/dev\/null/)
+  return command
+}
+
+/** What the rollback script migrate wrote will clean and spare, read from the script. */
+function recordedRollback(root: string): { created: string[], cleanups: { root: string, preserved: string[] }[] } {
+  const line = readFileSync(join(root, '.nextspark/migrate-rollback.mjs'), 'utf8').split('\n').find(text => text.startsWith('const data = '))
+  assert.ok(line, 'the script holds its data')
+  return JSON.parse(line.slice('const data = '.length, -1))
+}
+
+/** Run the printed rollback in the platform's own shell (sh here, cmd.exe on Windows), exactly as printed. */
+function runPrintedRollback(root: string, stdout: string): void {
+  execSync(printedRollback(stdout), { cwd: root, stdio: 'pipe' })
 }
 
 async function runAsync(root: string, args: string[], env: NodeJS.ProcessEnv = {}): Promise<{ status: number, stdout: string, stderr: string }> {
@@ -701,7 +726,7 @@ test('migrate --yes moves an intact legacy project and rewrites its source and t
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(result.stdout, /Migration complete/)
     assert.doesNotMatch(result.stdout, /migration report \(dry run\)/)
-    assert.match(result.stdout, /git -C .* checkout -- \./)
+    printedRollback(result.stdout)
     assert.equal(await readFile(join(root, 'components/Button.ts'), 'utf8'), 'export const Button = true\n')
     assert.match(await readFile(join(root, 'templates/page.tsx'), 'utf8'), /\.\.\/components\/Button/)
     assert.match(await readFile(join(root, 'config/hooks/proxy.ts'), 'utf8'), /export function proxyHook/)
@@ -1027,7 +1052,7 @@ test('migrate moves only the selected monorepo host and rewrites sibling helper 
   }
 })
 
-test('migrate rebases and deduplicates relative stylesheet references from a legacy theme', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate rebases and deduplicates relative stylesheet references from a legacy theme', async () => {
   const { root } = await moveFixture()
   const originalCss = [
     '@source "../../../**/*.{js,ts,jsx,tsx}";',
@@ -1060,11 +1085,7 @@ test('migrate rebases and deduplicates relative stylesheet references from a leg
     assert.equal(await readFile(join(root, 'styles/tokens.pcss'), 'utf8'), ':root { --logo: url(../public/logo.svg); }\n')
     assert.equal(await readFile(join(root, 'styles/theme.scss'), 'utf8'), '@import "./components.css";\n')
 
-    const rollbackCommands = result.stdout
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.startsWith('git -C '))
-    execFileSync('/bin/sh', ['-c', rollbackCommands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, result.stdout)
     assert.equal(await readFile(join(root, 'contents/themes/acme/styles/globals.css'), 'utf8'), originalCss)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -1110,7 +1131,7 @@ test('migrate refuses a moved stylesheet dependency absent from the project pack
   }
 })
 
-test('migrate refuses a dirty tree and its documented rollback restores tracked and untracked move output', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate refuses a dirty tree and its documented rollback restores tracked and untracked move output', async () => {
   const { root } = await moveFixture()
   try {
     await write(root, 'untracked.txt', 'dirty\n')
@@ -1120,15 +1141,25 @@ test('migrate refuses a dirty tree and its documented rollback restores tracked 
     await rm(join(root, 'untracked.txt'))
     const moved = run(root, ['--yes'])
     assert.equal(moved.status, 0, `${moved.stdout}\n${moved.stderr}`)
-    const rollbackCommands = moved.stdout
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.startsWith('git -C '))
-    assert.equal(rollbackCommands.length, 2, moved.stdout)
-    execFileSync('/bin/sh', ['-c', rollbackCommands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, moved.stdout)
+    await assert.rejects(access(join(root, '.nextspark/migrate-rollback.mjs')), 'the script deletes itself')
     assert.equal(await readFile(join(root, 'contents/themes/acme/components/Button.ts'), 'utf8'), 'export const Button = true\n')
     await assert.rejects(access(join(root, 'components/Button.ts')))
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the rollback of a migrate that was committed refuses to run instead of undoing the commits after it (#469)', async () => {
+  const { root } = await moveFixture()
+  try {
+    const moved = run(root, ['--yes'])
+    assert.equal(moved.status, 0, `${moved.stdout}\n${moved.stderr}`)
+    await commitFixture(root)
+    assert.throws(() => runPrintedRollback(root, moved.stdout), (error: { stderr: Buffer }) => /Rollback failed: the repository has commits made after the migrate this rollback belongs to/.test(String(error.stderr)))
+    assert.equal(await readFile(join(root, 'components/Button.ts'), 'utf8'), 'export const Button = true\n')
+    assert.equal(git_status(root), '')
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -1690,7 +1721,7 @@ test('migrate removes the emptied legacy app root and records the route-root gua
   }
 })
 
-test('migrate fails the post-migration route-root guard and its rollback restores app', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate fails the post-migration route-root guard and its rollback restores app', async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root)
@@ -1701,16 +1732,14 @@ test('migrate fails the post-migration route-root guard and its rollback restore
     const failed = run(root, ['--yes'])
     assert.notEqual(failed.status, 0)
     assert.match(failed.stderr, /Post-migration route-root check failed: pages remains next to src\/app/)
-    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    assert.equal(commands.length, 2, failed.stdout)
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, failed.stdout)
     assert.equal(await readFile(join(root, 'app/layout.tsx'), 'utf8'), facadeOf(routeOf('layout.tsx')))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
 
-test('migrate reports the generator failure and its printed rollback restores the app tree', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate reports the generator failure and its printed rollback restores the app tree', async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root, { prepare: 'fail' })
@@ -1724,8 +1753,7 @@ test('migrate reports the generator failure and its printed rollback restores th
     assert.match(result.stderr, /MIGRATION FAILED: nextspark prepare did not generate the new src\/app/)
     assert.match(result.stderr, /route templates\/dashboard\/page\.tsx cannot be planned/)
     assert.match(result.stdout, /Rollback after migration failure/)
-    const commands = [...new Set(result.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, result.stdout)
     assert.equal(await readFile(join(root, 'app/dashboard/page.tsx'), 'utf8'), CUSTOM_DASHBOARD)
     await assert.rejects(access(join(root, 'templates/dashboard/page.tsx')))
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
@@ -1751,7 +1779,7 @@ test('migrate refuses a project that has both app/ and a src/app no generation o
   }
 })
 
-test('migrate late failure rollback restores all newly-created migration paths to git HEAD', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate late failure rollback restores all newly-created migration paths to git HEAD', async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -1767,9 +1795,7 @@ test('migrate late failure rollback restores all newly-created migration paths t
     assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
     // The conversion and the generator had already run when the imports were checked
     assert.match(failed.stdout, /converted 1 customized core file\(s\) into overrides/)
-    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    assert.equal(commands.length, 2, failed.stdout)
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, failed.stdout)
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
     assert.equal(execFileSync('git', ['diff', '--exit-code', 'HEAD'], { cwd: root, encoding: 'utf8' }), '')
     await assert.rejects(access(join(root, 'nextspark.config.ts')))
@@ -1782,7 +1808,7 @@ test('migrate late failure rollback restores all newly-created migration paths t
   }
 })
 
-test('migrate late failure rollback removes the src/instrumentation.ts prepare moved the root template to', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate late failure rollback removes the src/instrumentation.ts prepare moved the root template to', async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -1798,8 +1824,7 @@ test('migrate late failure rollback removes the src/instrumentation.ts prepare m
     assert.notEqual(failed.status, 0)
     assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
     await access(join(root, 'src/instrumentation.ts'))
-    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, failed.stdout)
 
     assert.equal(await readFile(join(root, 'instrumentation.ts'), 'utf8'), rootInstrumentation)
     await assert.rejects(access(join(root, 'src/instrumentation.ts')), 'only the root file again, not both')
@@ -1809,7 +1834,7 @@ test('migrate late failure rollback removes the src/instrumentation.ts prepare m
   }
 })
 
-test('migrate late failure rollback keeps the user-owned state that already lived in .nextspark', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate late failure rollback keeps the user-owned state that already lived in .nextspark', async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -1822,9 +1847,7 @@ test('migrate late failure rollback keeps the user-owned state that already live
     const failed = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
     assert.notEqual(failed.status, 0)
     assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
-    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    assert.equal(commands.length, 2, failed.stdout)
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, failed.stdout)
 
     assert.equal(await readFile(join(root, '.nextspark/something'), 'utf8'), 'user-owned state\n')
     await assert.rejects(access(join(root, 'src/app/generated-by-prepare.txt')))
@@ -1835,7 +1858,7 @@ test('migrate late failure rollback keeps the user-owned state that already live
   }
 })
 
-test('migrate late-failure rollback restores ignored sync state and in-place config edits byte-for-byte', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('migrate late-failure rollback restores ignored sync state and in-place config edits byte-for-byte', async () => {
   const { root } = await moveFixture({ brokenImport: true })
   try {
     await installConversionCore(root)
@@ -1857,14 +1880,13 @@ test('migrate late-failure rollback restores ignored sync state and in-place con
     const failed = run(root, ['--yes'], { NEXT_PUBLIC_ACTIVE_THEME: 'acme' })
     assert.notEqual(failed.status, 0)
     assert.match(failed.stdout, /MIGRATION FAILED: migration introduced broken imports/)
-    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    assert.equal(commands.length, 2, failed.stdout)
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, failed.stdout)
 
     assert.equal(await readFile(join(root, '.gitignore'), 'utf8'), originalGitignore)
     assert.equal(await readFile(join(root, 'tsconfig.json'), 'utf8'), originalTsconfig)
     assert.deepEqual(await readFile(join(root, '.nextspark/sync-state.json')), originalState)
     await assert.rejects(access(join(root, '.nextspark/migrate-rollback')))
+    await assert.rejects(access(join(root, '.nextspark/migrate-rollback.mjs')))
     assert.equal(execFileSync('git', ['diff', '--exit-code', 'HEAD'], { cwd: root, encoding: 'utf8' }), '')
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
@@ -2825,9 +2847,7 @@ else process.exit(2)
     await assert.rejects(access(join(root, 'proxy.ts')))
     await assert.rejects(access(join(root, 'middleware.ts')))
 
-    const commands = [...new Set(failed.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    assert.equal(commands.length, 2, failed.stdout)
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, failed.stdout)
     assert.equal(await readFile(join(root, 'proxy.ts'), 'utf8'), oldProxy)
     assert.equal(await readFile(join(root, 'middleware.ts'), 'utf8'), oldMiddleware)
   } finally {
@@ -3277,7 +3297,7 @@ test('migrate moves the static metadata files of the app root to public/ and say
     assert.deepEqual(await readFile(join(root, 'public/opengraph-image.jpg')), Buffer.from('JPG\u0000og'))
     await assert.rejects(access(join(root, 'src/app/favicon.ico')))
     // the rollback cleans what the run created, public/favicon.ico included
-    assert.match(result.stdout, /clean -fdx -- [^\n]*'public\/favicon\.ico'/)
+    assert.ok(recordedRollback(root).created.includes('public/favicon.ico'))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -3376,7 +3396,7 @@ test('migrate carries the root layout.meta.ts of a 0.x theme over to a templates
     assert.match(layout, /^export default function RootTemplate\(\{ children \}: \{ children: ReactNode \}\) \{\n {2}return children\n\}$/m)
     assert.match(result.stdout, /templates\/layout\.tsx: written, it re-exports the metadata of templates\/layout\.meta\.ts/)
     // the rollback removes the file the run wrote
-    assert.match(result.stdout, /clean -fdx -- [^\n]*'templates\/layout\.tsx'/)
+    assert.ok(recordedRollback(root).created.includes('templates/layout.tsx'))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -4375,7 +4395,7 @@ test('a package.json under an AI-workflow directory is not a workspace member', 
   }
 })
 
-test('the rollback leaves the files of an existing packages/contracts directory alone', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('the rollback leaves the files of an existing packages/contracts directory alone', async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root, { prepare: 'fail' })
@@ -4390,8 +4410,7 @@ test('the rollback leaves the files of an existing packages/contracts directory 
     const result = run(root, ['--yes'])
     assert.notEqual(result.status, 0)
     await access(join(root, 'packages/contracts/package.json'))
-    const commands = [...new Set(result.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, result.stdout)
     assert.equal(await readFile(join(root, 'packages/contracts/notes.keep'), 'utf8'), 'keep me\n')
     assert.equal(await readFile(join(root, 'packages/contracts/README.md'), 'utf8'), 'mine\n')
     await assert.rejects(access(join(root, 'packages/contracts/package.json')))
@@ -4429,7 +4448,7 @@ test('packages/contracts is only planned where nextspark prepare will look for i
   assert.match(deep.skipped ?? '', /nextspark prepare only looks for it at ..\/packages\/contracts, ..\/..\/packages\/contracts, packages\/contracts/)
 })
 
-test('the printed rollback removes a packages/contracts that migrate created', posixOnly(POSIX_REASONS.shRollback), async () => {
+test('the printed rollback removes a packages/contracts that migrate created', async () => {
   const { root } = await moveFixture()
   try {
     await installConversionCore(root, { prepare: 'fail' })
@@ -4440,8 +4459,7 @@ test('the printed rollback removes a packages/contracts that migrate created', p
     const result = run(root, ['--yes'])
     assert.notEqual(result.status, 0)
     await access(join(root, 'packages/contracts/package.json'))
-    const commands = [...new Set(result.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    execFileSync('/bin/sh', ['-c', commands.join('\n')], { cwd: root, stdio: 'ignore' })
+    runPrintedRollback(root, result.stdout)
     await assert.rejects(access(join(root, 'packages/contracts')))
     assert.equal(execFileSync('git', ['status', '--short'], { cwd: root, encoding: 'utf8' }), '')
   } finally {
@@ -4947,7 +4965,7 @@ test('a run killed after it started writing is named on the next run, with the r
     assert.notEqual(failed.status, 0)
     // The commands are on disk, not only on the terminal that may be gone
     const recorded = await readFile(join(root, '.nextspark/migrate-rollback/rollback.txt'), 'utf8')
-    assert.match(recorded, /git -C .* checkout -- \./)
+    assert.equal(recorded.trimEnd(), printedRollback(failed.stdout))
     for (const args of [['--dry-run'], ['--yes']]) {
       const again = run(root, args)
       assert.notEqual(again.status, 0)
@@ -5010,22 +5028,24 @@ test('rollback.txt is never echoed: a crafted copy or marker prints no commands 
     await commitFixture(root)
     const first = run(root, ['--yes'])
     assert.notEqual(first.status, 0)
-    const printed = [...new Set(first.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    assert.equal(printed.length, 2, first.stdout.slice(-1500))
+    const printed = printedRollback(first.stdout)
+    const script = join(root, '.nextspark/migrate-rollback.mjs')
+    const written = await readFile(script, 'utf8')
     const txt = join(root, '.nextspark/migrate-rollback/rollback.txt')
     const json = join(root, '.nextspark/migrate-rollback/rollback.json')
     const good = await readFile(json, 'utf8')
     // A crafted rollback.txt, even a command-shaped one, is not read
     await writeFile(txt, "git -C '/' checkout -- .\n(cd '/' && if [ -d 'x' ]; then find 'x' -depth -mindepth 1 -delete; fi)\n")
+    // and so is a script left at the rollback's path: the next run writes it again from the marker
+    await writeFile(script, "console.log('EVIL-MARKER')\n")
     const again = run(root, ['--dry-run'])
     assert.notEqual(again.status, 0)
     assert.doesNotMatch(again.stdout, /git -C '\/'|cd '\/'/)
-    // The rebuilt commands are exactly what the live run printed, including the selective cleanup
-    assert.match(printed[1], /find '\.\/\.nextspark\/registries' .*! -path '\.\/\.nextspark\/registries\/keep\.json'/, 'the live run recorded a cleanup')
-    assert.match(printed[1], /! -path '\.\/\.nextspark\/registries\/\\\[slug\\\]'/, 'a dynamic-route name is escaped for find -path')
-    assert.match(printed[1], /--literal-pathspecs clean -fdx -- /, 'git clean reads paths literally, so app/[slug] does not match app/s')
-    const rebuilt = [...new Set(again.stdout.split('\n').map(line => line.trim()).filter(line => line.startsWith('git -C ')))]
-    assert.deepEqual(rebuilt, printed, 'the commands come from the marker, rebuilt by the CLI')
+    // The live run recorded the selective cleanup, with a dynamic-route name kept as a literal path
+    assert.deepEqual(recordedRollback(root).cleanups, [{ root: '.nextspark/registries', preserved: ['.nextspark/registries/[slug]', '.nextspark/registries/[slug]/x.json', '.nextspark/registries/keep.json'] }], 'the live run recorded a cleanup')
+    assert.match(written, /'--literal-pathspecs', 'clean', '-fdx'/, 'git clean reads paths literally, so app/[slug] does not match app/s')
+    assert.equal(printedRollback(again.stdout), printed, 'the same command')
+    assert.equal(await readFile(script, 'utf8'), written, 'the script comes from the marker, written again by the CLI')
     // Crafted markers: absolute, `..`, `.`, wrong version, not JSON
     const bad = [
       { version: 1, created: ['/'], cleanups: [] },
@@ -5050,12 +5070,12 @@ test('rollback.txt is never echoed: a crafted copy or marker prints no commands 
       const refused = run(root, ['--dry-run'])
       assert.notEqual(refused.status, 0)
       assert.match(refused.stderr, /rollback\.json is missing, tracked by git or not what nextspark writes/)
-      assert.doesNotMatch(refused.stdout + refused.stderr, /evil\.example|git -C|cd '/)
+      assert.doesNotMatch(refused.stdout + refused.stderr, /evil\.example|git -C|cd '|migrate-rollback\.mjs/)
     }
     // A run of an older nextspark leaves only rollback.txt: not trusted
     await rm(json)
     const old = run(root, ['--dry-run'])
-    assert.doesNotMatch(old.stdout + old.stderr, /git -C|cd '/)
+    assert.doesNotMatch(old.stdout + old.stderr, /git -C|cd '|migrate-rollback\.mjs/)
     assert.match(old.stderr, /run the rollback that run printed/)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -5431,7 +5451,7 @@ test('migrate --yes --rename-entity-slugs renames the directory, sets tableName 
     assert.match(result.stdout, /callers in the project source: lib\/members\.ts:3/)
     assert.match(result.stdout, /UPDATE "api_key"/)
     // nothing ran against a database, and the rollback names the new directory
-    assert.match(result.stdout, /clean -fdx -- .*entities\/campaign-members/)
+    assert.ok(recordedRollback(root).created.includes('entities/campaign-members'))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5458,7 +5478,7 @@ test('migrate --rename-entity-slugs on a root-first project renames and prints i
     assert.equal((config.match(/tableName/g) ?? []).length, 1)
     assert.match(await readFile(join(root, 'lib/members.ts'), 'utf8'), /@\/entities\/campaign-members\/campaign_members\.config/)
     assert.match(result.stdout, /was already 'members_table' and is kept/)
-    assert.match(result.stdout, /Rollback: git -C .* checkout -- \. && git -C .* clean -fd -- .*entities\/campaign-members/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- \.\n {4}git -C \S+ clean -fd -- entities\/campaign-members\n/)
     // the printed rollback restores the project
     git(root, ['checkout', '--', '.'])
     git(root, ['clean', '-fd', '--', 'entities/campaign-members'])
@@ -5498,7 +5518,8 @@ test('migrate --rename-entity-slugs that fails partway prints the rollback and l
     const result = run(root, ['--yes', '--rename-entity-slugs'])
     assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
     assert.match(result.stderr, /could not rename the "order_items" key of config\/permissions\.config\.ts; nothing was left changed/)
-    assert.match(result.stderr + result.stdout, /checkout -- \. && git -C .* clean -fd -- 'entities\/campaign-members' 'entities\/order-items'/)
+    assert.match(result.stdout, /git -C \S+ checkout -- \.\n {2}git -C \S+ clean -fd -- entities\/campaign-members entities\/order-items\n/)
+    for (const line of result.stdout.split('\n').filter(text => text.includes('git -C '))) assert.doesNotMatch(line, /&&|'/)
     assert.equal(git_status(root), '')
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -5565,7 +5586,7 @@ test('migrate on a root-first project on an earlier Next.js sets next and eslint
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.match(result.stdout, /next and eslint-config-next set to ~16\.4\.2\. Run your package manager's install, then nextspark prepare/)
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- package\.json/)
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
     assert.equal(pkg.dependencies.next, '~16.4.2')
     assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.2')
@@ -5591,7 +5612,7 @@ test('migrate on a root-first project lists the package.json range next to the p
     assert.match(result.stdout, /Root-first project\n {2}src\/proxy\.ts: an unchanged copy of an earlier core template, replaced with the current one\n {2}package\.json: next and eslint-config-next set to ~16\.4\.2/)
     assert.equal(await readFile(join(root, 'src/proxy.ts'), 'utf8'), facade)
     assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).dependencies.next, '~16.4.2')
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'src\/proxy\.ts' 'package\.json'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- src\/proxy\.ts package\.json\n/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5619,7 +5640,7 @@ test('migrate on a root-first project moves pnpm.onlyBuiltDependencies into pnpm
     for (const name of ['my-native-dep', 'sharp']) assert.match(yaml, new RegExp(`- '${name}'`))
     assert.deepEqual(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).pnpm, { overrides: { foo: '1.0.0' } })
     // the rollback names the file it edited and the one it created
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'[^\n]* clean -fdx -- 'pnpm-workspace\.yaml'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- package\.json\n {4}git -C \S+ --literal-pathspecs clean -fdx -- pnpm-workspace\.yaml\n/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5641,7 +5662,7 @@ test('migrate on a root-first project raises the host react range to the version
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
     assert.equal(pkg.dependencies.react, '^19.2.4')
     assert.equal(pkg.dependencies['react-dom'], '^19.0.0')
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- package\.json/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5657,7 +5678,7 @@ test('migrate on a root-first project updates the peer ranges of a workspace mem
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.deepEqual(JSON.parse(await readFile(join(root, 'packages/kit/package.json'), 'utf8')).peerDependencies, { next: '~16.4.2' })
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'packages\/kit\/package\.json'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- packages\/kit\/package\.json/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5672,7 +5693,7 @@ test('migrate on a root-first project removes the old block thumbnail lines', as
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.equal(await readFile(join(root, 'blocks/hero/config.ts'), 'utf8'), "export const config = {\n  slug: 'hero',\n}\n")
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'blocks\/hero\/config\.ts'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- blocks\/hero\/config\.ts/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5689,7 +5710,7 @@ test('migrate on a root-first project creates packages/contracts when a mobile a
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.equal(JSON.parse(await readFile(join(root, 'packages/contracts/package.json'), 'utf8')).name, '@project/contracts')
     assert.equal(JSON.parse(await readFile(join(root, 'mobile/package.json'), 'utf8')).dependencies['@project/contracts'], 'workspace:*')
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- [^\n]*'mobile\/package\.json'[^\n]* clean -fdx -- 'packages\/contracts'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- [^\n]*mobile\/package\.json[^\n]*\n {4}git -C \S+ --literal-pathspecs clean -fdx -- packages\/contracts\n/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5734,7 +5755,7 @@ test('migrate on a root-first project renames core script paths in package.json'
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.doesNotMatch(await readFile(join(root, 'package.json'), 'utf8'), /jest-theme\.mjs/)
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- 'package\.json'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- package\.json/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -5749,7 +5770,7 @@ test('migrate on a root-first project creates the missing nextspark.config.ts an
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.doesNotMatch(result.stdout, /Nothing to migrate/)
     assert.match(await readFile(join(root, 'nextspark.config.ts'), 'utf8'), /defineConfig\(\{\n  plugins: \[\],/)
-    assert.match(result.stdout, /clean -fdx -- 'nextspark\.config\.ts'/)
+    assert.match(result.stdout, /clean -fdx -- nextspark\.config\.ts\n/)
     assert.doesNotMatch(result.stdout, /checkout -- +&&/)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -5782,7 +5803,7 @@ test('the rollback of a slug rename on a root-first project also cleans the file
     const result = run(root, ['--rename-entity-slugs', '--yes'])
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.ok(existsSync(join(root, 'pnpm-workspace.yaml')))
-    assert.match(result.stdout, /Rollback: git -C [^\n]* checkout -- \. [^\n]*--literal-pathspecs clean -fdx -- 'pnpm-workspace\.yaml'/)
+    assert.match(result.stdout, /Rollback:\n {4}git -C \S+ checkout -- \.\n[^\n]*\n {4}git -C \S+ --literal-pathspecs clean -fdx -- pnpm-workspace\.yaml\n/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
