@@ -16,9 +16,9 @@ import { realpathSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { checkMobileBoundary as check, describeViolations, serverPackageReason } from '../../packages/core/scripts/build/mobile-boundary.mjs'
+import { checkMobileBoundary as check, describeViolations, isInsideRoot, serverPackageReason } from '../../packages/core/scripts/build/mobile-boundary.mjs'
 
-export { describeViolations, serverPackageReason }
+export { describeViolations, isInsideRoot, serverPackageReason }
 export { MOBILE_TREES } from '../../packages/core/scripts/build/mobile-boundary.mjs'
 
 const SELF_ROOT = join(dirname(realpathSync(fileURLToPath(import.meta.url))), '../..')

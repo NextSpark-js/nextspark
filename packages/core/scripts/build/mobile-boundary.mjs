@@ -48,7 +48,7 @@
 
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { builtinModules, createRequire } from 'node:module'
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import path, { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Package `exports` resolution (conditions per bundler target, wildcard and longest-pattern subpaths, dist -> src) is stage 7a's:
@@ -143,6 +143,15 @@ function packageName(specifier) {
 
 const isNodePrefixed = specifier => specifier.startsWith('node:')
 const isBuiltinName = specifier => BUILTINS.has(specifier) || BUILTINS.has(specifier.split('/')[0])
+
+/**
+ * Whether `file` is `root` or below it. TypeScript hands back `G:/repo/x.ts` where the root is `G:\repo` on Windows,
+ * so a prefix comparison of the strings does not hold there; `relative` compares the parsed paths.
+ */
+export function isInsideRoot(root, file, pathApi = path) {
+  const rel = pathApi.relative(root, file)
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${pathApi.sep}`) && !pathApi.isAbsolute(rel))
+}
 
 /** Why this bare specifier is server-side, or null. */
 export function serverPackageReason(specifier) {
@@ -364,7 +373,7 @@ export function checkMobileBoundary({ repoRoot, ts = loadTypeScript(repoRoot), t
 
   /** The package.json above a file, up to the repo root: `{ dir, manifest }` or null. */
   const owningPackage = file => {
-    for (let dir = dirname(file); dir.startsWith(root); dir = dirname(dir)) {
+    for (let dir = dirname(file); isInsideRoot(root, dir); dir = dirname(dir)) {
       const manifestPath = join(dir, 'package.json')
       if (existsSync(manifestPath)) {
         try {
@@ -456,7 +465,7 @@ export function checkMobileBoundary({ repoRoot, ts = loadTypeScript(repoRoot), t
     }
     // An alias (`paths`) or a linked workspace package resolves to a file of the repository. That is one entry of the
     // package: the others (what Metro takes on a device, `react-native`, or build output) are followed too, below
-    if (resolved && !installed && resolved.startsWith(root) && SOURCE_FILE.test(resolved)) follow(file, specifier, [resolved], chain, tsconfig)
+    if (resolved && !installed && isInsideRoot(root, resolved) && SOURCE_FILE.test(resolved)) follow(file, specifier, [resolve(resolved)], chain, tsconfig)
     const workspacePackage = workspace.get(name)
     if (workspacePackage) {
       const subpath = specifier.slice(name.length + 1)

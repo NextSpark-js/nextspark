@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, posix, win32 } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { checkMobileBoundary, describeViolations, serverPackageReason } from './mobile-boundary.mjs'
+import { checkMobileBoundary, describeViolations, isInsideRoot, serverPackageReason } from './mobile-boundary.mjs'
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'mobile-boundary.mjs')
 const REPO_ROOT = join(dirname(SCRIPT), '../..')
@@ -509,4 +509,14 @@ test('the script exits 1 and names the chain when a violation is present', () =>
   } finally {
     cleanup()
   }
+})
+
+test('isInsideRoot compares parsed paths: a Windows root and the forward-slash paths TypeScript returns', () => {
+  assert.equal(isInsideRoot('G:\\repo', 'G:/repo/packages/core/src/lib/db.ts', win32), true)
+  assert.equal(isInsideRoot('G:\\repo', 'G:\\repo', win32), true)
+  assert.equal(isInsideRoot('G:\\repo', 'G:/repository/x.ts', win32), false)
+  assert.equal(isInsideRoot('G:\\repo', 'H:/repo/x.ts', win32), false)
+  assert.equal(isInsideRoot('/repo', '/repo/a/b.ts', posix), true)
+  assert.equal(isInsideRoot('/repo', '/repo-other/b.ts', posix), false)
+  assert.equal(isInsideRoot('/repo/a', '/repo/b.ts', posix), false)
 })
