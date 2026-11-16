@@ -1,6 +1,8 @@
 {
   "name": "@nextsparkjs/plugin-amplitude",
   "version": "0.1.0-beta.203",
+  "description": "Amplitude analytics hooks, consent handling and experiments for NextSpark",
+  "license": "MIT",
   "homepage": "https://www.nextspark.dev",
   "repository": {
     "type": "git",

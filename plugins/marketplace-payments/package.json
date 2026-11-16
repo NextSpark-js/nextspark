@@ -1,6 +1,8 @@
 {
   "name": "@nextsparkjs/plugin-marketplace-payments",
   "version": "0.1.0-beta.203",
+  "description": "Split payments between the platform and connected sellers with Stripe Connect and MercadoPago, for NextSpark",
+  "license": "MIT",
   "homepage": "https://www.nextspark.dev",
   "repository": {
     "type": "git",

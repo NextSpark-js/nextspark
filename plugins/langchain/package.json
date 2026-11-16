@@ -1,6 +1,8 @@
 {
   "name": "@nextsparkjs/plugin-langchain",
   "version": "0.1.0-beta.203",
+  "description": "LangChain agents for NextSpark with tools, session memory, orchestration and observability",
+  "license": "MIT",
   "homepage": "https://www.nextspark.dev",
   "repository": {
     "type": "git",
