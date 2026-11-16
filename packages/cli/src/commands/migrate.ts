@@ -1,5 +1,5 @@
 import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, copyFileSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, readSync, openSync, readlinkSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash, randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -3686,6 +3686,41 @@ function snapshotMigrationRollback(hostRoot: string, plan: MovePlan, report: Mig
   }
 }
 
+const LOCK_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
+
+/** The path of a file another program holds open (Windows reports EBUSY, EPERM or EACCES), or null for any other error. */
+function lockedPath(error: unknown): string | null {
+  const { code, path } = (error ?? {}) as NodeJS.ErrnoException;
+  return code && LOCK_CODES.has(code) && path ? path : null;
+}
+
+/**
+ * Open every file below `paths` (relative to `root`) for writing and close it again, which writes nothing: on Windows a
+ * file another program holds fails here, before migrate has moved or rewritten anything.
+ */
+function assertWritable(root: string, paths: string[]): void {
+  const visit = (file: string) => {
+    let entry;
+    try {
+      entry = lstatSync(file);
+    } catch {
+      return;
+    }
+    if (entry.isDirectory()) {
+      for (const child of readdirSync(file)) visit(join(file, child));
+      return;
+    }
+    if (!entry.isFile()) return;
+    try {
+      closeSync(openSync(file, 'r+'));
+    } catch (error) {
+      if (!lockedPath(error)) throw error;
+      throw new MigrateAnalysisError(`${pathFrom(root, file)} cannot be written: another program has it open (an editor, the development server or an antivirus), or it is read-only. Close that program, or make the file writable, and run nextspark migrate again. Nothing was written.`);
+    }
+  };
+  for (const path of paths) visit(join(root, path));
+}
+
 function isLink(path: string): boolean {
   try {
     return lstatSync(path).isSymbolicLink();
@@ -4532,6 +4567,8 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
       const editedFiles = [...new Set([...upgrades.map(upgrade => pathFrom(repository, join(hostRoot, upgrade.file))), ...fixes.modified])];
       const fixRollback = [...(editedFiles.length > 0 ? [`${git} checkout -- ${list(editedFiles)}`] : []), ...cleanCreated];
       const rollbackLines = renameSlugs ? renameRollback : fixRollback;
+      // A file another program holds stops the run here, before anything is written
+      assertWritable(repository, [...editedFiles, ...(renameSlugs ? report.entitySlugs.renames : []).map(rename => pathFrom(repository, join(hostRoot, 'entities', rename.oldSlug)))]);
       if (renameSlugs || fixes.lines.length > 0) {
         // set before the first write: a run that fails partway still prints it
         rollback = rollbackLines;
@@ -4604,6 +4641,8 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     const beforeFiles = sourceFiles.map(item => ({ file: item.source, source: item.source, display: pathFrom(hostRoot, item.destination) }));
     const brokenBeforeMove = aliasesBeforeMove ? brokenImports(hostRoot, beforeFiles, aliasesBeforeMove) : [];
     if (!appTreeOnly) preflightMovedStylesheetDependencies(hostRoot, themeRoot, pluginsRoot, plan);
+    // A file another program holds stops the run here, before anything is written
+    assertWritable(hostRoot, migrationRollbackPaths(hostRoot, plan, report, hadLegacyApp));
     snapshotMigrationRollback(hostRoot, plan, report, hadLegacyApp);
     writeFileSync(join(migrationRollbackBackup(hostRoot), MIGRATION_ROLLBACK_STATE_FILE), `${JSON.stringify(state)}\n`);
     writeRollbackScript(repository, hostRoot, state);
@@ -4694,7 +4733,10 @@ export async function migrateCommand(options: MigrateOptions): Promise<void> {
     removeMigrationRollbackBackup(hostRoot);
     console.log(`  To undo the migration before you commit it, run: ${rollback[0]}`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not analyze this project.';
+    const locked = writesStarted ? lockedPath(error) : null;
+    const message = locked
+      ? `${locked} is open in another program, so migrate stopped partway: close the program that has it open (an editor, the development server or an antivirus), run the rollback printed below, then run nextspark migrate again.`
+      : error instanceof Error ? error.message : 'Could not analyze this project.';
     console.error(`nextspark migrate: ${message}`);
     if ((writesStarted || printRollbackOnFailure) && rollback) printRollback(rollback);
     // --check: 0 clean, 1 findings, 2 the check could not run

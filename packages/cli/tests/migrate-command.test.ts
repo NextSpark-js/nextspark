@@ -1165,6 +1165,64 @@ test('the rollback of a migrate that was committed refuses to run instead of und
   }
 })
 
+/**
+ * A module preloaded into the CLI that fails one fs call on `file` with EBUSY, as Windows does on a file another program
+ * holds: `open` fails opening it for writing (migrate's check before it writes), `rename` fails moving it (partway).
+ */
+async function lockedFileEnv(file: string, at: 'open' | 'rename'): Promise<{ env: NodeJS.ProcessEnv, dir: string }> {
+  const dir = await mkdtemp(join(tmpdir(), 'nextspark-migrate-lock-'))
+  const preload = join(dir, 'lock.mjs')
+  await writeFile(preload, [
+    "import fs from 'node:fs'",
+    "import { syncBuiltinESMExports } from 'node:module'",
+    `const target = ${JSON.stringify(file)}`,
+    "const locked = path => String(path).split('\\\\').join('/').endsWith(target)",
+    "const busy = (syscall, path) => Object.assign(new Error(`EBUSY: resource busy or locked, ${syscall} '${path}'`), { code: 'EBUSY', errno: -16, syscall, path: String(path) })",
+    at === 'open'
+      ? "const open = fs.openSync\nfs.openSync = (path, flags, ...rest) => { if (locked(path) && flags === 'r+') throw busy('open', path); return open(path, flags, ...rest) }"
+      : "const rename = fs.renameSync\nfs.renameSync = (from, to) => { if (locked(from)) throw busy('rename', from); return rename(from, to) }",
+    'syncBuiltinESMExports()',
+    '',
+  ].join('\n'))
+  return { env: { NODE_OPTIONS: `--import=${pathToFileURL(preload).href}` }, dir }
+}
+
+test('a file another program holds stops migrate before it writes anything, naming the file (#469)', async () => {
+  const { root } = await moveFixture()
+  const lock = await lockedFileEnv('contents/themes/acme/components/Button.ts', 'open')
+  try {
+    const result = run(root, ['--yes'], lock.env)
+    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /contents\/themes\/acme\/components\/Button\.ts cannot be written: another program has it open \(an editor, the development server or an antivirus\)/)
+    assert.match(result.stderr, /Nothing was written\./)
+    assert.doesNotMatch(result.stdout, /Rollback after migration failure/)
+    assert.equal(git_status(root), '')
+    await assert.rejects(access(join(root, '.nextspark')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(lock.dir, { recursive: true, force: true })
+  }
+})
+
+test('a file locked partway says so and points at the rollback, which restores the tree (#469)', async () => {
+  const { root } = await moveFixture()
+  const lock = await lockedFileEnv('contents/themes/acme/components/Button.ts', 'rename')
+  try {
+    const result = run(root, ['--yes'], lock.env)
+    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /Button\.ts is open in another program, so migrate stopped partway: close the program that has it open \(an editor, the development server or an antivirus\), run the rollback printed below/)
+    assert.match(result.stdout, /Rollback after migration failure/)
+    runPrintedRollback(root, result.stdout)
+    assert.equal(await readFile(join(root, 'contents/themes/acme/components/Button.ts'), 'utf8'), 'export const Button = true\n')
+    assert.equal(git_status(root), '')
+    await assert.rejects(access(join(root, '.nextspark/migrate-rollback')))
+    await assert.rejects(access(join(root, '.nextspark/migrate-rollback.mjs')))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(lock.dir, { recursive: true, force: true })
+  }
+})
+
 test('migrate creates a missing root-first config from required local and packaged plugins', async () => {
   const { root } = await moveFixture()
   try {
