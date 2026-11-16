@@ -329,7 +329,9 @@ test("cancelActiveChildrenAndExit waits for the active step's finally before exi
   assert.equal(result.cleanedUpAtExit, true, "exit must not be called before the active step's finally")
   assert.equal(result.exitCode, 1)
   assert.equal(result.stepPassed, false)
-  assert.ok(logs.some((line) => line.includes('Killed with SIGKILL')))
+  // Windows ends the process with taskkill /F, which sends no signal.
+  const ended = process.platform === 'win32' ? 'Exited with code' : 'Killed with SIGKILL'
+  assert.ok(logs.some((line) => line.includes(ended)))
   assert.ok(logs.some((line) => line.includes('✗ hang failed')))
 })
 
