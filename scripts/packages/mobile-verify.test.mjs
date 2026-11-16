@@ -304,7 +304,7 @@ test("cancelActiveChildrenAndExit waits for the active step's finally before exi
     let cleanedUp = false
     const stepPromise = step('hang', async () => {
       try {
-        return await exec('sleep', ['30'], process.cwd())
+        return await exec(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], process.cwd())
       } finally {
         cleanedUp = true
       }
@@ -344,7 +344,7 @@ test('exec gives up on a step instead of hanging forever when its kill signal is
     try {
       // The fake killProcessGroup never actually signals the child, like a
       // missing or refused taskkill on Windows would.
-      const value = await exec('sleep', ['5'], process.cwd(), {
+      const value = await exec(process.execPath, ['-e', 'setTimeout(() => {}, 5000)'], process.cwd(), {
         timeoutMs: 50,
         killFallbackMs: 100,
         killProcessGroup: (pid) => {
