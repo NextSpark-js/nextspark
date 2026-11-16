@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.203] - 2026-11-16
+
 ### Upgrading from 0.1.0-beta.202
 
 - **With `social-media-publisher` enabled, run `db:migrate` as the tables' owner (`MIGRATE_DATABASE_URL`).** Migration `005_social_accounts_policies.sql` replaces the policies of `social_accounts`; a project whose app connects as `nextspark_app` could not use the plugin's routes until then. (#456)
