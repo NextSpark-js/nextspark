@@ -1,6 +1,8 @@
-import { put, del } from '@vercel/blob'
 import type { StorageDriver } from './index'
 import { assertObjectName } from './names'
+
+/** @vercel/blob loads at the first upload or delete, not with this module: a project on another driver never pays for it. */
+const loadBlob = () => import('@vercel/blob')
 
 export const isVercelBlobToken = (token: string | undefined): boolean => !!token && token.startsWith('vercel_blob_')
 
@@ -19,11 +21,11 @@ export class VercelBlobStorageDriver implements StorageDriver {
 
   async put(name: string, body: Buffer, contentType: string): Promise<string> {
     assertObjectName(name)
-    const blob = await put(`uploads/temp/${name}`, body, { access: 'public', addRandomSuffix: false, contentType })
+    const blob = await (await loadBlob()).put(`uploads/temp/${name}`, body, { access: 'public', addRandomSuffix: false, contentType })
     return blob.url
   }
 
   async delete(url: string): Promise<void> {
-    if (isBlobUrl(url)) await del(url)
+    if (isBlobUrl(url)) await (await loadBlob()).del(url)
   }
 }

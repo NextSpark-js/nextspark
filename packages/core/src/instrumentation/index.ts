@@ -63,11 +63,14 @@ export async function register(): Promise<void> {
     }
 
     // A misconfigured STORAGE_DRIVER, and the local driver's volume caveat, show at startup, not on the first upload
-    try {
-      const { logStorageAtStartup } = await import('../lib/media/storage')
-      logStorageAtStartup()
-    } catch {
-      console.error('[storage] startup storage check could not run; uploads still check it per request')
+    // Without STORAGE_DRIVER there is nothing to check, so the storage module (and its drivers) is not loaded at all (#478)
+    if (process.env.STORAGE_DRIVER?.trim()) {
+      try {
+        const { logStorageAtStartup } = await import('../lib/media/storage')
+        logStorageAtStartup()
+      } catch {
+        console.error('[storage] startup storage check could not run; uploads still check it per request')
+      }
     }
 
     // Production only, not awaited: one warning when DATABASE_URL's role skips RLS, never a delay or an error at start
