@@ -71,7 +71,7 @@ export { listSlugs as generateStaticParams }
 Metadata image kinds accept Next's one-digit variants (`icon1`, `apple-icon9`, `opengraph-image2`,
 `twitter-image3`), mapped to the base kind.
 
-The emitter resolves `next/package.json` once (project first, then core) and accepts only `~16.4.2`: the table's
+The emitter resolves `next/package.json` once (project first, then core) and accepts only `~16.4.5`: the table's
 `next` is the verified baseline, and any stable 16.4.x patch at or above it is accepted, while other minors/majors,
 lower patches and prereleases are refused (`NS_HOST_UNSUPPORTED_NEXT_VERSION`). It loads Next's segment config
 schema from that same package root.
