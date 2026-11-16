@@ -1,17 +1,19 @@
 /**
  * Assign Social Accounts to Entity
  *
- * POST endpoint that saves OAuth tokens to social_accounts (user level)
- * and creates links via the adapter (entity level).
+ * POST endpoint that links accounts the user has connected to an entity, via the adapter (entity level).
+ * The request names each account by its platformAccountId; the token is read on the server, from the user's
+ * social_accounts row or, for a Page or Instagram account Graph returns for a stored Meta token, from Graph. A token
+ * in the request body is not read.
  *
  * Accessible via: /api/plugins/social-media-publisher/social/assign
  *
  * Body:
  * - entityId: Target entity ID (e.g., client ID)
- * - accounts: Array of account data to save
+ * - accounts: Array of { platformAccountId, platform? }, accounts listed by GET .../social/accounts
  *
  * Architecture:
- * 1. Upsert tokens to social_accounts (USER level - plugin-owned)
+ * 1. An account found through Graph is stored in social_accounts (USER level - plugin-owned)
  * 2. Create/update links via adapter (ENTITY level - theme-owned)
  * 3. This enables token reuse across multiple entities
  */
@@ -24,15 +26,12 @@ import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter, ensureAdapter, adapterRequiredResponse } from '../../../lib/adapter'
 import { auditTeamId, recordAuditLog } from '../../../lib/audit-log'
+import { listUserAccounts } from '../../../lib/user-accounts'
 
 interface AccountToAssign {
-  platform: string
   platformAccountId: string
-  username: string
-  accessToken: string
-  tokenExpiresAt: string
-  permissions: string[]
-  accountMetadata: Record<string, unknown>
+  /** Optional: when given, the account must be of this platform */
+  platform?: string
 }
 
 interface AssignRequest {
@@ -112,81 +111,83 @@ const postHandler = async (request: NextRequest) => {
       error?: string
     }> = []
 
-    for (const account of accounts) {
+    // The accounts the user can assign, with their tokens, from the server's side only
+    const userAccounts = await listUserAccounts(userId)
+
+    for (const requested of accounts) {
       try {
-        // Validate required fields
-        if (!account.platformAccountId || !account.platform || !account.accessToken) {
+        if (!requested?.platformAccountId) {
           results.push({
-            platformAccountId: account.platformAccountId || 'unknown',
-            username: account.username || 'unknown',
+            platformAccountId: 'unknown',
+            username: 'unknown',
             success: false,
             error: 'Missing required fields'
           })
           continue
         }
 
-        // Calculate token expiration
-        const tokenExpiresAt = account.tokenExpiresAt
-          ? new Date(account.tokenExpiresAt)
-          : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days default
-
-        // Encrypt access token
-        const encryptedToken = await TokenEncryption.encrypt(account.accessToken)
-        const tokenString = `${encryptedToken.encrypted}:${encryptedToken.iv}:${encryptedToken.keyId}`
-
-        // STEP 1: Upsert to social_accounts (USER level - plugin-owned table)
-        const socialAccountResult = await mutateWithRLS<{ id: string }>(
-          `INSERT INTO "social_accounts"
-            ("userId", platform, "platformAccountId", "username", "accessToken",
-             "tokenExpiresAt", permissions, "accountMetadata", "isActive")
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
-           ON CONFLICT ("platformAccountId")
-           DO UPDATE SET
-             "accessToken" = EXCLUDED."accessToken",
-             "tokenExpiresAt" = EXCLUDED."tokenExpiresAt",
-             permissions = EXCLUDED.permissions,
-             "accountMetadata" = EXCLUDED."accountMetadata",
-             "isActive" = true,
-             "updatedAt" = CURRENT_TIMESTAMP
-           RETURNING id`,
-          [
-            userId,
-            account.platform,
-            account.platformAccountId,
-            account.username,
-            tokenString,
-            tokenExpiresAt.toISOString(),
-            JSON.stringify(account.permissions || []),
-            JSON.stringify(account.accountMetadata || {}),
-          ],
-          userId
-        )
-
-        // Validate UPSERT result
-        if (!socialAccountResult || !socialAccountResult.rows || socialAccountResult.rows.length === 0) {
-          console.error(`[assign-accounts] UPSERT failed for ${account.username}: no rows returned`)
+        // Only the account's id (and platform) are read from the request: its token and details are the server's
+        const account = userAccounts.find(candidate =>
+          candidate.platformAccountId === requested.platformAccountId &&
+          (!requested.platform || candidate.platform === requested.platform))
+        if (!account) {
           results.push({
-            platformAccountId: account.platformAccountId,
-            username: account.username,
+            platformAccountId: requested.platformAccountId,
+            username: 'unknown',
             success: false,
-            error: 'Database operation failed'
+            error: 'Account not found among your connected accounts'
           })
           continue
         }
 
-        const socialAccountId = socialAccountResult.rows[0].id
-        if (!socialAccountId) {
-          console.error(`[assign-accounts] UPSERT returned row but no id for ${account.username}`)
-          results.push({
-            platformAccountId: account.platformAccountId,
-            username: account.username,
-            success: false,
-            error: 'Failed to retrieve account id'
-          })
-          continue
-        }
+        const tokenExpiresAt = new Date(account.tokenExpiresAt)
+        let socialAccountId = account.socialAccountId
 
-        console.log(`[assign-accounts] ✅ Saved to social_accounts: ${account.username} (${socialAccountId})`)
+        // STEP 1: An account found through Graph gets its own social_accounts row (USER level - plugin-owned table)
+        if (!account.stored) {
+          const encryptedToken = await TokenEncryption.encrypt(account.accessToken)
+          const tokenString = `${encryptedToken.encrypted}:${encryptedToken.iv}:${encryptedToken.keyId}`
+          const socialAccountResult = await mutateWithRLS<{ id: string }>(
+            `INSERT INTO "social_accounts"
+              ("userId", platform, "platformAccountId", "username", "accessToken",
+               "tokenExpiresAt", permissions, "accountMetadata", "isActive")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+             ON CONFLICT ("platformAccountId")
+             DO UPDATE SET
+               "accessToken" = EXCLUDED."accessToken",
+               "tokenExpiresAt" = EXCLUDED."tokenExpiresAt",
+               permissions = EXCLUDED.permissions,
+               "accountMetadata" = EXCLUDED."accountMetadata",
+               "isActive" = true,
+               "updatedAt" = CURRENT_TIMESTAMP
+             RETURNING id`,
+            [
+              userId,
+              account.platform,
+              account.platformAccountId,
+              account.username,
+              tokenString,
+              tokenExpiresAt.toISOString(),
+              JSON.stringify(account.permissions),
+              JSON.stringify(account.accountMetadata),
+            ],
+            userId
+          )
+
+          const rowId = socialAccountResult?.rows?.[0]?.id
+          if (!rowId) {
+            console.error(`[assign-accounts] UPSERT failed for ${account.username}: no rows returned`)
+            results.push({
+              platformAccountId: account.platformAccountId,
+              username: account.username,
+              success: false,
+              error: 'Database operation failed'
+            })
+            continue
+          }
+          socialAccountId = rowId
+          console.log(`[assign-accounts] ✅ Saved to social_accounts: ${account.username} (${socialAccountId})`)
+        }
 
         // STEP 2: Link via adapter (ENTITY level - theme-owned)
         const assignmentResult = await adapter.saveAssignment({
@@ -194,10 +195,10 @@ const postHandler = async (request: NextRequest) => {
           platform: account.platform,
           platformAccountId: account.platformAccountId,
           username: account.username,
-          accessToken: account.accessToken, // Adapter will encrypt
+          accessToken: account.accessToken, // the server's token; the adapter will encrypt it
           tokenExpiresAt,
-          permissions: account.permissions || [],
-          accountMetadata: account.accountMetadata || {},
+          permissions: account.permissions,
+          accountMetadata: account.accountMetadata,
           socialAccountId
         }, userId)
 
@@ -227,10 +228,10 @@ const postHandler = async (request: NextRequest) => {
         })
 
       } catch (error) {
-        console.error(`[assign-accounts] Error processing ${account.username}:`, error)
+        console.error(`[assign-accounts] Error processing ${requested?.platformAccountId}:`, error)
         results.push({
-          platformAccountId: account.platformAccountId,
-          username: account.username,
+          platformAccountId: requested?.platformAccountId || 'unknown',
+          username: 'unknown',
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error'
         })

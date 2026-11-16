@@ -12,7 +12,8 @@
  * - platform: (optional) Filter by platform (instagram_business, facebook_page)
  *
  * Architecture:
- * - social_accounts: User-level OAuth tokens (plugin-owned, source of truth)
+ * - social_accounts: User-level OAuth tokens (plugin-owned, source of truth); the response lists account and page
+ *   details without tokens
  * - Entity assignments: Theme-specific (via adapter)
  *
  * This enables token reuse - user connects once, can assign to multiple entities.
@@ -22,28 +23,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
-import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
-import { queryWithRLS } from '@nextsparkjs/core/lib/db'
-import { FacebookAPI } from '../../../lib/providers/facebook'
+import { listUserAccounts } from '../../../lib/user-accounts'
 import { getAdapter, ensureAdapter, adapterRequiredResponse, type ConnectedEntity } from '../../../lib/adapter'
-
-interface StoredSocialAccount {
-  id: string
-  platform: string
-  platformAccountId: string
-  username: string
-  accessToken: string
-  tokenExpiresAt: string
-  permissions: string
-  accountMetadata: string
-  isActive: boolean
-}
 
 interface AvailableAccount {
   platform: string
   platformAccountId: string
   username: string
-  accessToken: string
   tokenExpiresAt: string
   permissions: string[]
   accountMetadata: Record<string, unknown>
@@ -109,194 +95,20 @@ const getHandler = async (request: NextRequest) => {
 
     console.log(`[social-accounts] Found connected entities for ${clientsByPlatformAccountId.size} platform accounts`)
 
-    // 5. Fetch user's social accounts from social_accounts table (plugin-owned)
-    let query = `
-      SELECT
-        id,
-        platform,
-        "platformAccountId",
-        username,
-        "accessToken",
-        "tokenExpiresAt",
-        permissions,
-        "accountMetadata",
-        "isActive"
-      FROM "social_accounts"
-      WHERE "userId" = $1
-        AND "isActive" = true
-        AND "accessToken" IS NOT NULL
-        AND "accessToken" != ''
-    `
-
-    const params: unknown[] = [userId]
-
-    if (platformFilter) {
-      query += ` AND platform = $2`
-      params.push(platformFilter)
-    }
-
-    const result = await queryWithRLS<StoredSocialAccount>(query, params, userId)
-    const storedAccounts = result || []
-
-    console.log(`[social-accounts] Found ${storedAccounts.length} user social accounts`)
-
-    // 6. Check token validity and fetch fresh account data from Meta API
-    const availableAccounts: AvailableAccount[] = []
-    const processedAccountIds = new Set<string>()
-
-    for (const account of storedAccounts) {
-      // Skip expired tokens
-      const expiresAt = new Date(account.tokenExpiresAt)
-      if (expiresAt < new Date()) {
-        console.log(`[social-accounts] Token expired for ${account.username}, skipping`)
-        continue
-      }
-
-      // Skip duplicates
-      if (processedAccountIds.has(account.platformAccountId)) {
-        continue
-      }
-      processedAccountIds.add(account.platformAccountId)
-
-      // Decrypt token
-      try {
-        const tokenParts = account.accessToken.split(':')
-        if (tokenParts.length !== 3) {
-          console.log(`[social-accounts] Invalid token format for ${account.username}, skipping`)
-          continue
-        }
-
-        const decrypted = await TokenEncryption.decrypt(
-          tokenParts[0],
-          tokenParts[1],
-          tokenParts[2]
-        )
-
-        // Parse stored metadata
-        let metadata: Record<string, unknown> = {}
-        try {
-          metadata = typeof account.accountMetadata === 'string'
-            ? JSON.parse(account.accountMetadata)
-            : account.accountMetadata || {}
-        } catch {
-          metadata = {}
-        }
-
-        let permissions: string[] = []
-        try {
-          permissions = typeof account.permissions === 'string'
-            ? JSON.parse(account.permissions)
-            : account.permissions || []
-        } catch {
-          permissions = []
-        }
-
-        // Add the stored account to available accounts
-        availableAccounts.push({
-          platform: account.platform,
-          platformAccountId: account.platformAccountId,
-          username: account.username,
-          accessToken: decrypted,
-          tokenExpiresAt: account.tokenExpiresAt,
-          permissions,
-          accountMetadata: metadata,
-          alreadyAssignedToEntity: assignedAccountIds.has(account.platformAccountId),
-          socialAccountId: account.id,
-          connectedClients: clientsByPlatformAccountId.get(account.platformAccountId) || [],
-        })
-
-        // If this is a Meta token, try to fetch additional accounts
-        if (account.platform === 'instagram_business' || account.platform === 'facebook_page') {
-          try {
-            const pages = await FacebookAPI.getUserPages(decrypted)
-
-            for (const page of pages) {
-              // Add Facebook Page if not filtered and not already added
-              if ((!platformFilter || platformFilter === 'facebook_page') &&
-                  !processedAccountIds.has(page.id)) {
-                processedAccountIds.add(page.id)
-
-                const pageInfo = await FacebookAPI.getPageInfo(page.id, page.accessToken)
-
-                availableAccounts.push({
-                  platform: 'facebook_page',
-                  platformAccountId: page.id,
-                  username: page.name,
-                  accessToken: page.accessToken,
-                  tokenExpiresAt: account.tokenExpiresAt,
-                  permissions: page.tasks || [],
-                  accountMetadata: {
-                    category: page.category,
-                    profilePictureUrl: page.pictureUrl || pageInfo.profilePictureUrl,
-                    fanCount: pageInfo.fanCount,
-                    about: pageInfo.about,
-                    link: pageInfo.link,
-                    lastSyncedAt: new Date().toISOString(),
-                  },
-                  alreadyAssignedToEntity: assignedAccountIds.has(page.id),
-                  socialAccountId: account.id,
-                  connectedClients: clientsByPlatformAccountId.get(page.id) || [],
-                })
-              }
-
-              // Add Instagram Business Account if available
-              if ((!platformFilter || platformFilter === 'instagram_business') &&
-                  !processedAccountIds.has(page.id + '_ig')) {
-                try {
-                  const igAccount = await FacebookAPI.getInstagramBusinessAccount(
-                    page.id,
-                    page.accessToken
-                  )
-
-                  if (igAccount && !processedAccountIds.has(igAccount.id)) {
-                    processedAccountIds.add(igAccount.id)
-
-                    availableAccounts.push({
-                      platform: 'instagram_business',
-                      platformAccountId: igAccount.id,
-                      username: igAccount.username,
-                      accessToken: page.accessToken,
-                      tokenExpiresAt: account.tokenExpiresAt,
-                      permissions: [
-                        'instagram_basic',
-                        'instagram_content_publish',
-                        'instagram_manage_comments',
-                        'pages_show_list',
-                        'pages_manage_posts',
-                        'pages_read_engagement',
-                      ],
-                      accountMetadata: {
-                        username: igAccount.username,
-                        name: igAccount.name,
-                        profilePictureUrl: igAccount.profilePictureUrl,
-                        followersCount: igAccount.followersCount,
-                        followsCount: igAccount.followsCount,
-                        mediaCount: igAccount.mediaCount,
-                        biography: igAccount.biography,
-                        website: igAccount.website,
-                        lastSyncedAt: new Date().toISOString(),
-                        facebookPageId: page.id,
-                        facebookPageName: page.name,
-                      },
-                      alreadyAssignedToEntity: assignedAccountIds.has(igAccount.id),
-                      socialAccountId: account.id,
-                      connectedClients: clientsByPlatformAccountId.get(igAccount.id) || [],
-                    })
-                  }
-                } catch {
-                  // No Instagram account for this page, skip
-                }
-              }
-            }
-          } catch (error) {
-            console.error('[social-accounts] Error fetching from Meta API:', error)
-            // Don't fail - return what we have stored
-          }
-        }
-      } catch (error) {
-        console.error(`[social-accounts] Failed to process account ${account.username}:`, error)
-      }
-    }
+    // 5. The user's accounts (social_accounts, plus what Graph returns for a stored Meta token), listed without
+    // their tokens: assign reads the token of the account it is asked for on the server
+    const userAccounts = await listUserAccounts(userId, platformFilter)
+    const availableAccounts: AvailableAccount[] = userAccounts.map(account => ({
+      platform: account.platform,
+      platformAccountId: account.platformAccountId,
+      username: account.username,
+      tokenExpiresAt: account.tokenExpiresAt,
+      permissions: account.permissions,
+      accountMetadata: account.accountMetadata,
+      alreadyAssignedToEntity: assignedAccountIds.has(account.platformAccountId),
+      socialAccountId: account.socialAccountId,
+      connectedClients: clientsByPlatformAccountId.get(account.platformAccountId) || [],
+    }))
 
     console.log(`[social-accounts] Total available accounts: ${availableAccounts.length}`)
     console.log(`[social-accounts] Already assigned to entity: ${availableAccounts.filter(a => a.alreadyAssignedToEntity).length}`)
@@ -304,7 +116,7 @@ const getHandler = async (request: NextRequest) => {
     return NextResponse.json({
       success: true,
       accounts: availableAccounts,
-      hasValidToken: storedAccounts.length > 0,
+      hasValidToken: userAccounts.some(account => account.stored),
       assignedCount: assignedAccountIds.size,
       entitySlug: adapter ? adapter.getEntitySlug() : null,
     })

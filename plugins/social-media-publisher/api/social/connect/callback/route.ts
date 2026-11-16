@@ -327,12 +327,12 @@ const getHandler = async (request: NextRequest) => {
     // 10. Return appropriate response based on mode
     if (mode === 'preview') {
       // Preview mode: tokens saved, return accounts for frontend selection
-      // Frontend will use /social/assign to link selected accounts to entity
+      // Frontend will use /social/assign to link selected accounts to entity, by platformAccountId: the account
+      // details go to the page without tokens, and assign reads the token on the server
       const previewData = accountsToConnect.map((account, index) => ({
         platform: account.platform,
         platformAccountId: account.platformAccountId,
         username: account.username,
-        accessToken: account.accessToken, // Needed for frontend to pass to assign API
         tokenExpiresAt: tokenExpiresAt.toISOString(),
         permissions: account.permissions,
         accountMetadata: account.metadata,
@@ -405,54 +405,6 @@ function renderOAuthError(errorType: string, userMessage: string | null): NextRe
             }, window.location.origin);
           }
           setTimeout(() => window.close(), 3000);
-        </script>
-      </body>
-    </html>
-  `
-
-  return new NextResponse(html, { headers: { 'Content-Type': 'text/html' } })
-}
-
-// Helper: Render OAuth preview page (DEPRECATED - use renderOAuthPreviewWithSavedAccounts)
-function renderOAuthPreview(platform: string, accounts: unknown[]): NextResponse {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>OAuth Preview</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-          }
-          .container { text-align: center; padding: 2rem; }
-          .loading-icon { font-size: 4rem; margin-bottom: 1rem; animation: spin 2s linear infinite; }
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-          p { opacity: 0.9; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="loading-icon">🔄</div>
-          <h1>Loading Accounts...</h1>
-          <p>Found ${accounts.length} ${platform} account(s)</p>
-        </div>
-        <script>
-          if (window.opener) {
-            window.opener.postMessage({
-              type: 'oauth-preview',
-              platform: '${platform}',
-              accounts: ${JSON.stringify(accounts)}
-            }, window.location.origin);
-            setTimeout(() => window.close(), 1000);
-          }
         </script>
       </body>
     </html>
