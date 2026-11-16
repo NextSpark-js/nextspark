@@ -13,7 +13,7 @@ import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
 
 import { buildCli } from './built-cli.js'
-import { pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
+import { canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, simulationEnvironment } from '../src/commands/migrate.js'
 import { loadCoreHost } from '../src/utils/app-tree.js'
 import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
@@ -5789,4 +5789,14 @@ test('the report says generated root proxy files are left in place when the proj
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('an alias to a native path with backslashes drops the trailing /index like a posix one (#467)', async () => {
+  const host = await mkdtemp(join(tmpdir(), 'nextspark-index-'))
+  try {
+    // on Windows the source is `...\DS\index.ts`; a file with that literal name stands in for it here
+    const native = `${host}/DS\\index.ts`
+    await writeFile(native, '')
+    assert.equal(canonicalAliasSpecifier(host, join(host, 'components', 'DS', 'index.ts'), native), '@/components/DS')
+  } finally { await rm(host, { recursive: true, force: true }) }
 })

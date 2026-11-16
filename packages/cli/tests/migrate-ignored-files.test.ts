@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
 import { buildCli } from './built-cli.js'
+import { checkIgnore } from '../src/commands/migrate.js'
 
 // migrate asks git which files are ignored (#391): a long answer is still an answer, and a failed question is not "nothing is ignored"
 
@@ -169,4 +170,14 @@ test('a submodule with more paths than a pipe holds is still asked about itself,
   const result = check(root)
   assert.equal(result.status, 0, `${result.stdout.slice(0, 300)}\n${result.stderr}`)
   assert.deepEqual(members(result.stdout), ['.', 'sub/shown', 'visible/member'])
+})
+
+// Windows reports git's broken stdin pipe as EOF where macOS and Linux report EPIPE (#467)
+test('a git that fails early is reported by its exit when the broken pipe arrives as EOF', () => {
+  const spawned = (code: string, status: number) => (() => ({ error: Object.assign(new Error(`spawnSync git ${code}`), { code }), status, stderr: 'fatal: fake failure', stdout: '' })) as unknown as typeof spawnSync
+  assert.throws(() => checkIgnore('.', ['a'], spawned('EOF', 128)), /git check-ignore failed \(exit 128\): fatal: fake failure/)
+  assert.throws(() => checkIgnore('.', ['a'], spawned('EPIPE', 128)), /git check-ignore failed \(exit 128\)/)
+  // exit 1 from a git that did not read everything, and any other error, stay refusals
+  assert.throws(() => checkIgnore('.', ['a'], spawned('EOF', 1)), /Could not ask git which files are ignored \(spawnSync git EOF\)/)
+  assert.throws(() => checkIgnore('.', ['a'], spawned('EACCES', 128)), /Could not ask git which files are ignored/)
 })

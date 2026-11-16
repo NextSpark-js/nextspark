@@ -279,9 +279,9 @@ function gitIgnoredPaths(root: string, files: string[]): Set<string> {
   return checkIgnore(root, paths);
 }
 
-function checkIgnore(root: string, paths: string[]): Set<string> {
+export function checkIgnore(root: string, paths: string[], run: typeof spawnSync = spawnSync): Set<string> {
   if (paths.length === 0) return new Set();
-  const result = spawnSync('git', ['check-ignore', '-z', '--stdin'], {
+  const result = run('git', ['check-ignore', '-z', '--stdin'], {
     cwd: root,
     encoding: 'utf8',
     input: `${paths.join('\0')}\0`,
@@ -295,7 +295,8 @@ function checkIgnore(root: string, paths: string[]): Set<string> {
   if (error?.code === 'ENOENT') return new Set();
   // A git that fails (a refused submodule path, any fatal error) can exit with input still unwritten: its exit and message are
   // the answer, not the broken pipe. Exit 0 or 1 is an answer only when git read everything, so those stay errors.
-  const failedEarly = error?.code === 'EPIPE' && result.status !== null && result.status > 1;
+  // The same broken pipe is EPIPE on macOS and Linux and EOF on Windows.
+  const failedEarly = (error?.code === 'EPIPE' || error?.code === 'EOF') && result.status !== null && result.status > 1;
   if (error && !failedEarly) throw new MigrateAnalysisError(`Could not ask git which files are ignored (${error.message}). Nothing was changed.`);
   if (result.status === 1) return new Set();
   if (result.status === 128 && /not a git repository/i.test(result.stderr)) return new Set();
@@ -308,8 +309,8 @@ function checkIgnore(root: string, paths: string[]): Set<string> {
     const inside = paths.filter(path => path.startsWith(`${submodule}/`));
     const rest = paths.filter(path => !path.startsWith(`${submodule}/`));
     if (inside.length === 0) throw new MigrateAnalysisError(`git check-ignore refused paths inside the submodule ${submodule}, but none of the paths asked about are inside it. Nothing was changed.`);
-    const ignored = checkIgnore(root, rest);
-    for (const path of checkIgnore(join(root, submodule), inside.map(path => path.slice(submodule.length + 1)))) ignored.add(`${submodule}/${path}`);
+    const ignored = checkIgnore(root, rest, run);
+    for (const path of checkIgnore(join(root, submodule), inside.map(path => path.slice(submodule.length + 1)), run)) ignored.add(`${submodule}/${path}`);
     return ignored;
   }
   if (result.status !== 0) {
@@ -2785,7 +2786,7 @@ function movedReferenceDestination(target: string, planned: Map<string, string>,
 }
 
 /** TypeScript resolves these extensionful spellings, but source imports must not emit them. */
-function canonicalAliasSpecifier(hostRoot: string, target: string, sourceTarget = target): string {
+export function canonicalAliasSpecifier(hostRoot: string, target: string, sourceTarget = target): string {
   let value = pathFrom(hostRoot, target).replace(/\.(?:ts|tsx|mts|cts)$/i, '');
   // `dir/index.ts` and `dir.ts` have different meanings when both exist.
   // Keep the explicit index spelling in that ambiguity rather than changing
@@ -2793,7 +2794,7 @@ function canonicalAliasSpecifier(hostRoot: string, target: string, sourceTarget 
   if (/(?:^|\/)index$/.test(value)) {
     const directory = value.replace(/(?:^|\/)index$/, '');
     const sibling = resolve(hostRoot, directory);
-    const sourceSibling = sourceTarget.replace(/\.(?:ts|tsx|mts|cts)$/i, '').replace(/(?:^|\/)index$/, '');
+    const sourceSibling = sourceTarget.replace(/\.(?:ts|tsx|mts|cts)$/i, '').replace(/(?:^|[\\/])index$/, '');
     if (!moduleTargetSuffixes.some(suffix => suffix.startsWith('.') && (existsSync(`${sibling}${suffix}`) || existsSync(`${sourceSibling}${suffix}`)))) {
       value = directory;
     }
