@@ -15,6 +15,7 @@ import { pathToFileURL } from 'node:url';
 import { planRouteMetadata, writeRootLayoutFromMetadata, type RouteMetadataEntry } from '../utils/migrate-route-metadata.js';
 import { adaptProxySource, planProxyFile, type ProxyFileName } from '../utils/proxy-file.js';
 import { isPreviousTemplate, readPreviousTemplates, type PreviousTemplates as PreviousTemplateHashes } from '../utils/previous-templates.js';
+import { killProcessTree } from '../utils/kill-process-tree.js';
 import { contentHash, readSyncState } from '../utils/sync-state.js';
 import { applyEntityRenames, entityRenameReport, planEntitySlugs, renamedDirectories, type EntitySlugPlan, type ReportSection } from '../utils/migrate-entity-slugs.js';
 
@@ -4089,7 +4090,7 @@ function runAndCollect(command: string, args: string[], options: { cwd: string; 
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', chunk => { output += chunk; });
     child.stderr.on('data', chunk => { output += chunk; });
-    const timer = options.timeoutMs ? setTimeout(() => { try { process.kill(-(child.pid as number), 'SIGKILL'); } catch { child.kill('SIGKILL'); } }, options.timeoutMs) : null;
+    const timer = options.timeoutMs ? setTimeout(() => killProcessTree(child), options.timeoutMs) : null;
     child.on('error', error => { if (timer) clearTimeout(timer); track(null); resolvePromise({ code: 1, output: `${output}\n${error.message}` }); });
     child.on('close', code => { if (timer) clearTimeout(timer); track(null); resolvePromise({ code, output }); });
   });
@@ -4117,13 +4118,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
   const track = (child: ChildProcess | null) => { running = child; };
   const cleanUp = () => {
     const child = running as ChildProcess | null;
-    if (child?.pid) {
-      try {
-        process.kill(-child.pid, 'SIGKILL');
-      } catch {
-        child.kill('SIGKILL');
-      }
-    }
+    if (child) killProcessTree(child);
     rmSync(copy, { recursive: true, force: true });
   };
   const onSignal = (signal: NodeJS.Signals) => {
