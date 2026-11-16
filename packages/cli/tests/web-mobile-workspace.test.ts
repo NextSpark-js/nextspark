@@ -19,6 +19,7 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
+import { corepackCommand } from './platform.js'
 import { generateProject } from '../src/wizard/generators/index.js'
 import { applyPreset } from '../src/wizard/presets.js'
 import type { ProjectType } from '../src/wizard/types.js'
@@ -170,8 +171,10 @@ async function serveFixtureRegistry(root: string) {
 function pnpm(version: string, args: string[], cwd: string, userconfig: string): Promise<{ status: number | null; output: string }> {
   const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^(npm|pnpm)_config_/i.test(name)))
   return new Promise(resolve => {
-    const child = spawn('corepack', [`pnpm@${version}`, ...args], {
+    const corepack = corepackCommand()
+    const child = spawn(corepack.command, [...corepack.args, `pnpm@${version}`, ...args], {
       cwd,
+      windowsHide: true,
       env: { ...inherited, COREPACK_ENABLE_DOWNLOAD_PROMPT: '0', CI: '1', npm_config_userconfig: userconfig },
     })
     let output = ''

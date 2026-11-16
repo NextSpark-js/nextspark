@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join, sep } from 'node:path'
+import { dirname, join, sep } from 'node:path'
 
 /**
  * `text` with the platform's path separator written as `/`, so an assertion about a path the product prints
@@ -26,6 +26,15 @@ export function windowsNextEntry(projectRoot: string, script: string): void {
   mkdirSync(join(next, 'dist', 'bin'), { recursive: true })
   writeFileSync(join(next, 'package.json'), JSON.stringify({ name: 'next', version: '16.4.2' }))
   writeFileSync(join(next, 'dist', 'bin', 'next'), script)
+}
+
+/**
+ * How to start Corepack with child_process and no shell. On Windows `corepack` is a .cmd, which Node starts only through
+ * a shell, so there it is Corepack's JS entry, which ships next to node, run with this node. Elsewhere `corepack` itself.
+ */
+export function corepackCommand(): { command: string; args: string[] } {
+  if (process.platform !== 'win32') return { command: 'corepack', args: [] }
+  return { command: process.execPath, args: [join(dirname(process.execPath), 'node_modules', 'corepack', 'dist', 'corepack.js')] }
 }
 
 /** The reasons the suite skips tests on Windows, shared so each one reads the same wherever it applies. */
