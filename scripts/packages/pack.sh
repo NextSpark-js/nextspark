@@ -53,18 +53,19 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Helper: convert path for Node.js on Windows (Git Bash paths like /g/... don't work with require())
+source "$REPO_ROOT/scripts/lib/nodepath.sh"
+
+# Helper: Node.js on Windows cannot open Git Bash paths like /g/... (see node_path)
 node_require_name() {
-    local p="$1/package.json"
-    # On Windows (MSYS/Git Bash), convert to Windows path then use forward slashes for JS
-    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "mingw"* || "$OSTYPE" == "cygwin" ]]; then
-        p=$(cygpath -m "$p" 2>/dev/null || echo "$p")
-    fi
+    local p
+    p=$(node_path "$1/package.json")
     node -e "console.log(require('$p').name)"
 }
 
 is_publishable_package() {
-    node -e "const p=require('$1/package.json'); process.exit(p.private === true ? 1 : 0)"
+    local p
+    p=$(node_path "$1/package.json")
+    node -e "const p=require('$p'); process.exit(p.private === true ? 1 : 0)"
 }
 
 # Default options

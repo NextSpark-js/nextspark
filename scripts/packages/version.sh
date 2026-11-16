@@ -42,8 +42,12 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+source "$REPO_ROOT/scripts/lib/nodepath.sh"
+
 is_publishable_package() {
-    node -e "const p=require('$1/package.json'); process.exit(p.private === true ? 1 : 0)"
+    local p
+    p=$(node_path "$1/package.json")
+    node -e "const p=require('$p'); process.exit(p.private === true ? 1 : 0)"
 }
 
 # Parse arguments

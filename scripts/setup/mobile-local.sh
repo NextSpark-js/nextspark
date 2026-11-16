@@ -52,6 +52,7 @@ NC='\033[0m' # No Color
 # -----------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$REPO_ROOT/scripts/lib/nodepath.sh"
 MOBILE_PKG_DIR="$REPO_ROOT/packages/mobile"
 UI_PKG_DIR="$REPO_ROOT/packages/ui"
 PROJECTS_DIR="$(dirname "$REPO_ROOT")/projects"
@@ -144,14 +145,14 @@ if [ ! -f "$MOBILE_PKG_DIR/package.json" ]; then
   print_error "Mobile package not found at $MOBILE_PKG_DIR"
   exit 1
 fi
-MOBILE_VERSION=$(node -p "require('$MOBILE_PKG_DIR/package.json').version")
+MOBILE_VERSION=$(node -p "require('$(node_path "$MOBILE_PKG_DIR/package.json")').version")
 print_success "Found @nextsparkjs/mobile v$MOBILE_VERSION"
 
 if [ ! -f "$UI_PKG_DIR/package.json" ]; then
   print_error "UI package not found at $UI_PKG_DIR"
   exit 1
 fi
-UI_VERSION=$(node -p "require('$UI_PKG_DIR/package.json').version")
+UI_VERSION=$(node -p "require('$(node_path "$UI_PKG_DIR/package.json")').version")
 print_success "Found @nextsparkjs/ui v$UI_VERSION"
 
 # Step 2: Build packages (unless skipped)
@@ -243,7 +244,7 @@ cp "$UI_PKG_DIR/$UI_TGZ" "$TARGET_DIR/"
 cd "$TARGET_DIR"
 node -e "
 const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('$TEMPLATES_DIR/package.json.template', 'utf8'));
+const pkg = JSON.parse(fs.readFileSync('$(node_path "$TEMPLATES_DIR/package.json.template")', 'utf8'));
 
 // Update package name
 pkg.name = 'test-mobile-package';
