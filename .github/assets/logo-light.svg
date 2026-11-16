@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="291" height="48" viewBox="0 0 291 48" role="img" aria-label="NextSpark">
   <title>NextSpark</title>
-  <!-- For light backgrounds. Bolt: the "zap" icon from Lucide (ISC License, https://lucide.dev). Wordmark: Geist ExtraBold (SIL Open Font License 1.1) converted to outlines. -->
+  <!-- For light backgrounds. Bolt: the "zap" icon from Lucide (Copyright (c) Lucide Contributors, ISC License, https://lucide.dev). Wordmark: Geist ExtraBold (SIL Open Font License 1.1) converted to outlines. -->
   <defs>
     <linearGradient id="nextspark-wordmark" gradientUnits="userSpaceOnUse" x1="47.20" y1="-84.82" x2="185.61" y2="53.58">
       <stop offset="0" stop-color="#18181b"/>

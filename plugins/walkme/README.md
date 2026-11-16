@@ -436,7 +436,7 @@ When a tour is active:
 
 ## Environment Variables
 
-The package has a loader for the `WALKME_*` variables listed in `.env.example` (`lib/plugin-env.ts`), but the components do not read it: configure the plugin through the `WalkmeProvider` props (`debug`, `autoStart`, `autoStartDelay`, `persistState`).
+No environment variable is needed: the configuration is the `WalkmeProvider` props (`debug`, `autoStart`, `autoStartDelay`, `persistState`). The package also has a loader for the `WALKME_*` variables listed in `.env.example` (`lib/plugin-env.ts`), but the components do not read it.
 
 ## Troubleshooting
 

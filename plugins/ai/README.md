@@ -1,6 +1,6 @@
 # @nextsparkjs/plugin-ai
 
-Core AI utilities for NextSpark: text generation and embedding endpoints, a model selector, cost calculation, and an AI history entity that records each call. It supports OpenAI, Anthropic and Ollama (local models), and it is a toolkit: you build your own endpoints and components on its utilities.
+Core AI utilities for NextSpark: text generation and embedding endpoints, a model selector, cost calculation, and an AI history entity that records each call. It supports OpenAI, Anthropic and Ollama (local models), The endpoints work as shipped, with authentication, an API key scope and rate limiting; its utilities also let you build your own endpoints and components.
 
 > **Stability: experimental.** The first-party plugins are not part of the stable 1.0 surface and may change in a minor release without a deprecation period. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
 
@@ -44,14 +44,15 @@ The routes accept a session or an API key with the `ai:write` scope, and are rat
    | `AI_PLUGIN_ENABLED` | `true` | `false` makes the endpoints answer 503 |
    | `AI_PLUGIN_DEFAULT_PROVIDER` | `anthropic` | `anthropic`, `openai` or `ollama` |
    | `AI_PLUGIN_MAX_TOKENS`, `AI_PLUGIN_DEFAULT_TEMPERATURE` | `4000`, `0.7` | Generation defaults |
-   | `AI_PLUGIN_COST_TRACKING_ENABLED`, `AI_PLUGIN_DAILY_COST_LIMIT`, `AI_PLUGIN_MONTHLY_COST_LIMIT` | `true`, `10.00`, `100.00` (USD) | Limits that `checkCostLimits` enforces; `0` for both turns enforcement off |
+   | `AI_PLUGIN_COST_TRACKING_ENABLED`, `AI_PLUGIN_DAILY_COST_LIMIT`, `AI_PLUGIN_MONTHLY_COST_LIMIT` | `true`, `10.00`, `100.00` (USD) | Cost tracking and the limits `checkCostLimits` uses (see Notes) |
    | `AI_PLUGIN_DEBUG` | `false` | Debug logging |
 
-   `.env.example` also lists `AI_PLUGIN_RATE_LIMIT_REQUESTS_PER_MINUTE` and `AI_PLUGIN_RATE_LIMIT_TOKENS_PER_MINUTE`: the plugin reads them, but no route uses them; the routes use core's rate limit tiers.
-
-   `checkCostLimits` sums the usage the LangChain plugin records in `langchain_token_usage`, so enforcing the limits needs that plugin's migrations too.
-
 4. Call the endpoints, or build your own on `lib/core-utils`. The guides below have the request bodies and examples.
+
+Notes:
+
+- `.env.example` also lists `AI_PLUGIN_RATE_LIMIT_REQUESTS_PER_MINUTE` and `AI_PLUGIN_RATE_LIMIT_TOKENS_PER_MINUTE`: the plugin reads them, but no route uses them; the routes use core's rate limit tiers.
+- `checkCostLimits` is a utility for your own routes: the routes the plugin ships do not call it, so the endpoints apply no cost limit. It sums the usage in `langchain_token_usage`, so it needs the LangChain plugin's migrations; without that table it throws instead of letting the request through. With the daily and monthly limits both at `0` it does nothing.
 
 ## Requirements
 
