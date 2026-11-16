@@ -1182,7 +1182,8 @@ async function lockedFileEnv(file: string, at: 'open' | 'rename' | 'read'): Prom
       ? "const open = fs.openSync\nfs.openSync = (path, flags, ...rest) => { if (locked(path) && flags === 'r+') throw busy('open', path); return open(path, flags, ...rest) }"
       : at === 'read'
         ? "const read = fs.readFileSync\nfs.readFileSync = (path, ...rest) => { if (locked(path)) throw busy('open', path); return read(path, ...rest) }"
-        : "const rename = fs.renameSync\nfs.renameSync = (from, to) => { if (locked(from)) throw busy('rename', from); return rename(from, to) }",
+        // the lock check before writing renames next to itself and back on Windows: only the real move fails
+        : "const rename = fs.renameSync\nfs.renameSync = (from, to) => { if (locked(from) && !String(to).endsWith('.nextspark-lock-check')) throw busy('rename', from); return rename(from, to) }",
     'syncBuiltinESMExports()',
     '',
   ].join('\n'))
@@ -1246,7 +1247,7 @@ test('on Windows a file migrate only moves is checked by renaming it and back; e
     await write(root, 'package.json', '{}\n')
     const renames: string[] = []
     fs.renameSync = ((from: string, to: string) => {
-      renames.push(`${relative(root, String(from))} -> ${relative(root, String(to))}`)
+      renames.push(slashes(`${relative(root, String(from))} -> ${relative(root, String(to))}`))
       if (String(from).endsWith('a.ts')) throw Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY', path: String(from) })
       return realRename(from, to)
     }) as typeof fs.renameSync
@@ -1257,7 +1258,7 @@ test('on Windows a file migrate only moves is checked by renaming it and back; e
     assert.throws(() => assertWritable(root, ['package.json'], ['theme'], 'win32'), /theme\/a\.ts cannot be moved: another program has it open \(an editor, the development server or an antivirus\)\. Close that program and run nextspark migrate again\. Nothing was written\./)
     assert.deepEqual(renames, ['theme/a.ts -> theme/a.ts.nextspark-lock-check'])
     // an unlocked file goes next to itself and back
-    fs.renameSync = ((from: string, to: string) => { renames.push(`${relative(root, String(from))} -> ${relative(root, String(to))}`); return realRename(from, to) }) as typeof fs.renameSync
+    fs.renameSync = ((from: string, to: string) => { renames.push(slashes(`${relative(root, String(from))} -> ${relative(root, String(to))}`)); return realRename(from, to) }) as typeof fs.renameSync
     syncBuiltinESMExports()
     renames.length = 0
     assertWritable(root, [], ['theme'], 'win32')
@@ -4906,25 +4907,33 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     // way the runtime delivers one, so the handler runs where no real signal can be sent (Windows)
     const preload = join(dir, 'signal.mjs')
     await writeFile(preload, [
-      "import { existsSync } from 'node:fs'",
+      "import { existsSync, writeFileSync } from 'node:fs'",
       "if (process.env.NEXTSPARK_MIGRATE_SIMULATION !== '1') {",
-      `  const timer = setInterval(() => { if (existsSync(process.env.NEXTSPARK_PROBE_READY)) { clearInterval(timer); process.emit(${JSON.stringify(signal)}, ${JSON.stringify(signal)}) } }, 50)`,
+      `  const timer = setInterval(() => { if (existsSync(process.env.NEXTSPARK_PROBE_READY)) { clearInterval(timer); writeFileSync(process.env.NEXTSPARK_PROBE_READY + '.listeners', String(process.listenerCount(${JSON.stringify(signal)}))); process.emit(${JSON.stringify(signal)}, ${JSON.stringify(signal)}) } }, 50)`,
       '  timer.unref()',
       '}',
       '',
     ].join('\n'))
     try {
+      // An installed Next older than core's table: classification registers its stand-in's signal listeners first,
+      // as a real 0.x project does, before the simulation registers its own
+      const realNext = dirname(requireHere.resolve('next/package.json'))
+      await rm(join(root, 'node_modules/next'), { recursive: true, force: true })
+      await write(root, 'node_modules/next/package.json', JSON.stringify({ ...JSON.parse(await readFile(join(realNext, 'package.json'), 'utf8')), version: '16.2.11' }))
+      linkDirectory(join(realNext, 'dist'), join(root, 'node_modules/next/dist'))
       await commitFixture(root)
       const list = (prefix: string) => readdirSync(tmpdir()).filter(name => name.startsWith(prefix))
       const before = new Set(list('nextspark-migrate-plan-'))
       const result = await runAsync(root, ['--dry-run', '--json'], { NEXTSPARK_MIGRATE_NO_SIMULATION: '', NEXTSPARK_PROBE_READY: ready, NEXTSPARK_PROBE_SEEN: seen, NODE_OPTIONS: `--import=${pathToFileURL(preload).href}` })
       assert.equal(result.status, signal === 'SIGINT' ? 130 : 143, result.stderr)
+      assert.ok(Number(readFileSync(`${ready}.listeners`, 'utf8')) >= 2, 'the stand-in and the simulation were both listening')
       const childTmp = readFileSync(seen, 'utf8')
       assert.match(basename(childTmp), /^nextspark-migrate-plan-.+-tmp$/, `the child got its own temporary directory: ${childTmp}`)
       assert.equal(existsSync(childTmp), false, 'and it is gone, with what the child left in it')
       assert.deepEqual(list('nextspark-migrate-plan-').filter(name => !before.has(name)), [])
     } finally {
       rmSync(ready, { force: true })
+      rmSync(`${ready}.listeners`, { force: true })
       rmSync(seen, { force: true })
       await rm(dir, { recursive: true, force: true })
       await rm(root, { recursive: true, force: true })

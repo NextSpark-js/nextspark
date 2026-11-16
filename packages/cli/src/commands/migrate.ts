@@ -6,7 +6,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import * as tar from 'tar';
 import { readGeneratedTagAt } from '../utils/generated-tag.js';
 import { isOnPath, packageManagerCommand } from '../utils/package-manager.js';
-import { apiUrlMoves, applyAppConversion, assertContained, declareWebhookExtensions, isStaticMetadataFile, linkDirectory, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
+import { apiUrlMoves, applyAppConversion, assertContained, exitAfterSignalCleanup, terminationSignals, declareWebhookExtensions, isStaticMetadataFile, linkDirectory, loadCoreHost, planAppConversion, projectApiDir, unrecognizedLines, type ApiUrlMove, type AppConversionPlan } from '../utils/app-tree.js';
 import { coreHostMode, runHostPreparation } from '../utils/preparation.js';
 import { closingBrace, sourceView, type SourceView } from '../utils/source-view.js';
 import { getNextMajorVersion } from '../utils/next-bundler.js';
@@ -4264,10 +4264,8 @@ interface SimulationChild {
  * simulation reaches everything the migration started. On Windows a detached child has no console, and every console
  * program it starts (git, node, pnpm) opens a window of its own (#468): there it stays attached, its window hidden.
  */
-/** The signals that end a dry run while it simulates: Ctrl-Break arrives as SIGBREAK on Windows. */
-export function simulationSignals(platform: NodeJS.Platform = process.platform): NodeJS.Signals[] {
-  return platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGBREAK'] : ['SIGINT', 'SIGTERM'];
-}
+/** The signals that end a dry run while it simulates. */
+export const simulationSignals = terminationSignals;
 
 export function simulationSpawnOptions(platform: string = process.platform): { detached: boolean; windowsHide: boolean } {
   return { detached: platform !== 'win32', windowsHide: true };
@@ -4321,7 +4319,7 @@ async function simulateHostPlan(repository: string, report: MigrateReport, coreD
   };
   const onSignal = (signal: NodeJS.Signals) => {
     cleanUp();
-    process.exit(signal === 'SIGINT' ? 130 : 143);
+    exitAfterSignalCleanup(signal);
   };
   const signals = simulationSignals();
   for (const signal of signals) process.once(signal, onSignal);

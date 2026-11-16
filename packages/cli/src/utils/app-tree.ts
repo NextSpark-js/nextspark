@@ -82,7 +82,7 @@ function classificationRoot(emitter: { resolveNextPackage(root: string): { root:
       const remove = () => rmSync(directory, { recursive: true, force: true });
       process.once('exit', remove);
       // an interrupted run must not leave it either (the exit event does not fire on a default signal)
-      for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]] as const) process.once(signal, () => { remove(); process.exit(code); });
+      for (const signal of terminationSignals()) process.once(signal, () => { remove(); exitAfterSignalCleanup(signal); });
       stand = directory;
     } catch {
       stand = null;
@@ -90,6 +90,19 @@ function classificationRoot(emitter: { resolveNextPackage(root: string): { root:
   }
   targetNextRoots.set(hostRoot, stand);
   return stand ?? hostRoot;
+}
+
+/** The signals that end the CLI: Ctrl-Break arrives as SIGBREAK on Windows. */
+export function terminationSignals(platform: NodeJS.Platform = process.platform): NodeJS.Signals[] {
+  return platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGBREAK'] : ['SIGINT', 'SIGTERM'];
+}
+
+/**
+ * The last call of a `once` signal listener that cleans something up: it ends the process only when no other listener
+ * for that signal is left, so every cleanup runs whatever order they were registered in, and the last one exits.
+ */
+export function exitAfterSignalCleanup(signal: NodeJS.Signals): void {
+  if (process.listenerCount(signal) === 0) process.exit(signal === 'SIGINT' ? 130 : 143);
 }
 
 /** Load the route manifest and the facade emitter from the core installed in the project. */
