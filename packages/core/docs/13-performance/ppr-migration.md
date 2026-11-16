@@ -105,7 +105,7 @@ Or use the entity hook system for automatic revalidation.
 
 ### Unknown URLs answer 200 with `noindex`
 
-With `cacheComponents: true`, a URL that a catch-all `[slug]` route matches but that has no page answers **200 with `noindex`** (the visitor sees the not-found page). Legacy ISR answers 404. A 404 under Cache Components is a project recipe, a `proxyHook` rewrite to `/_not-found`: see [The status of a URL that has no page](../18-page-builder/07-public-rendering.md#the-status-of-a-url-that-has-no-page).
+With `cacheComponents: true`, a URL that a catch-all `[slug]` route matches but that has no page answers **200 with `noindex`** (the visitor sees the not-found page). Legacy ISR answers 404. A 404 under Cache Components is a project recipe, a `proxyHook` rewrite to a path no route matches: see [The status of a URL that has no page](../18-page-builder/07-public-rendering.md#the-status-of-a-url-that-has-no-page).
 
 ### 8. Verify
 

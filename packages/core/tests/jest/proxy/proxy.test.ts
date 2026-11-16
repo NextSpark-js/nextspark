@@ -477,7 +477,7 @@ describe('proxy docs pages the registry lacks', () => {
     const response = (await proxy(makeRequest(path))) as unknown as PassThrough & { rewriteUrl?: string }
 
     expect(response.type).toBe('rewrite')
-    expect(new URL(response.rewriteUrl as string).pathname).toBe('/_not-found')
+    expect(new URL(response.rewriteUrl as string).pathname).toBe('/_ns/not-found')
     expect(response.requestHeaders?.get('x-user-id')).toBeNull()
   })
 
@@ -511,7 +511,7 @@ describe('proxy docs pages the registry lacks', () => {
     const response = (await proxy(makeRequest(path))) as unknown as PassThrough & { rewriteUrl?: string }
 
     expect(response.type).toBe('rewrite')
-    expect(new URL(response.rewriteUrl as string).pathname).toBe('/_not-found')
+    expect(new URL(response.rewriteUrl as string).pathname).toBe('/_ns/not-found')
     expect(response.requestHeaders?.get('x-user-id')).toBe('user-1')
   })
 
@@ -552,7 +552,7 @@ describe('proxy docs pages the registry lacks', () => {
     const response = (await proxy(request)) as unknown as PassThrough & { rewriteUrl?: string }
 
     expect(response.type).toBe('rewrite')
-    expect(new URL(response.rewriteUrl as string).pathname).toBe('/base/_not-found')
+    expect(new URL(response.rewriteUrl as string).pathname).toBe('/base/_ns/not-found')
   })
 })
 

@@ -138,6 +138,16 @@ function isMissingDocsPage(pathname: string): boolean {
 }
 
 /**
+ * Where a request is rewritten to get the app's not-found page with a 404: a path no route matches (#480). A rewrite
+ * to `/_not-found`, Next's own not-found route, is answered 404 by `next start` but is served as a static page with
+ * 200 on Vercel. A path no route matches is answered 404 with the not-found page by both, the way any unknown URL
+ * is. The first segment starts with `_`, a private folder in the App Router, so no static route can match it, and
+ * the path has two segments, so the root item route (`[slug]`) does not match it either; only a root catch-all
+ * (`[...slug]`) a project writes itself would.
+ */
+const NOT_FOUND_REWRITE_PATH = '/_ns/not-found'
+
+/**
  * Serve the app's not-found page with a 404 status for a docs page the
  * registry does not have. The docs pages answer 404 on their own only where
  * their `dynamicParams = false` has a list to check: in `next dev`, and for
@@ -152,7 +162,7 @@ function rewriteToNotFound(
   requestHeaders: Headers,
   themeResponse: NextResponse | null = null
 ): NextResponse {
-  return syncSessionHint(request, NextResponse.rewrite(appUrl(request, '/_not-found'), {
+  return syncSessionHint(request, NextResponse.rewrite(appUrl(request, NOT_FOUND_REWRITE_PATH), {
     headers: themeResponseHeaders(themeResponse),
     request: { headers: requestHeaders },
   }))
