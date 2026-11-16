@@ -1,48 +1,46 @@
 # @nextsparkjs/cli
 
-CLI tool for NextSpark development workflow.
+The `nextspark` command: generates the host and the registries, runs the development server and the build, and runs migrations and checks for a NextSpark project.
+
+> **Stability.** Stable: `dev`, `build`, `prepare`, `db:*`, `doctor` and `migrate`. Experimental: `add:plugin`, `add:mobile`, `setup:ai`, `sync:ai`, `skills`. `add:theme` is not supported. Commands not named here (`init`, `worker`, `db:demo-reset`, `check:mobile`, the `registry` aliases) are not on the stable list. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
 
 ## Installation
 
-The CLI is included with `@nextsparkjs/core`. You can use it with npx:
+A project created with `pnpm create nextspark-app` already depends on it. Run it through the project's package manager:
 
 ```bash
-npx nextspark <command>
+pnpm exec nextspark <command>
 ```
 
-Or install globally:
-
-```bash
-pnpm add -g @nextsparkjs/cli
-```
+To use it in another project: `pnpm add -D @nextsparkjs/cli`.
 
 ## Commands
 
 ### Initialize Project
 
 ```bash
-npx nextspark init              # Interactive wizard
-npx nextspark init --preset saas    # Use SaaS preset
-npx nextspark init --preset blog    # Use Blog preset
-npx nextspark init --preset crm     # Use CRM preset (configuration only; the template is --theme)
-npx nextspark init --yes --locales en,es   # Languages without prompts (--default-locale picks the default)
-npx nextspark init --theme blog     # Pre-select a template: starter (stable); blog, crm, productivity (experimental)
+pnpm exec nextspark init              # Interactive wizard
+pnpm exec nextspark init --preset saas    # Use SaaS preset
+pnpm exec nextspark init --preset blog    # Use Blog preset
+pnpm exec nextspark init --preset crm     # Use CRM preset (configuration only; the template is --theme)
+pnpm exec nextspark init --yes --locales en,es   # Languages without prompts (--default-locale picks the default)
+pnpm exec nextspark init --theme blog     # Pre-select a template: starter (stable); blog, crm, productivity (experimental)
+```
 
 > **Experimental:** the blog, crm and productivity templates, the first-party plugins (`--plugins`), and billing are not part of the stable 1.0 surface and may change without a deprecation period.
-```
 
 ### Versioned skill guides
 
 The project-local CLI bundles concise offline guidance that matches its installed version. No monorepo `.claude/` folder or network access is required:
 
 ```bash
-pnpm nextspark skills list --json
-pnpm nextspark skills get nextspark-blocks
-pnpm nextspark skills get nextspark-auth
-pnpm nextspark skills get nextspark-cli
+pnpm exec nextspark skills list --json
+pnpm exec nextspark skills get nextspark-blocks
+pnpm exec nextspark skills get nextspark-auth
+pnpm exec nextspark skills get nextspark-cli
 ```
 
-New projects receive small `AGENTS.md` and `CLAUDE.md` pointers only. The legacy `@nextsparkjs/ai-workflow` pack remains an explicit opt-in through `nextspark setup:ai`; it is not installed by `nextspark init --yes`.
+New projects receive small `AGENTS.md` and `CLAUDE.md` pointers only. The legacy `@nextsparkjs/ai-workflow` pack remains an explicit opt-in through `pnpm exec nextspark setup:ai`; it is not installed by `nextspark init --yes`.
 
 ### Development
 
@@ -51,6 +49,8 @@ nextspark dev       # Generate src/app and the registries, start the dev server 
 nextspark build     # prepare --production, then next build
 nextspark prepare   # Generate src/app and the registries once (--check compares, --watch watches)
 ```
+
+A project's `pnpm dev` and `pnpm build` run these.
 
 `src/app` is generated and git-ignored: never edit it. Change a route by putting a file at
 the same path in `templates/` (pages, layouts) or `api/` (Route Handlers).
@@ -82,8 +82,14 @@ nextspark build --debug --profile
 ### Database
 
 ```bash
-nextspark db:migrate   # Run database migrations
-nextspark db:seed      # Seed sample data
+nextspark db:migrate   # Run database migrations (--dry-run lists what is pending and writes nothing)
+nextspark db:seed      # Run migrations with the sample data, development only
+```
+
+### Health check
+
+```bash
+nextspark doctor       # Run a health check on the project
 ```
 
 ### Upgrade a 0.x project
@@ -100,11 +106,12 @@ See [Upgrading a 0.x project](https://github.com/NextSpark-js/nextspark/blob/mai
 ## Requirements
 
 - Node.js 22.14.0 or later
-- pnpm recommended
+- pnpm 10 (10.34.6 or later), 11 or 12; npm, yarn and bun are not supported. See the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md).
 
 ## Documentation
 
-Visit [nextspark.dev/docs](https://nextspark.dev/docs) for full documentation.
+- [NextSpark documentation](https://www.nextspark.dev/docs)
+- [CLI tool](https://www.nextspark.dev/docs/npm-distribution/cli-tool)
 
 ## License
 

@@ -1,6 +1,15 @@
 {
   "name": "@nextsparkjs/plugin-langchain",
   "version": "0.1.0-beta.203",
+  "homepage": "https://www.nextspark.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NextSpark-js/nextspark.git",
+    "directory": "plugins/langchain"
+  },
+  "bugs": {
+    "url": "https://github.com/NextSpark-js/nextspark/issues"
+  },
   "files": [
     "plugin.config.ts",
     "api",

@@ -1,98 +1,67 @@
 # @nextsparkjs/testing
 
-> **Experimental:** @nextsparkjs/testing is not part of the stable 1.0 surface and may change without a deprecation period.
+Cypress helpers for NextSpark projects: base classes for page objects, an API interceptor for deterministic waits, and small helpers for test attributes.
 
-Testing utilities for NextSpark applications. Provides selectors, Page Object Models, and Cypress helpers.
+> **Stability: experimental.** `@nextsparkjs/testing` is not part of the stable 1.0 surface and may change in a minor release without a deprecation period. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
 
 ## Installation
 
 ```bash
-pnpm add @nextsparkjs/testing
+pnpm add -D @nextsparkjs/testing
 ```
+
+## Requirements
+
+- Node.js 22.14.0 or later
+- Cypress 13 or later (peer dependency)
+- A NextSpark project: the selectors these helpers work with ship in `@nextsparkjs/core`. See the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md) for supported versions.
+
+## What is in it
+
+| Entry point | Exports |
+| --- | --- |
+| `@nextsparkjs/testing` | Everything below |
+| `@nextsparkjs/testing/pom` | `BasePOMCore`, `DashboardEntityPOMCore`, `EntityConfig` |
+| `@nextsparkjs/testing/helpers` | `ApiInterceptor`, `ApiInterceptorConfig` |
+| `@nextsparkjs/testing/utils` | `createCyId`, `createTestId`, `sel`, `createStateAttr`, `createPriorityAttr`, `createTestingProps`, `createAriaLabel`, `keyboardHelpers` |
+
+**Selectors are not in this package.** `sel`, `cySelector`, `CORE_SELECTORS` and `createSelectorHelpers` come from `@nextsparkjs/core/selectors`. The `sel` exported here only joins its parts with dots.
 
 ## Usage
 
-### Basic Selectors
+### Page objects
+
+`BasePOMCore` and `DashboardEntityPOMCore` are abstract: your project extends them and supplies `cySelector`, usually from its own selector helpers.
 
 ```typescript
-import { sel, cySelector, CORE_SELECTORS } from '@nextsparkjs/testing'
+import { DashboardEntityPOMCore } from '@nextsparkjs/testing/pom'
+import { cySelector } from '@nextsparkjs/core/selectors'
 
-// Get selector value
-sel('dashboard.navigation.main') // 'nav-main'
-
-// Get Cypress selector
-cySelector('dashboard.navigation.main') // '[data-cy="nav-main"]'
-
-// Access raw selectors
-CORE_SELECTORS.dashboard.navigation.main // 'nav-main'
-```
-
-### Subpath Imports (Recommended)
-
-For better tree-shaking:
-
-```typescript
-import { sel, cySelector } from '@nextsparkjs/testing/selectors'
-import { createEntityTestingHelper } from '@nextsparkjs/testing/utils'
-```
-
-### Theme Extension
-
-Themes can extend core selectors:
-
-```typescript
-import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/testing/selectors'
-
-const THEME_SELECTORS = {
-  ...CORE_SELECTORS,
-  myFeature: {
-    button: 'my-feature-btn',
-    form: 'my-feature-form',
-  },
+export class ProductsPOM extends DashboardEntityPOMCore {
+  protected cySelector(path: string, replacements?: Record<string, string | number>): string {
+    return cySelector(path, replacements)
+  }
 }
-
-export const { sel, cySelector } = createSelectorHelpers(THEME_SELECTORS)
 ```
 
-### Entity Testing Helper
+### Waiting for the API
+
+`ApiInterceptor` registers `cy.intercept()` aliases for an entity's `/api/v1/<slug>` routes, so a test waits for the response instead of using `cy.wait(ms)`.
 
 ```typescript
-import { createEntityTestingHelper } from '@nextsparkjs/testing/utils'
+import { ApiInterceptor } from '@nextsparkjs/testing/helpers'
 
-const testId = createEntityTestingHelper('products')
-
-// Usage in components
-<div data-cy={testId.page()}>           // products-page
-  <form data-cy={testId.form()}>        // products-form
-    <input data-cy={testId.field('name')} /> // products-field-name
-    <button data-cy={testId.formSubmit()}>   // products-form-submit
-      Submit
-    </button>
-  </form>
-</div>
+const api = new ApiInterceptor('customers')
+api.setupCrudIntercepts()
+cy.visit('/dashboard/customers')
+api.waitForList()
 ```
 
-## Exports
+## Documentation
 
-### Main Entry (`@nextsparkjs/testing`)
-
-- `sel()` - Get selector value by path
-- `cySelector()` - Get Cypress selector string
-- `CORE_SELECTORS` - All core selectors
-- `createSelectorHelpers()` - Factory for custom selectors
-- `createEntityTestingHelper()` - Entity-specific helper factory
-
-### Selectors (`@nextsparkjs/testing/selectors`)
-
-- All selector-related exports
-
-### Utils (`@nextsparkjs/testing/utils`)
-
-- `createTestId()` - Create test IDs
-- `createCyId()` - Create Cypress IDs
-- `createEntityTestingHelper()` - Entity helper factory
-- `testingPatterns` - Common testing patterns
-- `keyboardHelpers` - Keyboard navigation helpers
+- [Testing overview](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/12-testing/01-testing-overview.md)
+- [End-to-end testing with Cypress](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/12-testing/03-e2e-testing-cypress.md)
+- [NextSpark documentation](https://www.nextspark.dev/docs)
 
 ## License
 

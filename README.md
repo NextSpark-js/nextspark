@@ -84,7 +84,7 @@ When the development server starts, Next.js prints its local URL (port 3000 by d
 
 ## Packages
 
-This monorepo publishes 13 packages to npm. Every package is at the same version.
+This monorepo publishes 13 packages to npm.
 
 | Package | Version | Description |
 |---------|---------|-------------|
@@ -95,12 +95,12 @@ This monorepo publishes 13 packages to npm. Every package is at the same version
 | [`@nextsparkjs/testing`](./packages/testing) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/testing.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/testing) | Selectors, page objects and Cypress helpers |
 | [`@nextsparkjs/mobile`](./packages/mobile) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/mobile.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/mobile) | API client, providers and utilities for Expo apps |
 | [`@nextsparkjs/ai-workflow`](./packages/ai-workflow) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/ai-workflow.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/ai-workflow) | Claude Code and Cursor workflow templates |
-| [`@nextsparkjs/plugin-ai`](./plugins/ai) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-ai.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-ai) | AI provider integrations and a text-generation API |
-| [`@nextsparkjs/plugin-amplitude`](./plugins/amplitude) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-amplitude.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-amplitude) | Amplitude analytics |
-| [`@nextsparkjs/plugin-langchain`](./plugins/langchain) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-langchain.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-langchain) | LangChain agents and orchestration |
+| [`@nextsparkjs/plugin-ai`](./plugins/ai) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-ai.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-ai) | Text generation and embeddings endpoints for Anthropic, OpenAI and Ollama |
+| [`@nextsparkjs/plugin-amplitude`](./plugins/amplitude) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-amplitude.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-amplitude) | Amplitude hooks, consent and experiments (the Amplitude client is simulated for now) |
+| [`@nextsparkjs/plugin-langchain`](./plugins/langchain) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-langchain.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-langchain) | LangChain agents with memory, orchestration and observability |
 | [`@nextsparkjs/plugin-marketplace-payments`](./plugins/marketplace-payments) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-marketplace-payments.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-marketplace-payments) | Split payments between the platform and connected sellers |
-| [`@nextsparkjs/plugin-social-media-publisher`](./plugins/social-media-publisher) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-social-media-publisher.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-social-media-publisher) | Publish to social networks |
-| [`@nextsparkjs/plugin-walkme`](./plugins/walkme) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-walkme.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-walkme) | Guided tours and onboarding walkthroughs |
+| [`@nextsparkjs/plugin-social-media-publisher`](./plugins/social-media-publisher) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-social-media-publisher.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-social-media-publisher) | Publish to Instagram Business and Facebook Pages |
+| [`@nextsparkjs/plugin-walkme`](./plugins/walkme) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-walkme.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-walkme) | Guided tours and onboarding |
 
 ## Documentation
 

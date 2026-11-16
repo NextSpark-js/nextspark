@@ -1,45 +1,38 @@
 # @nextsparkjs/plugin-walkme
 
-> **Experimental:** The WalkMe plugin is not part of the stable 1.0 surface and may change without a deprecation period.
+Guided tours and onboarding for NextSpark applications: declarative tour definitions, four step types (tooltip, modal, spotlight, beacon), cross-page navigation, conditional triggers, persistence in `localStorage`, keyboard navigation and i18n.
 
-Guided tours and onboarding system for NextSpark applications. Supports declarative tour definitions, multiple step types (tooltip, modal, spotlight, beacon), cross-page navigation, conditional triggers, localStorage persistence, full keyboard accessibility, and i18n.
+> **Stability: experimental.** The first-party plugins are not part of the stable 1.0 surface and may change in a minor release without a deprecation period. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
 
 ## Installation
 
-The plugin is available as an npm package or can be copied directly into your project.
+1. Add the package, enable it and tell Next.js to compile it:
 
-### npm (recommended)
+   ```bash
+   pnpm add @nextsparkjs/plugin-walkme
+   ```
 
-```bash
-pnpm add @nextsparkjs/plugin-walkme
-```
+   ```ts
+   // nextspark.config.ts
+   export default defineConfig({ plugins: ['@nextsparkjs/plugin-walkme'] })
+   ```
 
-The package ships TypeScript source, so add it to `transpilePackages` in `next.config.mjs`; `nextspark prepare` stops with `NS_PLUGIN_TRANSPILE_MISSING` until you do:
+   The package ships TypeScript source, so add it to `transpilePackages` in your Next config, next to `@nextsparkjs/core`; `nextspark prepare` stops with `NS_PLUGIN_TRANSPILE_MISSING` until you do:
 
-```js
-transpilePackages: ['@nextsparkjs/core', '@nextsparkjs/plugin-walkme'],
-```
+   ```js
+   transpilePackages: ['@nextsparkjs/core', '@nextsparkjs/plugin-walkme'],
+   ```
 
-### Manual
+   `pnpm exec nextspark add:plugin @nextsparkjs/plugin-walkme` is an experimental helper that adds a plugin to a project.
 
-Copy the `plugins/walkme/` directory to `plugins/walkme/` in your NextSpark project.
+2. Generate the registries: `pnpm build:registries` (`pnpm dev` and `pnpm build` do it too).
 
-### Register the plugin
+## Requirements
 
-Add `'walkme'` to your theme configuration:
-
-```typescript
-// config/theme.config.ts
-export const themeConfig: ThemeConfig = {
-  plugins: ['walkme'],
-}
-```
-
-Rebuild the registry:
-
-```bash
-pnpm build:registries
-```
+- `@nextsparkjs/core` `>=0.1.0-beta.192`, with Next.js `~16.4.2` and React `^19.2.0`
+- Peer dependencies: `@phosphor-icons/react` `^2` and `zod` `^4.6.6`
+- Node.js 22.14.0 or later (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
+- The App Router: cross-page steps navigate with `router.push()` from `next/navigation`
 
 ## Quick Start
 
@@ -198,6 +191,9 @@ All conditions use AND logic. Every specified condition must pass.
 | `onTourSkip` | `(event: TourEvent) => void` | - | Callback when a tour is skipped |
 | `onStepChange` | `(event: TourEvent) => void` | - | Callback when the active step changes |
 | `conditionContext` | `Partial<ConditionContext>` | - | External context for condition evaluation (userRole, featureFlags) |
+| `labels` | `Partial<WalkmeLabels>` | English | Translated UI labels |
+| `userId` | `string` | - | Scopes the `localStorage` state per user |
+| `serverSyncUrl` | `string` | - | URL for server-side state (cross-device sync); it must answer `GET` (fetch) and `POST` (save). Without it only `localStorage` is used |
 
 ## Hooks
 
@@ -272,109 +268,9 @@ const {
 
 ## Examples
 
-### Single-Page Tour
+The package ships three complete tours in [`examples/`](./examples): [a single-page tour](./examples/basic-tour.ts), [a cross-page tour](./examples/cross-window-tour.ts) (steps with `route`) and [a conditional tour](./examples/conditional-tour.ts) (role and feature flag conditions).
 
-A basic onboarding flow on one page:
-
-```typescript
-const basicTour: Tour = {
-  id: 'getting-started',
-  name: 'Getting Started',
-  trigger: { type: 'onFirstVisit', delay: 1000 },
-  steps: [
-    {
-      id: 'welcome',
-      type: 'modal',
-      title: 'Welcome!',
-      content: 'Let us show you around.',
-      actions: ['next', 'skip'],
-    },
-    {
-      id: 'sidebar',
-      type: 'tooltip',
-      target: '[data-cy="sidebar-nav"]',
-      title: 'Navigation',
-      content: 'Use the sidebar to navigate.',
-      position: 'right',
-      actions: ['next', 'prev', 'skip'],
-    },
-    {
-      id: 'create',
-      type: 'spotlight',
-      target: '[data-cy="create-button"]',
-      title: 'Create Item',
-      content: 'Click here to create your first item.',
-      actions: ['complete', 'prev'],
-    },
-  ],
-}
-```
-
-### Cross-Page Tour
-
-Navigate users between pages during a tour:
-
-```typescript
-const crossPageTour: Tour = {
-  id: 'explore-app',
-  name: 'Explore the App',
-  trigger: { type: 'manual' },
-  conditions: { completedTours: ['getting-started'] },
-  steps: [
-    {
-      id: 'dashboard',
-      type: 'tooltip',
-      target: '[data-cy="dashboard-stats"]',
-      title: 'Your Stats',
-      content: 'Key metrics at a glance.',
-      position: 'bottom',
-      route: '/dashboard',
-      actions: ['next', 'skip'],
-    },
-    {
-      id: 'profile',
-      type: 'spotlight',
-      target: '[data-cy="profile-form"]',
-      title: 'Your Profile',
-      content: 'Complete your profile.',
-      route: '/settings/profile',
-      actions: ['complete', 'prev'],
-    },
-  ],
-}
-```
-
-When the tour reaches a step with a `route` that differs from the current page, the provider automatically navigates using `router.push()` and waits for the target element to appear.
-
-### Conditional Tour
-
-Show tours only to specific user roles or when feature flags are active:
-
-```typescript
-const adminTour: Tour = {
-  id: 'admin-features',
-  name: 'Admin Features',
-  priority: 10,
-  trigger: { type: 'onRouteEnter', route: '/admin/*', delay: 500 },
-  conditions: {
-    userRole: ['admin', 'superadmin'],
-    completedTours: ['getting-started'],
-    featureFlags: ['admin-panel-v2'],
-  },
-  steps: [
-    {
-      id: 'admin-welcome',
-      type: 'modal',
-      title: 'Admin Dashboard',
-      content: 'Here are the key admin features.',
-      actions: ['next', 'skip'],
-    },
-    // ...more steps
-  ],
-}
-```
-
-Pass the user context to the provider:
+A tour with `conditions` needs the user's context from the provider:
 
 ```tsx
 <WalkmeProvider
@@ -464,7 +360,7 @@ If the target element is not found within 5 seconds, the step renders without an
 
 ### Internationalization
 
-The plugin ships with English and Spanish translations under `plugins/walkme/messages/`. To add more languages, create a JSON file following the same structure:
+The plugin ships English and Spanish messages in `messages/`, under the `walkme` namespace, and `WalkmeProvider` takes a `labels` prop to override or translate them. The keys:
 
 ```json
 {
@@ -503,7 +399,7 @@ All walkme components use CSS custom properties for styling. Override them in yo
   --walkme-border: #e5e7eb;
   --walkme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --walkme-beacon-color: #3b82f6;
-  --walkme-overlay-color: rgba(0, 0, 0, 0.5);
+  --walkme-overlay-bg: rgba(0, 0, 0, 0.5);
 }
 
 /* Dark mode */
@@ -515,7 +411,7 @@ All walkme components use CSS custom properties for styling. Override them in yo
   --walkme-border: #374151;
   --walkme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
   --walkme-beacon-color: #60a5fa;
-  --walkme-overlay-color: rgba(0, 0, 0, 0.7);
+  --walkme-overlay-bg: rgba(0, 0, 0, 0.7);
 }
 ```
 
@@ -540,14 +436,7 @@ When a tour is active:
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `WALKME_ENABLED` | `true` | Enable/disable the plugin |
-| `WALKME_DEBUG` | `false` | Debug mode |
-| `WALKME_AUTO_START` | `true` | Auto-start tours on first visit |
-| `WALKME_AUTO_START_DELAY` | `1000` | Delay before auto-starting (ms) |
-| `WALKME_PERSIST_STATE` | `true` | Persist state in localStorage |
-| `WALKME_ANALYTICS_ENABLED` | `false` | Enable analytics event emission |
+The package has a loader for the `WALKME_*` variables listed in `.env.example` (`lib/plugin-env.ts`), but the components do not read it: configure the plugin through the `WalkmeProvider` props (`debug`, `autoStart`, `autoStartDelay`, `persistState`).
 
 ## Troubleshooting
 
@@ -576,58 +465,13 @@ When a tour is active:
 
 1. Check that `persistState` is `true` (default).
 2. Verify localStorage is available (not in private browsing mode or incognito with storage disabled).
-3. The state is stored under the key `walkme-state` in localStorage.
+3. The state is stored under the key `walkme-state` in localStorage (`walkme-state-<userId>` when the provider has a `userId`).
 
-## File Structure
+## Documentation
 
-```
-plugins/walkme/
-  plugin.config.ts          # Plugin configuration
-  package.json              # Dependencies and metadata
-  .env.example              # Environment variable template
-  types/
-    walkme.types.ts         # All TypeScript type definitions
-  lib/
-    core.ts                 # Pure-function state machine (reducer + helpers)
-    validation.ts           # Zod schemas for tour config validation
-    storage.ts              # localStorage persistence adapter
-    targeting.ts            # DOM element targeting (CSS, data-walkme, data-cy)
-    positioning.ts          # @floating-ui/react wrapper for smart positioning
-    triggers.ts             # Tour trigger evaluation
-    conditions.ts           # Tour condition evaluation (AND logic)
-    plugin-env.ts           # Environment variable loader
-  hooks/
-    useWalkme.ts            # Main public hook (tour control + navigation)
-    useTour.ts              # Per-tour state hook
-    useTourProgress.ts      # Global completion progress hook
-    useTourState.ts         # Internal: state machine + localStorage sync
-  providers/
-    walkme-context.ts       # React Context definition
-  components/
-    WalkmeProvider.tsx      # Main provider (state, triggers, rendering)
-    WalkmeOverlay.tsx       # Semi-transparent backdrop overlay
-    WalkmeTooltip.tsx       # Positioned tooltip step
-    WalkmeModal.tsx         # Centered modal step with focus trap
-    WalkmeSpotlight.tsx     # Overlay with cutout + tooltip
-    WalkmeBeacon.tsx        # Pulsing indicator
-    WalkmeProgress.tsx      # Progress bar
-    WalkmeControls.tsx      # Navigation buttons (Next/Prev/Skip/Complete)
-  messages/
-    en.json                 # English translations
-    es.json                 # Spanish translations
-  examples/
-    basic-tour.ts           # Single-page tour example
-    cross-window-tour.ts    # Multi-page tour example
-    conditional-tour.ts     # Role-based conditional tour example
-  tests/
-    setup.ts                # Jest test setup
-    tsconfig.json           # Test-specific TypeScript config
-    lib/                    # Unit tests for all lib modules (165 tests)
-  jest.config.cjs           # Jest configuration
-```
+- [`examples/`](./examples) in this package, and the types in [`types/walkme.types.ts`](./types/walkme.types.ts)
+- [Plugin system](https://www.nextspark.dev/docs/plugin-system/introduction) in the NextSpark documentation
 
-## Dependencies
+## License
 
-- **`@floating-ui/react`** ^0.27.0 - Smart positioning for tooltips and popovers
-
-Peer dependencies (provided by the host project): `react`, `react-dom`, `next`, `zod`, `next-intl`, `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`.
+MIT

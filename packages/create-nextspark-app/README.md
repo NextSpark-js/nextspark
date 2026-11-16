@@ -2,11 +2,15 @@
 
 Create a new NextSpark SaaS project with a single command.
 
+> **Stability: stable.** `create-nextspark-app` is on the stable CLI list. The blog, crm and productivity templates, the first-party plugins, billing (Stripe, Polar) and the web-and-mobile project type are experimental. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
+
 ## Usage
 
 ```bash
-npx create-nextspark-app my-app
+pnpm create nextspark-app my-app
 ```
+
+`pnpm dlx create-nextspark-app my-app` does the same. The options below go after the project name.
 
 This will:
 1. Create a new directory `my-app`
@@ -18,31 +22,33 @@ This will:
 
 ```bash
 # Interactive setup (default)
-npx create-nextspark-app my-app
+pnpm create nextspark-app my-app
 
 # Use a preset to skip some prompts. A preset sets the project's configuration (team mode, billing,
 # features); the code comes from the template, which is the starter unless you pass --theme
-npx create-nextspark-app my-app --preset saas
-npx create-nextspark-app my-app --preset blog
-npx create-nextspark-app my-app --preset crm
+pnpm create nextspark-app my-app --preset saas
+pnpm create nextspark-app my-app --preset blog
+pnpm create nextspark-app my-app --preset crm
 
 # Pick a template (starter is stable; blog, crm and productivity are experimental)
-npx create-nextspark-app my-app --theme starter
+pnpm create nextspark-app my-app --theme starter
 
 # The CRM template with the CRM configuration
-npx create-nextspark-app my-app --preset crm --theme crm
+pnpm create nextspark-app my-app --preset crm --theme crm
 
 # Skip all prompts (use defaults)
-npx create-nextspark-app my-app -y
+pnpm create nextspark-app my-app -y
 
 # Choose the languages without prompts (en, es, fr, de, it, pt; default language: en when selected,
 # else the first; --default-locale picks another). Same result as choosing them in the prompts.
-npx create-nextspark-app my-app -y --locales en,es
-npx create-nextspark-app my-app -y --locales en,es --default-locale es
+pnpm create nextspark-app my-app -y --locales en,es
+pnpm create nextspark-app my-app -y --locales en,es --default-locale es
 
 # Do not create a git repository
-npx create-nextspark-app my-app --no-git
+pnpm create nextspark-app my-app --no-git
 ```
+
+`pnpm create nextspark-app --help` lists every option: `--preset`, `--type` (`web` or `web-mobile`), `--name`, `--slug`, `--description`, `--theme`, `--plugins`, `--locales`, `--default-locale`, `--no-git` and `-y, --yes`.
 
 `--locales` applies to `--yes` and `--preset` runs, where the prompts do not ask for languages; in a fully interactive run it is ignored with a warning, and you choose the languages in the prompts. A locale outside the six, an empty list, or a `--default-locale` that is not in the list stops the command before anything is installed. The list may come in any order and repeat a locale: it is read in the catalog's order, once each.
 
@@ -58,7 +64,7 @@ After the dependencies are installed the project gets a git repository with a fi
 - **TypeScript** strict configuration
 - **Tailwind CSS v4** with CSS-based theming
 - **Authentication** ready with Better Auth
-- **Database** setup with PostgreSQL + Drizzle
+- **Database** setup with PostgreSQL, SQL migrations and row-level security
 - **UI Components** 50+ components based on shadcn/ui
 - **Entity System** with automatic CRUD and APIs
 - **Page Builder** with blocks
@@ -83,6 +89,8 @@ After `pnpm install --frozen-lockfile --ignore-scripts`, the whole sequence is `
 ## Requirements
 
 - Node.js 22.14.0 or later
+- Linux x64 or macOS arm64. Windows is not supported.
+- Standard PostgreSQL 15, 16, 17 or 18, for the project's database (see the [PostgreSQL requirements](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/04-postgresql-requirements.md))
 - pnpm 10 (10.34.6 or later), 11 or 12. npm, yarn and bun are not supported (pnpm 9 is only for contributing to the NextSpark repository)
   Corepack bundled with Node.js 22.x cannot install pnpm 12: update Corepack first (`npm install --global corepack@latest`) or install pnpm standalone (`curl -fsSL https://get.pnpm.io/install.sh | sh -`); Node.js 24 ships a Corepack that can. The floor is 10.34.6 because pnpm 10.16 fails on a warm store cache with `ERR_PNPM_MISSING_TIME`.
 
@@ -116,7 +124,10 @@ dependency keeps the one-day wait.
 
 ## Documentation
 
-Visit [nextspark.dev/docs](https://nextspark.dev/docs) for full documentation.
+- [Quick start](https://www.nextspark.dev/docs/getting-started/quick-start)
+- [Project wizard](https://www.nextspark.dev/docs/getting-started/project-wizard)
+- [Support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md)
+- [NextSpark documentation](https://www.nextspark.dev/docs)
 
 ## License
 

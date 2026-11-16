@@ -4,11 +4,14 @@
   "description": "Testing utilities for NextSpark applications - Selectors, POMs, and Cypress helpers",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
-  "homepage": "https://nextspark.dev",
+  "homepage": "https://www.nextspark.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NextSpark-js/nextspark.git",
     "directory": "packages/testing"
+  },
+  "bugs": {
+    "url": "https://github.com/NextSpark-js/nextspark/issues"
   },
   "keywords": [
     "nextjs",

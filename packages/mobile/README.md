@@ -1,48 +1,28 @@
 # @nextsparkjs/mobile
 
-Mobile app infrastructure for NextSpark. Provides API client, authentication providers, and utilities for building Expo apps that connect to your NextSpark backend.
+Mobile app infrastructure for NextSpark: an API client, authentication and query providers, an entity API factory and a few utilities for Expo apps that connect to a NextSpark backend.
 
-## Repository Structure
-
-When developing the package, it's important to understand the different directories:
-
-```
-packages/mobile/
-├── src/                    # Package source code (published to npm)
-│   ├── api/                # API client and entity factory
-│   ├── providers/          # AuthProvider, QueryProvider
-│   ├── hooks/              # useAuth hook
-│   └── lib/                # Storage, Alert utilities
-├── templates/              # Scaffolding templates for `nextspark add:mobile`
-│   ├── app/                # Expo Router pages, gitignored: `pnpm sync:mobile-templates --sync` copies it from apps/mobile/app
-│   └── src/                # Example entities and components
-└── dist/                   # Compiled output, gitignored: created by `pnpm build`
-
-apps/mobile/                # Monorepo development app (NOT distributed)
-├── app/                    # Uses local source for development
-└── src/                    # Local copies for hot reload & debugging
-```
-
-**Key distinction:**
-- **`packages/mobile/src/`** → Published to npm as `@nextsparkjs/mobile`
-- **`packages/mobile/templates/`** → Copied to user projects via `nextspark add:mobile`
-- **`apps/mobile/`** → Internal dev app with local source (for package development)
-
-The templates correctly use `@nextsparkjs/mobile` imports, while `apps/mobile` uses local paths for development convenience.
+> **Stability: experimental.** Mobile (Expo SDK 58, React Native 0.88) becomes stable only when a real sign-in from the app passes in an iOS or Android simulator; CI today type-checks and tests the mobile app but does not sign in from a simulator. `nextspark add:mobile` is an experimental helper. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md) and the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md#mobile).
 
 ## Installation
 
 ```bash
-# Add mobile app to your NextSpark project (the add:mobile helper is experimental)
-npx nextspark add:mobile
+# Add a mobile app to your NextSpark project (experimental helper)
+pnpm exec nextspark add:mobile
 
-# Or install manually
+# Or install the package in an Expo app yourself
 pnpm add @nextsparkjs/mobile
 ```
 
+## Requirements
+
+- Node.js 22.14.0 or later, and a NextSpark web project as the backend.
+- Expo SDK 58 with React Native 0.88 is the only pair tested. The peer ranges are wider (`expo >=54.0.0`, `react-native >=0.75.0`) and still accept SDK 54 and later.
+- Peer dependencies: `react` ^19.1.0, `@tanstack/react-query` ^5, `expo-constants` >=18, `expo-device` >=8, `expo-secure-store` >=15 and, optional, `@preeternal/react-native-cookie-manager` >=6.3.0 (see [Sign-out and native cookies](#sign-out-and-native-cookies)).
+
 ## Quick Start
 
-### 1. Configure API URL
+### 1. Configure the API URL
 
 In `app.config.ts`:
 
@@ -57,9 +37,9 @@ export default {
 }
 ```
 
-### 2. Setup Providers
+### 2. Set up the providers
 
-In `app/_layout.tsx`:
+In `app/_layout.tsx`. `AuthProvider` reads the query client, so it goes inside `QueryProvider`:
 
 ```typescript
 import { AuthProvider, QueryProvider } from '@nextsparkjs/mobile'
@@ -75,23 +55,28 @@ export default function RootLayout() {
 }
 ```
 
-### 3. Use Authentication
+### 3. Sign in
+
+NextSpark sign-in is passwordless by default: the app asks for a one-time code by email and exchanges it for a session. `login(email, password)` works only when the backend enables email and password in `auth.methods`.
 
 ```typescript
 import { useAuth } from '@nextsparkjs/mobile'
 
 function LoginScreen() {
-  const { login, isLoading } = useAuth()
+  const { requestOtp, loginWithOtp } = useAuth()
 
-  const handleLogin = async () => {
-    await login('user@example.com', 'password')
-  }
+  // 1. email the code
+  const sendCode = (email: string) => requestOtp(email)
+  // 2. sign in with the code (the first sign-in creates the account)
+  const verify = (email: string, code: string) => loginWithOtp(email, code)
 
   // ...
 }
 ```
 
-### 4. Create Entity APIs
+`validateOtpCode(code)` checks the format (4 to 10 digits, Better Auth's range) before you send it.
+
+### 4. Create entity APIs
 
 ```typescript
 import { createEntityApi } from '@nextsparkjs/mobile'
@@ -99,8 +84,7 @@ import type { Task } from './types'
 
 export const tasksApi = createEntityApi<Task>('tasks')
 
-// Use in queries
-const { data } = await tasksApi.list()
+const { data, info } = await tasksApi.list({ page: 1, limit: 10 })
 const task = await tasksApi.get(id)
 await tasksApi.create({ title: 'New Task' })
 ```
@@ -110,19 +94,25 @@ await tasksApi.create({ title: 'New Task' })
 ### Providers
 
 #### `AuthProvider`
-Authentication context provider. Wrap your app with this provider to enable authentication. Must be rendered inside `QueryProvider`.
+Authentication context provider. Wrap your app with it to enable authentication. Must be rendered inside `QueryProvider`.
 
 **Props:**
 - `children: ReactNode` - Your app components
 
-**Context Value:**
+#### `useAuth()`
+Returns the authentication context:
+
 - `user: User | null` - Current authenticated user
 - `team: Team | null` - Current team
-- `isAuthenticated: boolean` - Whether user is logged in
+- `teams: Team[]` - The user's teams
+- `isAuthenticated: boolean` - Whether the user is logged in
 - `isLoading: boolean` - Whether auth is loading
-- `login(email, password): Promise<void>` - Login user
-- `logout(): Promise<void>` - Logout user
-- `selectTeam(team: Team): Promise<void>` - Switch to different team (cancels and resets the query cache, so screens show their loading state until the new team's data arrives)
+- `requestOtp(email): Promise<void>` - Email a one-time sign-in code
+- `loginWithOtp(email, otp): Promise<void>` - Sign in with the emailed code (creates the account on first use)
+- `login(email, password): Promise<void>` - Sign in with email and password, when the backend enables it
+- `logout(): Promise<void>` - Sign out
+- `selectTeam(team: Team): Promise<void>` - Switch to a different team (cancels and resets the query cache, so screens show their loading state until the new team's data arrives)
+- `refreshSession(): Promise<void>` - Re-validate the session with the server without toggling `isLoading`: a session restored offline is confirmed or cleared
 
 #### `QueryProvider`
 TanStack Query provider for data fetching. Configures default options for queries and mutations.
@@ -132,47 +122,35 @@ TanStack Query provider for data fetching. Configures default options for querie
 - `client?: QueryClient` - Use your own client (for example one with a `MutationCache`, or a fresh client per test) instead of the shared `queryClient`. `defaultOptions` is ignored when a client is passed.
 - `defaultOptions?: DefaultOptions` - Merged over the defaults (`staleTime` 5 minutes, `retry: 1` for queries, `retry: 0` for mutations, no refetch on window focus) in a client the provider creates. Without either prop the shared client is used, unchanged. `defaultOptions` is read once at mount; a changed value is ignored while the provider stays mounted.
 
-### Hooks
-
-#### `useAuth()`
-Hook to access authentication context.
-
-```typescript
-const { user, team, isAuthenticated, login, logout, selectTeam } = useAuth()
-```
-
 ### API Client
 
 #### `apiClient`
 Singleton HTTP client for API requests.
 
 **Methods:**
-- `init(): Promise<void>` - Initialize client (load stored credentials)
-- `get<T>(endpoint, config?): Promise<T>` - GET request
-- `post<T>(endpoint, data, config?): Promise<T>` - POST request
-- `patch<T>(endpoint, data, config?): Promise<T>` - PATCH request
-- `delete<T>(endpoint, config?): Promise<T>` - DELETE request
+- `init(): Promise<void>` - Initialize the client (load stored credentials)
+- `get<T>(endpoint, params?): Promise<T>` - GET request; `params` become the query string
+- `post<T>(endpoint, data?): Promise<T>` - POST request
+- `patch<T>(endpoint, data?): Promise<T>` - PATCH request
+- `delete<T>(endpoint): Promise<T>` - DELETE request
 - `setToken(token): Promise<void>` - Store the session token (a marker that a session exists; requests authenticate with the session cookie and send no `Authorization` header)
-- `setTeamId(teamId): Promise<void>` - Set current team ID
+- `setTeamId(teamId): Promise<void>` - Set the current team ID
 - `clearAuth(): Promise<void>` - Clear all authentication data: the stored token, team and user, and the native cookie store (see [Sign-out and native cookies](#sign-out-and-native-cookies))
 
-> **Migrating from `meta` (Unreleased):** `PaginatedResponse<T>` was typed `{ data, meta: { total, page, limit, totalPages } }`, but the API has
-> never sent a `meta`: it sends `{ success, data, info }` with the pagination in `info`. `PaginatedResponse<T>` is now that shape
-> (`ApiListResponse<T>`), and `SingleResponse<T>` is `ApiSuccessResponse<T>`. Replace `response.meta.total` with `response.info.total`
-> (same for `page`, `limit`, `totalPages`); code that read `meta` was reading `undefined`.
+`getApiUrl()` returns the resolved API URL and `ApiError` is what failed requests throw.
 
-#### `createEntityApi<T>(entity: string)`
-Factory function to create CRUD API for an entity.
+#### `createEntityApi<T, CreateInput, UpdateInput>(entity: string)`
+Factory function to create a CRUD API for an entity. `CreateInput` and `UpdateInput` default to `Partial<T>`.
 
 **Parameters:**
-- `entity: string` - Entity name (e.g., 'tasks', 'users')
+- `entity: string` - Entity path (e.g., 'tasks', 'users'); requests go to `/api/v1/<entity>`
 
-**Returns:** `EntityApi<T>` with methods:
-- `list(params?): Promise<PaginatedResponse<T>>` - List entities: `{ success, data, info }`, the pagination (`page`, `limit`, `total`, `totalPages`, `hasNextPage`, `hasPrevPage`) in `info`
-- `get(id): Promise<T>` - Get single entity
-- `create(data): Promise<T>` - Create entity
-- `update(id, data): Promise<T>` - Update entity
-- `delete(id): Promise<void>` - Delete entity
+**Returns:** `EntityApi<T, CreateInput, UpdateInput>` with methods:
+- `list(params?): Promise<PaginatedResponse<T>>` - List entities: `{ success, data, info }`, the pagination (`page`, `limit`, `total`, `totalPages`, `hasNextPage`, `hasPrevPage`) in `info`. `params` takes `page`, `limit`, `search`, `sort`, `order` and any other filter
+- `get(id): Promise<T>` - Get a single entity
+- `create(data): Promise<T>` - Create an entity
+- `update(id, data): Promise<T>` - Update an entity
+- `delete(id): Promise<void>` - Delete an entity
 
 **Example:**
 ```typescript
@@ -195,24 +173,24 @@ await tasksApi.create({ title: 'New Task', status: 'pending' })
 ### Utilities
 
 #### `Storage`
-Secure storage wrapper using Expo SecureStore.
+Secure storage wrapper: Expo SecureStore on native, `localStorage` on web (which XSS can read).
 
 **Methods:**
-- `Storage.getItem(key): Promise<string | null>` - Get item
-- `Storage.setItem(key, value): Promise<void>` - Set item
-- `Storage.removeItem(key): Promise<void>` - Remove item
+- `Storage.getItemAsync(key): Promise<string | null>` - Get an item
+- `Storage.setItemAsync(key, value): Promise<void>` - Set an item
+- `Storage.deleteItemAsync(key): Promise<void>` - Remove an item
 
-#### `alert(title, message?)`
-Show alert dialog.
+#### `alert({ title, message?, buttons? })`
+Show an alert dialog. On web it uses `window.alert` and `window.confirm`.
 
 ```typescript
 import { alert } from '@nextsparkjs/mobile'
 
-alert('Success', 'Task created successfully')
+alert({ title: 'Success', message: 'Task created successfully' })
 ```
 
 #### `confirm(title, message?)`
-Show confirmation dialog.
+Show a confirmation dialog; resolves to `true` when confirmed.
 
 ```typescript
 import { confirm } from '@nextsparkjs/mobile'
@@ -223,13 +201,46 @@ if (confirmed) {
 }
 ```
 
-#### `confirmDestructive(title, message?)`
-Show destructive confirmation dialog (red action).
+#### `confirmDestructive(title, message?, destructiveButtonText?)`
+Show a destructive confirmation dialog (red action).
 
 ```typescript
 import { confirmDestructive } from '@nextsparkjs/mobile'
 
 const confirmed = await confirmDestructive('Delete All', 'This cannot be undone')
+```
+
+#### `clearNativeCookies()`
+Empties the app's native cookie store, as `apiClient.clearAuth()` does on sign-out. Never rejects. See [Sign-out and native cookies](#sign-out-and-native-cookies).
+
+## Core Services
+
+Pre-built API services for the core endpoints:
+
+### `authApi`
+- `login(email, password): Promise<LoginResponse>`
+- `sendOtp(email): Promise<void>`
+- `loginWithOtp(email, otp): Promise<OtpLoginResponse>`
+- `getSocialSignInUrl('google', callbackURL): Promise<string>` - On a native device the browser session is not handed back to the app without Better Auth's Expo plugin on both sides; on Expo web it completes
+- `logout(): Promise<void>`
+- `getSession(): Promise<SessionResponse | null>`
+
+### `teamsApi`
+- `getTeams(): Promise<TeamsResponse>`
+- `switchTeam(teamId): Promise<void>`
+
+## TypeScript Support
+
+Type definitions ship with the package.
+
+```typescript
+import type {
+  User,
+  Team,
+  AuthSession,
+  PaginatedResponse,
+  EntityListParams
+} from '@nextsparkjs/mobile'
 ```
 
 ## Sign-out and native cookies
@@ -249,37 +260,6 @@ It is a native module: **it needs a [development build](https://docs.expo.dev/de
 ### Expo web and the origin check
 
 Requests authenticate with the session cookie and send no `Authorization` header. From Expo web the browser sends an `Origin`, and core checks it on cookie-authenticated writes (`POST`, `PUT`, `PATCH`, `DELETE`): add the Expo web origin (for example `http://localhost:8081`) to `CORS_ADDITIONAL_ORIGINS` (or `api.cors.additionalOrigins`) on the API, or those writes get 403 `ORIGIN_NOT_ALLOWED`. Native iOS and Android requests send `Origin: <the API's own origin>` (the client adds it: Better Auth answers 403 `MISSING_OR_NULL_ORIGIN` to a cookie-authenticated POST without one). That origin is trusted when the API host is the one in `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL`; if the app talks to a different host (for example `api.example.com` while the site is `app.example.com`), add the API's origin to `CORS_ADDITIONAL_ORIGINS` too, or native requests get 403 `INVALID_ORIGIN`.
-
-## Core Services
-
-Pre-built API services for common entities:
-
-### `authApi`
-- `login(email, password): Promise<LoginResponse>`
-- `logout(): Promise<void>`
-- `getSession(): Promise<SessionResponse>`
-
-### `teamsApi`
-- `getTeams(): Promise<TeamsResponse>`
-- `switchTeam(teamId): Promise<void>`
-
-### `usersApi`
-- `getCurrentUser(): Promise<User>`
-- `updateProfile(data): Promise<User>`
-
-## TypeScript Support
-
-Full TypeScript support with generated type definitions.
-
-```typescript
-import type {
-  User,
-  Team,
-  Session,
-  PaginatedResponse,
-  EntityQueryParams
-} from '@nextsparkjs/mobile'
-```
 
 ## Environment Configuration
 
@@ -318,7 +298,7 @@ Both the `preview` and `production` profiles produce release builds, so each nee
 
 Native libraries add Android permissions through their own manifests (camera, audio recording, external storage), and they end up in the release build whether or not your app uses them. The `android` block of the template `app.config.ts` has a `blockedPermissions` list, empty by default, with the usual candidates commented out.
 
-To review it, run a prebuild (`npx expo prebuild --platform android`) and read the merged manifest under `android/app/build/intermediates/merged_manifests/` after a release build, or `android/app/src/main/AndroidManifest.xml` for what Expo itself wrote. Every `uses-permission` entry your app has no feature for (for example `RECORD_AUDIO` when nothing records audio) goes in `blockedPermissions`:
+To review it, run a prebuild (`pnpm exec expo prebuild --platform android`) and read the merged manifest under `android/app/build/intermediates/merged_manifests/` after a release build, or `android/app/src/main/AndroidManifest.xml` for what Expo itself wrote. Every `uses-permission` entry your app has no feature for (for example `RECORD_AUDIO` when nothing records audio) goes in `blockedPermissions`:
 
 ```typescript
 android: {
@@ -330,23 +310,29 @@ Block only what the app does not use: a blocked permission that a feature needs 
 
 ## Examples
 
-### Complete Login Flow
+### Complete Sign-In Flow
 
 ```typescript
-import { useAuth } from '@nextsparkjs/mobile'
+import { alert, useAuth } from '@nextsparkjs/mobile'
 import { useState } from 'react'
 
 export default function LoginScreen() {
-  const { login, isLoading } = useAuth()
+  const { requestOtp, loginWithOtp } = useAuth()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
 
-  const handleLogin = async () => {
+  const handleSend = async () => {
+    await requestOtp(email)
+    setCodeSent(true)
+  }
+
+  const handleVerify = async () => {
     try {
-      await login(email, password)
+      await loginWithOtp(email, code)
       // Navigation handled by AuthProvider
     } catch (error) {
-      alert('Login Failed', error.message)
+      alert({ title: 'Sign-in failed', message: (error as Error).message })
     }
   }
 
@@ -433,7 +419,40 @@ export default {
 
 ## Documentation
 
-Full documentation: https://nextspark.dev/docs/mobile
+- This README is the package reference.
+- [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md) and the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md#mobile)
+- [`apps/mobile`](https://github.com/NextSpark-js/nextspark/tree/main/apps/mobile), the repository's development app, with its own README
+- [NextSpark documentation](https://www.nextspark.dev/docs)
+
+## Contributing
+
+### Repository structure
+
+When developing the package, it's important to understand the different directories:
+
+```
+packages/mobile/
+├── src/                    # Package source code (published to npm)
+│   ├── api/                # API client and entity factory
+│   ├── providers/          # AuthProvider, QueryProvider
+│   ├── hooks/              # useAuth hook
+│   └── lib/                # Storage, Alert utilities
+├── templates/              # Scaffolding templates for `nextspark add:mobile`
+│   ├── app/                # Expo Router pages, gitignored: `pnpm sync:mobile-templates --sync` copies it from apps/mobile/app
+│   └── src/                # Example entities and components
+└── dist/                   # Compiled output, gitignored: created by `pnpm build`
+
+apps/mobile/                # Monorepo development app (NOT distributed)
+├── app/                    # Uses local source for development
+└── src/                    # Local copies for hot reload & debugging
+```
+
+**Key distinction:**
+- **`packages/mobile/src/`** → Published to npm as `@nextsparkjs/mobile`
+- **`packages/mobile/templates/`** → Copied to user projects via `nextspark add:mobile`
+- **`apps/mobile/`** → Internal dev app with local source (for package development)
+
+The templates correctly use `@nextsparkjs/mobile` imports, while `apps/mobile` uses local paths for development convenience.
 
 ## License
 

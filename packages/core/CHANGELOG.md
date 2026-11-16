@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The READMEs of the repository and of the 13 published packages match the code and the documentation.** They use `pnpm`, state the supported versions (Node.js, PostgreSQL 15 to 18, Linux x64 and macOS arm64, no Windows) and the stability of what they describe, and every link resolves; the root README has a working logo, the six first-party plugins and all 13 packages. `@nextsparkjs/ui` and `@nextsparkjs/plugin-langchain` now have a README, the `@nextsparkjs/plugin-marketplace-payments` one is complete, and the READMEs of `@nextsparkjs/testing`, `@nextsparkjs/mobile`, `@nextsparkjs/plugin-ai`, `@nextsparkjs/plugin-amplitude` and `@nextsparkjs/plugin-social-media-publisher` no longer describe exports, files or auto-discovery that do not exist. Every published `package.json` has `homepage`, `repository` and `bugs`. The steps to test a production build locally moved from the README to the deployment guide, and the stability pages list `marketplace-payments` among the experimental first-party plugins. (#471)
+
 ## [0.1.0-beta.203] - 2026-11-16
 
 ### Upgrading from 0.1.0-beta.202

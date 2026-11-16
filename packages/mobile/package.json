@@ -4,11 +4,14 @@
   "description": "Mobile app infrastructure for NextSpark - API client, providers, and utilities for Expo apps",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
-  "homepage": "https://nextspark.dev",
+  "homepage": "https://www.nextspark.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NextSpark-js/nextspark.git",
     "directory": "packages/mobile"
+  },
+  "bugs": {
+    "url": "https://github.com/NextSpark-js/nextspark/issues"
   },
   "type": "module",
   "main": "./dist/index.js",

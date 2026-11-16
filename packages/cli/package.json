@@ -57,6 +57,10 @@
     "url": "https://github.com/NextSpark-js/nextspark.git",
     "directory": "packages/cli"
   },
+  "homepage": "https://www.nextspark.dev",
+  "bugs": {
+    "url": "https://github.com/NextSpark-js/nextspark/issues"
+  },
   "engines": {
     "node": ">=22.14.0"
   }

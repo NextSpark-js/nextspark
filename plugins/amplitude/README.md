@@ -1,631 +1,106 @@
-# 📊 Amplitude Analytics Plugin
-
-> **Experimental:** The Amplitude plugin is not part of the stable 1.0 surface and may change without a deprecation period.
-
-> **Enterprise-grade user analytics and behavioral tracking plugin for NextSpark applications**
-
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](./package.json)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.0+-61dafb.svg)](https://reactjs.org/)
-[![Test Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](#testing)
-
-## 🎯 **Características Principales**
-
-### **📈 Analytics Avanzado**
-- **Auto-tracking inteligente** de page views, clicks, forms y navegación SPA
-- **Event batching** optimizado para performance con cola offline
-- **Real-time dashboards** con métricas de negocio y técnicas
-- **Cache LRU con TTL** para optimización de performance
-
-### **🔒 Seguridad y Privacidad Enterprise**
-- **Gestión de consentimiento GDPR/CCPA** granular por categoría
-- **Enmascaramiento automático de PII** con 13+ patrones de detección
-- **Rate limiting** con sliding window (1000 eventos/minuto)
-- **Audit logging** con retención configurable y severidad
-
-### **🧪 A/B Testing y Experimentación**
-- **Asignación determinística** con sticky sessions por user/device/session
-- **Statistical significance** calculation con confidence intervals
-- **Targeting avanzado** por propiedades, geolocation, device type
-- **Exposure y conversion tracking** automático
-
-### **🎬 Session Replay**
-- **Grabación privacy-first** con masking automático de elementos sensibles
-- **Sampling inteligente** para optimización de performance
-- **Selective recording** con páginas excluidas configurables
-- **Compression y batching** para transmisión eficiente
-
-### **🎨 Integración con Temas**
-- **Theme-aware components** que respetan el design system
-- **CSS custom properties** para integración seamless
-- **Component overrides** a través del sistema de temas
-- **Dark mode support** automático
-
-### **🌍 Internacionalización**
-- **Plugin translation namespace** (`plugins.amplitude.*`)
-- **Soporte completo English/Spanish** con 200+ strings
-- **Fallback automático** para keys faltantes
-- **Integration con sistema i18n** de la aplicación
-
-## 🍪 **Consentimiento de cookies del core**
-
-Con `consent: { enabled: true }` en `app.config.ts`, el plugin lee el mismo consentimiento que el banner del core
-(`useConsent()` de `@nextsparkjs/core/lib/consent`): **no se inicializa antes de que se conceda `analytics`**, se
-inicializa al concederlo y **se da de baja (opt-out) al revocarlo**: descarta los eventos y vacía la cola, sin una
-segunda inicialización si se vuelve a conceder. Con el consentimiento desactivado en la config, el plugin se comporta
-como antes. Ver la guía de cookie consent del core.
-
-## 🚀 **Instalación y Configuración**
-
-### **1. Configuración Básica**
-
-```typescript
-// plugins/amplitude/plugin.config.ts
-import { amplitudePlugin } from './plugin.config';
-
-const config = {
-  apiKey: 'your-amplitude-api-key-32-chars',
-  serverZone: 'US', // or 'EU'
-  enableSessionReplay: true,
-  enableABTesting: true,
-  enableConsentManagement: true,
-  debugMode: false, // Set to true for development
-};
-```
-
-### **2. Provider Setup**
-
-```tsx
-// app/layout.tsx
-import { AmplitudeProvider } from '@/plugins/amplitude/providers/AmplitudeProvider';
-
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        <AmplitudeProvider overrideConfig={config}>
-          {children}
-        </AmplitudeProvider>
-      </body>
-    </html>
-  );
-}
-```
-
-### **3. Hook Usage**
-
-```tsx
-// components/YourComponent.tsx
-import { useAmplitude } from '@/plugins/amplitude/hooks/useAmplitude';
-
-export function YourComponent() {
-  const { track, identify, isInitialized } = useAmplitude();
-
-  const handleClick = async () => {
-    await track('Button Clicked', {
-      buttonId: 'cta-signup',
-      page: '/home',
-      user_plan: 'free'
-    });
-  };
-
-  const handleUserLogin = async (userId: string) => {
-    await identify(userId, {
-      plan: 'premium',
-      signup_date: new Date().toISOString(),
-      feature_flags: ['new_ui', 'advanced_analytics']
-    });
-  };
-
-  if (!isInitialized) {
-    return <div>Loading analytics...</div>;
-  }
-
-  return (
-    <button onClick={handleClick}>
-      Track This Click
-    </button>
-  );
-}
-```
-
-## 📋 **API Reference**
-
-### **useAmplitude Hook**
-
-```typescript
-const {
-  track,           // (eventType: string, properties?: object) => Promise<void>
-  identify,        // (userId: string, properties?: object) => Promise<void>
-  setUserProperties, // (properties: object) => Promise<void>
-  reset,           // () => void
-  isInitialized,   // boolean
-  context,         // { config, consent, error }
-  lastError        // Error | null
-} = useAmplitude();
-```
-
-### **useExperiment Hook**
-
-```typescript
-const {
-  getVariant,      // (experimentId: string, userId: string) => string | null
-  trackExposure,   // (experimentId: string, variantId?: string) => Promise<void>
-  trackConversion, // (experimentId: string, metricId?: string, value?: number) => Promise<void>
-  isInExperiment,  // (experimentId: string, userId: string) => boolean
-  registerExperiment, // (config: ExperimentConfig) => void
-  canRunExperiments   // boolean
-} = useExperiment();
-```
-
-### **useSessionReplay Hook**
-
-```typescript
-const {
-  startRecording,  // () => Promise<boolean>
-  stopRecording,   // () => Promise<void>
-  pauseRecording,  // () => void
-  resumeRecording, // () => void
-  isRecording,     // boolean
-  canRecord,       // boolean
-  recordingState,  // RecordingState object
-  privacyControls  // PrivacyControls object
-} = useSessionReplay();
-```
-
-## 🧪 **A/B Testing y Experimentos**
-
-### **Configuración de Experimento**
-
-```typescript
-// Registrar experimento
-const experimentConfig = {
-  id: 'checkout-flow-v2',
-  name: 'New Checkout Flow',
-  status: 'running',
-  variants: [
-    { 
-      id: 'control', 
-      name: 'Original Checkout', 
-      allocation: 50, 
-      isControl: true,
-      config: { showProgressBar: false, steps: 3 }
-    },
-    { 
-      id: 'treatment', 
-      name: 'Streamlined Checkout', 
-      allocation: 50, 
-      isControl: false,
-      config: { showProgressBar: true, steps: 2 }
-    }
-  ],
-  targeting: {
-    userProperties: { plan: 'premium' },
-    deviceType: ['desktop', 'mobile']
-  },
-  startDate: new Date(),
-  endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-  sampleSize: 10000,
-  confidenceLevel: 0.95
-};
-
-registerExperiment(experimentConfig);
-```
-
-### **Uso con Componentes**
-
-```tsx
-// Declarative A/B Testing
-import { ExperimentWrapper, ABTest, FeatureFlag } from '@/plugins/amplitude/components/ExperimentWrapper';
-
-// Wrapper básico
-<ExperimentWrapper 
-  experimentId="checkout-flow-v2"
-  trackExposureOnMount={true}
->
-  {(variant, config) => (
-    variant === 'treatment' ? 
-      <StreamlinedCheckout config={config} /> : 
-      <OriginalCheckout config={config} />
-  )}
-</ExperimentWrapper>
-
-// A/B Test simplificado
-<ABTest 
-  experimentId="button-color-test"
-  variants={{
-    control: <button className="btn-blue">Sign Up</button>,
-    red: <button className="btn-red">Sign Up</button>,
-    green: <button className="btn-green">Sign Up</button>
-  }}
-/>
-
-// Feature Flag
-<FeatureFlag flag="new-dashboard">
-  <NewDashboard />
-</FeatureFlag>
-```
-
-### **Tracking de Conversiones**
-
-```typescript
-// En el componente de checkout
-const { trackConversion } = useExperiment();
-
-const handlePurchaseComplete = async (orderValue: number) => {
-  await trackConversion('checkout-flow-v2', 'purchase', orderValue);
-};
-```
-
-## 🎬 **Session Replay**
-
-### **Configuración de Privacidad**
-
-```typescript
-const sessionReplayConfig = {
-  enabled: true,
-  sampleRate: 0.1, // 10% de sesiones
-  privacyMode: 'balanced', // 'strict' | 'balanced' | 'permissive'
-  maskAllInputs: true,
-  blockSelector: [
-    '[data-private]',
-    '.sensitive-data',
-    '#credit-card-form'
-  ],
-  maskSelector: [
-    'input[type="email"]',
-    '.user-details',
-    '[data-mask]'
-  ],
-  ignoredPages: ['/admin', '/payment']
-};
-```
-
-### **Control Programático**
-
-```tsx
-import { useSessionReplay } from '@/plugins/amplitude/hooks/useSessionReplay';
-
-function SessionControls() {
-  const { 
-    startRecording, 
-    stopRecording, 
-    isRecording, 
-    recordingState 
-  } = useSessionReplay();
-
-  return (
-    <div>
-      <p>Recording: {isRecording ? 'Active' : 'Stopped'}</p>
-      <p>Duration: {recordingState.duration}ms</p>
-      <p>Events: {recordingState.eventsCount}</p>
-      
-      <button onClick={startRecording}>Start Recording</button>
-      <button onClick={stopRecording}>Stop Recording</button>
-    </div>
-  );
-}
-```
-
-## 🔒 **Gestión de Consentimiento**
-
-### **ConsentManager Component**
-
-```tsx
-import { ConsentManager, useConsent } from '@/plugins/amplitude/components/ConsentManager';
-
-function App() {
-  const { 
-    isConsentModalOpen, 
-    openConsentModal, 
-    closeConsentModal,
-    hasConsent,
-    getConsentStatus 
-  } = useConsent();
-
-  return (
-    <>
-      <button onClick={openConsentModal}>
-        Privacy Settings
-      </button>
-      
-      <ConsentManager
-        isOpen={isConsentModalOpen}
-        onClose={closeConsentModal}
-        onConsentChange={(consent) => {
-          console.log('Consent updated:', consent);
-        }}
-        position="center"
-        showBadge={true}
-      />
-      
-      {hasConsent('analytics') && (
-        <AnalyticsComponents />
-      )}
-    </>
-  );
-}
-```
-
-### **Estados de Consentimiento**
-
-```typescript
-// Verificar consentimiento específico
-if (hasConsent('sessionReplay')) {
-  // Iniciar session replay
-}
-
-// Obtener estado completo
-const status = getConsentStatus();
-console.log(`${status.granted}/${status.total} categorías habilitadas`);
-console.log(`${status.percentage}% de consentimiento`);
-```
-
-## 📊 **Dashboard y Monitoring**
-
-### **Analytics Dashboard**
-
-```tsx
-import { AnalyticsDashboard } from '@/plugins/amplitude/components/AnalyticsDashboard';
-
-<AnalyticsDashboard
-  refreshInterval={30000}  // 30 segundos
-  showAdvancedMetrics={true}
-  timeRange="24h"
-  compactMode={false}
-/>
-```
-
-### **Performance Monitor**
-
-```tsx
-import { PerformanceMonitor } from '@/plugins/amplitude/components/PerformanceMonitor';
-
-<PerformanceMonitor
-  refreshInterval={5000}   // 5 segundos
-  showAlerts={true}
-  showCharts={true}
-  alertThresholds={{
-    errorRate: 0.05,      // 5%
-    memoryUsageMB: 100,
-    latencyMs: 1000,
-    queueSize: 1000
-  }}
-  onAlert={(alert) => {
-    console.warn('Performance Alert:', alert);
-    // Enviar a sistema de alertas
-  }}
-/>
-```
-
-## 🧪 **Testing**
-
-### **Ejecutar Tests**
-
-```bash
-# Tests unitarios
-npm test
-
-# Tests con watch mode
-npm run test:watch
-
-# Coverage report
-npm run test:coverage
-
-# Type checking
-npm run type-check
-```
-
-### **Mock para Testing**
-
-```typescript
-// __tests__/setup.ts
-jest.mock('@/plugins/amplitude/hooks/useAmplitude', () => ({
-  useAmplitude: () => ({
-    track: jest.fn().mockResolvedValue(undefined),
-    identify: jest.fn().mockResolvedValue(undefined),
-    isInitialized: true,
-    context: { config: mockConfig, consent: mockConsent, error: null }
-  })
-}));
-```
-
-## 🎨 **Personalización y Temas**
-
-### **CSS Custom Properties**
-
-```css
-/* Personalizar colores del plugin */
-:root {
-  --amplitude-primary: #3b82f6;
-  --amplitude-success: #10b981;
-  --amplitude-warning: #f59e0b;
-  --amplitude-error: #ef4444;
-}
-
-/* Dark mode */
-[data-theme="dark"] {
-  --amplitude-bg-primary: #1f2937;
-  --amplitude-text-primary: #f9fafb;
-}
-```
-
-### **Component Overrides**
-
-```tsx
-// Sistema de temas (ejemplo)
-const themeOverrides = {
-  'amplitude.consent': {
-    Modal: CustomModal,
-    Button: CustomButton,
-    Card: CustomCard
-  }
-};
-```
-
-## 🔧 **Configuración Avanzada**
-
-### **Plugin Configuration Schema**
-
-```typescript
-const advancedConfig = {
-  // API Configuration
-  apiKey: 'your-32-char-api-key',
-  serverZone: 'US' | 'EU',
-  
-  // Features
-  enableSessionReplay: true,
-  enableABTesting: true,
-  enableConsentManagement: true,
-  
-  // Performance
-  batchSize: 30,              // Events per batch
-  flushInterval: 10000,       // ms between flushes
-  sampleRate: 1.0,            // 0-1 sampling rate
-  
-  // Security
-  piiMaskingEnabled: true,
-  rateLimitEventsPerMinute: 1000,
-  errorRetryAttempts: 3,
-  errorRetryDelayMs: 1000,
-  
-  // Debug
-  debugMode: false,
-};
-```
-
-### **Event Queue Configuration**
-
-```typescript
-const queueConfig = {
-  maxSize: 10000,
-  batchSize: 30,
-  flushIntervalMs: 10000,
-  maxRetries: 3,
-  enablePersistence: true,
-  priorityQueueEnabled: true
-};
-```
-
-### **Cache Configuration**
-
-```typescript
-const cacheConfig = {
-  maxSize: 5000,
-  defaultTtlMs: 30 * 60 * 1000, // 30 minutos
-  maxMemoryMB: 20,
-  enablePersistence: true
-};
-```
-
-## 🚨 **Troubleshooting**
-
-### **Problemas Comunes**
-
-#### **Plugin no inicializa**
-```typescript
-// Verificar API key
-console.log('API Key length:', config.apiKey.length); // Debe ser 32
-console.log('API Key format:', /^[a-zA-Z0-9]{32}$/.test(config.apiKey));
-
-// Verificar contexto
-const { error, isInitialized } = useAmplitudeContext();
-if (error) console.error('Amplitude Error:', error);
-```
-
-#### **Eventos no se envían**
-```typescript
-// Verificar consentimiento
-const { consent } = useAmplitudeContext();
-console.log('Analytics consent:', consent.analytics);
-
-// Verificar rate limiting
-import { rateLimiter } from '@/plugins/amplitude/lib/security';
-console.log('Rate limit OK:', rateLimiter.checkRateLimit('user-id'));
-```
-
-#### **Performance Issues**
-```typescript
-// Verificar métricas
-import { getPerformanceStats } from '@/plugins/amplitude/lib/performance';
-const stats = getPerformanceStats();
-console.log('Memory usage:', stats.amplitudeCore.memoryUsage);
-console.log('Queue size:', stats.amplitudeCore.eventQueueSize);
-```
-
-### **Debug Mode**
-
-```typescript
-// Habilitar debug mode
-const debugConfig = {
-  ...config,
-  debugMode: true
-};
-
-// Logs adicionales en consola
-// Performance metrics detalladas
-// Event tracking verbose
-// Error reporting extendido
-```
-
-## 📈 **Performance y Optimización**
-
-### **Métricas Monitoreadas**
-- **Initialization Time**
-- **Event Processing**
-- **Memory Usage**
-- **Cache Hit Rate**
-- **Error Rate**
-
-(No se citan valores: el repositorio no los mide.)
-
-### **Best Practices**
-1. **Batch events** en lugar de enviar individualmente
-2. **Use consent management** para compliance automático
-3. **Configure sampling** para session replay (10-30%)
-4. **Monitor performance** con alertas automáticas
-5. **Test thoroughly** con coverage > 90%
-
-## 🏗️ **Arquitectura**
-
-```
-plugins/amplitude/
-├── plugin.config.ts          # Configuración principal
-├── types/amplitude.types.ts   # Tipos TypeScript
-├── providers/                 # React Providers
-├── hooks/                     # Custom Hooks
-├── components/               # UI Components
-├── lib/                      # Core Logic
-│   ├── amplitude-core.ts     # Amplitude SDK Wrapper
-│   ├── performance.ts        # Performance Monitoring
-│   ├── security.ts           # Security & Privacy
-│   ├── queue.ts              # Event Queue System
-│   └── cache.ts              # LRU Cache with TTL
-├── utils/                    # Utilities
-├── translations/             # i18n Files
-├── styles/                   # CSS Styles
-└── __tests__/                # Test Suite
-```
-
-## 📄 **License**
-
-MIT License - ver [LICENSE](./LICENSE) para detalles completos.
-
-## 🤝 **Contributing**
-
-1. Fork el repositorio
-2. Crear feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit cambios (`git commit -m 'Add amazing feature'`)
-4. Push al branch (`git push origin feature/amazing-feature`)
-5. Crear Pull Request
-
-## 📞 **Soporte**
-
-- **Issues**: [GitHub Issues](https://github.com/your-org/nextspark/issues)
-- **Docs**: [Plugin Documentation](./docs/)
-- **Team**: NextSpark Development Team
-
----
-
-**🎊 Resultado**: Plugin de analytics enterprise-grade, completamente modular, que valida la arquitectura WordPress-like y establece la base para un ecosistema de plugins escalable.
+# @nextsparkjs/plugin-amplitude
+
+Amplitude analytics for the web app of a NextSpark project: a provider that initializes Amplitude, hooks to track events, identify users and run experiments and session replay, a consent manager and monitoring components. It works on the client; it has no API routes and no database tables.
+
+> **Stability: experimental.** The first-party plugins are not part of the stable 1.0 surface and may change in a minor release without a deprecation period. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
+
+> **No event reaches Amplitude yet.** `AmplitudeCore` (`lib/amplitude-core.ts`) simulates the Amplitude client: `init` logs and waits, and the batch send only logs and waits. The hooks, consent handling, queue and components work around that simulated client. Do not use the plugin to collect real analytics until the client is connected.
+
+## Installation
+
+1. Add the package, enable it and tell Next.js to compile it:
+
+   ```bash
+   pnpm add @nextsparkjs/plugin-amplitude
+   ```
+
+   ```ts
+   // nextspark.config.ts
+   export default defineConfig({ plugins: ['@nextsparkjs/plugin-amplitude'] })
+   ```
+
+   The package ships TypeScript source, so add `'@nextsparkjs/plugin-amplitude'` to `transpilePackages` in your Next config, next to `@nextsparkjs/core`; `nextspark prepare` stops and tells you if it is missing. `pnpm exec nextspark add:plugin @nextsparkjs/plugin-amplitude` is an experimental helper that adds a plugin to a project.
+
+2. Wrap your app with the provider and pass its configuration in `overrideConfig`:
+
+   ```tsx
+   import { AmplitudeProvider } from '@nextsparkjs/plugin-amplitude/providers/AmplitudeProvider'
+
+   const config = {
+     apiKey: 'your-32-character-amplitude-api-key', // from your Amplitude project; 32 letters and digits
+     serverZone: 'US', // or 'EU'
+   }
+
+   export default function Layout({ children }: { children: React.ReactNode }) {
+     return <AmplitudeProvider overrideConfig={config}>{children}</AmplitudeProvider>
+   }
+   ```
+
+   `overrideConfig` is the only source of configuration today: the provider does not read the Zod schema in `plugin.config.ts`, and without `overrideConfig` it does not initialize.
+
+3. Track events from a component:
+
+   ```tsx
+   import { useAmplitude } from '@nextsparkjs/plugin-amplitude/hooks/useAmplitude'
+
+   const { track, identify, isInitialized } = useAmplitude()
+   await track('Button Clicked', { buttonId: 'cta-signup' })
+   await identify(userId, { plan: 'premium' })
+   ```
+
+## Configuration
+
+The options of `overrideConfig`, with the defaults of the schema in `plugin.config.ts`. These take effect:
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `apiKey` | required | Amplitude API key: 32 letters and digits |
+| `enableSessionReplay` | `false` | Turns on `useSessionReplay` |
+| `enableABTesting` | `false` | Turns on `useExperiment` |
+| `sampleRate` | `1` | Session replay sampling, 0 to 1 |
+| `piiMaskingEnabled` | `true` | Mask personal data patterns in event properties |
+| `errorRetryAttempts`, `errorRetryDelayMs` | `3`, `1000` | Retries of a failed initialization (0 to 5, and 100 to 10000 ms) |
+
+The schema also declares `serverZone`, `enableConsentManagement`, `batchSize`, `flushInterval`, `debugMode` and `rateLimitEventsPerMinute`, but nothing reads them yet: the queue and the rate limiter use their own defaults.
+
+## Cookie consent
+
+With `consent: { enabled: true }` in `config/app.config.ts`, the plugin reads the same consent as the core banner (`useConsent()` from `@nextsparkjs/core/lib/consent`): it does not initialize before `analytics` is granted, initializes when it is, and opts out when it is revoked, dropping events and emptying its queue, with no second initialization if it is granted again. With consent off in the config, initialization does not wait for the banner. The plugin also has its own consent categories (`analytics`, `sessionReplay`, `experiments`, `performance`), all off until granted, stored in `localStorage` under `amplitude_consent`, and a `ConsentManager` component to grant them; `track` and `identify` need `analytics` there.
+
+## Hooks
+
+| Hook | Returns |
+| --- | --- |
+| `useAmplitude()` | `track`, `identify`, `setUserProperties`, `reset`, `isInitialized`, `context` (`config`, `consent`, `error`) and `lastError`. `track` and `identify` skip the call without `analytics` consent |
+| `useExperiment()` | `getVariant`, `trackExposure`, `trackConversion`, `isInExperiment`, `registerExperiment`, `canRunExperiments`, and the `experiments`, `exposures` and `conversions` state |
+| `useSessionReplay()` | `startRecording`, `stopRecording`, `pauseRecording`, `resumeRecording`, `isRecording`, `canRecord`, `recordingState`, `privacyControls` and `updatePrivacyControls` |
+| `useAmplitudeEvents()` | Automatic page view and click tracking. It uses `next/router`, so page views are tracked on the Pages Router only |
+| `useConsent()` (from `components/ConsentManager`) | `consent`, `updateConsent`, `hasConsent`, `getConsentStatus` and the state of the consent modal |
+| `useAmplitudeContext()` | The provider's context: `amplitude`, `isInitialized`, `config`, `consent`, `updateConsent` and `error` |
+
+## Components
+
+| Component | Purpose |
+| --- | --- |
+| `ConsentManager` | Consent panel with a badge; props `onConsentChange`, `initialConsent`, `showBadge`, `position`, `theme`, `compactMode` |
+| `ExperimentWrapper`, `ABTest`, `MultivariateTest`, `FeatureFlag` | Render by experiment variant or feature flag, in `components/ExperimentWrapper`; `ExperimentWrapper` can track the exposure on mount or when visible |
+| `AnalyticsDashboard` | Metrics dashboard; props `refreshInterval`, `showAdvancedMetrics`, `timeRange` (`'1h'`, `'24h'`, `'7d'`, `'30d'`), `compactMode`, `onAlert` |
+| `PerformanceMonitor` | Performance metrics and alerts; props `refreshInterval`, `showAlerts`, `showCharts`, `compactMode`, `alertThresholds`, `onAlert` |
+
+The modules under `lib/` (`security`, `performance`, `queue`, `cache`) and the types in `types/amplitude.types.ts` can be imported by path.
+
+## Requirements
+
+- `@nextsparkjs/core` `>=0.1.0-beta.199`, with Next.js `~16.4.2` and React `^19.2.0`
+- Peer dependency: `zod` `^4.6.6`
+- Node.js 22.14.0 or later (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
+- An Amplitude project and its API key
+
+## Documentation
+
+- [Plugin system](https://www.nextspark.dev/docs/plugin-system/introduction) in the NextSpark documentation
+- The types in [`types/amplitude.types.ts`](./types/amplitude.types.ts) and the tests in [`__tests__/`](./__tests__)
+
+## License
+
+MIT

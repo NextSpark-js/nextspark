@@ -4,11 +4,14 @@
   "description": "AI workflow templates for NextSpark - Claude Code agents, commands, skills, and multi-editor support",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
-  "homepage": "https://nextspark.dev",
+  "homepage": "https://www.nextspark.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NextSpark-js/nextspark.git",
     "directory": "packages/ai-workflow"
+  },
+  "bugs": {
+    "url": "https://github.com/NextSpark-js/nextspark/issues"
   },
   "keywords": [
     "nextjs",

@@ -1,502 +1,74 @@
-# AI Plugin
+# @nextsparkjs/plugin-ai
 
-> **Experimental:** The AI plugin is not part of the stable 1.0 surface and may change without a deprecation period.
+Core AI utilities for NextSpark: text generation and embedding endpoints, a model selector, cost calculation, and an AI history entity that records each call. It supports OpenAI, Anthropic and Ollama (local models), and it is a toolkit: you build your own endpoints and components on its utilities.
 
-Plugin empresarial de IA con soporte multi-modelo, generación de contenido, y características de seguridad. Diseñado para integrarse dinámicamente con el sistema de entidades y plugins.
+> **Stability: experimental.** The first-party plugins are not part of the stable 1.0 surface and may change in a minor release without a deprecation period. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
 
-## Características
+## What it provides
 
-### 🤖 Soporte Multi-Modelo
-- **Locales**: Ollama, LM Studio, LocalAI
-- **Cloud**: OpenAI, Anthropic, Groq
-- **Selección automática** basada en casos de uso
-- **Fallback estratégico** cuando los modelos no están disponibles
+| Piece | Where |
+| --- | --- |
+| Text generation | `POST /api/plugins/ai/generate` (`GET` returns the capabilities) |
+| Embeddings | `POST /api/plugins/ai/embeddings`, with OpenAI `text-embedding-3-small` |
+| AI history | The `ai-history` entity (`/api/v1/ai-history`), with its own migrations |
+| Utilities | `selectModel`, `calculateCost`, `checkCostLimits`, `validatePlugin`, `extractTokens`, `handleAIError` and `COST_CONFIG`, in `lib/core-utils` |
+| Types | `types/ai.types` |
 
-### 🎯 Generación de Contenido
-- **Templates flexibles** para diferentes tipos de contenido
-- **Optimización por plataforma** (Twitter, Instagram, LinkedIn, etc.)
-- **Generación de variantes** automática
-- **Sugerencias basadas en IA**
+The routes accept a session or an API key with the `ai:write` scope, and are rate limited.
 
-### 🛡️ Características de Seguridad
-- **Detección de PII** automática
-- **Filtros de contenido** tóxico
-- **Enmascaramiento de datos** sensibles
-- **Cumplimiento GDPR/CCPA**
+## Installation
 
-### 💰 Gestión de Costos
-- **Seguimiento de tokens** en tiempo real
-- **Estimación de costos** por solicitud
-- **Límites de cuota** configurables
-- **Rate limiting** dinámico
+1. Add the package and enable it:
 
-### 🔌 Integración con Entidades
-- **Procesamiento dinámico** de cualquier tipo de entidad
-- **Análisis automático** de contenido
-- **Mejora inteligente** de datos
-- **Sugerencias contextuales**
-
-## Instalación y Configuración
-
-### ⭐ Nuevo: Variables de Entorno a Nivel de Plugin
-
-**¡Ahora puedes configurar el plugin con variables de entorno específicas!**
-
-1. **Copia el archivo de ejemplo:**
    ```bash
-   cp plugins/ai/.env.example plugins/ai/.env
+   pnpm add @nextsparkjs/plugin-ai
    ```
 
-2. **Configura tus claves API:**
-   ```env
-   # API Keys
-   ANTHROPIC_API_KEY=sk-ant-api03-tu_clave_anthropic
-   OPENAI_API_KEY=sk-tu_clave_openai
-
-   # Configuración del Plugin
-   AI_PLUGIN_ENABLED=true
-   AI_PLUGIN_DEBUG=false
-   AI_PLUGIN_DEFAULT_PROVIDER=ollama
-
-   # Ollama (Modelos Locales)
-   OLLAMA_BASE_URL=http://localhost:11434
-   OLLAMA_DEFAULT_MODEL=llama3.2:3b
-
-   # Gestión de Costos
-   AI_PLUGIN_COST_TRACKING_ENABLED=true
-   AI_PLUGIN_DAILY_COST_LIMIT=10.00
-   AI_PLUGIN_MONTHLY_COST_LIMIT=100.00
+   ```ts
+   // nextspark.config.ts
+   export default defineConfig({ plugins: ['@nextsparkjs/plugin-ai'] })
    ```
 
-### Ventajas de la Configuración a Nivel de Plugin
+   Add `'@nextsparkjs/plugin-ai'` to `transpilePackages` in your Next config, next to `@nextsparkjs/core`: the plugin ships TypeScript source, and `nextspark prepare` stops and tells you if it is missing. `pnpm exec nextspark add:plugin @nextsparkjs/plugin-ai` is an experimental helper that adds a plugin to a project.
 
-- ✅ **Aislamiento**: Configuración específica del plugin sin contaminar `.env` principal
-- ✅ **Modularidad**: Cada plugin maneja sus propias variables de entorno
-- ✅ **Seguridad**: Las claves API están contenidas en el ámbito del plugin
-- ✅ **Flexibilidad**: Diferentes plugins pueden usar diferentes claves API
-- ✅ **Fallback**: Recurre a variables de entorno del sistema si no existe `.env` del plugin
+2. Run `pnpm db:migrate` to create the `ai_history` tables.
 
-### Variables de Entorno del Sistema (Método Anterior)
+3. Set the provider variables in your project's `.env`. The package's `.env.example` is the template:
 
-También puedes usar variables de entorno globales:
+   | Variable | Default | Purpose |
+   | --- | --- | --- |
+   | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | none | Cloud providers; embeddings need `OPENAI_API_KEY` |
+   | `OLLAMA_BASE_URL`, `OLLAMA_DEFAULT_MODEL` | `http://localhost:11434`, `llama3.2:3b` | Local models, no key needed |
+   | `USE_LOCAL_AI` | `false` | Prefer Ollama over the cloud models |
+   | `DEFAULT_CLOUD_MODEL` | `claude-sonnet-4-5-20250929` | Model for cloud requests |
+   | `AI_PLUGIN_ENABLED` | `true` | `false` makes the endpoints answer 503 |
+   | `AI_PLUGIN_DEFAULT_PROVIDER` | `anthropic` | `anthropic`, `openai` or `ollama` |
+   | `AI_PLUGIN_MAX_TOKENS`, `AI_PLUGIN_DEFAULT_TEMPERATURE` | `4000`, `0.7` | Generation defaults |
+   | `AI_PLUGIN_COST_TRACKING_ENABLED`, `AI_PLUGIN_DAILY_COST_LIMIT`, `AI_PLUGIN_MONTHLY_COST_LIMIT` | `true`, `10.00`, `100.00` (USD) | Limits that `checkCostLimits` enforces; `0` for both turns enforcement off |
+   | `AI_PLUGIN_DEBUG` | `false` | Debug logging |
 
-```env
-# OpenAI
-OPENAI_API_KEY=tu_clave_openai
+   `.env.example` also lists `AI_PLUGIN_RATE_LIMIT_REQUESTS_PER_MINUTE` and `AI_PLUGIN_RATE_LIMIT_TOKENS_PER_MINUTE`: the plugin reads them, but no route uses them; the routes use core's rate limit tiers.
 
-# Anthropic
-ANTHROPIC_API_KEY=tu_clave_anthropic
+   `checkCostLimits` sums the usage the LangChain plugin records in `langchain_token_usage`, so enforcing the limits needs that plugin's migrations too.
 
-# Groq
-GROQ_API_KEY=tu_clave_groq
+4. Call the endpoints, or build your own on `lib/core-utils`. The guides below have the request bodies and examples.
 
-# Configuración local (opcional)
-OLLAMA_BASE_URL=http://localhost:11434
-LM_STUDIO_BASE_URL=http://localhost:1234
-```
+## Requirements
 
-### Configuración del Plugin
+- `@nextsparkjs/core` `>=0.1.0-beta.192`, with Next.js `~16.4.2` and React `^19.2.0`
+- Peer dependencies: `@tanstack/react-query` `^5`, `lucide-react` `^0.539.0` and `zod` `^4.6.6`
+- Node.js 22.14.0 or later
+- Standard PostgreSQL 15 to 18 (see the [support matrix](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/02-support-matrix.md))
+- A provider: an API key for Anthropic or OpenAI, or a running Ollama server
 
-El plugin se registra automáticamente en el sistema y carga su configuración desde:
+## Documentation
 
-1. **Primera prioridad**: `plugins/ai/.env` (archivo específico del plugin)
-2. **Segunda prioridad**: Variables de entorno del sistema (`process.env`)
-3. **Tercera prioridad**: Valores por defecto incorporados
+- [Introduction](./docs/01-getting-started/01-introduction.md), [installation](./docs/01-getting-started/02-installation.md) and [configuration](./docs/01-getting-started/03-configuration.md)
+- [Text generation](./docs/02-features/01-text-generation.md), [embeddings](./docs/02-features/02-embeddings.md) and [AI history](./docs/02-features/03-ai-history.md)
+- [Core utilities](./docs/03-advanced-usage/01-core-utilities.md) and [content generation](./docs/04-use-cases/01-content-generation.md)
+- [The generate endpoint](./api/generate/docs.md)
+- [Plugin system](https://www.nextspark.dev/docs/plugin-system/introduction) in the NextSpark documentation
 
-## Uso
+## License
 
-### 1. Componentes React
-
-#### AIProvider
-Proveedor de contexto para toda la funcionalidad de IA:
-
-\`\`\`tsx
-import { AIProvider } from '@/plugins/ai/components/AIProvider'
-
-function App() {
-  return (
-    <AIProvider
-      userId="user123"
-      preferLocal={false}
-      autoSelect={true}
-    >
-      <YourApp />
-    </AIProvider>
-  )
-}
-\`\`\`
-
-#### AIChat
-Interfaz de chat con IA integrada:
-
-\`\`\`tsx
-import { AIChat } from '@/plugins/ai/components/AIChat'
-
-function ChatPage() {
-  return (
-    <AIChat
-      entityContext={{
-        type: 'task',
-        id: 'task_123',
-        data: { title: 'Proyecto importante' }
-      }}
-      contentType="custom"
-      showModelSelector={true}
-      onEntityProcessed={(result) => {
-        console.log('Entidad procesada:', result)
-      }}
-    />
-  )
-}
-\`\`\`
-
-#### ContentGenerator
-Generador de contenido con templates:
-
-\`\`\`tsx
-import { ContentGenerator } from '@/plugins/ai/components/ContentGenerator'
-
-function ContentPage() {
-  return (
-    <ContentGenerator
-      defaultContentType="social"
-      showTemplates={true}
-      autoSuggestions={true}
-      onContentGenerated={(content) => {
-        console.log('Contenido generado:', content)
-      }}
-    />
-  )
-}
-\`\`\`
-
-### 2. Hooks
-
-#### useAI
-Hook principal para funcionalidad de IA:
-
-\`\`\`tsx
-import { useAI } from '@/plugins/ai/hooks/useAI'
-
-function MyComponent() {
-  const ai = useAI({
-    userId: 'user123',
-    autoCheck: true
-  })
-
-  const handleGenerate = async () => {
-    const result = await ai.generateText('Escribe un email profesional')
-    console.log(result)
-  }
-
-  const handleAnalyze = async () => {
-    const analysis = await ai.analyze('Este es mi contenido')
-    console.log(analysis)
-  }
-
-  return (
-    <div>
-      <button onClick={handleGenerate}>Generar</button>
-      <button onClick={handleAnalyze}>Analizar</button>
-    </div>
-  )
-}
-\`\`\`
-
-#### useContentGeneration
-Hook especializado para generación de contenido:
-
-\`\`\`tsx
-import { useContentGeneration } from '@/plugins/ai/hooks/useContentGeneration'
-
-function ContentComponent() {
-  const content = useContentGeneration({
-    defaultContentType: 'blog',
-    autoSuggestions: true
-  })
-
-  const handleGenerate = async () => {
-    const result = await content.generateContent(
-      'Escribe sobre tecnología',
-      {
-        platform: 'linkedin',
-        tone: 'profesional',
-        audience: 'desarrolladores'
-      }
-    )
-    console.log(result)
-  }
-
-  return <button onClick={handleGenerate}>Generar Contenido</button>
-}
-\`\`\`
-
-### 3. API REST
-
-#### ⭐ Nuevo: Generar Contenido Multi-Proveedor
-
-**Usando Anthropic Claude (configuración del plugin):**
-\`\`\`bash
-POST /api/plugins/ai/generate
-Content-Type: application/json
-
-{
-  "prompt": "Explica la computación cuántica en términos simples",
-  "model": "claude-3-5-haiku-20241022",
-  "contentType": "blog",
-  "maxTokens": 500
-}
-\`\`\`
-
-**Usando OpenAI GPT (configuración del plugin):**
-\`\`\`bash
-POST /api/plugins/ai/generate
-Content-Type: application/json
-
-{
-  "prompt": "Escribe una función para invertir una cadena",
-  "model": "gpt-4o-mini",
-  "contentType": "analysis",
-  "temperature": 0.3
-}
-\`\`\`
-
-**Usando Ollama Local (sin clave API requerida):**
-\`\`\`bash
-POST /api/plugins/ai/generate
-Content-Type: application/json
-
-{
-  "prompt": "Crea una publicación en redes sociales sobre sostenibilidad",
-  "model": "llama3.2:3b",
-  "contentType": "social"
-}
-\`\`\`
-
-**Respuesta con seguimiento de costos en tiempo real:**
-\`\`\`json
-{
-  "success": true,
-  "data": {
-    "content": "Contenido generado aquí...",
-    "model": "claude-3-5-haiku-20241022",
-    "provider": "anthropic",
-    "isLocal": false,
-    "tokens": {
-      "input": 25,
-      "output": 150,
-      "total": 175
-    },
-    "cost": 0.000194,
-    "metadata": {
-      "costBreakdown": {
-        "inputTokens": 25,
-        "outputTokens": 150,
-        "inputCost": 0.00000625,
-        "outputCost": 0.0001875,
-        "totalCost": 0.000194
-      }
-    }
-  }
-}
-\`\`\`
-
-#### Información de Capacidades
-\`\`\`bash
-GET /api/plugins/ai/generate
-\`\`\`
-
-#### Generar Contenido (Método Anterior)
-\`\`\`bash
-POST /api/plugins/ai/generate
-Content-Type: application/json
-
-{
-  "prompt": "Escribe un tweet sobre IA",
-  "contentType": "social",
-  "platform": "twitter",
-  "tone": "casual"
-}
-\`\`\`
-
-### 4. Integración Directa con AIAPI
-
-Para uso directo desde el código del servidor:
-
-\`\`\`tsx
-import { AIAPI } from '@/plugins/ai/lib/ai-api'
-
-// Generación simple
-const text = await AIAPI.generateText('Hola mundo')
-
-// Generación avanzada
-const response = await AIAPI.generateContentAdvanced({
-  prompt: 'Escribe un artículo',
-  systemPrompt: 'Eres un experto escritor',
-  options: {
-    contentType: 'blog',
-    temperature: 0.7
-  }
-})
-
-// Procesamiento de entidades
-const result = await AIAPI.processEntity(
-  'user',
-  { name: 'Juan', email: 'juan@example.com' },
-  'analyze'
-)
-
-// Verificación de seguridad
-const safety = await AIAPI.isContentSafe('Este contenido')
-\`\`\`
-
-## Arquitectura
-
-### Estructura de Archivos
-\`\`\`
-plugins/ai/
-├── plugin.config.ts          # Configuración principal del plugin
-├── types/
-│   └── ai.types.ts           # Definiciones de tipos TypeScript
-├── lib/
-│   ├── ai-api.ts            # API exportable principal
-│   ├── ai-core.ts           # Funcionalidad core de IA
-│   ├── model-selector.ts    # Selección de modelos
-│   ├── prompts.ts           # Sistema de prompts modulares
-│   ├── safety.ts            # Características de seguridad
-│   ├── cost-tracker.ts      # Seguimiento de costos
-│   └── rate-limiter.ts      # Rate limiting
-├── hooks/
-│   ├── useAI.ts             # Hook principal de IA
-│   ├── useContentGeneration.ts # Hook de generación
-│   └── useModelSelection.ts  # Hook de selección de modelos
-├── components/
-│   ├── AIProvider.tsx       # Proveedor de contexto React
-│   ├── AIChat.tsx           # Componente de chat
-│   ├── ContentGenerator.tsx # Generador de contenido
-│   ├── ModelSelector.tsx    # Selector de modelos
-│   └── UsageMonitor.tsx     # Monitor de uso
-└── api/
-    └── endpoints.ts         # Endpoints dinámicos de API
-\`\`\`
-
-### Flujo de Datos
-
-1. **Configuración**: El plugin se registra automáticamente en el sistema
-2. **Inicialización**: Los modelos y servicios se configuran al activar
-3. **Solicitud**: Los usuarios pueden usar componentes, hooks, o API
-4. **Procesamiento**: Las solicitudes pasan por el AI Core
-5. **Seguridad**: Se aplican filtros de contenido y PII
-6. **Modelo**: Se selecciona el modelo óptimo automáticamente
-7. **Generación**: Se ejecuta la solicitud de IA
-8. **Respuesta**: Se devuelve el contenido procesado
-9. **Seguimiento**: Se registran métricas y costos
-
-### Integración con Entidades
-
-El plugin puede procesar cualquier tipo de entidad dinámicamente:
-
-\`\`\`tsx
-// Para tareas
-await AIAPI.processEntity('task', taskData, 'analyze')
-
-// Para usuarios
-await AIAPI.processEntity('user', userData, 'enhance')
-
-// Para posts
-await AIAPI.processEntity('post', postData, 'summarize')
-
-// Para proyectos
-await AIAPI.processEntity('project', projectData, 'suggest')
-\`\`\`
-
-### Endpoints Dinámicos
-
-Endpoints que sirve el plugin (`plugins/ai/api/`):
-
-- \`/api/plugins/ai/generate\` → Generación de contenido
-- \`/api/plugins/ai/embeddings\` → Embeddings de texto
-- \`/api/plugins/ai/ai-history/[id]\` → Actualizar una entrada del historial (PATCH)
-
-## Casos de Uso
-
-### 1. Asistente de Tareas
-Analiza y mejora tareas automáticamente:
-
-\`\`\`tsx
-const enhancedTask = await AIAPI.processEntity(
-  'task',
-  { title: 'Hacer algo', description: 'Pendiente' },
-  'enhance'
-)
-\`\`\`
-
-### 2. Generación de Contenido Social
-Crea contenido optimizado para diferentes plataformas:
-
-\`\`\`tsx
-const tweetContent = await content.generateContent(
-  'Lanzamiento de producto',
-  { platform: 'twitter', tone: 'emocionante' }
-)
-\`\`\`
-
-### 3. Chat con Contexto de Entidad
-Chat que entiende el contexto de entidades específicas:
-
-\`\`\`tsx
-<AIChat
-  entityContext={{
-    type: 'project',
-    id: 'project_456',
-    data: projectData
-  }}
-/>
-\`\`\`
-
-### 4. Análisis de Contenido
-Analiza contenido para obtener insights:
-
-\`\`\`tsx
-const analysis = await ai.analyze(content, 'comprehensive')
-// Retorna: legibilidad, sentimiento, temas, SEO, etc.
-\`\`\`
-
-## Contribución
-
-Para extender el plugin:
-
-1. **Nuevos Modelos**: Agrega configuraciones en \`model-selector.ts\`
-2. **Nuevos Endpoints**: Registra en \`endpoints.ts\`
-3. **Nuevos Tipos de Contenido**: Extiende \`prompts.ts\`
-4. **Nuevos Componentes**: Agrega en \`components/\`
-5. **Nuevos Hooks**: Implementa en \`hooks/\`
-
-## Seguridad y Privacidad
-
-- **Datos sensibles**: Se enmascaran automáticamente
-- **Contenido tóxico**: Se filtra antes del procesamiento
-- **Logs**: No se almacenan datos de usuario
-- **Cumplimiento**: Compatible con GDPR y CCPA
-- **Rate limiting**: Previene abuso del sistema
-
-## Monitoreo y Métricas
-
-El plugin incluye monitoreo completo:
-
-- **Uso por usuario**: Tokens, costos, solicitudes
-- **Rendimiento**: Tiempo de respuesta, tasa de éxito
-- **Modelos**: Popularidad, efectividad
-- **Errores**: Seguimiento y alertas
-- **Cuotas**: Límites diarios y mensuales
-
-## Soporte
-
-Para problemas o preguntas:
-
-1. Revisa los logs del plugin en la consola
-2. Verifica la configuración de variables de entorno
-3. Confirma que los modelos estén disponibles
-4. Chequea los límites de cuota y rate limiting
-
-El plugin está diseñado para ser completamente flexible y extensible, integrándose perfectamente con el sistema de entidades dinámicas.
+MIT
