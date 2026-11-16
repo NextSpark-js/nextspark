@@ -3,11 +3,11 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { after, before, test } from 'node:test'
 import { createServer } from 'node:http'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, type symlinkSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, type symlinkSync, writeFileSync } from 'node:fs'
 import { access, chmod, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import type { AddressInfo } from 'node:net'
 import * as tar from 'tar'
@@ -17,6 +17,7 @@ import { canonicalAliasSpecifier, pnpmViewCommand, projectPnpmPackageManager, si
 import { linkDirectory, loadCoreHost } from '../src/utils/app-tree.js'
 import { ROOT_LAYOUT_FROM_METADATA } from '../src/utils/migrate-route-metadata.js'
 import { BUILD_ALLOWLIST, addBuildAllowlist, addCompatRewrites, addWorkspaceGlob, dropLegacyBuildList, catalogVersion, checkNextRange, countBlockThumbnails, planContractsPackage, hostFrameworkFixes, rangeAccepts, rangeAllBelow, removeBlockThumbnails, workspaceGlobs } from '../src/utils/migrate-extras.js'
+import { slashes } from './platform.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -1369,8 +1370,12 @@ test('migrate replaces the reads of NEXT_PUBLIC_ACTIVE_THEME in code, leaves eve
     ].join('\n'))
     assert.equal(await readFile(join(root, 'docs/theme.md'), 'utf8'), 'Set `NEXT_PUBLIC_ACTIVE_THEME=acme`, read as `process.env.NEXT_PUBLIC_ACTIVE_THEME`.\n')
     assert.equal(await readFile(join(root, 'scripts/start.mjs'), 'utf8'), "const theme = undefined || 'acme'\nconsole.log(theme)\n")
-    const named = spawnSync('grep', ['-rl', '--exclude-dir=.git', '--exclude-dir=node_modules', 'ROOT_FIRST_PROJECT', '.'], { cwd: root, encoding: 'utf8' })
-    assert.equal(named.stdout, '')
+    // every file outside .git and node_modules, read in-process: the system grep is not on PATH on Windows
+    const named = readdirSync(root, { recursive: true, withFileTypes: true })
+      .filter(entry => entry.isFile() && !relative(root, entry.parentPath).split(/[\\/]/).some(part => part === '.git' || part === 'node_modules'))
+      .map(entry => join(entry.parentPath, entry.name))
+      .filter(file => readFileSync(file, 'utf8').includes('ROOT_FIRST_PROJECT'))
+    assert.deepEqual(named, [])
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -2909,7 +2914,7 @@ test('migrate blocks, writing nothing, a root proxy it cannot move: an unsupport
       await commitFixture(root)
       const dry = run(root, ['--dry-run', '--json'])
       assert.equal(dry.status, 1, name)
-      assert.ok(JSON.parse(dry.stdout).appConversion.blockers.some((line: string) => message.test(line)), `${name}: ${dry.stdout}`)
+      assert.ok(JSON.parse(dry.stdout).appConversion.blockers.some((line: string) => message.test(slashes(line))), `${name}: ${dry.stdout}`)
       const result = run(root, ['--yes'])
       assert.notEqual(result.status, 0, name)
       assert.match(result.stderr, /Refusing to migrate/, name)
@@ -3141,7 +3146,8 @@ test('migrate refuses an untracked directory of more than 1 MB of file names wit
     // 12,000 names of ~120 characters: git lists more than 1 MB (execFileSync's default buffer) unless the directory is collapsed
     const directory = join(root, 'node_modules/big')
     await mkdir(directory, { recursive: true })
-    await Promise.all(Array.from({ length: 12_000 }, (_, index) => writeFile(join(directory, `${'n'.repeat(110)}-${index}.js`), '')))
+    // in sequence: 12,000 writes at once exceed the open-file limit of Windows (EMFILE)
+    for (let index = 0; index < 12_000; index++) writeFileSync(join(directory, `${'n'.repeat(110)}-${index}.js`), '')
     const dry = run(root, ['--dry-run'])
     assert.equal(dry.status, 0, `${dry.stdout.slice(0, 500)}\n${dry.stderr.slice(0, 500)}`)
     assert.ok(dry.stdout.length < 1_000_000)
@@ -4717,8 +4723,10 @@ test('the simulation keeps Corepack and Windows shell variables, and nothing sec
   names.forEach(name => { process.env[name] = 'x' })
   try {
     const env = simulationEnvironment()
-    for (const name of names.slice(0, -1)) assert.equal(env[name], 'x', name)
-    assert.equal(env.DATABASE_URL, undefined)
+    // Windows names are case-insensitive and the process may spell them otherwise (SYSTEMROOT under Git Bash): look them up so
+    const value = (name: string) => Object.entries(env).find(([key]) => key.toUpperCase() === name.toUpperCase())?.[1]
+    for (const name of names.slice(0, -1)) assert.equal(value(name), 'x', name)
+    assert.equal(value('DATABASE_URL'), undefined)
   } finally {
     names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i] })
   }

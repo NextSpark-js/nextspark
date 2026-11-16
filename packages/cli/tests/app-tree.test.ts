@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 
 import {
@@ -13,6 +13,9 @@ import {
   planAppConversion,
   rewriteMovedImports,
 } from '../src/utils/app-tree.js'
+
+/** A project path of these tests as the platform spells it: /p/x off Windows, <drive>:\p\x on Windows. */
+const at = (path: string): string => resolve(path)
 
 for (const apiDir of ['server/api', undefined]) {
   test(`planAppConversion serves a project Route Handler at /api/<path> from ${apiDir ?? 'the default api'}, and keeps pages in templates/`, async () => {
@@ -110,9 +113,8 @@ test('declareWebhookExtensions stops on an existing billing entry, on a nested o
 })
 
 test('rewriteMovedImports keeps each relative import pointing at the same file', () => {
-  const root = '/p'
-  const from = '/p/src/app/dashboard/page.tsx'
-  const to = '/p/templates/dashboard/page.tsx'
+  const from = at('/p/src/app/dashboard/page.tsx')
+  const to = at('/p/templates/dashboard/page.tsx')
   const source = [
     "import Local from './Local'",
     "import Shared from '../../../lib/shared'",
@@ -122,11 +124,11 @@ test('rewriteMovedImports keeps each relative import pointing at the same file',
     "const lazy = () => import('./Local')",
   ].join('\n')
   const moved = new Map([
-    ['/p/src/app/dashboard/Local.tsx', '/p/templates/dashboard/Local.tsx'],
-    ['/p/src/app/dashboard/style.css', '/p/templates/dashboard/style.css'],
-    ['/p/src/app/pricing/page.tsx', '/p/templates/pricing/page.tsx'],
+    [at('/p/src/app/dashboard/Local.tsx'), at('/p/templates/dashboard/Local.tsx')],
+    [at('/p/src/app/dashboard/style.css'), at('/p/templates/dashboard/style.css')],
+    [at('/p/src/app/pricing/page.tsx'), at('/p/templates/pricing/page.tsx')],
   ])
-  const { source: rewritten, broken } = rewriteMovedImports(source, from, to, `${root}/src/app`, moved)
+  const { source: rewritten, broken } = rewriteMovedImports(source, from, to, at('/p/src/app'), moved)
   assert.deepEqual(broken, [])
   assert.equal(rewritten, [
     "import Local from './Local'",
@@ -140,13 +142,13 @@ test('rewriteMovedImports keeps each relative import pointing at the same file',
 })
 
 test('rewriteMovedImports reports an import of a file of the app tree that is not kept', () => {
-  const { broken } = rewriteMovedImports("import { x } from '../layout'\nimport y from './helpers/y'\n", '/p/src/app/dashboard/page.tsx', '/p/templates/dashboard/page.tsx', '/p/src/app', new Map())
+  const { broken } = rewriteMovedImports("import { x } from '../layout'\nimport y from './helpers/y'\n", at('/p/src/app/dashboard/page.tsx'), at('/p/templates/dashboard/page.tsx'), at('/p/src/app'), new Map())
   assert.deepEqual(broken, ['../layout', './helpers/y'])
 })
 
 test('rewriteMovedImports resolves an import through the index file of a moved directory', () => {
-  const moved = new Map([['/p/src/app/dashboard/ui/index.ts', '/p/api/ui/index.ts']])
-  const { source, broken } = rewriteMovedImports("import { A } from './ui'\n", '/p/src/app/dashboard/page.tsx', '/p/templates/dashboard/page.tsx', '/p/src/app', moved)
+  const moved = new Map([[at('/p/src/app/dashboard/ui/index.ts'), at('/p/api/ui/index.ts')]])
+  const { source, broken } = rewriteMovedImports("import { A } from './ui'\n", at('/p/src/app/dashboard/page.tsx'), at('/p/templates/dashboard/page.tsx'), at('/p/src/app'), moved)
   assert.deepEqual(broken, [])
   assert.equal(source, "import { A } from '../../api/ui'\n")
 })

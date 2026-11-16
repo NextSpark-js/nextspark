@@ -16,8 +16,9 @@ import fs from 'node:fs'
 import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import type { AddressInfo } from 'node:net'
+import * as tar from 'tar'
 import { generateProject } from '../src/wizard/generators/index.js'
 import { applyPreset } from '../src/wizard/presets.js'
 import type { ProjectType } from '../src/wizard/types.js'
@@ -119,11 +120,8 @@ async function serveFixtureRegistry(root: string) {
   const scripts = { postinstall: `node -e "require('fs').writeFileSync('built', '')"` }
   fs.mkdirSync(path.join(pack, 'package'), { recursive: true })
   fs.writeFileSync(path.join(pack, 'package', 'package.json'), JSON.stringify({ name: 'fixture-built', version: '1.0.0', scripts }))
-  const packed = spawnSync('tar', ['-czf', path.join(pack, 'package.tgz'), '-C', pack, 'package'], {
-    encoding: 'utf8',
-    env: { ...process.env, COPYFILE_DISABLE: '1' },
-  })
-  assert.equal(packed.status, 0, packed.stderr)
+  // The tar package, not the system tar: GNU tar on Windows reads the drive letter of G:\... as a remote host
+  tar.c({ gzip: true, file: path.join(pack, 'package.tgz'), cwd: pack, sync: true, portable: true }, ['package'])
   const tarball = fs.readFileSync(path.join(pack, 'package.tgz'))
 
   const server = http.createServer()

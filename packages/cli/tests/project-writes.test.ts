@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { directFsWritesIn, generatorFiles } from '../../core/scripts/build/registry/__tests__/direct-fs-writes.mjs'
+import { slashes } from './platform.js'
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -12,7 +13,7 @@ const COMMANDS = ['build', 'dev', 'registry', 'generate'].map((name) => join(PKG
 
 test('no file the commands that write in a project load changes the file system except through core’s safe-fs', () => {
   const files: string[] = generatorFiles({ entries: COMMANDS, within: join(PKG_ROOT, 'src') })
-  const names = files.map((file) => file.slice(PKG_ROOT.length + 1))
+  const names = files.map((file) => slashes(file.slice(PKG_ROOT.length + 1)))
   for (const expected of [
     'src/commands/registry.ts',
     'src/utils/registry-build.ts',

@@ -8,6 +8,7 @@ import type { HealthCheckResult } from '../src/doctor/index.js'
 import { checkQueryClients } from '../src/doctor/checks/query-client.js'
 import { checkNextThemesImports } from '../src/doctor/checks/next-themes.js'
 import { nextThemesImportLines } from '../src/utils/next-themes-imports.js'
+import { slashes } from './platform.js'
 
 type Importers = Record<string, Record<string, string>>
 
@@ -190,7 +191,7 @@ test('NS_QUERY_CLIENT_NOT_REGISTERED reports file:line, and skips registered, co
   }, checkQueryClients)
   assert.equal(result.status, 'warn')
   assert.equal(result.code, 'NS_QUERY_CLIENT_NOT_REGISTERED')
-  assert.match(result.message, /\(components\/cache\.tsx:2\)/)
+  assert.match(slashes(result.message), /\(components\/cache\.tsx:2\)/)
   assert.equal((await inProject(null, { 'components/ok.tsx': registered }, checkQueryClients)).status, 'pass')
 })
 
@@ -211,7 +212,7 @@ test('NS_NEXT_THEMES_IMPORT reports each file:line that loads next-themes, and s
   }), checkNextThemesImports)
   assert.equal(result.status, 'warn')
   assert.equal(result.code, 'NS_NEXT_THEMES_IMPORT')
-  for (const where of ['components/Navbar.tsx:2', 'lib/theme.ts:3', 'lib/lazy.cjs:1']) assert.ok(result.message.includes(where), where)
+  for (const where of ['components/Navbar.tsx:2', 'lib/theme.ts:3', 'lib/lazy.cjs:1']) assert.ok(slashes(result.message).includes(where), where)
   for (const not of ['ok.tsx', 'Navbar.test', 'generated', 'pkg']) assert.ok(!result.message.includes(not), not)
   const clean = await inProject(null, withCore({ 'components/ok.tsx': "import { useTheme } from '@nextsparkjs/core/providers/theme-provider'\n" }), checkNextThemesImports)
   assert.equal(clean.status, 'pass')
@@ -258,7 +259,7 @@ test('NS_NEXT_THEMES_IMPORT does not fail on a directory the project cannot read
     }
   })
   assert.equal(result.status, 'warn')
-  assert.match(result.message, /components\/Navbar\.tsx:1/)
+  assert.match(slashes(result.message), /components\/Navbar\.tsx:1/)
 })
 
 test('the prepare notice is empty, with no error, for a core without code migrations', async () => {

@@ -7,6 +7,7 @@ import { join } from 'node:path'
 
 import { buildCli } from './built-cli.js'
 import { runHostPreparation } from '../src/utils/preparation.js'
+import { slashes, windowsNextEntry } from './platform.js'
 
 let cliEntry: string
 before(() => { cliEntry = buildCli() })
@@ -103,7 +104,7 @@ test('prepare points out project code that still imports next-themes, without wr
     const flagged = run(project.root, ['prepare'])
     assert.equal(flagged.status, 0, `${flagged.stdout}\n${flagged.stderr}`)
     const output = `${flagged.stdout}${flagged.stderr}`
-    assert.match(output, /NS_NEXT_THEMES_IMPORT: [^\n]*components\/Navbar\.tsx:2/)
+    assert.match(slashes(output), /NS_NEXT_THEMES_IMPORT: [^\n]*components\/Navbar\.tsx:2/)
     assert.match(output, /node node_modules\/@nextsparkjs\/core\/scripts\/maintenance\/code-migrations\.mjs 0\.1\.0-beta\.200/)
     assert.equal(await readFile(join(project.root, 'components/Navbar.tsx'), 'utf8'), navbar)
   } finally {
@@ -138,7 +139,7 @@ test('prepare skips the next-themes notice with --check and --contracts-only, an
       await chmod(locked, 0o000)
       const ran = run(project.root, ['prepare'])
       assert.equal(ran.status, 0, `${ran.stdout}\n${ran.stderr}`)
-      assert.match(`${ran.stdout}${ran.stderr}`, /NS_NEXT_THEMES_IMPORT: [^\n]*components\/Navbar\.tsx:1/)
+      assert.match(slashes(`${ran.stdout}${ran.stderr}`), /NS_NEXT_THEMES_IMPORT: [^\n]*components\/Navbar\.tsx:1/)
     }
   } finally {
     await chmod(locked, 0o755).catch(() => {})
@@ -153,6 +154,7 @@ process.exitCode = 7
 `)
   await mkdir(join(project.root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(project.root, 'node_modules/.bin/next'), '#!/bin/sh\necho next-was-run > next-ran.txt\n', { mode: 0o755 })
+  windowsNextEntry(project.root, "require('node:fs').writeFileSync('next-ran.txt', 'next-was-run\\n')\n")
   try {
     const prepared = run(project.root, ['prepare'])
     assert.equal(prepared.status, 7, `${prepared.stdout}\n${prepared.stderr}`)
@@ -170,6 +172,7 @@ test('build --no-registry preserves the opt-out: only the freshness check runs, 
   const project = await fixture(`if (!process.argv.includes('--check')) throw new Error('generation should not run')`)
   await mkdir(join(project.root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(project.root, 'node_modules/.bin/next'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+  windowsNextEntry(project.root, '')
   try {
     const built = run(project.root, ['build', '--no-registry'])
     assert.equal(built.status, 0, `${built.stdout}\n${built.stderr}`)

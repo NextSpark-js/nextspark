@@ -8,6 +8,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import semver from 'semver'
 
 import { getTemplatesDir } from '../src/wizard/generators/templates-dir.js'
@@ -18,7 +19,7 @@ import type { WizardConfig } from '../src/wizard/types.js'
 const TEMPLATES = getTemplatesDir()
 const CORE = path.resolve(TEMPLATES, '..')
 const core = JSON.parse(fs.readFileSync(path.join(CORE, 'package.json'), 'utf8'))
-const { dependenciesBelowCore } = await import(path.join(CORE, 'scripts/maintenance/dependency-floors.mjs'))
+const { dependenciesBelowCore } = await import(pathToFileURL(path.join(CORE, 'scripts/maintenance/dependency-floors.mjs')).href)
 
 for (const template of ['starter', 'blog', 'crm', 'productivity']) {
   test(`${template}: no dependency the wizard writes is below core's range`, async () => {

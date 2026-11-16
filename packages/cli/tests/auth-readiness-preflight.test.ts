@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 import { buildCli } from './built-cli.js'
 import { packageManagerCommand } from '../src/utils/package-manager.js'
+import { windowsNextEntry } from './platform.js'
 
 /** `pnpm` the way the code under test starts it: through cmd.exe, every argument quoted, on Windows (#450) */
 function pnpmCall<T extends object>(args: string[], options: T) {
@@ -84,6 +85,7 @@ appendFileSync(process.cwd() + '/registry-ran.txt', 'ran\\n')
   await writeFile(join(root, '.env'), dotEnv)
   await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho next-was-run > next-ran.txt\n', { mode: 0o755 })
+  windowsNextEntry(root, "require('node:fs').writeFileSync('next-ran.txt', 'next-was-run\\n')\n")
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 

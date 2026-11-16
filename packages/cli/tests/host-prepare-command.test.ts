@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { buildCli } from './built-cli.js'
+import { windowsNextEntry } from './platform.js'
 
 /**
  * prepare, build and dev with a core that generates the whole src/app (#203): a stand-in core
@@ -70,6 +71,7 @@ export function resolveHostMode({ projectRoot }) {
   // Next runs through its own executable now, with no npx start-up ahead of it: the pause stands in for a dev server
   // that stays up, so the watcher the CLI starts beside it has recorded its run before the CLI stops it.
   await write(join(root, 'node_modules/.bin/next'), '#!/bin/sh\necho "$@" >> next-runs.txt\nsleep 1\n', 0o755)
+  windowsNextEntry(root, "require('node:fs').appendFileSync('next-runs.txt', process.argv.slice(2).join(' ') + '\\n')\nsetTimeout(() => {}, 1000)\n")
   return {
     root,
     runs: async () => (existsSync(join(root, 'host-runs.txt')) ? (await readFile(join(root, 'host-runs.txt'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line)) : []),

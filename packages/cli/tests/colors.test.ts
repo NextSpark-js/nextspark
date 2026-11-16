@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import colors, { renderColorMarkers, stripColorMarkers } from '../src/utils/colors.js'
+import { slashes } from './platform.js'
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SOURCE_ROOT = join(PACKAGE_ROOT, 'src')
@@ -20,7 +21,7 @@ function typescriptFiles(directory: string): string[] {
 test('only the color boundary imports chalk directly', () => {
   const directImports = typescriptFiles(SOURCE_ROOT)
     .filter((path) => /\bfrom\s+['"]chalk['"]|\bimport\s*['"]chalk['"]/.test(readFileSync(path, 'utf8')))
-    .map((path) => relative(SOURCE_ROOT, path))
+    .map((path) => slashes(relative(SOURCE_ROOT, path)))
     .filter((path) => !DIRECT_CHALK_ALLOWED.has(path))
     .sort()
 
