@@ -49,7 +49,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, relative, sep } from 'node:path'
+import path, { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { tarRead } from '../lib/tar.mjs'
 
@@ -92,8 +92,9 @@ export function parseArgs(argv) {
   return { dir: dir ? resolvePath(dir) : DEFAULT_OUTPUT_DIR, allowlistPath: resolvePath(allowlistPath), expectAll }
 }
 
-function resolvePath(p) {
-  return p.startsWith('/') ? p : join(process.cwd(), p)
+// A drive path (G:\x) is absolute on Windows; only a leading / was taken as one.
+export function resolvePath(p, pathApi = path, cwd = process.cwd()) {
+  return pathApi.isAbsolute(p) ? p : pathApi.join(cwd, p)
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +153,7 @@ function listTarballs(dir) {
 
 function extractTarball(tgzPath) {
   const dest = mkdtempSync(join(tmpdir(), 'verify-tarballs-'))
-  const result = tarRead(tgzPath, 'xz', ['-C', dest], { encoding: 'utf8' })
+  const result = tarRead(tgzPath, 'xz', [], { encoding: 'utf8', cwd: dest })
   if (result.status !== 0) {
     rmSync(dest, { recursive: true, force: true })
     throw new Error(`Failed to extract ${tgzPath}: ${result.stderr || result.stdout}`)

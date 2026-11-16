@@ -12,6 +12,7 @@ import {
   loadAllowlist,
   missingExpectedPackages,
   parseArgs,
+  resolvePath,
   publishablePackagesMissingFiles,
   pluginDirectoriesOutsideFiles,
   verifyDirectory,
@@ -35,7 +36,7 @@ function buildFixtureTarball(outputDir, tarballName, files) {
     writeFileSync(abs, content)
   }
   const outputPath = join(outputDir, tarballName)
-  const result = tarCreate(outputPath, ['-C', stageDir, 'package'])
+  const result = tarCreate(outputPath, ['package'], { cwd: stageDir })
   assert.equal(result.status, 0, result.stderr || result.stdout)
   rmSync(stageDir, { recursive: true, force: true })
   return outputPath
@@ -528,4 +529,12 @@ test('a binary DER-like file with a key-like filename is a finding', () => {
 test('the CLI exits non-zero for a directory that does not exist, so its entry guard must run it', () => {
   const run = spawnSync(process.execPath, [SCRIPT, join(tmpdir(), 'verify-tarballs-no-such-dir')], { encoding: 'utf8' })
   assert.notEqual(run.status, 0, run.stdout)
+})
+
+test('resolvePath keeps an absolute path, drive paths included, and anchors a relative one at the cwd', async () => {
+  const { win32, posix } = await import('node:path')
+  assert.equal(resolvePath('G:\\tmp\\x', win32, 'G:\\repo'), 'G:\\tmp\\x')
+  assert.equal(resolvePath('rel\\x', win32, 'G:\\repo'), 'G:\\repo\\rel\\x')
+  assert.equal(resolvePath('/tmp/x', posix, '/repo'), '/tmp/x')
+  assert.equal(resolvePath('rel/x', posix, '/repo'), '/repo/rel/x')
 })

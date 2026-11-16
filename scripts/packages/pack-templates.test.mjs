@@ -37,7 +37,7 @@ test('the core tarball ships the route modules and no templates/app', () => {
     assert.equal(listed.status, 0, listed.stderr || listed.stdout)
     assert.doesNotMatch(listed.stdout, /package\/(dist\/)?templates\/app\//, 'the core tarball must not include templates/app')
 
-    const unpacked = tarRead(join(outputDir, archive), 'xz', ['-C', outputDir], { encoding: 'utf8' })
+    const unpacked = tarRead(join(outputDir, archive), 'xz', [], { encoding: 'utf8', cwd: outputDir })
     assert.equal(unpacked.status, 0, unpacked.stderr || unpacked.stdout)
 
     // With --skip-build there may be no dist to ship, so the route logic is read from the module

@@ -56,7 +56,7 @@ function fixtureTarballs(manifests) {
     const pkgDir = join(dir, 'src', m.name.replace(/\W/g, '_'), 'package')
     mkdirSync(pkgDir, { recursive: true })
     writeFileSync(join(pkgDir, 'package.json'), JSON.stringify({ version: '1.0.0', ...m }))
-    const tar = tarCreate(join(dir, `${m.name.replace(/\W/g, '-')}-1.0.0.tgz`), ['-C', join(pkgDir, '..'), 'package'])
+    const tar = tarCreate(join(dir, `${m.name.replace(/\W/g, '-')}-1.0.0.tgz`), ['package'], { cwd: join(pkgDir, '..') })
     assert.equal(tar.status, 0)
   }
   return dir

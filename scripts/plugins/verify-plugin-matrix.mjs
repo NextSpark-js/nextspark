@@ -26,6 +26,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
+import { tarCreate } from '../lib/tar.mjs'
 
 const { values } = parseArgs({
   options: {
@@ -130,7 +131,7 @@ export const fixturePluginConfig = definePlugin({ name: '${pluginName}', capabil
 export default fixturePluginConfig
 `)
   const tarball = path.join(root, 'plugin.tgz')
-  const packed = spawnSync('tar', ['-czf', tarball, '-C', root, 'package'])
+  const packed = tarCreate(tarball, ['package'], { cwd: root })
   assert(packed.status === 0, `tar failed for ${directory}`)
   return `file:${path.relative(app, tarball)}`
 }
