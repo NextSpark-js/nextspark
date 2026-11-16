@@ -714,3 +714,28 @@ test('cancelActiveChildrenAndExit names a stray process group its kill did not s
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test('exec still reports how a killed child ended when it exits after the step already resolved', async () => {
+  // Windows order: taskkill ends the process without a signal, after the give-up.
+  const { logs } = await withCapturedLogAsync(async () => {
+    const value = await exec(process.execPath, ['-e', 'setTimeout(() => {}, 400)'], process.cwd(), {
+      timeoutMs: 50,
+      killFallbackMs: 50,
+      killProcessGroup: () => false,
+    })
+    await new Promise((resolve) => setTimeout(resolve, 700))
+    return value
+  })
+  assert.equal(logs.filter((line) => line.includes('Exited with code 0')).length, 1, logs.join('\n'))
+})
+
+test('exec reports a cancelled child that ends with an exit code, as taskkill leaves it, instead of staying silent', async () => {
+  const { logs } = await withCapturedLogAsync(async () => {
+    const pending = exec(process.execPath, ['-e', 'setTimeout(() => process.exit(1), 300)'], process.cwd())
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    // The fake kill sends no signal; the child then ends on its own with code 1.
+    await cancelActiveChildrenAndExit(1, { exit: () => {}, killProcessGroup: () => true })
+    return pending
+  })
+  assert.ok(logs.some((line) => line.includes('Exited with code 1')), logs.join('\n'))
+})

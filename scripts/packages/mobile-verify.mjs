@@ -317,7 +317,8 @@ function exec(command, args, cwd, {
     child.stdout.pipe(process.stdout, { end: false })
     child.stderr.pipe(process.stderr, { end: false })
     const commandLine = [command, ...args].join(' ')
-    runningChildren.set(child.pid, { commandLine, child })
+    const entry = { commandLine, child, killRequested: false }
+    runningChildren.set(child.pid, entry)
 
     // With its pipes closed and its handle unref'd, nothing of the child ties
     // this script's event loop to it any longer.
@@ -344,6 +345,7 @@ function exec(command, args, cwd, {
     const timer = setTimeout(() => {
       timedOut = true
       console.log(`${RED}Timed out after ${timeoutMs / 1000}s: ${commandLine}${NC}`)
+      entry.killRequested = true
       const delivered = killGroup(child.pid, { killLeader: () => child.kill('SIGKILL') })
       // An undelivered kill never makes `exit` arrive, and a delivered one
       // does not either while the process is stuck in uninterruptible I/O.
@@ -364,12 +366,20 @@ function exec(command, args, cwd, {
     child.on('exit', (code, signal) => {
       runningChildren.delete(child.pid)
       stopStragglers(child.pid, commandLine, killGroup)
-      if (settled) return
+      // Windows ends a killed process without a signal (taskkill /F), so a
+      // kill this script asked for is reported by how it ended even then.
       const how = signal ? `Killed with ${signal}` : `Exited with code ${code}`
+      const wasKilled = signal || entry.killRequested
+      if (settled) {
+        // The step already resolved (time limit, give-up or cancel): the
+        // outcome still gets its line, once.
+        if (wasKilled) console.log(`${RED}${how}${NC}`)
+        return
+      }
       // A step that ran past its limit failed, however its process ends.
       const [value, message] = timedOut
         ? [false, `${how} after the time limit`]
-        : [code === 0, signal ? how : undefined]
+        : [code === 0, wasKilled ? how : undefined]
       // The verdict waits for the pipes to close so it prints after the
       // child's last output. A process that still holds them past
       // outputDrainMs (a straggler its kill has not stopped) loses them.
@@ -442,7 +452,10 @@ async function cancelActiveChildrenAndExit(exitCode, {
   cleanupTimeoutMs = CLEANUP_TIMEOUT_MS,
   killProcessGroup: killGroup = killProcessGroup,
 } = {}) {
-  for (const [pid, { child }] of runningChildren) killGroup(pid, { killLeader: () => child.kill('SIGKILL') })
+  for (const [pid, entry] of runningChildren) {
+    entry.killRequested = true
+    killGroup(pid, { killLeader: () => entry.child.kill('SIGKILL') })
+  }
   for (const pgid of strayGroups.keys()) {
     if (groupHasProcesses(pgid)) killGroup(pgid)
   }
