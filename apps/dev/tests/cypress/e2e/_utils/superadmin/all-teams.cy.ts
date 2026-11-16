@@ -3,7 +3,7 @@
 /**
  * Superadmin All Teams Management Tests
  *
- * Tests the Sector7 all teams management page:
+ * Tests the Superadmin all teams management page:
  * - Teams list access and display
  * - Team details view
  * - Team filtering and search
@@ -17,7 +17,7 @@ import * as allure from 'allure-cypress'
 import { loginAsDefaultSuperadmin } from '../../../src/session-helpers'
 import { SuperadminPOM } from '../../../src/features/SuperadminPOM'
 
-describe('Sector7 - All Teams Management', {
+describe('Superadmin - All Teams Management', {
   tags: ['@uat', '@area-superadmin', '@teams']
 }, () => {
   const superadmin = SuperadminPOM.create()
@@ -33,7 +33,7 @@ describe('Sector7 - All Teams Management', {
     it('should access all teams list', { tags: '@smoke' }, () => {
       allure.severity('critical')
 
-      // 1. Visit Sector7 Teams
+      // 1. Visit Superadmin Teams
       superadmin.visitTeams()
 
       // 2. Validate teams page
@@ -49,7 +49,7 @@ describe('Sector7 - All Teams Management', {
     it('should display teams in a list or table', { tags: '@smoke' }, () => {
       allure.severity('critical')
 
-      // 1. Visit Sector7 Teams
+      // 1. Visit Superadmin Teams
       superadmin.visitTeams()
 
       // 2. Validate teams list/table exists
@@ -70,7 +70,7 @@ describe('Sector7 - All Teams Management', {
     it('should view individual team details', () => {
       allure.severity('high')
 
-      // 1. Visit Sector7 Teams
+      // 1. Visit Superadmin Teams
       superadmin.visitTeams()
 
       // 2. Find and click first team row
@@ -93,7 +93,7 @@ describe('Sector7 - All Teams Management', {
     it('should filter teams by search query', () => {
       allure.severity('high')
 
-      // 1. Visit Sector7 Teams
+      // 1. Visit Superadmin Teams
       superadmin.visitTeams()
 
       // 2. Check if search exists
@@ -116,7 +116,7 @@ describe('Sector7 - All Teams Management', {
     it('should display member count for each team', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Teams
+      // 1. Visit Superadmin Teams
       superadmin.visitTeams()
 
       // 2. Check for member count display
@@ -135,10 +135,10 @@ describe('Sector7 - All Teams Management', {
   })
 
   describe('ADMIN-TEAMS-006: Navigate Back to Dashboard', () => {
-    it('should navigate back to Sector7 dashboard', () => {
+    it('should navigate back to Superadmin dashboard', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Teams
+      // 1. Visit Superadmin Teams
       superadmin.visitTeams()
 
       // 2. Click on dashboard nav
@@ -156,7 +156,7 @@ describe('Sector7 - All Teams Management', {
     it('should display billing plan for each team', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Teams
+      // 1. Visit Superadmin Teams
       superadmin.visitTeams()
 
       // 2. Check for plan indicator
@@ -172,6 +172,6 @@ describe('Sector7 - All Teams Management', {
   })
 
   after(() => {
-    cy.log('✅ Sector7 all teams tests completed')
+    cy.log('✅ Superadmin all teams tests completed')
   })
 })

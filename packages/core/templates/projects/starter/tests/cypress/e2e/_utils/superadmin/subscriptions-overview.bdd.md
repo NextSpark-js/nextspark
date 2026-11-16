@@ -1,8 +1,8 @@
 ---
 feature: Superadmin Subscriptions Overview
 priority: high
-tags: [sector7, superadmin, subscriptions, metrics]
-grepTags: [uat, feat-sector7, superadmin, subscriptions]
+tags: [superadmin, superadmin, subscriptions, metrics]
+grepTags: [uat, feat-superadmin, superadmin, subscriptions]
 coverage: 8
 ---
 
@@ -17,7 +17,7 @@ coverage: 8
 ### Metadata
 - **Priority:** Critical
 - **Type:** Smoke
-- **Tags:** sector7, subscriptions, access
+- **Tags:** superadmin, subscriptions, access
 - **Grep:** `@smoke`
 
 ```gherkin:en
@@ -47,7 +47,7 @@ Then la URL deberia incluir /admin/subscriptions
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, subscriptions, revenue
+- **Tags:** superadmin, subscriptions, revenue
 
 ```gherkin:en
 Scenario: Display revenue metrics if available
@@ -78,7 +78,7 @@ Or la pagina deberia cargar exitosamente
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, subscriptions, plans
+- **Tags:** superadmin, subscriptions, plans
 
 ```gherkin:en
 Scenario: Display plan distribution stats if available
@@ -109,7 +109,7 @@ Or la pagina deberia cargar exitosamente
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, subscriptions, active
+- **Tags:** superadmin, subscriptions, active
 
 ```gherkin:en
 Scenario: Display active subscriptions count if available
@@ -138,7 +138,7 @@ Then deberia ver el conteo de suscripciones activas si esta implementado
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, subscriptions, teams
+- **Tags:** superadmin, subscriptions, teams
 
 ```gherkin:en
 Scenario: Display free vs paid teams breakdown if available
@@ -169,7 +169,7 @@ And deberia ver el conteo de teams paid si esta implementado
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, subscriptions, trials
+- **Tags:** superadmin, subscriptions, trials
 
 ```gherkin:en
 Scenario: Display teams on trial if available
@@ -197,7 +197,7 @@ Then deberia ver el conteo de teams en trial si esta implementado
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, navigation
+- **Tags:** superadmin, navigation
 
 ```gherkin:en
 Scenario: Navigate to teams page from subscriptions
@@ -228,7 +228,7 @@ Then deberia estar en /admin/teams
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, navigation
+- **Tags:** superadmin, navigation
 
 ```gherkin:en
 Scenario: Navigate back to Admin Panel dashboard
@@ -260,7 +260,7 @@ And el contenedor del dashboard deberia estar visible
 
 | Element | Selector | Description |
 |---------|----------|-------------|
-| Container | `[data-cy="sector7-container"]` | Admin Panel main container |
+| Container | `[data-cy="superadmin-container"]` | Admin Panel main container |
 | MRR Metric | `[data-cy="subscriptions-mrr"]` | Monthly Recurring Revenue |
 | Revenue | `[data-cy="subscriptions-revenue"]` | Total revenue metric |
 | Plan Distribution | `[data-cy="subscriptions-plan-distribution"]` | Plan breakdown chart |
@@ -269,8 +269,8 @@ And el contenedor del dashboard deberia estar visible
 | Free Teams | `[data-cy="subscriptions-free-teams"]` | Free teams count |
 | Paid Teams | `[data-cy="subscriptions-paid-teams"]` | Paid teams count |
 | Trial Teams | `[data-cy="subscriptions-trial-teams"]` | Trial teams count |
-| Nav Dashboard | `[data-cy="sector7-nav-dashboard"]` | Dashboard nav item |
-| Nav Teams | `[data-cy="sector7-nav-teams"]` | Teams nav item |
+| Nav Dashboard | `[data-cy="superadmin-nav-dashboard"]` | Dashboard nav item |
+| Nav Teams | `[data-cy="superadmin-nav-teams"]` | Teams nav item |
 
 > Note: Many UI elements may not have data-cy selectors yet. Tests are defensive and will pass if page loads correctly.
 

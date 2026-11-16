@@ -3,7 +3,7 @@
 /**
  * Superadmin All Users Management Tests
  *
- * Tests the Sector7 all users management page:
+ * Tests the Superadmin all users management page:
  * - Users list access and display
  * - User details view
  * - User search and filtering
@@ -17,7 +17,7 @@ import * as allure from 'allure-cypress'
 import { loginAsDefaultSuperadmin } from '../../../src/session-helpers'
 import { SuperadminPOM } from '../../../src/features/SuperadminPOM'
 
-describe('Sector7 - All Users Management', {
+describe('Superadmin - All Users Management', {
   tags: ['@uat', '@area-superadmin', '@users']
 }, () => {
   const superadmin = SuperadminPOM.create()
@@ -33,7 +33,7 @@ describe('Sector7 - All Users Management', {
     it('should access all users list', { tags: '@smoke' }, () => {
       allure.severity('critical')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Validate users page
@@ -49,7 +49,7 @@ describe('Sector7 - All Users Management', {
     it('should display users in a list or table', { tags: '@smoke' }, () => {
       allure.severity('critical')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Validate users list/table exists
@@ -69,7 +69,7 @@ describe('Sector7 - All Users Management', {
     it('should view individual user details', () => {
       allure.severity('high')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Find and click first user row
@@ -92,7 +92,7 @@ describe('Sector7 - All Users Management', {
     it('should filter users by search query', () => {
       allure.severity('high')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Check if search exists
@@ -115,7 +115,7 @@ describe('Sector7 - All Users Management', {
     it('should display email for each user', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Check for email display
@@ -133,7 +133,7 @@ describe('Sector7 - All Users Management', {
     it('should display app role for users with global roles', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Check for role indicators (defensive check)
@@ -154,7 +154,7 @@ describe('Sector7 - All Users Management', {
     it('should display email verification status', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Check for verification status (defensive check)
@@ -172,10 +172,10 @@ describe('Sector7 - All Users Management', {
   })
 
   describe('ADMIN-USERS-008: Navigate Back to Dashboard', () => {
-    it('should navigate back to Sector7 dashboard', () => {
+    it('should navigate back to Superadmin dashboard', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Click on dashboard nav
@@ -193,7 +193,7 @@ describe('Sector7 - All Users Management', {
     it('should display team memberships for users', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Check user details for team info (defensive check)
@@ -214,7 +214,7 @@ describe('Sector7 - All Users Management', {
     it('should display user metadata card in user detail view', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Navigate to first user's detail view
@@ -240,7 +240,7 @@ describe('Sector7 - All Users Management', {
     it('should display metadata table or empty state', () => {
       allure.severity('normal')
 
-      // 1. Visit Sector7 Users
+      // 1. Visit Superadmin Users
       superadmin.visitUsers()
 
       // 2. Navigate to first user's detail view
@@ -288,6 +288,6 @@ describe('Sector7 - All Users Management', {
   })
 
   after(() => {
-    cy.log('✅ Sector7 all users tests completed')
+    cy.log('✅ Superadmin all users tests completed')
   })
 })

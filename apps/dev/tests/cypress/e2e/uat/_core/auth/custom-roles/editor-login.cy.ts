@@ -29,7 +29,7 @@ describe('Authentication - Editor Custom Role Permissions', {
 }, () => {
   const dashboard = DashboardPOM.create()
   const settings = SettingsPOM.create()
-  const sector7 = SuperadminPOM.create()
+  const superadmin = SuperadminPOM.create()
   const devArea = DevAreaPOM.create()
   const auth = new AuthPOM()
 
@@ -144,7 +144,7 @@ describe('Authentication - Editor Custom Role Permissions', {
       cy.visit('/superadmin', { timeout: 60000, failOnStatusCode: false })
 
       // 2. Should be redirected
-      sector7.assertAccessDenied()
+      superadmin.assertAccessDenied()
 
       cy.log('✅ Editor correctly blocked from Superadmin')
     })

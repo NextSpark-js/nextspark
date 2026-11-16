@@ -8,7 +8,7 @@ coverage: 6
 
 # Owner Team Role Permissions
 
-> Tests for Owner team role permissions and access control. Owner is the highest team-based role with full CRUD access to all entities, team settings, and billing. Does not have access to app-role areas like /dev or /sector7.
+> Tests for Owner team role permissions and access control. Owner is the highest team-based role with full CRUD access to all entities, team settings, and billing. Does not have access to app-role areas like /dev or /superadmin.
 
 ## @test OWNER-PERM-001: Owner Dashboard Access
 
@@ -140,33 +140,33 @@ Then el contenedor de billing deberia estar visible
 
 ---
 
-## @test OWNER-PERM-005: Owner Cannot Access Sector7
+## @test OWNER-PERM-005: Owner Cannot Access Superadmin
 
 ### Metadata
 - **Priority:** High
 - **Type:** Security
-- **Tags:** owner, sector7, blocked
+- **Tags:** owner, superadmin, blocked
 
 ```gherkin:en
-Scenario: Owner is blocked from Sector7
+Scenario: Owner is blocked from Superadmin
 
 Given I am logged in as Owner (carlos.mendoza@nextspark.dev)
-When I attempt to visit /sector7
-Then I should be redirected away from /sector7
+When I attempt to visit /superadmin
+Then I should be redirected away from /superadmin
 And the URL should include /dashboard or error=access_denied
 ```
 
 ```gherkin:es
-Scenario: Owner no puede acceder a Sector7
+Scenario: Owner no puede acceder a Superadmin
 
 Given estoy logueado como Owner (carlos.mendoza@nextspark.dev)
-When intento visitar /sector7
-Then deberia ser redirigido fuera de /sector7
+When intento visitar /superadmin
+Then deberia ser redirigido fuera de /superadmin
 And la URL deberia incluir /dashboard o error=access_denied
 ```
 
 ### Expected Results
-- Access denied to Sector7
+- Access denied to Superadmin
 - Redirect to dashboard with error
 - Security control working
 
@@ -227,5 +227,5 @@ And la URL deberia incluir /dashboard o error=access_denied
 | OWNER-PERM-002 | Access | Full CRUD access to customers | `@smoke` |
 | OWNER-PERM-003 | Access | Team settings access | |
 | OWNER-PERM-004 | Access | Billing access | |
-| OWNER-PERM-005 | Blocked | Cannot access Sector7 | |
+| OWNER-PERM-005 | Blocked | Cannot access Superadmin | |
 | OWNER-PERM-006 | Blocked | Cannot access Dev Zone | |

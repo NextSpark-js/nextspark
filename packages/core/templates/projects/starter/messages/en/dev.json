@@ -6,8 +6,8 @@
   "exitToDashboard": "Exit to Dashboard",
   "exitToDashboardDescription": "Return to main dashboard",
   "returnToDashboard": "Return to dashboard",
-  "goToSector7": "Go to Sector7",
-  "goToSector7Description": "Access Sector7 admin area",
+  "goToSuperadmin": "Go to Superadmin",
+  "goToSuperadminDescription": "Access Superadmin admin area",
   "superAdminArea": "Super Admin Area",
   "nav": {
     "home": "Home",

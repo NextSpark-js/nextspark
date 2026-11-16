@@ -3,7 +3,7 @@
  *
  * Tests role helper functions for Developer Area feature:
  * - isDeveloper(): Check if user is developer
- * - canAccessAdmin(): Check if user has Sector7 access
+ * - canAccessAdmin(): Check if user has Superadmin access
  * - hasRoleLevel(): Hierarchy comparison with developer role
  * - getAllRolesByHierarchy(): Verify developer is first (highest)
  *
@@ -348,21 +348,21 @@ describe('Real-World Use Cases', () => {
       expect(canAccess).toBe(false)
     })
 
-    it('should allow developer through SuperAdminGuard (Sector7)', () => {
+    it('should allow developer through SuperAdminGuard (Superadmin)', () => {
       const userRole: UserRole = 'developer'
       const canAccess = roleHelpers.canAccessAdmin(userRole)
 
       expect(canAccess).toBe(true)
     })
 
-    it('should allow superadmin through SuperAdminGuard (Sector7)', () => {
+    it('should allow superadmin through SuperAdminGuard (Superadmin)', () => {
       const userRole: UserRole = 'superadmin'
       const canAccess = roleHelpers.canAccessAdmin(userRole)
 
       expect(canAccess).toBe(true)
     })
 
-    it('should block member from SuperAdminGuard (Sector7)', () => {
+    it('should block member from SuperAdminGuard (Superadmin)', () => {
       const userRole: UserRole = 'member'
       const canAccess = roleHelpers.canAccessAdmin(userRole)
 
@@ -375,11 +375,11 @@ describe('Real-World Use Cases', () => {
       const userRole: UserRole = 'developer'
 
       const devArea = roleHelpers.isDeveloper(userRole)
-      const sector7 = roleHelpers.canAccessAdmin(userRole)
+      const superadmin = roleHelpers.canAccessAdmin(userRole)
       const hasAdminLevel = roleHelpers.hasRoleLevel(userRole, USER_ROLES.SUPERADMIN)
 
       expect(devArea).toBe(true)
-      expect(sector7).toBe(true)
+      expect(superadmin).toBe(true)
       expect(hasAdminLevel).toBe(true)
     })
 
@@ -387,11 +387,11 @@ describe('Real-World Use Cases', () => {
       const userRole: UserRole = 'superadmin'
 
       const devArea = roleHelpers.isDeveloper(userRole)
-      const sector7 = roleHelpers.canAccessAdmin(userRole)
+      const superadmin = roleHelpers.canAccessAdmin(userRole)
       const isSuperAdmin = roleHelpers.isSuperAdmin(userRole)
 
       expect(devArea).toBe(false) // Cannot access /dev
-      expect(sector7).toBe(true)  // Can access Sector7
+      expect(superadmin).toBe(true)  // Can access Superadmin
       expect(isSuperAdmin).toBe(true)
     })
 
@@ -399,11 +399,11 @@ describe('Real-World Use Cases', () => {
       const userRole: UserRole = 'member'
 
       const devArea = roleHelpers.isDeveloper(userRole)
-      const sector7 = roleHelpers.canAccessAdmin(userRole)
+      const superadmin = roleHelpers.canAccessAdmin(userRole)
       const isSuperAdmin = roleHelpers.isSuperAdmin(userRole)
 
       expect(devArea).toBe(false)
-      expect(sector7).toBe(false)
+      expect(superadmin).toBe(false)
       expect(isSuperAdmin).toBe(false)
     })
   })

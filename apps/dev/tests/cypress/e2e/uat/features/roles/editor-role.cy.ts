@@ -186,7 +186,7 @@ describe('Editor Role - Permission Restrictions', {
       cy.visit('/dashboard')
 
       // Superadmin button should NOT exist in toolbar/header for Editor
-      cy.get('[data-cy="sector7-button"]').should('not.exist')
+      cy.get('[data-cy="superadmin-button"]').should('not.exist')
       cy.get('[data-cy="admin-toolbar"]').should('not.exist')
 
       cy.log('✅ Superadmin button not visible for Editor')

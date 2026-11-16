@@ -47,7 +47,7 @@ export const APP_CONFIG_OVERRIDES = {
       notifications: false,
       help: false,
       theme: true,
-      sector7: false,
+      superadmin: false,
       userMenu: true,
     },
   },

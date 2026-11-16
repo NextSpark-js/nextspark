@@ -1,8 +1,8 @@
 ---
 feature: Superadmin All Teams Management
 priority: high
-tags: [sector7, superadmin, teams, management]
-grepTags: [uat, feat-sector7, superadmin, teams]
+tags: [superadmin, superadmin, teams, management]
+grepTags: [uat, feat-superadmin, superadmin, teams]
 coverage: 7
 ---
 
@@ -15,7 +15,7 @@ coverage: 7
 ### Metadata
 - **Priority:** Critical
 - **Type:** Smoke
-- **Tags:** sector7, teams, access
+- **Tags:** superadmin, teams, access
 - **Grep:** `@smoke`
 
 ```gherkin:en
@@ -49,7 +49,7 @@ And el contenedor de teams deberia estar visible
 ### Metadata
 - **Priority:** Critical
 - **Type:** Smoke
-- **Tags:** sector7, teams, list
+- **Tags:** superadmin, teams, list
 - **Grep:** `@smoke`
 
 ```gherkin:en
@@ -81,7 +81,7 @@ And cada team deberia estar representado como una fila
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, teams, details
+- **Tags:** superadmin, teams, details
 
 ```gherkin:en
 Scenario: View individual team details
@@ -114,7 +114,7 @@ And los detalles del team deberian estar visibles
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, teams, search
+- **Tags:** superadmin, teams, search
 
 ```gherkin:en
 Scenario: Filter teams by search query
@@ -147,7 +147,7 @@ And solo los teams que coinciden deberian mostrarse
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, teams, members
+- **Tags:** superadmin, teams, members
 
 ```gherkin:en
 Scenario: Display member count for each team
@@ -176,7 +176,7 @@ Then cada fila de team deberia mostrar el conteo de miembros
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, navigation
+- **Tags:** superadmin, navigation
 
 ```gherkin:en
 Scenario: Navigate back to Admin Panel dashboard
@@ -209,7 +209,7 @@ And el contenedor del dashboard deberia estar visible
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, teams, billing
+- **Tags:** superadmin, teams, billing
 
 ```gherkin:en
 Scenario: Display billing plan for each team
@@ -237,14 +237,14 @@ Then cada team deberia mostrar su plan de facturacion (Free, Starter, Pro, Busin
 
 | Element | Selector | Description |
 |---------|----------|-------------|
-| Container | `[data-cy="sector7-teams-container"]` | Teams page container |
-| Teams List | `[data-cy="sector7-teams-list"]` | List/table of teams |
-| Team Row | `[data-cy="sector7-team-row-{id}"]` | Individual team row |
-| Team Details | `[data-cy="sector7-team-details"]` | Team details view |
-| Search | `[data-cy="sector7-teams-search"]` | Search input |
+| Container | `[data-cy="superadmin-teams-container"]` | Teams page container |
+| Teams List | `[data-cy="superadmin-teams-list"]` | List/table of teams |
+| Team Row | `[data-cy="superadmin-team-row-{id}"]` | Individual team row |
+| Team Details | `[data-cy="superadmin-team-details"]` | Team details view |
+| Search | `[data-cy="superadmin-teams-search"]` | Search input |
 | Member Count | `[data-cy="team-member-count"]` | Member count display |
 | Team Plan | `[data-cy="team-plan-{planName}"]` | Plan indicator |
-| Nav Dashboard | `[data-cy="sector7-nav-dashboard"]` | Dashboard nav item |
+| Nav Dashboard | `[data-cy="superadmin-nav-dashboard"]` | Dashboard nav item |
 
 ---
 

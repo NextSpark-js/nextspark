@@ -8,7 +8,7 @@ coverage: 8
 
 # Editor Custom Role Permissions
 
-> Tests for Editor custom role permissions. Editor is a theme-defined custom role with view-only access to entities. Cannot create, update, or delete. Cannot access Sector7 or Dev Zone.
+> Tests for Editor custom role permissions. Editor is a theme-defined custom role with view-only access to entities. Cannot create, update, or delete. Cannot access Superadmin or Dev Zone.
 
 ## @test EDITOR-PERM-001: Editor Dashboard Access
 
@@ -167,27 +167,27 @@ Then deberia ver pestana de perfil o ser redirigido
 
 ---
 
-## @test EDITOR-PERM-006: Editor Cannot Access Sector7
+## @test EDITOR-PERM-006: Editor Cannot Access Superadmin
 
 ### Metadata
 - **Priority:** High
 - **Type:** Security
-- **Tags:** editor, sector7, blocked
+- **Tags:** editor, superadmin, blocked
 
 ```gherkin:en
-Scenario: Editor is blocked from Sector7
+Scenario: Editor is blocked from Superadmin
 
 Given I am logged in as Editor (diego.ramirez@nextspark.dev)
-When I attempt to visit /sector7
-Then I should be redirected away from /sector7
+When I attempt to visit /superadmin
+Then I should be redirected away from /superadmin
 ```
 
 ```gherkin:es
-Scenario: Editor no puede acceder a Sector7
+Scenario: Editor no puede acceder a Superadmin
 
 Given estoy logueado como Editor (diego.ramirez@nextspark.dev)
-When intento visitar /sector7
-Then deberia ser redirigido fuera de /sector7
+When intento visitar /superadmin
+Then deberia ser redirigido fuera de /superadmin
 ```
 
 ### Expected Results
@@ -283,6 +283,6 @@ Then deberia ser redirigido a /login
 | EDITOR-PERM-003 | Blocked | Cannot edit customers | |
 | EDITOR-PERM-004 | View-Only | Read-only tasks | |
 | EDITOR-PERM-005 | Access | Profile-only settings | |
-| EDITOR-PERM-006 | Blocked | Sector7 blocked | |
+| EDITOR-PERM-006 | Blocked | Superadmin blocked | |
 | EDITOR-PERM-007 | Blocked | Dev Zone blocked | |
 | EDITOR-PERM-008 | Logout | Logout flow | |

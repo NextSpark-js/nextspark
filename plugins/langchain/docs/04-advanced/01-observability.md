@@ -376,10 +376,10 @@ GET /api/plugins/langchain/observability/metrics
 The observability dashboard is available at:
 
 ```
-/sector7/ai-observability
+/superadmin/ai-observability
 ```
 
-> **Note**: This is a superadmin-only page in the Sector7 protected zone.
+> **Note**: This is a superadmin-only page in the Superadmin protected zone.
 
 ### Features
 

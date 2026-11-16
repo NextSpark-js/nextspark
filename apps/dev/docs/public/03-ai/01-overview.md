@@ -159,7 +159,7 @@ Shows:
 For superadmins, detailed traces at:
 
 ```
-/sector7/ai-observability
+/superadmin/ai-observability
 ```
 
 Shows:

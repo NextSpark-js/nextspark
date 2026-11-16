@@ -23,7 +23,7 @@ So that **I can view data without accidentally modifying it**
 
 **Security Focus:** Editor is a custom role more restrictive than Member.
 - Can only list/read customers (no create/update/delete)
-- Cannot access Sector7 (superadmin only)
+- Cannot access Superadmin (superadmin only)
 - Cannot access Dev Zone (restricted zone)
 
 </td>
@@ -35,7 +35,7 @@ Para que **pueda ver datos sin modificarlos accidentalmente**
 
 **Enfoque de Seguridad:** Editor es un rol personalizado mas restrictivo que Member.
 - Solo puede listar/ver clientes (sin crear/editar/eliminar)
-- No puede acceder a Sector7 (solo superadmin)
+- No puede acceder a Superadmin (solo superadmin)
 - No puede acceder a Dev Zone (zona restringida)
 
 </td>
@@ -337,7 +337,7 @@ Or deberia ser redirigido fuera de /edit
 
 ## Restricted Zones - Access Denied
 
-### EDIT_ROLE_007: Editor cannot access Sector7
+### EDIT_ROLE_007: Editor cannot access Superadmin
 
 <table>
 <tr>
@@ -348,29 +348,29 @@ Or deberia ser redirigido fuera de /edit
 <td>
 
 ```gherkin
-Scenario: Sector7 access is blocked for Editor
+Scenario: Superadmin access is blocked for Editor
 
 Given I am logged in as an Editor
-When I navigate directly to /sector7
+When I navigate directly to /superadmin
 Then I should be redirected to /dashboard
 And the URL should include "error=access_denied"
 ```
 
-**Severity:** Blocker - Sector7 is superadmin-only area.
+**Severity:** Blocker - Superadmin is superadmin-only area.
 
 </td>
 <td>
 
 ```gherkin
-Scenario: Acceso a Sector7 esta bloqueado para Editor
+Scenario: Acceso a Superadmin esta bloqueado para Editor
 
 Given estoy logueado como Editor
-When navego directamente a /sector7
+When navego directamente a /superadmin
 Then deberia ser redirigido a /dashboard
 And la URL deberia incluir "error=access_denied"
 ```
 
-**Severidad:** Bloqueante - Sector7 es area solo para superadmin.
+**Severidad:** Bloqueante - Superadmin es area solo para superadmin.
 
 </td>
 </tr>
@@ -419,7 +419,7 @@ And la URL deberia incluir "error=access_denied"
 
 ---
 
-### EDIT_ROLE_009: Editor UI does not show Sector7 button
+### EDIT_ROLE_009: Editor UI does not show Superadmin button
 
 <table>
 <tr>
@@ -430,11 +430,11 @@ And la URL deberia incluir "error=access_denied"
 <td>
 
 ```gherkin
-Scenario: Sector7 button is hidden from Editor UI
+Scenario: Superadmin button is hidden from Editor UI
 
 Given I am logged in as an Editor
 When I navigate to /dashboard
-Then the Sector7 button should NOT exist
+Then the Superadmin button should NOT exist
 And the admin toolbar should NOT exist
 ```
 
@@ -442,11 +442,11 @@ And the admin toolbar should NOT exist
 <td>
 
 ```gherkin
-Scenario: Boton Sector7 esta oculto de la UI de Editor
+Scenario: Boton Superadmin esta oculto de la UI de Editor
 
 Given estoy logueado como Editor
 When navego a /dashboard
-Then el boton Sector7 NO deberia existir
+Then el boton Superadmin NO deberia existir
 And la barra de herramientas de admin NO deberia existir
 ```
 
@@ -500,10 +500,10 @@ Then el boton Dev Zone NO deberia existir
 | **Customers** | LIST | Yes | Yes | Yes | Yes |
 | **Customers** | UPDATE | **No** | **No** | Yes | Yes |
 | **Customers** | DELETE | **No** | **No** | Yes | Yes |
-| **Sector7** | ACCESS | **No** | **No** | **No** | **No** |
+| **Superadmin** | ACCESS | **No** | **No** | **No** | **No** |
 | **Dev Zone** | ACCESS | **No** | **No** | **No** | **No** |
 
-**Note:** Sector7 and Dev Zone require superadmin access, not regular roles.
+**Note:** Superadmin and Dev Zone require superadmin access, not regular roles.
 
 ---
 
@@ -518,7 +518,7 @@ Then el boton Dev Zone NO deberia existir
 | Row Action View | `[data-cy="row-action-view"]` | View option in row menu |
 | Row Action Edit | `[data-cy="row-action-edit"]` | Edit option (should not exist) |
 | Row Action Delete | `[data-cy="row-action-delete"]` | Delete option (should not exist) |
-| Sector7 Button | `[data-cy="sector7-button"]` | Sector7 access button |
+| Superadmin Button | `[data-cy="superadmin-button"]` | Superadmin access button |
 | Dev Zone Button | `[data-cy="dev-zone-button"]` | Dev Zone access button |
 | Admin Toolbar | `[data-cy="admin-toolbar"]` | Admin-only toolbar |
 
@@ -546,7 +546,7 @@ Then el boton Dev Zone NO deberia existir
 | EDIT_ROLE_004 | UI Restrictions | Row menu only shows View | |
 | EDIT_ROLE_005 | URL Access | /create blocked | |
 | EDIT_ROLE_006 | URL Access | /edit blocked | |
-| EDIT_ROLE_007 | Restricted Zones | Sector7 blocked | |
+| EDIT_ROLE_007 | Restricted Zones | Superadmin blocked | |
 | EDIT_ROLE_008 | Restricted Zones | Dev Zone blocked | |
-| EDIT_ROLE_009 | Restricted Zones | Sector7 button hidden | |
+| EDIT_ROLE_009 | Restricted Zones | Superadmin button hidden | |
 | EDIT_ROLE_010 | Restricted Zones | Dev Zone button hidden | |

@@ -1,8 +1,8 @@
 ---
 feature: Superadmin Dashboard (Admin Panel)
 priority: critical
-tags: [sector7, superadmin, dashboard, navigation]
-grepTags: [uat, feat-sector7, superadmin, dashboard]
+tags: [superadmin, superadmin, dashboard, navigation]
+grepTags: [uat, feat-superadmin, superadmin, dashboard]
 coverage: 6
 ---
 
@@ -15,7 +15,7 @@ coverage: 6
 ### Metadata
 - **Priority:** Critical
 - **Type:** Smoke
-- **Tags:** sector7, dashboard, access
+- **Tags:** superadmin, dashboard, access
 - **Grep:** `@smoke`
 
 ```gherkin:en
@@ -24,7 +24,7 @@ Scenario: Superadmin can access Admin Panel dashboard
 Given I am logged in as Superadmin (superadmin@nextspark.dev)
 When I visit /admin
 Then the URL should include /admin
-And the sector7 container should be visible
+And the superadmin container should be visible
 And the header should display "Super Administrator Control Panel"
 ```
 
@@ -34,7 +34,7 @@ Scenario: Superadmin puede acceder al dashboard de Admin Panel
 Given estoy logueado como Superadmin (superadmin@nextspark.dev)
 When visito /admin
 Then la URL deberia incluir /admin
-And el contenedor de sector7 deberia estar visible
+And el contenedor de superadmin deberia estar visible
 And el header deberia mostrar "Super Administrator Control Panel"
 ```
 
@@ -50,7 +50,7 @@ And el header deberia mostrar "Super Administrator Control Panel"
 ### Metadata
 - **Priority:** Critical
 - **Type:** Smoke
-- **Tags:** sector7, navigation, menu
+- **Tags:** superadmin, navigation, menu
 - **Grep:** `@smoke`
 
 ```gherkin:en
@@ -84,14 +84,14 @@ And el nav item de teams deberia estar visible
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, stats, dashboard
+- **Tags:** superadmin, stats, dashboard
 
 ```gherkin:en
 Scenario: Dashboard displays system statistics
 
 Given I am logged in as Superadmin
 When I visit /admin
-Then the sector7 container should be visible
+Then the superadmin container should be visible
 And I should see stats cards (users count, teams count) if available
 ```
 
@@ -100,7 +100,7 @@ Scenario: Dashboard muestra estadisticas del sistema
 
 Given estoy logueado como Superadmin
 When visito /admin
-Then el contenedor de sector7 deberia estar visible
+Then el contenedor de superadmin deberia estar visible
 And deberia ver cards de estadisticas (conteo de usuarios, teams) si estan disponibles
 ```
 
@@ -115,7 +115,7 @@ And deberia ver cards de estadisticas (conteo de usuarios, teams) si estan dispo
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, navigation, users
+- **Tags:** superadmin, navigation, users
 
 ```gherkin:en
 Scenario: Navigate to Users management from dashboard
@@ -148,7 +148,7 @@ And deberia ver el heading "User Management"
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, navigation, teams
+- **Tags:** superadmin, navigation, teams
 
 ```gherkin:en
 Scenario: Navigate to Teams management from dashboard
@@ -181,7 +181,7 @@ And deberia ver el heading "Team Management"
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, navigation, exit
+- **Tags:** superadmin, navigation, exit
 
 ```gherkin:en
 Scenario: Exit Admin Panel to main dashboard
@@ -213,13 +213,13 @@ And la URL no deberia incluir /admin
 
 | Element | Selector | Description |
 |---------|----------|-------------|
-| Container | `[data-cy="sector7-container"]` | Main Admin Panel container |
-| Nav Dashboard | `[data-cy="sector7-nav-dashboard"]` | Dashboard nav item |
-| Nav Users | `[data-cy="sector7-nav-users"]` | Users nav item |
-| Nav Teams | `[data-cy="sector7-nav-teams"]` | Teams nav item |
-| Stats Users | `[data-cy="sector7-stats-users"]` | Users count stat |
-| Stats Teams | `[data-cy="sector7-stats-teams"]` | Teams count stat |
-| Exit Button | `[data-cy="sector7-sidebar-exit-to-dashboard"]` | Exit to dashboard button |
+| Container | `[data-cy="superadmin-container"]` | Main Admin Panel container |
+| Nav Dashboard | `[data-cy="superadmin-nav-dashboard"]` | Dashboard nav item |
+| Nav Users | `[data-cy="superadmin-nav-users"]` | Users nav item |
+| Nav Teams | `[data-cy="superadmin-nav-teams"]` | Teams nav item |
+| Stats Users | `[data-cy="superadmin-stats-users"]` | Users count stat |
+| Stats Teams | `[data-cy="superadmin-stats-teams"]` | Teams count stat |
+| Exit Button | `[data-cy="superadmin-sidebar-exit-to-dashboard"]` | Exit to dashboard button |
 
 ---
 

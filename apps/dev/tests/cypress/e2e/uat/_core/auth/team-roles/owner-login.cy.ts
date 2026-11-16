@@ -31,7 +31,7 @@ describe('Authentication - Owner Team Role Permissions', {
   const dashboard = DashboardPOM.create()
   const settings = SettingsPOM.create()
   const billing = BillingPOM.create()
-  const sector7 = SuperadminPOM.create()
+  const superadmin = SuperadminPOM.create()
   const devArea = DevAreaPOM.create()
 
   beforeEach(() => {
@@ -115,7 +115,7 @@ describe('Authentication - Owner Team Role Permissions', {
       cy.visit('/superadmin', { timeout: 60000, failOnStatusCode: false })
 
       // 2. Should be redirected (Owner is not superadmin)
-      sector7.assertAccessDenied()
+      superadmin.assertAccessDenied()
 
       cy.log('✅ Owner correctly blocked from Superadmin')
     })

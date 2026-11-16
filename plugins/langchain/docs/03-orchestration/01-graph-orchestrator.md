@@ -742,7 +742,7 @@ Ensure providers are configured in `langchain.config.ts`:
 pnpm test
 
 # Monitor observability dashboard
-# /sector7/ai-observability
+# /superadmin/ai-observability
 ```
 
 ### Fallback

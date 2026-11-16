@@ -167,27 +167,27 @@ Then deberia ser redirigido fuera de /billing
 
 ---
 
-## @test MEMBER-PERM-006: Member Cannot Access Sector7
+## @test MEMBER-PERM-006: Member Cannot Access Superadmin
 
 ### Metadata
 - **Priority:** High
 - **Type:** Security
-- **Tags:** member, sector7, blocked
+- **Tags:** member, superadmin, blocked
 
 ```gherkin:en
-Scenario: Member is blocked from Sector7
+Scenario: Member is blocked from Superadmin
 
 Given I am logged in as Member (emily.johnson@nextspark.dev)
-When I attempt to visit /sector7
-Then I should be redirected away from /sector7
+When I attempt to visit /superadmin
+Then I should be redirected away from /superadmin
 ```
 
 ```gherkin:es
-Scenario: Member no puede acceder a Sector7
+Scenario: Member no puede acceder a Superadmin
 
 Given estoy logueado como Member (emily.johnson@nextspark.dev)
-When intento visitar /sector7
-Then deberia ser redirigido fuera de /sector7
+When intento visitar /superadmin
+Then deberia ser redirigido fuera de /superadmin
 ```
 
 ### Expected Results
@@ -247,5 +247,5 @@ Then deberia ser redirigido fuera de /dev
 | MEMBER-PERM-003 | Blocked | Cannot create entities | |
 | MEMBER-PERM-004 | Restricted | Settings limited/blocked | |
 | MEMBER-PERM-005 | Blocked | Billing blocked | |
-| MEMBER-PERM-006 | Blocked | Sector7 blocked | |
+| MEMBER-PERM-006 | Blocked | Superadmin blocked | |
 | MEMBER-PERM-007 | Blocked | Dev Zone blocked | |

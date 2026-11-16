@@ -1,8 +1,8 @@
 ---
 feature: Superadmin All Users Management
 priority: high
-tags: [sector7, superadmin, users, management]
-grepTags: [uat, feat-sector7, superadmin, users]
+tags: [superadmin, superadmin, users, management]
+grepTags: [uat, feat-superadmin, superadmin, users]
 coverage: 11
 ---
 
@@ -15,7 +15,7 @@ coverage: 11
 ### Metadata
 - **Priority:** Critical
 - **Type:** Smoke
-- **Tags:** sector7, users, access
+- **Tags:** superadmin, users, access
 - **Grep:** `@smoke`
 
 ```gherkin:en
@@ -49,7 +49,7 @@ And el contenedor de usuarios deberia estar visible
 ### Metadata
 - **Priority:** Critical
 - **Type:** Smoke
-- **Tags:** sector7, users, list
+- **Tags:** superadmin, users, list
 - **Grep:** `@smoke`
 
 ```gherkin:en
@@ -81,7 +81,7 @@ And cada usuario deberia estar representado como una fila
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, users, details
+- **Tags:** superadmin, users, details
 
 ```gherkin:en
 Scenario: View individual user details
@@ -114,7 +114,7 @@ And los detalles del usuario deberian estar visibles
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** sector7, users, search
+- **Tags:** superadmin, users, search
 
 ```gherkin:en
 Scenario: Filter users by search query
@@ -147,7 +147,7 @@ And solo los usuarios que coinciden deberian mostrarse
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, users, email
+- **Tags:** superadmin, users, email
 
 ```gherkin:en
 Scenario: Display email for each user
@@ -178,7 +178,7 @@ And el email deberia contener el simbolo @
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, users, roles
+- **Tags:** superadmin, users, roles
 
 ```gherkin:en
 Scenario: Display app role for users with global roles
@@ -207,7 +207,7 @@ Then los usuarios con app roles (superadmin, developer) deberian mostrar indicad
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, users, verification
+- **Tags:** superadmin, users, verification
 
 ```gherkin:en
 Scenario: Display email verification status
@@ -236,7 +236,7 @@ Then cada usuario deberia mostrar estado de verificacion (verificado/no verifica
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, navigation
+- **Tags:** superadmin, navigation
 
 ```gherkin:en
 Scenario: Navigate back to Admin Panel dashboard
@@ -269,7 +269,7 @@ And el contenedor del dashboard deberia estar visible
 ### Metadata
 - **Priority:** Normal
 - **Type:** Regression
-- **Tags:** sector7, users, teams
+- **Tags:** superadmin, users, teams
 
 ```gherkin:en
 Scenario: Display team memberships for users

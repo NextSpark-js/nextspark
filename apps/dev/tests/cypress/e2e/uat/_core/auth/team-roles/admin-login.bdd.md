@@ -140,31 +140,31 @@ Then deberia tener acceso solo lectura o ser redirigido
 
 ---
 
-## @test ADMIN-PERM-005: Admin Cannot Access Sector7
+## @test ADMIN-PERM-005: Admin Cannot Access Superadmin
 
 ### Metadata
 - **Priority:** High
 - **Type:** Security
-- **Tags:** admin, sector7, blocked
+- **Tags:** admin, superadmin, blocked
 
 ```gherkin:en
-Scenario: Admin is blocked from Sector7
+Scenario: Admin is blocked from Superadmin
 
 Given I am logged in as Admin (james.wilson@nextspark.dev)
-When I attempt to visit /sector7
-Then I should be redirected away from /sector7
+When I attempt to visit /superadmin
+Then I should be redirected away from /superadmin
 ```
 
 ```gherkin:es
-Scenario: Admin no puede acceder a Sector7
+Scenario: Admin no puede acceder a Superadmin
 
 Given estoy logueado como Admin (james.wilson@nextspark.dev)
-When intento visitar /sector7
-Then deberia ser redirigido fuera de /sector7
+When intento visitar /superadmin
+Then deberia ser redirigido fuera de /superadmin
 ```
 
 ### Expected Results
-- Access denied to Sector7
+- Access denied to Superadmin
 - Redirect to dashboard
 
 ---
@@ -221,5 +221,5 @@ Then deberia ser redirigido fuera de /dev
 | ADMIN-PERM-002 | Access | Full CRUD to customers | `@smoke` |
 | ADMIN-PERM-003 | Access | Settings with limits | |
 | ADMIN-PERM-004 | Restricted | View-only billing | |
-| ADMIN-PERM-005 | Blocked | Cannot access Sector7 | |
+| ADMIN-PERM-005 | Blocked | Cannot access Superadmin | |
 | ADMIN-PERM-006 | Blocked | Cannot access Dev Zone | |

@@ -1,4 +1,4 @@
-# Sector7 - Team Roles Matrix (Format: BDD/Gherkin - Bilingual)
+# Superadmin - Team Roles Matrix (Format: BDD/Gherkin - Bilingual)
 
 > **Test File:** `team-roles-matrix.cy.ts`
 > **Format:** Behavior-Driven Development (BDD) with Given/When/Then
@@ -7,7 +7,7 @@
 
 ---
 
-## Feature: Sector7 Team Roles Permissions Matrix
+## Feature: Superadmin Team Roles Permissions Matrix
 
 <table>
 <tr>
@@ -21,7 +21,7 @@ As a **SuperAdmin**
 I want to **view the consolidated permissions matrix for all team roles**
 So that **I can verify role configurations and permission assignments**
 
-**Scope:** Sector7 admin panel - Team Roles page
+**Scope:** Superadmin admin panel - Team Roles page
 **Access:** SuperAdmin only
 
 The matrix displays:
@@ -37,7 +37,7 @@ Como **SuperAdmin**
 Quiero **ver la matriz consolidada de permisos para todos los roles de equipo**
 Para que **pueda verificar configuraciones de roles y asignaciones de permisos**
 
-**Alcance:** Panel admin Sector7 - Pagina Team Roles
+**Alcance:** Panel admin Superadmin - Pagina Team Roles
 **Acceso:** Solo SuperAdmin
 
 La matriz muestra:
@@ -62,7 +62,7 @@ La matriz muestra:
 
 ```gherkin
 Given I am logged in as SuperAdmin (superadmin@nextspark.dev)
-And I have access to Sector7 admin panel
+And I have access to Superadmin admin panel
 And the application is running
 ```
 
@@ -71,7 +71,7 @@ And the application is running
 
 ```gherkin
 Given estoy logueado como SuperAdmin (superadmin@nextspark.dev)
-And tengo acceso al panel admin de Sector7
+And tengo acceso al panel admin de Superadmin
 And la aplicacion esta corriendo
 ```
 
@@ -97,7 +97,7 @@ And la aplicacion esta corriendo
 Scenario: All team roles are displayed in the matrix
 
 Given I am logged in as SuperAdmin
-When I navigate to /sector7/team-roles
+When I navigate to /superadmin/team-roles
 Then I should see role cards for:
   | Role   |
   | owner  |
@@ -114,7 +114,7 @@ Then I should see role cards for:
 Scenario: Todos los roles de equipo se muestran en la matriz
 
 Given estoy logueado como SuperAdmin
-When navego a /sector7/team-roles
+When navego a /superadmin/team-roles
 Then deberia ver tarjetas de rol para:
   | Rol    |
   | owner  |
@@ -144,7 +144,7 @@ Then deberia ver tarjetas de rol para:
 Scenario: Role cards display correct hierarchy levels
 
 Given I am logged in as SuperAdmin
-When I navigate to /sector7/team-roles
+When I navigate to /superadmin/team-roles
 Then I should see the following hierarchy levels:
   | Role   | Level |
   | owner  | 100   |
@@ -163,7 +163,7 @@ Then I should see the following hierarchy levels:
 Scenario: Tarjetas de rol muestran niveles de jerarquia correctos
 
 Given estoy logueado como SuperAdmin
-When navego a /sector7/team-roles
+When navego a /superadmin/team-roles
 Then deberia ver los siguientes niveles de jerarquia:
   | Rol    | Nivel |
   | owner  | 100   |
@@ -440,7 +440,7 @@ And los permisos peligrosos deberian mostrarse en rojo
 Scenario: Page displays accurate statistics
 
 Given I am logged in as SuperAdmin
-When I navigate to /sector7/team-roles
+When I navigate to /superadmin/team-roles
 Then I should see stats cards showing:
   | Stat            | Value |
   | Available Roles | 5     |
@@ -454,7 +454,7 @@ Then I should see stats cards showing:
 Scenario: Pagina muestra estadisticas precisas
 
 Given estoy logueado como SuperAdmin
-When navego a /sector7/team-roles
+When navego a /superadmin/team-roles
 Then deberia ver tarjetas de estadisticas mostrando:
   | Estadistica     | Valor |
   | Available Roles | 5     |
@@ -524,7 +524,7 @@ And Editor deberia tener menos permisos que Member
 
 ## UI Elements / Elementos UI
 
-### Sector7 Team Roles Page
+### Superadmin Team Roles Page
 
 | Element | Selector | Description / Descripción |
 |---------|----------|---------------------------|

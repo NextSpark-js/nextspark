@@ -458,7 +458,7 @@ for (const perm of ALL_RESOLVED_PERMISSIONS) {
   PERMISSIONS_BY_CATEGORY[perm.category].push(perm)
 }
 
-// Full matrix for UI (Sector7)
+// Full matrix for UI (Superadmin)
 export const FULL_MATRIX: Record<Permission, Record<string, boolean>> = {} as any
 for (const perm of ALL_RESOLVED_PERMISSIONS) {
   FULL_MATRIX[perm.id as Permission] = {}

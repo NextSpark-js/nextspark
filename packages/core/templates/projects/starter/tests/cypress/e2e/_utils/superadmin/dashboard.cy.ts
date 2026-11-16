@@ -143,6 +143,6 @@ describe('Admin - Superadmin Dashboard', {
   })
 
   after(() => {
-    cy.log('✅ Sector7 dashboard tests completed')
+    cy.log('✅ Superadmin dashboard tests completed')
   })
 })

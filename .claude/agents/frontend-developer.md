@@ -171,7 +171,7 @@ if (context.context === 'consumer' && targetPath.startsWith('core/')) {
 **Specializations:**
 - Public-facing application pages
 - Dashboard and admin interfaces
-- Superadmin sector7 management panels
+- Superadmin management panels
 - Responsive and mobile-first design
 - Accessibility (WCAG 2.1 AA compliance)
 - Performance optimization

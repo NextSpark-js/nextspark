@@ -5,11 +5,11 @@
     "style": "Stil-Galerie",
     "analytics": "Analysen",
     "config": "Systemkonfiguration",
-    "exitSector7": "Sector7 verlassen",
+    "exitSuperadmin": "Superadmin verlassen",
     "returnToDashboard": "Zurück zum Dashboard"
   },
   "dashboard": {
-    "title": "Sector7",
+    "title": "Superadmin",
     "subtitle": "Super-Administrator-Kontrollzentrum",
     "restrictedAccess": "Zugangsbeschränkter Bereich - Nur für Superadmin und Developer",
     "systemStatus": "Systemstatus",
@@ -237,7 +237,7 @@
     "retry": "Erneut versuchen"
   },
   "common": {
-    "backToSector7": "Zurück zu Sector7",
+    "backToSuperadmin": "Zurück zu Superadmin",
     "comingSoon": "Demnächst verfügbar",
     "soon": "Bald",
     "loading": "Laden...",

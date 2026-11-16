@@ -502,7 +502,7 @@ End-to-end tracing for debugging and monitoring:
 - **Traces**: Complete agent invocations
 - **Spans**: Individual operations (LLM calls, tool calls)
 - **Metrics**: Aggregate performance data
-- **Dashboard**: Visual debugging at `/sector7/ai-observability`
+- **Dashboard**: Visual debugging at `/superadmin/ai-observability`
 
 > **Documentation**: [Observability](../04-advanced/01-observability.md)
 

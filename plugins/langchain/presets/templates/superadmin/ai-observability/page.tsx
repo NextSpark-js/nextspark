@@ -9,7 +9,7 @@
  * Usage in theme template:
  * ```tsx
  * // In your theme, import the langchain config from lib/langchain/langchain.config
- * // import { AIObservabilityPagePreset } from '@nextsparkjs/plugin-langchain/presets/templates/sector7/ai-observability/page'
+ * // import { AIObservabilityPagePreset } from '@nextsparkjs/plugin-langchain/presets/templates/superadmin/ai-observability/page'
  *
  * export const metadata = {
  *   title: 'AI Observability',

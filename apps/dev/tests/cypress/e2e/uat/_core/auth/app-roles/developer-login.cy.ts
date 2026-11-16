@@ -110,7 +110,7 @@ describe('Authentication - Developer App Role', {
 
       // 3. Validate access to Superadmin
       cy.url().should('include', '/superadmin')
-      cy.get('[data-cy="sector7-container"]').should('be.visible')
+      cy.get('[data-cy="superadmin-container"]').should('be.visible')
 
       cy.log('✅ Superadmin access granted (inherited privilege)')
     })

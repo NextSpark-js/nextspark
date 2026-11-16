@@ -8,7 +8,7 @@ coverage: 6
 
 # Developer App Role Authentication
 
-> Tests for Developer app role login and specific access privileges. Developer is a global app role (not team-based) that grants access to the Dev Zone and inherits Sector7 access.
+> Tests for Developer app role login and specific access privileges. Developer is a global app role (not team-based) that grants access to the Dev Zone and inherits Superadmin access.
 
 ## @test DEV-LOGIN-001: Developer Login and Dev Zone Access
 
@@ -139,34 +139,34 @@ And la pagina de Config Viewer deberia estar visible
 
 ---
 
-## @test DEV-LOGIN-005: Developer Inherited Sector7 Access
+## @test DEV-LOGIN-005: Developer Inherited Superadmin Access
 
 ### Metadata
 - **Priority:** High
 - **Type:** Regression
-- **Tags:** developer, sector7, inherited
+- **Tags:** developer, superadmin, inherited
 
 ```gherkin:en
-Scenario: Developer can access Sector7 (inherited privilege)
+Scenario: Developer can access Superadmin (inherited privilege)
 
 Given I am logged in as Developer (developer@nextspark.dev)
-When I visit /sector7
-Then the URL should include /sector7
-And the Sector7 container should be visible
+When I visit /superadmin
+Then the URL should include /superadmin
+And the Superadmin container should be visible
 ```
 
 ```gherkin:es
-Scenario: Developer puede acceder a Sector7 (privilegio heredado)
+Scenario: Developer puede acceder a Superadmin (privilegio heredado)
 
 Given estoy logueado como Developer (developer@nextspark.dev)
-When visito /sector7
-Then la URL deberia incluir /sector7
-And el contenedor de Sector7 deberia estar visible
+When visito /superadmin
+Then la URL deberia incluir /superadmin
+And el contenedor de Superadmin deberia estar visible
 ```
 
 ### Expected Results
-- Developer inherits superadmin privileges for Sector7
-- Sector7 control panel accessible
+- Developer inherits superadmin privileges for Superadmin
+- Superadmin control panel accessible
 - No access denied redirect
 
 ---
@@ -213,7 +213,7 @@ Then deberia ser redirigido a /login
 | Dev Style Page | `[data-cy="dev-style-page"]` | Style Gallery page container |
 | Dev Tests Page | `[data-cy="dev-tests-page"]` | Test Cases viewer container |
 | Dev Config Page | `[data-cy="dev-config-page"]` | Config Viewer page container |
-| Sector7 Container | `[data-cy="sector7-container"]` | Sector7 main container |
+| Superadmin Container | `[data-cy="superadmin-container"]` | Superadmin main container |
 | User Menu Trigger | `[data-cy="topnav-user-menu-trigger"]` | User menu dropdown trigger |
 | Sign Out Button | `[data-cy="topnav-menu-signOut"]` | Sign out menu item |
 
@@ -227,5 +227,5 @@ Then deberia ser redirigido a /login
 | DEV-LOGIN-002 | Access | Style Gallery access | `@smoke` |
 | DEV-LOGIN-003 | Access | Test Cases viewer access | `@smoke` |
 | DEV-LOGIN-004 | Access | Config Viewer access | `@smoke` |
-| DEV-LOGIN-005 | Inherited | Sector7 access (inherited) | |
+| DEV-LOGIN-005 | Inherited | Superadmin access (inherited) | |
 | DEV-LOGIN-006 | Logout | Developer logout flow | |
