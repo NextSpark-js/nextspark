@@ -94,7 +94,8 @@ Returns HTML page that:
 | `missing_client` | Client ID not in state |
 | `missing_code` | Authorization code not provided |
 | `no_instagram_accounts` | No Instagram Business accounts found |
-| `callback_exception` | Server error during processing |
+| `account_connected_elsewhere` | Every account found already has a row of another user in `social_accounts` (left as it is): "This account is already connected by another user" |
+| `callback_exception` | Server error during processing; the popup says the account could not be connected, the detail goes to the server log |
 
 ## Account Types
 
@@ -120,7 +121,7 @@ Fetches Facebook Pages the user manages:
 
 ## Database Storage
 
-- Tokens stored in the plugin's `social_accounts` table (upsert on `platformAccountId` conflict)
+- Tokens stored in the plugin's `social_accounts` table (upsert on `platformAccountId` conflict, which updates only a row of the same user: an account whose row is another user's is skipped, and left out of the preview)
 - The link to the entity saved by the project's adapter (`saveAssignment`), in the project's own table
 - Audit log entry created for each connection
 

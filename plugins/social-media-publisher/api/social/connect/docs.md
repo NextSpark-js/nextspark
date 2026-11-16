@@ -86,9 +86,12 @@ This endpoint receives the authorization code and exchanges it for access tokens
       },
       "connectedAt": "2024-01-15T10:30:00Z"
     }
-  ]
+  ],
+  "notConnected": []
 }
 ```
+
+An account whose `platformAccountId` already has a row of another user in `social_accounts` is not connected and that row is left as it is: it is listed in `notConnected` with `error: "This account is already connected by another user"`, and when no account was connected the route answers 409 with that `error` and the `notConnected` list.
 
 ## Error Responses
 
@@ -98,7 +101,8 @@ This endpoint receives the authorization code and exchanges it for access tokens
 | 400 | Invalid platform | Platform must be facebook_page or instagram_business |
 | 401 | Authentication required | User not logged in |
 | 404 | No Instagram accounts | No Instagram Business accounts found |
-| 500 | OAuth failed | Failed to exchange code for token |
+| 409 | This account is already connected by another user | Every account found is connected by another user |
+| 500 | Failed to connect social account | Server error; the detail goes to the server log |
 
 ## Setup
 

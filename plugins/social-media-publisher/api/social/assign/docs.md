@@ -41,7 +41,7 @@ The route reads only `platformAccountId` and `platform`. It finds the account am
 }
 ```
 
-An account that is not among the user's own fails in `results` with `Account not found among your connected accounts`; `success` is `false` when no account was assigned.
+An account that is not among the user's own fails in `results` with `Account not found among your connected accounts`, and a Graph-found account whose row in `social_accounts` is another user's fails with `This account is already connected by another user` (that row is left as it is). Any other failure says `Failed to assign the account`, with the detail in the server log. `success` is `false` when no account was assigned.
 
 ## Error Responses
 
@@ -51,4 +51,4 @@ An account that is not among the user's own fails in `results` with `Account not
 | 401 | Authentication required | Not authenticated |
 | 404 | Entity not found or access denied | The adapter denied access to `entityId` |
 | 501 | `SOCIAL_ADAPTER_NOT_REGISTERED` | No adapter registered |
-| 500 | Failed to assign accounts | Server error |
+| 500 | Failed to assign accounts | Server error; the detail goes to the server log |
