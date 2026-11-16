@@ -56,23 +56,32 @@ fs.writeFileSync(path.join('.nextspark', 'generation.json'), JSON.stringify({ ve
 `
 
 /**
- * The stand-in npm: `npm pack <name>@<version> --pack-destination .` writes the tarball of a package the state
- * publishes as `packs[<name>@<version>]` (its files), and fails like npm for one it does not.
+ * The stand-in npm: `npm pack <name>@<version> --pack-destination <dir>` writes into <dir> the tarball of a package the
+ * state publishes as `packs[<name>@<version>]`, and fails like npm for one it does not. An entry of a package is a
+ * file's content, `{ content, mode }`, `{ link }` for a symlink or `{ dir: true }` for a directory. It logs the
+ * directory it runs in.
  */
 const FAKE_NPM = `#!/usr/bin/env node
 ${FAKE_HEADER}
 fs.appendFileSync(process.env.FAKE_PNPM_LOG, ['npm', ...args].join(' ') + '\\n')
-const files = args[0] === 'pack' && args[2] === '--pack-destination' && args[3] === '.' ? (state.packs || {})[args[1]] : undefined
-if (!files) {
+fs.appendFileSync(process.env.FAKE_PNPM_LOG + '.npm-cwd', fs.realpathSync(process.cwd()) + '\\n')
+const destination = args[0] === 'pack' && args[2] === '--pack-destination' ? args[3] : null
+const entries = destination ? (state.packs || {})[args[1]] : undefined
+if (!entries) {
   process.stderr.write('npm error 404 Not Found - GET https://user:secret@registry.example/' + args[1] + '\\n')
   process.exit(1)
 }
-for (const [file, content] of Object.entries(files)) {
-  fs.mkdirSync(path.dirname(path.join('package', file)), { recursive: true })
-  fs.writeFileSync(path.join('package', file), content)
+const root = path.join(destination, 'package')
+fs.mkdirSync(root, { recursive: true })
+for (const [file, entry] of Object.entries(entries)) {
+  const target = path.join(root, file)
+  if (typeof entry === 'object' && entry.dir) { fs.mkdirSync(target, { recursive: true }); continue }
+  fs.mkdirSync(path.dirname(target), { recursive: true })
+  if (typeof entry === 'object' && entry.link) fs.symlinkSync(entry.link, target)
+  else fs.writeFileSync(target, typeof entry === 'string' ? entry : entry.content, { mode: typeof entry === 'string' ? 0o644 : entry.mode })
 }
-require('node:child_process').execFileSync('tar', ['-czf', 'pkg.tgz', 'package'])
-fs.rmSync('package', { recursive: true, force: true })
+require('node:child_process').execFileSync('tar', ['-czf', 'pkg.tgz', 'package'], { cwd: destination })
+fs.rmSync(root, { recursive: true, force: true })
 `
 
 /**
@@ -238,6 +247,8 @@ interface ProjectOptions {
   importers?: string[]
 }
 
+type PackEntry = string | { content: string, mode: number } | { link: string } | { dir: true }
+
 interface FakeState {
   published?: Record<string, string[]>
   latest?: string
@@ -258,8 +269,8 @@ interface FakeState {
   snapshot?: string
   /** What the installed @nextsparkjs/core declares besides its name and version: its dependencies, say */
   coreManifest?: Record<string, unknown>
-  /** The packages the stand-in `npm pack` downloads, as `<name>@<version>` -> their files */
-  packs?: Record<string, Record<string, string>>
+  /** The packages the stand-in `npm pack` downloads, as `<name>@<version>` -> their entries (see FAKE_NPM) */
+  packs?: Record<string, Record<string, PackEntry>>
 }
 
 function git(cwd: string, ...args: string[]) {
@@ -410,6 +421,7 @@ function runUpdateCore(root: string, args: string[], state: FakeState = {}) {
       output: `${result.stdout}${result.stderr}`,
       calls: pnpm.calls(),
       installDirs: pnpm.installDirs(),
+      npmDirs: fs.existsSync(`${pnpm.logPath}.npm-cwd`) ? fs.readFileSync(`${pnpm.logPath}.npm-cwd`, 'utf8').split('\n').filter(Boolean) : [],
       snapshots: pnpm.snapshots(),
     }
   } finally {
@@ -1688,7 +1700,9 @@ test('a package of the project that is aligned, with a peer range above the floo
   assert.equal(result.calls.filter((call) => call === 'install').length, 1)
 })
 
+
 const FIRST_PARTY_PLUGIN = '@nextsparkjs/plugin-social'
+const ADD_PLUGIN = `pnpm exec nextspark add:plugin ${FIRST_PARTY_PLUGIN} -v ${TO} --force`
 
 /** The files of the first-party plugin as published at `version`: TO adds a dependency and a migration and drops a file. */
 function pluginFiles(version: string): Record<string, string> {
@@ -1715,6 +1729,9 @@ function copyFiles(root: string) {
   return Object.fromEntries([...snapshot(path.join(root, 'plugins/social'))].map(([file, content]) => [file.split(path.sep).join('/'), Buffer.from(content, 'base64').toString('utf8')]))
 }
 
+/** How many times `text` holds `part`. */
+const occurrences = (text: string, part: string) => text.split(part).length - 1
+
 test('a first-party plugin copy older than the target is replaced with the target version before the install, and its dependencies set in package.json (#473)', (t) => {
   const root = createProject(t, { files: pluginCopy(pluginFiles(FROM)) })
 
@@ -1725,44 +1742,120 @@ test('a first-party plugin copy older than the target is replaced with the targe
   assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).dependencies['social-sdk'], '^2.0.0')
   assert.match(result.stdout, /plugins\/social: @nextsparkjs\/plugin-social 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
   assert.match(result.stdout, /New migrations in plugins\/social: 1[\s\S]*Migrate: pnpm db:migrate/)
+  assert.doesNotMatch(result.output, /Not replaced/)
   const calls = result.calls
-  assert.ok(calls.indexOf(`npm pack ${FIRST_PARTY_PLUGIN}@${TO} --pack-destination .`) < calls.indexOf('install'), calls.join('\n'))
+  assert.ok(calls.findIndex((call) => call.startsWith(`npm pack ${FIRST_PARTY_PLUGIN}@${TO} --pack-destination `)) < calls.indexOf('install'), calls.join('\n'))
   assert.ok(calls.includes('nextspark prepare'), calls.join('\n'))
 })
 
-test('a plugin copy that differs from the package it was copied from stops the update before anything is written, listing the files and the add:plugin command (#473)', (t) => {
-  const edited: Record<string, string> = { ...pluginFiles(FROM), 'plugin.config.ts': 'export const socialPlugin = { mine: true }\n', 'lib/mine.ts': 'export const mine = 1\n' }
-  delete edited['lib/legacy.ts']
-  const root = createProject(t, { files: pluginCopy(edited) })
-  const before = stateOf(root)
+// npm reads the .npmrc of the directory it runs in: a registry mirror configured in the project has to apply (#473)
+test('npm pack runs in the project, so the project\'s .npmrc applies, and writes the tarball into a directory of its own (#473)', (t) => {
+  const root = createProject(t, { files: { ...pluginCopy(pluginFiles(FROM)), '.npmrc': 'registry=https://mirror.example/\n' } })
 
   const result = runUpdateCore(root, ['--version', TO], FIRST_PARTY_STATE)
 
-  assert.equal(result.status, 1, result.output)
-  assert.match(result.stderr, /plugins\/social \(@nextsparkjs\/plugin-social 0\.1\.0-beta\.188\):\n {7}removed {2}lib\/legacy\.ts\n {7}added {4}lib\/mine\.ts\n {7}changed {2}plugin\.config\.ts\n/)
-  assert.match(result.stderr, /pnpm exec nextspark add:plugin @nextsparkjs\/plugin-social -v 0\.1\.0-beta\.189 --force\n[\s\S]*Nothing was changed/)
-  assert.ok(!result.calls.includes('install'), result.calls.join('\n'))
-  assertSameRepo(before)
+  assert.equal(result.status, 0, result.output)
+  assert.deepEqual(result.npmDirs, [fs.realpathSync(root), fs.realpathSync(root)])
+  for (const call of result.calls.filter((item) => item.startsWith('npm '))) {
+    const destination = call.split(' --pack-destination ')[1]
+    assert.ok(path.isAbsolute(destination) && !fs.realpathSync(path.dirname(destination)).startsWith(fs.realpathSync(root)), call)
+  }
 })
 
-test('a plugin copy update-core cannot download, or whose plugin is not published at the target, stops the update before anything is written, without npm\'s output (#473)', (t) => {
-  const root = createProject(t, { files: pluginCopy(pluginFiles(FROM)) })
-  const before = stateOf(root)
+test('a plugin copy with changes is left as it is and reported with the add:plugin command, the update of core goes on, and a rerun answers Already on (#473)', (t) => {
+  const edited: Record<string, string> = { ...pluginFiles(FROM), 'plugin.config.ts': 'export const socialPlugin = { mine: true }\n', 'lib/mine.ts': 'export const mine = 1\n' }
+  delete edited['lib/legacy.ts']
+  const root = createProject(t, { files: pluginCopy(edited) })
 
-  const unpublished = runUpdateCore(root, ['--version', TO], { ...FIRST_PARTY_STATE, published: { ...FIRST_PARTY_STATE.published, [FIRST_PARTY_PLUGIN]: [FROM] } })
-  assert.equal(unpublished.status, 1, unpublished.output)
-  assert.match(unpublished.stderr, /Not published at 0\.1\.0-beta\.189: @nextsparkjs\/plugin-social\. Nothing was changed/)
+  const result = runUpdateCore(root, ['--version', TO], FIRST_PARTY_STATE)
 
-  const offline = runUpdateCore(root, ['--version', TO], { ...FIRST_PARTY_STATE, packs: {} })
-  assert.equal(offline.status, 1, offline.output)
-  assert.match(offline.stderr, /Could not download @nextsparkjs\/plugin-social to refresh plugins\/social: npm pack @nextsparkjs\/plugin-social@0\.1\.0-beta\.188 exited 1; run it yourself to see npm's output\. Nothing was changed/)
-  assert.doesNotMatch(offline.output, /secret/)
-  for (const result of [unpublished, offline]) assert.ok(!result.calls.includes('install'), result.calls.join('\n'))
-  assertSameRepo(before)
+  assert.equal(result.status, 0, result.output)
+  assert.deepEqual(copyFiles(root), edited)
+  assert.deepEqual(installedVersions(root), PACKAGES.map(() => TO))
+  assert.ok(result.calls.includes('nextspark prepare'), result.calls.join('\n'))
+  assert.match(result.stdout, /plugins\/social \(@nextsparkjs\/plugin-social 0\.1\.0-beta\.188\): it differs from @nextsparkjs\/plugin-social 0\.1\.0-beta\.188 as published\n {6}removed {2}lib\/legacy\.ts\n {6}added {4}lib\/mine\.ts\n {6}changed {2}plugin\.config\.ts\n/)
+  // Once while checking and again in the final report
+  assert.equal(occurrences(result.stdout, ADD_PLUGIN), 2, result.stdout)
+  assert.match(result.stdout, /Update Complete[\s\S]*Not replaced[\s\S]*Next steps/)
+
+  git(root, 'add', '-A')
+  git(root, 'commit', '-q', '-m', 'Update with an edited plugin copy')
+  const rerun = runUpdateCore(root, ['--version', TO], FIRST_PARTY_STATE)
+  assert.equal(rerun.status, 0, rerun.output)
+  assert.match(rerun.stdout, /Already on 0\.1\.0-beta\.189/)
+  assert.ok(rerun.stdout.indexOf(ADD_PLUGIN, rerun.stdout.indexOf('Already on')) > 0, rerun.stdout)
+  assert.ok(!rerun.calls.includes('install') && !rerun.calls.includes('nextspark prepare'), rerun.calls.join('\n'))
+  assert.deepEqual(copyFiles(root), edited)
 })
 
-test('after a failed prepare is committed, running update-core again runs prepare and records the version instead of answering Already on (#473)', (t) => {
-  const root = createProject(t)
+test('a plugin copy update-core cannot download, whose version is no longer published, or whose plugin is not published at the target, is reported with the add:plugin command and the update goes on, without npm\'s output (#473)', (t) => {
+  const cases: Array<[string, FakeState, RegExp]> = [
+    ['not at the target', { ...FIRST_PARTY_STATE, published: { ...FIRST_PARTY_STATE.published, [FIRST_PARTY_PLUGIN]: [FROM] } }, /plugins\/social \(@nextsparkjs\/plugin-social 0\.1\.0-beta\.188\): @nextsparkjs\/plugin-social is not published at 0\.1\.0-beta\.189/],
+    ['offline', { ...FIRST_PARTY_STATE, packs: {} }, /could not download it to compare and replace: npm pack @nextsparkjs\/plugin-social@0\.1\.0-beta\.188 exited 1; run it yourself to see npm's output/],
+    ['old version gone', { ...FIRST_PARTY_STATE, packs: { [`${FIRST_PARTY_PLUGIN}@${TO}`]: pluginFiles(TO) } }, /could not download it to compare and replace: npm pack @nextsparkjs\/plugin-social@0\.1\.0-beta\.188 exited 1/],
+  ]
+  for (const [name, state, reason] of cases) {
+    const root = createProject(t, { files: pluginCopy(pluginFiles(FROM)) })
+    const result = runUpdateCore(root, ['--version', TO], state)
+    assert.equal(result.status, 0, `${name}\n${result.output}`)
+    assert.match(result.stdout, reason, name)
+    assert.equal(occurrences(result.stdout, ADD_PLUGIN), 2, `${name}\n${result.stdout}`)
+    assert.doesNotMatch(result.output, /secret/, name)
+    assert.deepEqual(copyFiles(root), pluginFiles(FROM), name)
+    assert.deepEqual(installedVersions(root), PACKAGES.map(() => TO), name)
+  }
+})
+
+test('a plugins/<name>/package.json that is not valid JSON is reported, not skipped in silence, and the update goes on (#473)', (t) => {
+  const root = createProject(t, { files: { 'plugins/broken/package.json': '{ "name": "@nextsparkjs/plugin-broken", }\n' } })
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /plugins\/broken: plugins\/broken\/package\.json is not valid JSON \(.+\), so update-core can't tell whether it is a first-party plugin copy/)
+  assert.match(result.stdout, /pnpm exec nextspark add:plugin @nextsparkjs\/plugin-broken -v 0\.1\.0-beta\.189 --force {3}\(only if plugins\/broken is that plugin\)/)
+})
+
+test('symlinks, empty directories and file modes count: a copy matching them is replaced with them, one missing them is reported (#473)', (t) => {
+  const tree = (version: string): Record<string, PackEntry> => ({
+    ...pluginFiles(version),
+    'bin/run.sh': { content: `#!/bin/sh\necho ${version}\n`, mode: 0o755 },
+    'docs/latest.md': { link: '../plugin.config.ts' },
+    'templates/empty': { dir: true },
+  })
+  const state: FakeState = { ...FIRST_PARTY_STATE, packs: { [`${FIRST_PARTY_PLUGIN}@${FROM}`]: tree(FROM), [`${FIRST_PARTY_PLUGIN}@${TO}`]: tree(TO) } }
+  const copyOf = (root: string, { withEmpty }: { withEmpty: boolean }) => {
+    const dir = path.join(root, 'plugins/social')
+    fs.mkdirSync(path.join(dir, 'bin'), { recursive: true })
+    fs.mkdirSync(path.join(dir, 'docs'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'bin/run.sh'), `#!/bin/sh\necho ${FROM}\n`, { mode: 0o755 })
+    fs.symlinkSync('../plugin.config.ts', path.join(dir, 'docs/latest.md'))
+    if (withEmpty) fs.mkdirSync(path.join(dir, 'templates/empty'), { recursive: true })
+    git(root, 'add', '-A')
+    git(root, 'commit', '-q', '-m', 'Plugin copy')
+  }
+
+  const same = createProject(t, { files: pluginCopy(pluginFiles(FROM)) })
+  copyOf(same, { withEmpty: true })
+  const replaced = runUpdateCore(same, ['--version', TO], state)
+  assert.equal(replaced.status, 0, replaced.output)
+  assert.doesNotMatch(replaced.output, /Not replaced/)
+  const dir = path.join(same, 'plugins/social')
+  assert.equal(fs.readlinkSync(path.join(dir, 'docs/latest.md')), '../plugin.config.ts')
+  assert.equal(fs.statSync(path.join(dir, 'bin/run.sh')).mode & 0o777, 0o755)
+  assert.equal(fs.readFileSync(path.join(dir, 'bin/run.sh'), 'utf8'), `#!/bin/sh\necho ${TO}\n`)
+  assert.ok(fs.statSync(path.join(dir, 'templates/empty')).isDirectory())
+
+  // git does not keep an empty directory: a checkout of the copy lacks it, and that is a difference
+  const missing = createProject(t, { files: pluginCopy(pluginFiles(FROM)) })
+  copyOf(missing, { withEmpty: false })
+  const reported = runUpdateCore(missing, ['--version', TO], state)
+  assert.equal(reported.status, 0, reported.output)
+  assert.match(reported.stdout, /removed {2}templates\n {6}removed {2}templates\/empty\n/)
+})
+
+test('after a failed prepare is committed, running update-core again runs prepare and records the version before it, not the target (#473)', (t) => {
+  const root = createProject(t, { files: { 'core.version.json': `${JSON.stringify({ version: FROM, previousVersion: '0.1.0-beta.187' }, null, 2)}\n` } })
   const failed = runUpdateCore(root, ['--version', TO], { syncExit: 1 })
   assert.equal(failed.status, 1, failed.output)
   assert.match(failed.stderr, /fix what failed, commit, and run update-core --version 0\.1\.0-beta\.189 again: it runs the steps it did not get through/)
@@ -1774,7 +1867,9 @@ test('after a failed prepare is committed, running update-core again runs prepar
   assert.equal(rerun.status, 0, rerun.output)
   assert.match(rerun.stdout, /already on 0\.1\.0-beta\.189, but no finished generation of src\/app\/ is recorded in \.nextspark\/generation\.json: finishing the update/)
   assert.ok(rerun.calls.includes('nextspark prepare'), rerun.calls.join('\n'))
-  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8')).version, TO)
+  const record = JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'))
+  assert.deepEqual([record.version, record.previousVersion], [TO, FROM])
+  assert.match(rerun.stdout, /@nextsparkjs\/core 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
 
   git(root, 'add', '-A')
   git(root, 'commit', '-q', '-m', 'Update finished')
@@ -1782,6 +1877,17 @@ test('after a failed prepare is committed, running update-core again runs prepar
   assert.equal(third.status, 0, third.output)
   assert.match(third.stdout, /Already on 0\.1\.0-beta\.189/)
   assert.deepEqual(third.calls.filter((call) => !call.startsWith('view ')), [])
+
+  // A fresh clone has no .nextspark/: the run regenerates and keeps the committed record as it is
+  const committed = fs.readFileSync(path.join(root, 'core.version.json'), 'utf8')
+  fs.rmSync(path.join(root, '.nextspark'), { recursive: true, force: true })
+  git(root, 'add', '-A')
+  git(root, 'commit', '-q', '-m', 'As a clone has it')
+  const clone = runUpdateCore(root, ['--version', TO])
+  assert.equal(clone.status, 0, clone.output)
+  assert.ok(clone.calls.includes('nextspark prepare'), clone.calls.join('\n'))
+  assert.equal(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'), committed)
+  assert.match(clone.stdout, /core\.version\.json already records 0\.1\.0-beta\.189; left as it is/)
 })
 
 test('src/app generated from an older core, or an older plugin copy, with the packages already on the target, finishes the update (#473)', (t) => {
