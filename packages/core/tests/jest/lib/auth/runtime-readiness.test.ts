@@ -426,11 +426,11 @@ describe('startup auth readiness log', () => {
     warn.mockRestore()
   })
 
-  test('never throws, even when readiness cannot be evaluated', () => {
+  test('never throws, even when readiness cannot be evaluated', async () => {
     const authConfig = Object.defineProperty({}, 'methods', {
       get() { throw new Error('config exploded') },
     })
-    expect(() => logAuthReadinessAtStartup({ authConfig, env: production })).not.toThrow()
+    await expect(logAuthReadinessAtStartup({ authConfig, env: production })).resolves.toBeUndefined()
     expect(console.error).toHaveBeenCalledTimes(1)
     expect(JSON.stringify((console.error as jest.Mock).mock.calls[0])).not.toContain('config exploded')
   })
