@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path'
 import { ENTITY_DIAGNOSTICS, ENTITY_MODULES, entityConfigFile, planEntityRoutes, readAllEntityFacts, readEntityFacts, routableEntities } from '../entity-routes.mjs'
 import { PLAN_DIAGNOSTICS, PLAN_NOTICES, planHost, urlConflicts } from '../plan.mjs'
 import { renderHost } from '../render.mjs'
+import { notFoundRewritePath } from '../root-files.mjs'
 import { CORE_COMPOSITION_WRAPPERS, validateGeneratedModule } from '../static-imports.mjs'
 import { loadTypeScriptFor } from '../../shared/typescript-compiler.mjs'
 
@@ -1160,5 +1161,24 @@ test('a template that only adds a URL under the entity coexists with the generat
     assert.equal(targets(routes).filter(target => target.startsWith('dashboard/(main)/cohorts-archive/')).length, 7)
   } finally {
     prefix.cleanup()
+  }
+})
+
+test("the not-found rewrite goes to /_not-found when core generates the root [...slug] of an entity at '/' with nested slugs, and to /_ns/not-found otherwise (#480)", async () => {
+  const cases = [
+    ["slug: 'pages', enabled: true, access: { public: true, basePath: '/', allowNestedSlugs: true }, builder: { enabled: true }", '(public)/[...slug]/page.tsx', '/_not-found'],
+    ["slug: 'pages', enabled: true, access: { public: true, basePath: '/' }, builder: { enabled: true }", '(public)/[slug]/page.tsx', '/_ns/not-found'],
+    ["slug: 'pages', enabled: true, access: { public: true, basePath: '/blog', allowNestedSlugs: true }, builder: { enabled: true }", '(public)/blog/[...slug]/page.tsx', '/_ns/not-found'],
+  ]
+  for (const [facts, itemRoute, expected] of cases) {
+    const w = world()
+    try {
+      const { routes, diagnostics } = await plan(w, [entity('pages', 'taskEntityConfig')], { pages: await factsOf(facts) }, { cacheComponents: true })
+      assert.deepEqual(diagnostics, [])
+      assert.ok(routes.some(route => route.target === itemRoute), itemRoute)
+      assert.equal(notFoundRewritePath({ routes }), expected, facts)
+    } finally {
+      w.cleanup()
+    }
   }
 })

@@ -473,6 +473,8 @@ declare module '@nextsparkjs/registries/features' {
 declare module '@nextsparkjs/registries/root-files' {
   /** The names with a dot the host serves at its root (public/'s files, root routes such as robots.txt), for createProxy({ rejectUnknownRootFiles }) (#480). */
   export const ROOT_FILES: readonly string[]
+  /** Where the proxy rewrites a request for the not-found page with a 404: `/_ns/not-found`, or `/_not-found` in a host with a dynamic route of two or more segments at the root (#480). */
+  export const NOT_FOUND_REWRITE_PATH: string
 }
 
 declare module '@nextsparkjs/registries/request-locale' {

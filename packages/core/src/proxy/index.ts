@@ -36,7 +36,7 @@ import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '../
 import { isDocsPublic, legacyDocsAccessMessage } from '../lib/docs/access'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { FEATURES } from '@nextsparkjs/registries/features'
-import { ROOT_FILES } from '@nextsparkjs/registries/root-files'
+import { NOT_FOUND_REWRITE_PATH, ROOT_FILES } from '@nextsparkjs/registries/root-files'
 import { STATIC_FILE_EXTENSION } from '../lib/entities/public-item-slug'
 
 /**
@@ -138,17 +138,19 @@ function isMissingDocsPage(pathname: string): boolean {
   return !sections.some(section => section.slug === sectionSlug && section.pages.some(page => page.slug === pageSlug))
 }
 
-/**
- * Where a request is rewritten to get the app's not-found page with a 404: a path no route matches (#480). A rewrite
- * to `/_not-found`, Next's own not-found route, is answered 404 by `next start` but is served as a static page with
- * 200 on Vercel. A path no route matches is answered 404 with the not-found page by both, the way any unknown URL
- * is. The first segment starts with `_`, a private folder in the App Router, so no static route can match it, and
- * the path has two segments, so the root item route (`[slug]`) does not match it either. A two-segment dynamic route
- * at the root does match it: the root item route of a builder entity with basePath `/` and `allowNestedSlugs: true`
- * (`(public)/[...slug]`, which core generates), a root catch-all a project writes, or `[a]/[b]`. There the route
- * answers (under Cache Components, 200 with `noindex`), so this rewrite does not give the 404.
+/*
+ * NOT_FOUND_REWRITE_PATH (root-files.ts, written by `nextspark prepare`) is where a request is rewritten to get the
+ * app's not-found page with a 404 (#480). It is `/_ns/not-found`, a path no route matches, which `next start` and
+ * Vercel answer 404 with the not-found page, the way they answer any unknown URL: the first segment starts with `_`, a
+ * private folder in the App Router, so no static route matches it, and the path has two segments, so the root item
+ * route (`[slug]`) does not match it either. A host with a dynamic route of two or more segments at the root has no
+ * unmatched path: the root item route of a builder entity with basePath `/` and `allowNestedSlugs: true`
+ * (`(public)/[...slug]`, which core generates), or a project's `[...x]`, `[[...x]]` or `[a]/[b]` would answer
+ * `/_ns/not-found` (under Cache Components, 200 with `noindex`). For such a host prepare writes `/_not-found`, Next's
+ * own not-found route: `next start` answers it 404, but Vercel serves it as a static page with 200, so there a page
+ * that does not exist answers 200 with `noindex`. A real 404 on Vercel needs a basePath with a prefix for that entity,
+ * or `allowNestedSlugs: false` at the root.
  */
-const NOT_FOUND_REWRITE_PATH = '/_ns/not-found'
 
 /**
  * Serve the app's not-found page with a 404 status for a docs page the

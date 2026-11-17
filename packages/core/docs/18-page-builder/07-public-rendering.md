@@ -91,6 +91,8 @@ Under Cache Components the item route has a dynamic segment (`[slug]`), so Next 
 ```typescript
 // config/hooks/proxy.ts
 import { NextRequest, NextResponse } from 'next/server'
+// Where to rewrite for the not-found page with a 404, written by `nextspark prepare`: see below
+import { NOT_FOUND_REWRITE_PATH } from '@nextsparkjs/registries/root-files'
 
 // Your own lookup: a closed list of public slugs, a cached query, or a call to your pages API.
 import { isPublishedSlug } from '@/lib/published-slugs'
@@ -109,14 +111,16 @@ export async function proxyHook(request: NextRequest) {
   if (segment && rest.length === 0 && !segment.includes('.') && !NOT_PAGES.has(segment)
       && !(await isPublishedSlug(segment))) {
     const url = request.nextUrl.clone()
-    url.pathname = '/_ns/not-found' // a path no route matches: see below
+    url.pathname = NOT_FOUND_REWRITE_PATH
     return NextResponse.rewrite(url)
   }
   return NextResponse.next()
 }
 ```
 
-The destination is a path no route matches, so Next answers it the way it answers any unknown URL: 404 with the project's not-found page, in `next start` and on Vercel alike (#480). Its first segment starts with `_`, a [private folder](https://nextjs.org/docs/app/getting-started/project-structure#private-folders) in the App Router, so no page can claim it, and it has two segments, so the root item route (`[slug]`) does not match it either; `request.nextUrl.clone()` keeps the `basePath`. Do not rewrite to `/_not-found`: that is Next's own not-found route, which `next start` answers with 404 but Vercel serves as a static page with 200. A project with a two-segment dynamic route at the root has no unmatched path, and there the rewrite does not fix the status: the route answers it (under Cache Components, 200 with `noindex`; with legacy ISR, 404). That is the root item route of a builder entity with basePath `/` and `allowNestedSlugs: true` (core generates `(public)/[...slug]` for it), a root catch-all of your own (`templates/(public)/[...slug]` or `[[...slug]]`), or two dynamic segments at the root (`[a]/[b]`). The framework proxy uses the same destination for a missing docs page.
+`NOT_FOUND_REWRITE_PATH` is written by `nextspark prepare` in `.nextspark/registries/root-files.ts` (#480), and `request.nextUrl.clone()` keeps the `basePath`. In most projects it is `/_ns/not-found`, a path no route matches, so Next answers it the way it answers any unknown URL: 404 with the project's not-found page, in `next start` and on Vercel alike. Its first segment starts with `_`, a [private folder](https://nextjs.org/docs/app/getting-started/project-structure#private-folders) in the App Router, so no page can claim it, and it has two segments, so the root item route (`[slug]`) does not match it either.
+
+A project with a dynamic route of two or more segments at the root has no unmatched path: that route would answer `/_ns/not-found` itself (under Cache Components, 200 with `noindex`). That is the root item route of a builder entity with basePath `/` and `allowNestedSlugs: true` (core generates `(public)/[...slug]` for it), a root catch-all of your own (`templates/(public)/[...slug]` or `[[...slug]]`), or two dynamic segments at the root (`[a]/[b]`). For such a project prepare writes `/_not-found`, Next's own not-found route, which `next start` answers with 404 and the not-found page. **On Vercel, `/_not-found` is served as a static page with 200**, so in such a project a page that does not exist answers **200 with `noindex`** there, recipe or not. For a real 404 on Vercel, give the nested entity a basePath with a prefix (`/p`, so its route is `(public)/p/[...slug]`), or set `allowNestedSlugs: false` on the entity at the root (its route is then `(public)/[slug]`), and have no root catch-all or `[a]/[b]` of your own. Do not hardcode either destination in the hook: import `NOT_FOUND_REWRITE_PATH`, which follows the routes on each prepare. The framework proxy uses the same destination for a missing docs page.
 
 Keep the lookup cheap (the proxy runs on every request). The reserved list above is a starting point: add every top-level route your project defines (a page, a route handler, a metadata file), because anything that is not in the list and not a published slug becomes a 404. The recipe covers `/not-a-page` only; `/blog/[slug]` (two segments) is not covered, so give that route its own check in the same hook. This snippet is a recipe, not covered by the repository's tests: after adding it, confirm with `curl -I https://your-host/not-a-page` that the status is 404.
 

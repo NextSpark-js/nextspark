@@ -10,7 +10,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { rootFileNames } from '../root-files.mjs'
+import { notFoundRewritePath, rootFileNames } from '../root-files.mjs'
 import { prepareHost } from '../prepare.mjs'
 import { PAGE, ROUTE, hostConfig, read, write } from './host-helpers.mjs'
 
@@ -67,6 +67,32 @@ test('prepare writes the list with the registries, from the plan and the host pu
     assert.ok(file, 'root-files.ts is published')
     assert.equal(read(join(root, 'host'), '.nextspark/registries/root-files.ts'), file.content)
     assert.match(file.content, /export const ROOT_FILES = \[\n {2}"favicon\.ico",\n {2}"llms\.txt"\n\] as readonly string\[\]/)
+    assert.match(file.content, /\nexport const NOT_FOUND_REWRITE_PATH = "\/_ns\/not-found"\n/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('the not-found rewrite goes to /_not-found only when a route serves /_ns/not-found: a dynamic route of two or more segments at the root (#480)', () => {
+  const at = (...targets) => notFoundRewritePath({ routes: targets.map(target => route('page', target)) })
+  for (const target of ['(public)/[...slug]/page.tsx', '[[...slug]]/page.tsx', '(public)/[a]/[b]/page.tsx', '[a]/not-found/page.tsx', '(public)/[a]/[...rest]/page.tsx', '%5Fns/not-found/page.tsx', '(marketing)/@modal/[...x]/page.tsx']) {
+    assert.equal(at(target), '/_not-found', target)
+  }
+  assert.equal(notFoundRewritePath({ routes: [route('route', '[...path]/route.ts')] }), '/_not-found')
+  for (const target of ['(public)/[slug]/page.tsx', '(public)/blog/[...slug]/page.tsx', '[a]/[b]/[c]/page.tsx', '[a]/other/page.tsx', '_ns/not-found/page.tsx', 'page.tsx', 'docs/[section]/[page]/page.tsx']) {
+    assert.equal(at(target), '/_ns/not-found', target)
+  }
+  assert.equal(notFoundRewritePath({ routes: [route('layout', '[...slug]/layout.tsx')] }), '/_ns/not-found')
+})
+
+test("prepare writes /_not-found for a project's own root catch-all (#480)", async () => {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-root-files-host-'))
+  try {
+    write(root, 'source/templates/(public)/[...path]/page.tsx', PAGE('Any'))
+    mkdirSync(join(root, 'host'))
+    const run = await prepareHost(hostConfig(root))
+    const file = run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts')
+    assert.match(file.content, /\nexport const NOT_FOUND_REWRITE_PATH = "\/_not-found"\n/)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
