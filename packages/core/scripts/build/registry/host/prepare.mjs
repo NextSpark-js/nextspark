@@ -275,7 +275,7 @@ async function generateAndPublish(config, { mode, devStatus, cache }) {
     // The typed entity client (#277) is generated from the same contracts and published as registry files
     const clientFiles = planClientStep(config, contracts)
     // The root files the proxy may answer 404 for without them (#480): written with the registries, from the same plan
-    const files = [...appFiles, ...registryFiles, ...clientFiles, rootFilesRegistry({ routes, hostRoot: config.hostRoot })]
+    const files = [...appFiles, ...registryFiles, ...clientFiles, rootFilesRegistry({ routes, hostRoot: config.hostRoot, cacheComponents: config.cacheComponents })]
     const invalid = await validateFiles(files, { projectRoot: config.projectRoot, wrappers: config.compositionWrappers })
     if (invalid.length > 0) throw new PrepareError(invalid)
 

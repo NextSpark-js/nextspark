@@ -1164,7 +1164,7 @@ test('a template that only adds a URL under the entity coexists with the generat
   }
 })
 
-test("the not-found rewrite goes to /_not-found when core generates the root [...slug] of an entity at '/' with nested slugs, and to /_ns/not-found otherwise (#480)", async () => {
+test("under Cache Components the not-found rewrite goes to /_not-found when core generates the root [...slug] of an entity at '/' with nested slugs, and to /_ns/not-found otherwise (#480)", async () => {
   const cases = [
     ["slug: 'pages', enabled: true, access: { public: true, basePath: '/', allowNestedSlugs: true }, builder: { enabled: true }", '(public)/[...slug]/page.tsx', '/_not-found'],
     ["slug: 'pages', enabled: true, access: { public: true, basePath: '/' }, builder: { enabled: true }", '(public)/[slug]/page.tsx', '/_ns/not-found'],
@@ -1176,7 +1176,8 @@ test("the not-found rewrite goes to /_not-found when core generates the root [..
       const { routes, diagnostics } = await plan(w, [entity('pages', 'taskEntityConfig')], { pages: await factsOf(facts) }, { cacheComponents: true })
       assert.deepEqual(diagnostics, [])
       assert.ok(routes.some(route => route.target === itemRoute), itemRoute)
-      assert.equal(notFoundRewritePath({ routes }), expected, facts)
+      assert.equal(notFoundRewritePath({ routes, cacheComponents: true }), expected, facts)
+      assert.equal(notFoundRewritePath({ routes, cacheComponents: false }), '/_ns/not-found', facts)
     } finally {
       w.cleanup()
     }

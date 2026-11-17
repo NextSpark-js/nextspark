@@ -73,26 +73,38 @@ test('prepare writes the list with the registries, from the plan and the host pu
   }
 })
 
-test('the not-found rewrite goes to /_not-found only when a route serves /_ns/not-found: a dynamic route of two or more segments at the root (#480)', () => {
-  const at = (...targets) => notFoundRewritePath({ routes: targets.map(target => route('page', target)) })
+test('under Cache Components the not-found rewrite goes to /_not-found only when a route serves /_ns/not-found: a dynamic route of two or more segments at the root (#480)', () => {
+  const at = (...targets) => notFoundRewritePath({ cacheComponents: true, routes: targets.map(target => route('page', target)) })
   for (const target of ['(public)/[...slug]/page.tsx', '[[...slug]]/page.tsx', '(public)/[a]/[b]/page.tsx', '[a]/not-found/page.tsx', '(public)/[a]/[...rest]/page.tsx', '%5Fns/not-found/page.tsx', '(marketing)/@modal/[...x]/page.tsx']) {
     assert.equal(at(target), '/_not-found', target)
   }
-  assert.equal(notFoundRewritePath({ routes: [route('route', '[...path]/route.ts')] }), '/_not-found')
+  assert.equal(notFoundRewritePath({ cacheComponents: true, routes: [route('route', '[...path]/route.ts')] }), '/_not-found')
   for (const target of ['(public)/[slug]/page.tsx', '(public)/blog/[...slug]/page.tsx', '[a]/[b]/[c]/page.tsx', '[a]/other/page.tsx', '_ns/not-found/page.tsx', 'page.tsx', 'docs/[section]/[page]/page.tsx']) {
     assert.equal(at(target), '/_ns/not-found', target)
   }
-  assert.equal(notFoundRewritePath({ routes: [route('layout', '[...slug]/layout.tsx')] }), '/_ns/not-found')
+  assert.equal(notFoundRewritePath({ cacheComponents: true, routes: [route('layout', '[...slug]/layout.tsx')] }), '/_ns/not-found')
 })
 
-test("prepare writes /_not-found for a project's own root catch-all (#480)", async () => {
+test('a legacy ISR route answers /_ns/not-found with its own 404, so it keeps that destination; per-route modes count only cc routes (#480)', () => {
+  const catchAll = { kind: 'page', target: '(public)/[...slug]/page.tsx' }
+  assert.equal(notFoundRewritePath({ cacheComponents: false, routes: [catchAll] }), '/_ns/not-found')
+  assert.equal(notFoundRewritePath({ routes: [catchAll] }), '/_ns/not-found')
+  assert.equal(notFoundRewritePath({ cacheComponents: true, routes: [{ ...catchAll, mode: 'isr' }] }), '/_ns/not-found')
+  assert.equal(notFoundRewritePath({ routes: [{ ...catchAll, mode: 'cc' }] }), '/_not-found')
+})
+
+test("prepare writes /_not-found for a project's own root catch-all under Cache Components, and /_ns/not-found for a legacy host (#480)", async () => {
   const root = mkdtempSync(join(tmpdir(), 'nextspark-root-files-host-'))
   try {
     write(root, 'source/templates/(public)/[...path]/page.tsx', PAGE('Any'))
     mkdirSync(join(root, 'host'))
-    const run = await prepareHost(hostConfig(root))
-    const file = run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts')
-    assert.match(file.content, /\nexport const NOT_FOUND_REWRITE_PATH = "\/_not-found"\n/)
+    const destination = async cacheComponents => {
+      const run = await prepareHost(hostConfig(root, { modes: [], cacheComponents }))
+      return /\nexport const NOT_FOUND_REWRITE_PATH = "([^"]+)"\n/.exec(run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts').content)?.[1]
+    }
+    assert.equal(await destination(true), '/_not-found')
+    // Legacy ISR: the catch-all's notFound() answers 404 itself
+    assert.equal(await destination(false), '/_ns/not-found')
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

@@ -146,10 +146,12 @@ function isMissingDocsPage(pathname: string): boolean {
  * route (`[slug]`) does not match it either. A host with a dynamic route of two or more segments at the root has no
  * unmatched path: the root item route of a builder entity with basePath `/` and `allowNestedSlugs: true`
  * (`(public)/[...slug]`, which core generates), or a project's `[...x]`, `[[...x]]` or `[a]/[b]` would answer
- * `/_ns/not-found` (under Cache Components, 200 with `noindex`). For such a host prepare writes `/_not-found`, Next's
- * own not-found route: `next start` answers it 404, but Vercel serves it as a static page with 200, so there a page
- * that does not exist answers 200 with `noindex`. A real 404 on Vercel needs a basePath with a prefix for that entity,
- * or `allowNestedSlugs: false` at the root.
+ * `/_ns/not-found`. With legacy ISR that answer is already a 404 (the route's notFound()), so the destination stays.
+ * Under Cache Components it is 200 with `noindex`, so prepare writes `/_not-found`, Next's own not-found route:
+ * `next start` answers it 404, but Vercel serves it as a static page with 200, so there a page that does not exist
+ * answers 200 with `noindex`. A real 404 on Vercel needs a basePath with a prefix for that entity, or
+ * `allowNestedSlugs: false` at the root. A next.config rewrite that catches the path (`afterFiles` or `fallback` with
+ * `source: '/:path*'`) also takes `/_ns/not-found`, and prepare does not see it, as with ROOT_FILES.
  */
 
 /**

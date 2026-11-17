@@ -1,7 +1,7 @@
 /**
  * The proxy's not-found rewrite goes where `nextspark prepare` says (#480): `NOT_FOUND_REWRITE_PATH` of root-files.ts,
- * which is `/_not-found` in a host with a dynamic route of two or more segments at the root (that route would answer
- * `/_ns/not-found` with a 200).
+ * which is `/_not-found` in a Cache Components host with a dynamic route of two or more segments at the root (that
+ * route would answer `/_ns/not-found` with a 200).
  */
 import { describe, expect, jest, test } from '@jest/globals'
 

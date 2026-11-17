@@ -69,16 +69,21 @@ function servesPath(segments, path) {
 
 /**
  * The destination of the proxy's not-found rewrite (#480): `/_ns/not-found`, which no route matches, so Next answers it
- * 404 with the not-found page, as it answers any unknown URL, in `next start` and on Vercel. A host with a route that
- * matches it (a dynamic route of two or more segments at the root: core's `(public)/[...slug]` for a builder entity at
- * basePath `/` with nested slugs, or a project's `[...x]`, `[[...x]]`, `[a]/[b]`) would answer it from that route, under
- * Cache Components with 200; there it is `/_not-found`, which `next start` answers 404 and Vercel 200.
+ * 404 with the not-found page, as it answers any unknown URL, in `next start` and on Vercel. Under Cache Components a
+ * route that matches it (a dynamic route of two or more segments at the root: core's `(public)/[...slug]` for a builder
+ * entity at basePath `/` with nested slugs, or a project's `[...x]`, `[[...x]]`, `[a]/[b]`) would answer it with 200;
+ * there it is `/_not-found`, which `next start` answers 404 and Vercel 200. Only routes that render with Cache
+ * Components count (`cacheComponents: true`, or a route in `cc` mode): a legacy ISR route's notFound() answers 404 on
+ * its own, so `/_ns/not-found` stays. A next.config rewrite that catches the path (`afterFiles` or `fallback` with
+ * `source: '/:path*'`) is not seen here, as for `ROOT_FILES`.
  *
- * @param {{ routes: Array<{ kind: string, target: string }> }} input - the resolved host plan
+ * @param {{ routes: Array<{ kind: string, target: string, mode?: string }>, cacheComponents?: boolean }} input - the
+ *   resolved host plan, and the host's `cacheComponents` when next.config states it
  */
-export function notFoundRewritePath({ routes }) {
+export function notFoundRewritePath({ routes, cacheComponents }) {
   const path = UNMATCHED_NOT_FOUND_PATH.split('/').filter(Boolean)
-  const matched = routes.some(route => (route.kind === 'page' || route.kind === 'route') && servesPath(servedUrlSegments(route.target), path))
+  const cached = route => (route.mode ? route.mode === 'cc' : cacheComponents === true)
+  const matched = routes.some(route => (route.kind === 'page' || route.kind === 'route') && cached(route) && servesPath(servedUrlSegments(route.target), path))
   return matched ? NEXT_NOT_FOUND_PATH : UNMATCHED_NOT_FOUND_PATH
 }
 
