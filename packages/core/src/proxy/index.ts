@@ -24,7 +24,6 @@
  * @module core/proxy
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '../lib/auth'
 import { APP_CONFIG_MERGED } from '../lib/config'
 import { accessDeniedPath } from '../lib/auth/home-route'
 import {
@@ -235,6 +234,10 @@ function redirectAccessDenied(request: NextRequest, role?: string): NextResponse
  * A suspended account's session is no session (lib/auth/suspension).
  */
 async function getSession(request: NextRequest): Promise<Session | null> {
+  // Loaded on the first session read, not with the proxy: building the Better Auth instance starts its schema check,
+  // a database query no request waits for, and most requests the proxy sees (public pages, static files) read no
+  // session (#480). A failure to load is a failed session read: the caller fails closed as for any other.
+  const { auth } = await import('../lib/auth')
   const session = await auth.api.getSession({
     headers: new Headers({ cookie: request.headers.get('cookie') || '' }),
     query: { disableRefresh: true, disableCookieCache: true },

@@ -10,9 +10,12 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 const mockHasProjectMiddleware = jest.fn()
 const mockExecuteProjectMiddleware = jest.fn()
 
-jest.mock('@nextsparkjs/core/lib/auth', () => ({
-  auth: { api: { getSession: jest.fn() } },
-}))
+// A factory runs when the module is first required: the counter says whether the auth instance was built (#480)
+const mockAuthLoads = jest.fn()
+jest.mock('@nextsparkjs/core/lib/auth', () => {
+  mockAuthLoads()
+  return { auth: { api: { getSession: jest.fn(async () => null) } } }
+})
 
 jest.mock('@nextsparkjs/core/lib/middleware', () => ({
   hasProjectMiddleware: mockHasProjectMiddleware,
@@ -148,5 +151,18 @@ describe('createProxy({ rejectUnknownRootFiles }) (#480)', () => {
     env.NODE_ENV = 'development'
 
     expect((await rejecting(request('/meta.json'))).headers.get('x-middleware-next')).toBe('1')
+  })
+
+  // Last in the file: every request above was a public page or a root file, and none built the auth instance
+  test('public pages and root files do not build the auth instance; the first protected request does (#480)', async () => {
+    await proxy(request('/'))
+    await rejecting(request('/meta.json'))
+    await rejecting(request('/robots.txt'))
+    expect(mockAuthLoads).not.toHaveBeenCalled()
+
+    const response = await proxy(request('/dashboard'))
+
+    expect(mockAuthLoads).toHaveBeenCalledTimes(1)
+    expect(response.headers.get('location')).toContain('/login')
   })
 })

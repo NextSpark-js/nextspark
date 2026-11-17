@@ -9,9 +9,12 @@
 import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 
 const mockGetSession = jest.fn<(...args: unknown[]) => Promise<unknown>>()
-jest.mock('@/core/lib/auth', () => ({
-  auth: { api: { getSession: (...args: unknown[]) => mockGetSession(...args) } },
-}))
+// A factory runs when the module is first required: the counter says whether the auth instance was built (#480)
+const mockAuthLoads = jest.fn()
+jest.mock('@/core/lib/auth', () => {
+  mockAuthLoads()
+  return { auth: { api: { getSession: (...args: unknown[]) => mockGetSession(...args) } } }
+})
 
 const mockHeaders = jest.fn<() => unknown>()
 const mockCookies = jest.fn<() => unknown>()
@@ -49,6 +52,7 @@ beforeEach(() => {
   mockHeaders.mockReset().mockReturnValue(headersWith())
   mockCookies.mockReset().mockReturnValue(cookiesWith())
   mockQueryOne.mockReset()
+  mockAuthLoads.mockClear()
 })
 
 describe('getUserLocale', () => {
@@ -59,6 +63,14 @@ describe('getUserLocale', () => {
     await expect(getUserLocale()).resolves.toBe('es')
     expect(mockGetSession).not.toHaveBeenCalled()
     expect(mockQueryOne).not.toHaveBeenCalled()
+  })
+
+  test('an anonymous visitor\'s page does not build the auth instance, whose startup schema check queries the database (#480)', async () => {
+    mockHeaders.mockReturnValue(headersWith({ 'accept-language': 'es', cookie: 'theme=dark' }))
+    const { getUserLocale } = await load(MULTI)
+
+    await expect(getUserLocale()).resolves.toBe('es')
+    expect(mockAuthLoads).not.toHaveBeenCalled()
   })
 
   test('the locale cookie wins, and nothing else is read', async () => {
@@ -80,6 +92,7 @@ describe('getUserLocale', () => {
 
     await expect(getUserLocale()).resolves.toBe('es')
     expect(mockGetSession).toHaveBeenCalledTimes(1)
+    expect(mockAuthLoads).toHaveBeenCalledTimes(1)
     expect(mockGetSession).toHaveBeenCalledWith(
       expect.objectContaining({ query: expect.objectContaining({ disableRefresh: true }) })
     )

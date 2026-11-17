@@ -2,7 +2,6 @@ import { cache } from 'react'
 import { cookies, headers } from 'next/headers'
 import { I18N_CONFIG, type SupportedLocale } from './config'
 import { isLocaleFixedFor, isSourceEnabled as isSourceEnabledFor, type LocaleDetectionSource } from './config/locale-detection'
-import { auth } from './auth'
 import { hasSessionCookie } from './auth/session-hint'
 
 function isSupportedLocale(value: unknown): value is SupportedLocale {
@@ -88,6 +87,11 @@ export const getUserLocale = cache(async (): Promise<SupportedLocale> => {
       // would extend `expiresAt` in the DB but the re-issued cookie would be
       // dropped, consuming the renewal window. Real renewal happens from a Route
       // Handler: see `lib/auth/session-refresh.ts` / `useSessionCookieRefresh`.
+      // Loaded here, not at the top: importing ./auth builds the Better Auth instance, whose startup schema check
+      // queries the database without any request waiting for it. Every page reaches this module (the root layout,
+      // the i18n request config), so a page an anonymous visitor opens would start that query and could answer
+      // before it ends, leaving it to a serverless instance frozen after the response (#480).
+      const { auth } = await import('./auth')
       const session = await auth.api.getSession({
         headers: requestHeaders,
         query: { disableRefresh: true },
