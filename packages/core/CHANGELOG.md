@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **A project created by `create-nextspark-app` asks for `next` as `~16.4.5`, not as an exact `16.4.x`.** The installer adds `next@16.4.5` and pnpm can save that exact, so the project never took later 16.4.x patches on `pnpm update`; the wizard now writes the supported range over an exact `16.4.5` or later, and the install that follows it updates the lockfile to match. `eslint-config-next` stays `~16.4.5`. (#485)
+- **A project created by `create-nextspark-app` asks for `next` as `~16.4.5`, not as an exact `16.4.x`.** The installer adds `next@16.4.5` and pnpm can save that exact, so the project never took later 16.4.x patches on `pnpm update`; the wizard now puts a tilde on an exact `next` that is inside the supported range (`16.4.5` becomes `~16.4.5`, `16.4.9` becomes `~16.4.9`), and the install that follows it updates the lockfile to match. `eslint-config-next` stays `~16.4.5`. (#485)
 - **The `.env.example` (and the `.env` copied from it) that `create-nextspark-app --yes` writes documents `DATABASE_SERVICE_URL` and `MIGRATE_DATABASE_URL`.** The wizard's generator only wrote `DATABASE_URL`, so the note that `DATABASE_SERVICE_URL` is required once `DATABASE_URL` is `nextspark_app` did not reach the default path. A test compares the generated notes with `templates/env.template`. (#484)
 - **The upgrade notes of 0.1.0-beta.204 put the `next` and `eslint-config-next` step first.** It was last, but the plugin copies they ask to refresh need `next ~16.4.5` as a peer and `add:plugin` stops with an older `next`. (#483)
 

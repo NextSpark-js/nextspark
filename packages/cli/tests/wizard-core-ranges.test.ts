@@ -64,13 +64,26 @@ for (const [projectType, expected] of [['web-mobile', '19.3.0'], ['web', '^19.3.
   })
 }
 
-// create-nextspark-app installs next@16.4.5 and pnpm can save it exact; the project takes the supported range (#485).
-for (const [saved, expected] of [['16.4.5', '~16.4.5'], ['16.4.12', '~16.4.5'], ['~16.4.6', '~16.4.6'], ['^16.4.5', '^16.4.5'], ['16.4.2', '16.4.2']]) {
-  test(`next saved as ${saved} is ${expected} in the generated package.json`, async () => {
+// create-nextspark-app installs an exact next and pnpm can save it exact; the project gets a tilde on it, inside the
+// range core supports. Core's range is read from the project's node_modules, so a case can use another one (#485).
+for (const [supported, saved, expected] of [
+  ['~16.4.5', '16.4.5', '~16.4.5'],
+  ['~16.4.5', '16.4.9', '~16.4.9'],
+  ['~16.4.5', '~16.4.6', '~16.4.6'],
+  ['~16.4.5', '^16.4.5', '^16.4.5'],
+  ['~16.4.5', '16.4.2', '16.4.2'],
+  ['~16.4.5', 'workspace:*', 'workspace:*'],
+  ['~16.5.0', '16.5.0', '~16.5.0'],
+  ['~16.5.0', '16.4.9', '16.4.9'],
+]) {
+  test(`core supports next ${supported}: next saved as ${saved} is ${expected} in the generated package.json`, async () => {
     const previous = process.cwd()
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-next-range-'))
     process.chdir(dir)
     try {
+      const fakeCore = path.join(dir, 'node_modules/@nextsparkjs/core')
+      fs.mkdirSync(path.join(fakeCore, 'templates'), { recursive: true })
+      fs.writeFileSync(path.join(fakeCore, 'package.json'), JSON.stringify({ peerDependencies: { next: supported } }))
       fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'web', dependencies: { next: saved } }))
       await updatePackageJson({ projectSlug: 'acme', projectType: 'web' } as WizardConfig, {})
       const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
