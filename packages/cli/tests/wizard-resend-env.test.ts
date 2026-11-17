@@ -45,6 +45,30 @@ test('wizard environment files leave the Resend placeholder commented out', asyn
   }
 })
 
+// The `--yes` path writes `.env.example` with generateEnvExample() and copies it
+// to `.env`; both must carry the database notes of templates/env.template (#484).
+test('wizard environment files document DATABASE_SERVICE_URL and MIGRATE_DATABASE_URL like env.template', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-wizard-dburls-'))
+  const previousCwd = process.cwd()
+  try {
+    process.chdir(root)
+    await generateEnvExample(config)
+    await copyEnvExampleToEnv()
+    const template = await readFile(new URL('../templates/env.template', import.meta.url), 'utf8')
+    const notes = template.split(/^DATABASE_URL=.*\n/m)[1].split('\n\n')[0]
+    assert.match(notes, /# DATABASE_SERVICE_URL=/)
+    assert.match(notes, /# MIGRATE_DATABASE_URL=/)
+    for (const file of ['.env.example', '.env']) {
+      const content = await readFile(join(root, file), 'utf8')
+      assert.ok(content.includes(notes), `${file} carries the env.template database notes`)
+      assert.match(content, /REQUIRED once DATABASE_URL is the non-owner `nextspark_app` role/)
+    }
+  } finally {
+    process.chdir(previousCwd)
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 function assertSafeGoogleConfig(content: string) {
   assert.match(content, /# GOOGLE_CLIENT_ID="your-google-client-id"/)
   assert.match(content, /# GOOGLE_CLIENT_SECRET="your-google-client-secret"/)

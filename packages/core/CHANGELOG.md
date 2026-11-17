@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `.env.example` (and the `.env` copied from it) that `create-nextspark-app --yes` writes documents `DATABASE_SERVICE_URL` and `MIGRATE_DATABASE_URL`.** The wizard's generator only wrote `DATABASE_URL`, so the note that `DATABASE_SERVICE_URL` is required once `DATABASE_URL` is `nextspark_app` did not reach the default path. A test compares the generated notes with `templates/env.template`. (#484)
 - **The upgrade notes of 0.1.0-beta.204 put the `next` and `eslint-config-next` step first.** It was last, but the plugin copies they ask to refresh need `next ~16.4.5` as a peer and `add:plugin` stops with an older `next`. (#483)
 
 ## [0.1.0-beta.204] - 2026-11-17

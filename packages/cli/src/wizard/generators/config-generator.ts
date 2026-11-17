@@ -354,6 +354,13 @@ export async function generateEnvExample(config: WizardConfig): Promise<void> {
 # DATABASE
 # =============================================================================
 DATABASE_URL="postgresql://user:password@localhost:5432/database"
+# SERVICE connection (RLS bypass) for system ops (sign-in, API keys, scheduler, webhooks).
+# Optional only while DATABASE_URL is the owner role (it falls back to DATABASE_URL).
+# REQUIRED once DATABASE_URL is the non-owner \`nextspark_app\` role: point it at the owner or a
+# BYPASSRLS role. Without it, sign-in and API keys answer 401.
+# DATABASE_SERVICE_URL=
+# Owner connection used to run migrations/seeds. Optional — falls back to DATABASE_URL.
+# MIGRATE_DATABASE_URL=
 
 # =============================================================================
 # AUTHENTICATION (better-auth)
