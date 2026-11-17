@@ -294,12 +294,12 @@ The project config is loaded with Node's type stripping (Node 22.14 or later), n
 
 ### Startup re-validation
 
-At server start, `logAuthReadinessAtStartup()` evaluates runtime readiness when `NODE_ENV` is `production` and logs one `[auth-readiness]` error with safe diagnostics if no login method can work. It never throws or stops the server; the per-request gates keep refusing unusable methods. New projects receive a `src/instrumentation.ts` that calls it. A project created by the wizard has the file; `nextspark sync:app`, which used to add it to an existing host, was removed in beta.192, so a host without one copies core's `templates/instrumentation.ts` to `src/instrumentation.ts` once (beside `src/app`, where `next build` looks for it). Hosts with their own `src/instrumentation.ts` add this inside the `process.env.NEXT_RUNTIME === 'nodejs'` branch of its `register()`:
+At server start, `logAuthReadinessAtStartup()` evaluates runtime readiness when `NODE_ENV` is `production` and logs one `[auth-readiness]` error with safe diagnostics if no login method can work. It never throws or stops the server; the per-request gates keep refusing unusable methods. In production it also checks for accounts that still have a sample-data password and warns when there are any; that query runs when the server starts, not during `next build`, and the returned promise resolves once it ends, or after 3 seconds if the database is slower than that. `register()` awaits it: Next.js serves nothing until `register()` resolves, so the query ends inside the first request instead of after its response, when a serverless instance can be frozen and the query cut. New projects receive a `src/instrumentation.ts` that calls it. A project created by the wizard has the file; `nextspark sync:app`, which used to add it to an existing host, was removed in beta.192, so a host without one copies core's `templates/instrumentation.ts` to `src/instrumentation.ts` once (beside `src/app`, where `next build` looks for it). Hosts with their own `src/instrumentation.ts` add this inside the `process.env.NEXT_RUNTIME === 'nodejs'` branch of its `register()`:
 
 ```ts
 try {
   const { logAuthReadinessAtStartup } = await import('@nextsparkjs/core/lib/auth/runtime-readiness')
-  logAuthReadinessAtStartup()
+  await logAuthReadinessAtStartup()
 } catch {
   // Fixed text only: what failed to load can carry configuration values
   console.error('[auth-readiness] startup readiness check could not run; per-request gates still apply')

@@ -79,16 +79,39 @@ export function getRuntimeAuthReadiness(options: RuntimeAuthReadinessOptions = {
 }
 
 /**
+ * How long server start waits for the sample-password check. Next.js serves nothing until register() resolves, so the
+ * check ends inside the first invocation instead of after its response, when a serverless instance can be frozen and
+ * the query cut (#480). With a healthy database it takes one connection and one query; the connection stays in the
+ * pool for the request.
+ * ponytail: past this the check goes on unawaited, as before, so a database slower than this to answer can still
+ * see it cut; a per-deploy record of the result would be the next step.
+ */
+export const SAMPLE_ACCOUNTS_CHECK_WAIT_MS = 3_000
+
+/**
  * Startup re-validation for production servers. The build check may have
  * deferred runtime-only providers, and the runtime environment can differ from
  * the build's, so this logs one error with safe diagnostics (codes and
  * messages, never values) when no login method can work. It never throws or
- * stops the server: the per-request gates already fail closed.
+ * stops the server: the per-request gates already fail closed. It resolves
+ * once the sample-password check has ended, or after SAMPLE_ACCOUNTS_CHECK_WAIT_MS:
+ * register() awaits it.
  */
-export function logAuthReadinessAtStartup(options: RuntimeAuthReadinessOptions = {}): void {
+export async function logAuthReadinessAtStartup(options: RuntimeAuthReadinessOptions = {}): Promise<void> {
   // The startup hook every project's instrumentation already calls, so the client address warning rides on it
   warnClientIpSourceAtStartup(options.env ?? process.env)
-  void warnSampleAccountsAtStartup(options.env ?? process.env)
+  const sampleAccountsCheck = warnSampleAccountsAtStartup(options.env ?? process.env)
+  logLoginReadiness(options)
+  let timer: ReturnType<typeof setTimeout> | undefined
+  await Promise.race([
+    sampleAccountsCheck,
+    // unref: the wait never keeps a process alive on its own
+    new Promise<void>(resolve => { timer = setTimeout(resolve, SAMPLE_ACCOUNTS_CHECK_WAIT_MS); timer.unref?.() }),
+  ])
+  clearTimeout(timer)
+}
+
+function logLoginReadiness(options: RuntimeAuthReadinessOptions): void {
   try {
     const env = options.env ?? process.env
     const result = getRuntimeAuthReadiness(options)

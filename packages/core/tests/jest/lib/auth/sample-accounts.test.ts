@@ -19,6 +19,8 @@ describe('warnSampleAccountsAtStartup', () => {
     await warnSampleAccountsAtStartup({ NODE_ENV: 'production' }, jest.fn().mockResolvedValue([{ count: 0 }]))
     const notCalled = jest.fn()
     await warnSampleAccountsAtStartup({ NODE_ENV: 'development' }, notCalled)
+    // next build runs register() with NODE_ENV=production; register() waits for this query, the build must not (#480)
+    await warnSampleAccountsAtStartup({ NODE_ENV: 'production', NEXT_PHASE: 'phase-production-build' }, notCalled)
     expect(notCalled).not.toHaveBeenCalled()
     expect(warn).not.toHaveBeenCalled()
   })

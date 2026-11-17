@@ -33,7 +33,8 @@ export function queryFailureReason(error: unknown): string {
 }
 
 /**
- * In production, logs one warning when accounts with a sample password exist.
+ * In production, logs one warning when accounts with a sample password exist. Not during `next build`, which runs
+ * register() too: the server checks when it starts, and register() waits for this query.
  * Never throws. When the query fails it logs one line with the reason `queryFailureReason` gives
  * (never the error object, which can carry the connection string).
  */
@@ -41,7 +42,7 @@ export async function warnSampleAccountsAtStartup(
   env: Record<string, string | undefined> = process.env,
   queryRows?: QueryRows,
 ): Promise<void> {
-  if (env.NODE_ENV !== 'production' || isDemoMode(env)) return
+  if (env.NODE_ENV !== 'production' || env.NEXT_PHASE === 'phase-production-build' || isDemoMode(env)) return
   try {
     const run = queryRows ?? (await import('../db')).queryRows as QueryRows
     const [row] = await run(
