@@ -387,6 +387,10 @@ export async function updatePackageJson(
       }
     } else if (!packageJson.dependencies[name]) {
       packageJson.dependencies[name] = version
+    } else if (name === 'next' && /^16\.4\.(?:[5-9]|\d{2,})$/.test(packageJson.dependencies[name])) {
+      // create-nextspark-app installs next@16.4.5 and pnpm may save it exact, which would keep the project
+      // off later 16.4.x patches. The install that follows the wizard updates the lockfile to the range (#485).
+      packageJson.dependencies[name] = version
     }
   }
 

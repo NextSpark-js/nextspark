@@ -63,3 +63,22 @@ for (const [projectType, expected] of [['web-mobile', '19.3.0'], ['web', '^19.3.
     }
   })
 }
+
+// create-nextspark-app installs next@16.4.5 and pnpm can save it exact; the project takes the supported range (#485).
+for (const [saved, expected] of [['16.4.5', '~16.4.5'], ['16.4.12', '~16.4.5'], ['~16.4.6', '~16.4.6'], ['^16.4.5', '^16.4.5'], ['16.4.2', '16.4.2']]) {
+  test(`next saved as ${saved} is ${expected} in the generated package.json`, async () => {
+    const previous = process.cwd()
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextspark-next-range-'))
+    process.chdir(dir)
+    try {
+      fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'web', dependencies: { next: saved } }))
+      await updatePackageJson({ projectSlug: 'acme', projectType: 'web' } as WizardConfig, {})
+      const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
+      assert.equal(pkg.dependencies.next, expected)
+      assert.equal(pkg.devDependencies['eslint-config-next'], '~16.4.5')
+    } finally {
+      process.chdir(previous)
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+}
