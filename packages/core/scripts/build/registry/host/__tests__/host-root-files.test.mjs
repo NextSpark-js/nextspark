@@ -13,6 +13,10 @@ import { join } from 'node:path'
 import { notFoundRewritePath, rootFileNames } from '../root-files.mjs'
 import { prepareHost } from '../prepare.mjs'
 import { PAGE, ROUTE, hostConfig, read, write } from './host-helpers.mjs'
+import { validateGeneratedModule } from '../static-imports.mjs'
+import { loadTypeScriptFor } from '../../shared/typescript-compiler.mjs'
+
+const ts = await loadTypeScriptFor(join(import.meta.dirname, '../../../../..'))
 
 const route = (kind, target) => ({ kind, target })
 
@@ -67,7 +71,7 @@ test('prepare writes the list with the registries, from the plan and the host pu
     assert.ok(file, 'root-files.ts is published')
     assert.equal(read(join(root, 'host'), '.nextspark/registries/root-files.ts'), file.content)
     assert.match(file.content, /export const ROOT_FILES = \[\n {2}"favicon\.ico",\n {2}"llms\.txt"\n\] as readonly string\[\]/)
-    assert.match(file.content, /\nexport const NOT_FOUND_REWRITE_PATH = "\/_ns\/not-found"\n/)
+    assert.match(file.content, /\nexport const NOT_FOUND_REWRITE = \{ path: "\/_ns\/not-found" \}\n/)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
@@ -100,11 +104,26 @@ test("prepare writes /_not-found for a project's own root catch-all under Cache 
     mkdirSync(join(root, 'host'))
     const destination = async cacheComponents => {
       const run = await prepareHost(hostConfig(root, { modes: [], cacheComponents }))
-      return /\nexport const NOT_FOUND_REWRITE_PATH = "([^"]+)"\n/.exec(run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts').content)?.[1]
+      return /\nexport const NOT_FOUND_REWRITE = \{ path: "([^"]+)" \}\n/.exec(run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts').content)?.[1]
     }
     assert.equal(await destination(true), '/_not-found')
     // Legacy ISR: the catch-all's notFound() answers 404 itself
     assert.equal(await destination(false), '/_ns/not-found')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('the generated root-files.ts fits the registry grammar the host conformance checks, with and without a root catch-all (#480)', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'nextspark-root-files-host-'))
+  try {
+    write(root, 'host/public/favicon.ico', '')
+    for (const files of [{}, { 'source/templates/(public)/[...path]/page.tsx': PAGE('Any') }]) {
+      for (const [path, content] of Object.entries(files)) write(root, path, content)
+      const run = await prepareHost(hostConfig(root, { modes: [], cacheComponents: true }))
+      const file = run.files.find(entry => entry.path === '.nextspark/registries/root-files.ts')
+      assert.deepEqual(validateGeneratedModule({ ts, source: file.content, file: 'root-files.ts', grammar: 'registry' }), [], file.content)
+    }
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

@@ -11,4 +11,4 @@ export const ROOT_FILES = [
   "sitemap.xml"
 ] as readonly string[]
 
-export const NOT_FOUND_REWRITE_PATH = "/_ns/not-found"
+export const NOT_FOUND_REWRITE = { path: "/_ns/not-found" }

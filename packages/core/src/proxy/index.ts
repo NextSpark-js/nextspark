@@ -36,7 +36,7 @@ import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '../
 import { isDocsPublic, legacyDocsAccessMessage } from '../lib/docs/access'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { FEATURES } from '@nextsparkjs/registries/features'
-import { NOT_FOUND_REWRITE_PATH, ROOT_FILES } from '@nextsparkjs/registries/root-files'
+import { NOT_FOUND_REWRITE, ROOT_FILES } from '@nextsparkjs/registries/root-files'
 import { STATIC_FILE_EXTENSION } from '../lib/entities/public-item-slug'
 
 /**
@@ -139,7 +139,7 @@ function isMissingDocsPage(pathname: string): boolean {
 }
 
 /*
- * NOT_FOUND_REWRITE_PATH (root-files.ts, written by `nextspark prepare`) is where a request is rewritten to get the
+ * NOT_FOUND_REWRITE.path (root-files.ts, written by `nextspark prepare`) is where a request is rewritten to get the
  * app's not-found page with a 404 (#480). It is `/_ns/not-found`, a path no route matches, which `next start` and
  * Vercel answer 404 with the not-found page, the way they answer any unknown URL: the first segment starts with `_`, a
  * private folder in the App Router, so no static route matches it, and the path has two segments, so the root item
@@ -169,7 +169,7 @@ function rewriteToNotFound(
   requestHeaders: Headers,
   themeResponse: NextResponse | null = null
 ): NextResponse {
-  return syncSessionHint(request, NextResponse.rewrite(appUrl(request, NOT_FOUND_REWRITE_PATH), {
+  return syncSessionHint(request, NextResponse.rewrite(appUrl(request, NOT_FOUND_REWRITE.path), {
     headers: themeResponseHeaders(themeResponse),
     request: { headers: requestHeaders },
   }))

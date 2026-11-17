@@ -8,7 +8,7 @@
  * written into public/ during or after the build (a serwist or next-pwa service worker, next-sitemap's postbuild
  * sitemaps), nor the sources of next.config `rewrites`, which run after the proxy: with the option on, those get the
  * 404 too. Written with the registries as `.nextspark/registries/root-files.ts`, with the destination of the proxy's
- * not-found rewrite (`NOT_FOUND_REWRITE_PATH`, see `notFoundRewritePath`).
+ * not-found rewrite (`NOT_FOUND_REWRITE.path`, see `notFoundRewritePath`).
  *
  * @module core/scripts/build/registry/host/root-files
  */
@@ -102,7 +102,7 @@ export function rootFilesRegistry(input) {
 
 export const ROOT_FILES = ${JSON.stringify(rootFileNames(input), null, 2)} as readonly string[]
 
-export const NOT_FOUND_REWRITE_PATH = ${JSON.stringify(notFoundRewritePath(input))}
+export const NOT_FOUND_REWRITE = { path: ${JSON.stringify(notFoundRewritePath(input))} }
 `,
     grammar: null,
   }

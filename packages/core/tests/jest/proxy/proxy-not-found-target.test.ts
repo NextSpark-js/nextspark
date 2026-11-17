@@ -1,5 +1,5 @@
 /**
- * The proxy's not-found rewrite goes where `nextspark prepare` says (#480): `NOT_FOUND_REWRITE_PATH` of root-files.ts,
+ * The proxy's not-found rewrite goes where `nextspark prepare` says (#480): `NOT_FOUND_REWRITE.path` of root-files.ts,
  * which is `/_not-found` in a Cache Components host with a dynamic route of two or more segments at the root (that
  * route would answer `/_ns/not-found` with a 200).
  */
@@ -17,7 +17,7 @@ jest.mock('@nextsparkjs/core/lib/middleware', () => ({
 
 jest.mock('@nextsparkjs/registries/root-files', () => ({
   ROOT_FILES: [],
-  NOT_FOUND_REWRITE_PATH: '/_not-found',
+  NOT_FOUND_REWRITE: { path: '/_not-found' },
 }))
 
 import { NextRequest } from 'next/server'
