@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.204] - 2026-11-17
+
 ### Upgrading from 0.1.0-beta.203
 
 - **Refresh every first-party plugin copy in `plugins/` before `pnpm update-core`.** A project keeps the copy of each `@nextsparkjs/plugin-*` package it was created or `add:plugin`-ed with, and the updater installed in a project on 0.1.0-beta.203 or earlier does not touch it, so `nextspark prepare` can stop on an old copy. For each `plugins/<name>/package.json` that names a `@nextsparkjs/plugin-*` package below the target, run `pnpm exec nextspark add:plugin @nextsparkjs/plugin-<name> -v <target> --force` (use `-v`: in those CLIs `--version` does nothing), bring back any change of yours to the copy, commit, and then run `pnpm update-core --version <target>`. From this release on, `update-core` replaces an unchanged copy itself and lists the others with that command. (#473)

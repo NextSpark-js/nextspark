@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/plugin-walkme",
-  "version": "0.1.0-beta.203",
+  "version": "0.1.0-beta.204",
   "description": "Guided tours and onboarding for NextSpark applications",
   "license": "MIT",
   "homepage": "https://www.nextspark.dev",
