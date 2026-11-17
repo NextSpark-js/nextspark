@@ -278,7 +278,7 @@ The comparison is between the lowest version your declared range allows and the 
 `pnpm update-core` runs the updater installed in your project. An update that starts on `0.1.0-beta.198` or earlier therefore runs that release's updater, which sets the `@nextsparkjs` pins and installs but neither raises nor lists the third-party versions the new core needs, and its `nextspark prepare` stops (`NS_HOST_UNSUPPORTED_NEXT_VERSION` for `next`). Raise them yourself first, then update:
 
 1. Read what the target needs: `pnpm view @nextsparkjs/core@<target> dependencies peerDependencies`. It declares many dependencies; the ones that stop a build or a start are the ones in the command below.
-2. For `0.1.0-beta.199`, run `pnpm add next@~16.4.2 better-auth@~1.7.7 @better-fetch/fetch@1.3.2 zod@^4.5.4 @vercel/blob@^2.8.2` and `pnpm add -D eslint-config-next@~16.4.2` (the same command as the `0.1.0-beta.199` release notes, "Upgrading from 0.1.0-beta.198"), then commit: `update-core` starts only from a clean git tree.
+2. For `0.1.0-beta.199`, run `pnpm add next@~16.4.2 better-auth@~1.7.7 @better-fetch/fetch@1.3.2 zod@^4.5.4 @vercel/blob@^2.8.2` and `pnpm add -D eslint-config-next@~16.4.2` (the same command as the `0.1.0-beta.199` release notes, "Upgrading from 0.1.0-beta.198"), For `0.1.0-beta.204` or later, use `next@~16.4.5` and `eslint-config-next@~16.4.5` in those two commands instead (an earlier 16.4 patch makes `nextspark prepare` stop with `NS_HOST_UNSUPPORTED_NEXT_VERSION`). Then commit: `update-core` starts only from a clean git tree.
 3. `pnpm update-core --version <target>`.
 
 From the target onward, later updates raise these themselves, and no manual step is needed.
