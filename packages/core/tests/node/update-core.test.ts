@@ -1912,6 +1912,51 @@ test('src/app generated from an older core, or an older plugin copy, with the pa
   assert.ok(refreshed.calls.includes('install') && refreshed.calls.includes('nextspark prepare'), refreshed.calls.join('\n'))
 })
 
+// The summary's "from" is where this run started, not the previous update the record (core.version.json) remembers (#487)
+test('a run that only finishes work on packages already on the target does not report an upgrade from the record\'s previous version (#487)', (t) => {
+  const pins = Object.fromEntries(PACKAGES.map((name) => [name, TO]))
+  const root = createProject(t, {
+    pins,
+    installed: TO,
+    files: {
+      '.nextspark/generation.json': JSON.stringify({ versions: { core: FROM } }),
+      'core.version.json': `${JSON.stringify({ version: TO, previousVersion: FROM }, null, 2)}\n`,
+    },
+  })
+  fs.rmSync(path.join(root, 'node_modules', '.fake-last-install'))
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /but src\/app\/ was generated from 0\.1\.0-beta\.188: finishing the update/)
+  assert.doesNotMatch(result.stdout, /0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
+  assert.match(result.stdout, /@nextsparkjs\/core 0\.1\.0-beta\.189: already installed, no version to update/)
+  // the record is left as it was
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8')), { version: TO, previousVersion: FROM })
+})
+
+// The run that installed died before it wrote the record: the next one records FROM -> TO and says so, without also
+// saying that nothing was updated (#487)
+test('a run that records an upgrade an earlier run left unrecorded does not say that no version was updated (#487)', (t) => {
+  const pins = Object.fromEntries(PACKAGES.map((name) => [name, TO]))
+  const root = createProject(t, {
+    pins,
+    installed: TO,
+    files: {
+      '.nextspark/generation.json': JSON.stringify({ versions: { core: FROM } }),
+      'core.version.json': `${JSON.stringify({ version: FROM, previousVersion: '0.1.0-beta.187' }, null, 2)}\n`,
+    },
+  })
+  fs.rmSync(path.join(root, 'node_modules', '.fake-last-install'))
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /core\.version\.json: 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
+  assert.match(result.stdout, /@nextsparkjs\/core 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189: this run finished what an earlier run left of the upgrade/)
+  assert.doesNotMatch(result.stdout, /no version to update/)
+})
+
 // The rollback leaves ignored files: a .nextspark/ generated from the target by a run that was rolled back stays (#473)
 test('a generation record that already names the target does not hide an update whose prepare failed: the rerun finishes it (#473)', (t) => {
   const root = createProject(t, { files: { '.gitignore': 'node_modules\n.next\n.nextspark\n' } })

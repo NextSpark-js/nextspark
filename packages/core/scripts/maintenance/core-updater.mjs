@@ -1504,7 +1504,17 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     const newMigrations = coreMigrations(cwd).filter((file) => !migrationsBefore.has(file))
 
     banner(out, 'Update Complete')
-    out(`\n  ${CORE_PACKAGE} ${previous ?? installed} -> ${target}`)
+    // The "from" is the version this run started from. A run that finishes work on packages already on the target (a
+    // src/app/ generated from an older core, an older plugin copy) upgraded nothing: the previous update of the record
+    // (core.version.json) is not this run's, and reading it as the "from" reported an upgrade that was not made (#487).
+    // If the record still named an older version (the run that installed died before it wrote one), this run records
+    // that upgrade, and says so instead of contradicting the line above.
+    const recordedNow = !(finishing && recorded?.version === target)
+    out(startedFrom !== target
+      ? `\n  ${CORE_PACKAGE} ${startedFrom} -> ${target}`
+      : recordedNow && previous
+        ? `\n  ${CORE_PACKAGE} ${previous} -> ${target}: this run finished what an earlier run left of the upgrade`
+        : `\n  ${CORE_PACKAGE} ${target}: already installed, no version to update (this run finished what was left)`)
     if (branch) out(`  Branch: ${branch}`)
     if (newMigrations.length > 0) out(`  New core migrations: ${newMigrations.length}`)
     for (const { dir, migrations } of refreshes.filter(({ migrations }) => migrations.length > 0)) out(`  New migrations in ${dir}: ${migrations.length}`)
