@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.205] - 2026-11-18
+
 ### Upgrading from 0.1.0-beta.204
 
 - **Run `pnpm db:migrate` after `update-core`: migration `047_users_role_before_suspension.sql` adds `users."roleBeforeSuspension"`.** The suspend and unsuspend actions of the superadmin users route read and write it, so they fail on a database without it. The migration is idempotent and adds a nullable column; an account suspended before it has no stored role and comes back as `member`, as it did. If your project replaced the `users_rls_role_guard` trigger of migration 037 with its own, add `"roleBeforeSuspension"` to its `UPDATE OF` list and its role check.
