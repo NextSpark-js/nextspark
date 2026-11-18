@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
-import { suspendUser, unsuspendUser } from '@nextsparkjs/core/lib/auth/suspension';
-import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
+import { suspendUser, unsuspendUser, UNSUSPEND_FORBIDDEN } from '@nextsparkjs/core/lib/auth/suspension';
+import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole, effectiveUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import { LAST_SUPERADMIN, guardLastSuperadmin } from '@nextsparkjs/core/lib/auth/last-superadmin';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -14,6 +14,7 @@ interface UserResult {
   lastName: string | null;
   email: string;
   role: string;
+  roleBeforeSuspension: string | null;
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
@@ -86,6 +87,7 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
         "lastName",
         email,
         role,
+        "roleBeforeSuspension",
         "emailVerified",
         "createdAt",
         "updatedAt"
@@ -161,6 +163,7 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
       fullName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
       email: user.email,
       role: user.role,
+      roleBeforeSuspension: user.role === 'suspended' ? user.roleBeforeSuspension : null,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
@@ -225,7 +228,7 @@ interface UserActionBody {
  * Actions:
  * - change-role: Change user's role (requires 'role' field: member, or developer when a developer asks)
  * - suspend: Suspend the user (role 'suspended'), sign out all their sessions and deactivate their API keys
- * - unsuspend: Give a suspended user back the 'member' role (their API keys stay deactivated)
+ * - unsuspend: Give a suspended user back the role they had (member when none is stored); only a developer brings back a developer or superadmin. Their API keys stay deactivated
  * - verify-email: Manually verify user's email
  *
  * Nobody can act on their own account. Only a developer acts on a developer or a superadmin.
@@ -270,11 +273,11 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
 
     // Check if target user exists and get their current role
     const checkUserQuery = `
-      SELECT id, role FROM "users" WHERE id = $1
+      SELECT id, role, "roleBeforeSuspension" FROM "users" WHERE id = $1
     `;
     // On the service connection, as GET: the role check above authorizes, and every statement here is scoped to the
     // subject user.
-    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string }[];
+    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string; roleBeforeSuspension: string | null }[];
 
     if (!userCheck || userCheck.length === 0) {
       return createApiError('User not found', 404, undefined, 'NOT_FOUND');
@@ -283,7 +286,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
     const targetUser = userCheck[0];
 
     // The developer role ranks above superadmin: only a developer acts on a developer or a superadmin
-    if (!canActOnUser(session.user.role, targetUser.role)) {
+    if (!canActOnUser(session.user.role, effectiveUserRole(targetUser.role, targetUser.roleBeforeSuspension))) {
       return createApiError('Forbidden - Only a developer can modify a developer or superadmin account', 403, undefined, 'FORBIDDEN');
     }
 
@@ -333,13 +336,18 @@ export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: 
         if (targetUser.role !== 'suspended') {
           return createApiError('User is not suspended', 400, undefined, 'VALIDATION_ERROR');
         }
-        if (!(await unsuspendUser(userId, session.user.id))) {
+        const unsuspended = await unsuspendUser(userId, session.user.id, session.user.role);
+        if (unsuspended === UNSUSPEND_FORBIDDEN) {
+          return createApiError('Forbidden - Only a developer can unsuspend a user who comes back as a developer or superadmin', 403, undefined, 'FORBIDDEN');
+        }
+        if (!unsuspended) {
           return createApiError('Failed to update user', 500, undefined, 'INTERNAL_ERROR');
         }
         return NextResponse.json({
           success: true,
           action,
           userId,
+          role: unsuspended.role,
           message: `User ${action} successful`,
           metadata: { performedBy: session.user.id, performedAt: new Date().toISOString(), source: 'superadmin-api' }
         });
@@ -423,10 +431,10 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
 
     // Check if target user exists and get their role
     const checkUserQuery = `
-      SELECT id, role, email FROM "users" WHERE id = $1
+      SELECT id, role, "roleBeforeSuspension", email FROM "users" WHERE id = $1
     `;
     // On the service connection, as GET and PATCH (team_members has no bypass policy at all)
-    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string; email: string }[];
+    const userCheck = await queryWithRLS(checkUserQuery, [userId], session.user.id, { service: true }) as { id: string; role: string; roleBeforeSuspension: string | null; email: string }[];
 
     if (!userCheck || userCheck.length === 0) {
       return createApiError('User not found', 404, undefined, 'NOT_FOUND');
@@ -435,7 +443,7 @@ export const DELETE = withRateLimitTier(async (request: NextRequest, { params }:
     const targetUser = userCheck[0];
 
     // Only a developer deletes a developer or a superadmin
-    if (!canActOnUser(session.user.role, targetUser.role)) {
+    if (!canActOnUser(session.user.role, effectiveUserRole(targetUser.role, targetUser.roleBeforeSuspension))) {
       return createApiError('Forbidden - Only a developer can delete a developer or superadmin account', 403, undefined, 'FORBIDDEN');
     }
 

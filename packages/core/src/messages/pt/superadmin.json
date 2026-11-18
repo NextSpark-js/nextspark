@@ -127,7 +127,7 @@
       "done": "Concluído",
       "failed": "A ação falhou",
       "unsuspendTitle": "Reativar usuário",
-      "unsuspendDescription": "Tem certeza de que deseja reativar {name}? A pessoa voltará a acessar o aplicativo como membro.",
+      "unsuspendDescription": "Tem certeza de que deseja reativar {name}? A pessoa voltará a acessar o aplicativo com o papel {role}.",
       "verifyEmailTitle": "Verificar e-mail",
       "verifyEmailDescription": "Tem certeza de que deseja verificar manualmente o e-mail de {name}?",
       "delete": "Excluir"

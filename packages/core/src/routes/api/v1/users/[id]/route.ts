@@ -15,7 +15,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { canAccessUser, hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
-import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
+import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole, effectiveUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles';
 import * as z from 'zod';
 
 import { updateProfileSchema } from '@nextsparkjs/core/lib/users/schema';
@@ -143,8 +143,8 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
 
     // SECURITY: the rules of PATCH /api/superadmin/users/:id. Nobody changes their own role, only a developer
     // changes a developer or a superadmin or grants the developer role, and a suspended user comes back only through unsuspend.
-    const target = await queryOneWithRLS<{ id: string; role: string }>(
-      'SELECT id, role FROM "users" WHERE id = $1 OR email = $1',
+    const target = await queryOneWithRLS<{ id: string; role: string; roleBeforeSuspension: string | null }>(
+      'SELECT id, role, "roleBeforeSuspension" FROM "users" WHERE id = $1 OR email = $1',
       [id],
       authResult.user!.id
     );
@@ -152,7 +152,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
       return addCorsHeaders(response, req);
     }
-    if (target.id !== authResult.user!.id && !canActOnUser(authResult.user!.role, target.role)) {
+    if (target.id !== authResult.user!.id && !canActOnUser(authResult.user!.role, effectiveUserRole(target.role, target.roleBeforeSuspension))) {
       const response = createApiError('Only a developer can modify a developer or superadmin account', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
     }
@@ -308,7 +308,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
 
     // First, get the user to check if it exists and prevent self-deletion
     const targetUser = await queryOneWithRLS(
-      'SELECT id, email, role FROM "users" WHERE id = $1 OR email = $1',
+      'SELECT id, email, role, "roleBeforeSuspension" FROM "users" WHERE id = $1 OR email = $1',
       [id],
       authResult.user!.id
     );
@@ -324,7 +324,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    if (!canActOnUser(authResult.user!.role, (targetUser as { role: string }).role)) {
+    if (!canActOnUser(authResult.user!.role, effectiveUserRole((targetUser as { role: string }).role, (targetUser as { roleBeforeSuspension: string | null }).roleBeforeSuspension))) {
       const response = createApiError('Only a developer can delete a developer or superadmin account', 403, null, 'FORBIDDEN');
       return addCorsHeaders(response, req);
     }

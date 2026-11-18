@@ -127,7 +127,7 @@
       "done": "Terminé",
       "failed": "L'action a échoué",
       "unsuspendTitle": "Réactiver l’utilisateur",
-      "unsuspendDescription": "Voulez-vous vraiment réactiver {name} ? Il retrouvera l’accès à l’application en tant que membre.",
+      "unsuspendDescription": "Voulez-vous vraiment réactiver {name} ? L’accès à l’application sera rétabli avec le rôle {role}.",
       "verifyEmailTitle": "Vérifier l’e-mail",
       "verifyEmailDescription": "Voulez-vous vraiment vérifier manuellement l’e-mail de {name} ?",
       "delete": "Supprimer"

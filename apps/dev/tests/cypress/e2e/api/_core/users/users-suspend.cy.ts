@@ -4,7 +4,7 @@
  * Suspending a user signs out their sessions, deactivates their API keys and refuses them a new session; unsuspending
  * lets them sign in again (their keys stay deactivated). Nobody suspends a superadmin or themselves.
  *
- * Users (password Test1234): superadmin@nextspark.dev (superadmin), sarah.davis@nextspark.dev (usr-sarah-008, member)
+ * Users (password Test1234): superadmin@nextspark.dev (superadmin), developer@nextspark.dev (developer), sarah.davis@nextspark.dev (usr-sarah-008, member)
  *
  * Tags: @api, @superadmin, @permissions
  */
@@ -23,8 +23,9 @@ describe('Superadmin - suspend users', { tags: ['@api', '@superadmin', '@permiss
 
   after(() => {
     cy.clearCookies()
-    signIn(SUPERADMIN)
+    signIn('developer@nextspark.dev')
     action(TARGET.id, { action: 'unsuspend' })
+    action(TARGET.id, { action: 'change-role', role: 'member' })
   })
 
   it('SUSPEND_001: a suspended user loses their session and cannot sign in again; unsuspending lets them back', () => {
@@ -60,5 +61,30 @@ describe('Superadmin - suspend users', { tags: ['@api', '@superadmin', '@permiss
       action(selfId, { action: 'suspend' }).its('status').should('eq', 400)
     })
     action(TARGET.id, { action: 'change-role', role: 'admin' }).its('status').should('eq', 400)
+  })
+
+  // The sample data has one superadmin (the last one cannot be suspended) and one developer, so the elevated round trip
+  // uses a member made a developer for the test: a suspended developer comes back as a developer (#486).
+  it('SUSPEND_003: a suspended developer comes back as a developer, and only a developer brings them back', () => {
+    const DEVELOPER = 'developer@nextspark.dev'
+    cy.clearCookies()
+    signIn(DEVELOPER).its('status').should('eq', 200)
+    action(TARGET.id, { action: 'change-role', role: 'developer' }).its('status').should('eq', 200)
+    action(TARGET.id, { action: 'suspend' }).its('status').should('eq', 200)
+
+    // a superadmin cannot bring back a developer
+    cy.clearCookies()
+    signIn(SUPERADMIN).its('status').should('eq', 200)
+    action(TARGET.id, { action: 'unsuspend' }).its('status').should('eq', 403)
+
+    // a developer does, and the role is the one before the suspension, not member
+    cy.clearCookies()
+    signIn(DEVELOPER).its('status').should('eq', 200)
+    action(TARGET.id, { action: 'unsuspend' }).then(response => {
+      expect(response.status).to.eq(200)
+      expect(response.body.role).to.eq('developer')
+    })
+    cy.request(`${BASE_URL}/api/superadmin/users/${TARGET.id}`).its('body.user.role').should('eq', 'developer')
+    action(TARGET.id, { action: 'change-role', role: 'member' }).its('status').should('eq', 200)
   })
 })

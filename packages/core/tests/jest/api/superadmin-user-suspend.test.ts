@@ -1,7 +1,7 @@
 /**
  * PATCH /api/superadmin/users/:id: `suspend` sets the role 'suspended' (which check_users_role accepts since migration
- * 031), deletes the user's sessions and deactivates their API keys in one statement; `unsuspend` gives back 'member' and
- * leaves the keys deactivated. Nobody acts on their own account or on a superadmin, so the last superadmin is never
+ * 031), deletes the user's sessions and deactivates their API keys in one statement; `unsuspend` gives back the role the user
+ * had before (member when none is stored; only a developer brings back a developer or a superadmin) and leaves the keys deactivated. Nobody acts on their own account or on a superadmin, so the last superadmin is never
  * suspended. `change-role` offers only roles the schema accepts.
  */
 import { NextRequest } from 'next/server'
@@ -20,7 +20,9 @@ jest.mock('@nextsparkjs/core/lib/api/auth', () => ({ invalidateApiKeyCache: (has
 
 import { GET, PATCH, DELETE } from '../../../src/routes/api/superadmin/users/[userId]/route'
 
-const USERS: Record<string, string> = { 'sa-1': 'superadmin', 'sa-2': 'superadmin', 'dev-1': 'developer', 'dev-2': 'developer', 'mem-1': 'member', 'sus-1': 'suspended' }
+const USERS: Record<string, string> = { 'sa-1': 'superadmin', 'sa-2': 'superadmin', 'dev-1': 'developer', 'dev-2': 'developer', 'mem-1': 'member', 'sus-1': 'suspended', 'sus-sa': 'suspended', 'sus-dev': 'suspended' }
+// users."roleBeforeSuspension" (migration 047); a user suspended before it has none
+const BEFORE: Record<string, string | null> = { 'sus-1': null, 'sus-sa': 'superadmin', 'sus-dev': 'developer' }
 
 function as(id: string) {
   session.mockResolvedValue({ session: { id: 's' }, user: { id, role: USERS[id] } })
@@ -33,10 +35,11 @@ beforeEach(() => {
   jest.spyOn(console, 'error').mockImplementation(() => {})
   queryWithRLS.mockImplementation(async (sql: string, params: string[]) => {
     if (sql.includes('FOR UPDATE')) return Object.keys(USERS).filter((id) => USERS[id] === 'superadmin').map((id) => ({ id }))
-    if (sql.includes('SELECT id, role, email FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]], email: `${params[0]}@x` }] : []
-    if (sql.includes('SELECT id, role FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]] }] : []
+    if (sql.includes('SELECT id, role, "roleBeforeSuspension", email FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]], roleBeforeSuspension: BEFORE[params[0]] ?? null, email: `${params[0]}@x` }] : []
+    if (sql.includes('SELECT id, role, "roleBeforeSuspension" FROM "users"')) return USERS[params[0]] ? [{ id: params[0], role: USERS[params[0]], roleBeforeSuspension: BEFORE[params[0]] ?? null }] : []
     if (sql.includes('WITH suspended AS')) return [{ suspended: 1, sessions: 2, keyHashes: ['h1', 'h2'] }]
-    if (sql.includes(`AND role = 'suspended' RETURNING id`)) return USERS[params[0]] === 'suspended' ? [{ id: params[0] }] : []
+    if (sql.includes('SELECT role, "roleBeforeSuspension"')) return USERS[params[0]] ? [{ role: USERS[params[0]], roleBeforeSuspension: BEFORE[params[0]] ?? null }] : []
+    if (sql.includes(`AND role = 'suspended'`)) return USERS[params[0]] === 'suspended' ? [{ id: params[0], role: params[1] }] : []
     return [{ id: params[params.length - 1] }]
   })
 })
@@ -48,7 +51,8 @@ describe('suspend', () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({ success: true, revoked: { sessions: 2, apiKeys: 2 } })
     const [[sql, params]] = queryWithRLS.mock.calls.filter(([s]: [string]) => s.includes('WITH suspended AS'))
-    expect(sql).toContain(`SET role = 'suspended'`)
+    expect(sql).toContain(`role = 'suspended'`)
+    expect(sql).toContain('"roleBeforeSuspension" = CASE')
     expect(sql).not.toContain('superadmin')
     expect(sql).toContain('DELETE FROM "session"')
     expect(sql).toContain(`UPDATE "api_key" SET status = 'inactive'`)
@@ -74,13 +78,39 @@ describe('suspend', () => {
 })
 
 describe('unsuspend', () => {
-  it('gives a suspended user back the member role, without touching their API keys', async () => {
+  const writes = () => queryWithRLS.mock.calls.filter(([s]: [string]) => /^\s*UPDATE/.test(s))
+
+  it('gives a suspended user with no stored role back the member role, without touching their API keys', async () => {
     as('sa-1')
+    const response = await patch('sus-1', { action: 'unsuspend' })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ success: true, role: 'member' })
+    expect(writes()).toHaveLength(1)
+    const [[sql, params]] = writes()
+    expect(sql).toContain('"roleBeforeSuspension" = NULL')
+    expect(sql).not.toContain('api_key')
+    expect(params).toEqual(['sus-1', 'member'])
+  })
+
+  it('gives back the role the user had: a developer unsuspends a superadmin and a developer', async () => {
+    as('dev-1')
+    for (const [target, role] of [['sus-sa', 'superadmin'], ['sus-dev', 'developer']]) {
+      const response = await patch(target, { action: 'unsuspend' })
+      expect(response.status).toBe(200)
+      expect(await response.json()).toMatchObject({ role })
+      expect(writes().pop()?.[1]).toEqual([target, role])
+    }
+  })
+
+  it('a superadmin does not unsuspend a user who comes back as a superadmin or a developer: 403, nothing written', async () => {
+    as('sa-1')
+    for (const target of ['sus-sa', 'sus-dev']) {
+      const response = await patch(target, { action: 'unsuspend' })
+      expect(response.status).toBe(403)
+      expect((await response.json()).error).toMatch(/Only a developer/)
+    }
+    expect(writes()).toHaveLength(0)
     expect((await patch('sus-1', { action: 'unsuspend' })).status).toBe(200)
-    const writes = queryWithRLS.mock.calls.map(([s]: [string]) => s).filter((s: string) => !s.includes('SELECT id, role'))
-    expect(writes).toHaveLength(1)
-    expect(writes[0]).toContain(`SET role = 'member'`)
-    expect(writes[0]).not.toContain('api_key')
   })
 
   it('refuses a user who is not suspended (a developer is not demoted by it)', async () => {
@@ -209,6 +239,26 @@ describe('developer targets', () => {
     expect((await patch('sa-2', { action: 'suspend' })).status).toBe(200)
     expect((await patch('sa-2', { action: 'verify-email' })).status).toBe(200)
     expect((await del('sa-2')).status).toBe(200)
+  })
+
+  // A suspended user is acted on as the role they come back with, not as 'suspended' (#486)
+  it.each(['sus-sa', 'sus-dev'])('a superadmin does not delete, verify, re-suspend or change %s (suspended); a developer does', async (target) => {
+    as('sa-1')
+    for (const body of [{ action: 'verify-email' }, { action: 'suspend' }, { action: 'change-role', role: 'member' }]) {
+      expect((await patch(target, body)).status).toBe(403)
+    }
+    expect((await del(target)).status).toBe(403)
+    expect(queryWithRLS.mock.calls.some(([s]: [string]) => /^\s*(UPDATE|DELETE)|WITH suspended/.test(s))).toBe(false)
+    as('dev-1')
+    expect((await patch(target, { action: 'verify-email' })).status).toBe(200)
+    expect((await patch(target, { action: 'suspend' })).status).toBe(200)
+    expect((await del(target)).status).toBe(200)
+  })
+
+  it('a superadmin still acts on a suspended member, and on one suspended before migration 047', async () => {
+    as('sa-1')
+    expect((await patch('sus-1', { action: 'verify-email' })).status).toBe(200)
+    expect((await del('sus-1')).status).toBe(200)
   })
 
   it('another developer does', async () => {

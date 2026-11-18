@@ -30,8 +30,10 @@ jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
 }))
 jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({ withRateLimitTier: (handler: unknown) => handler }))
 
-const USERS: Record<string, string> = { sa: 'superadmin', sa2: 'superadmin', dev: 'developer', dev2: 'developer', mem: 'member', mem2: 'member', sus: 'suspended' }
-const queryOneWithRLS = jest.fn(async (_sql: string, [id]: string[]) => (USERS[id] ? { id, email: `${id}@x`, role: USERS[id] } : null))
+const USERS: Record<string, string> = { sa: 'superadmin', sa2: 'superadmin', dev: 'developer', dev2: 'developer', mem: 'member', mem2: 'member', sus: 'suspended', susdev: 'suspended', sussa: 'suspended' }
+// users."roleBeforeSuspension" (migration 047); `sus` was suspended before it
+const BEFORE: Record<string, string> = { susdev: 'developer', sussa: 'superadmin' }
+const queryOneWithRLS = jest.fn(async (_sql: string, [id]: string[]) => (USERS[id] ? { id, email: `${id}@x`, role: USERS[id], roleBeforeSuspension: BEFORE[id] ?? null } : null))
 // the guard's lock lists the superadmins; its write answers the row it wrote
 const queryWithRLS = jest.fn(async (sql: string, params: unknown[] = []) =>
   sql.includes('FOR UPDATE') ? Object.keys(USERS).filter((id) => USERS[id] === 'superadmin').map((id) => ({ id }))
@@ -135,6 +137,23 @@ describe('superadmin targets, as on the superadmin route', () => {
     expect(await del('dev2')).toBe(200)
   })
 
+  // A suspended user is acted on as the role they come back with, not as 'suspended' (#486)
+  it.each(['susdev', 'sussa'])('only a developer changes or deletes %s (suspended)', async (target) => {
+    as('sa')
+    expect(await patch(target, { firstName: 'X' })).toBe(403)
+    expect(await del(target)).toBe(403)
+    expect(mutateWithRLS).not.toHaveBeenCalled()
+    as('dev')
+    expect(await patch(target, { firstName: 'X' })).toBe(200)
+    expect(await del(target)).toBe(200)
+  })
+
+  it('a superadmin still changes and deletes a user suspended before migration 047', async () => {
+    as('sa')
+    expect(await patch('sus', { firstName: 'X' })).toBe(200)
+    expect(await del('sus')).toBe(200)
+  })
+
   it('a member deletes nobody', async () => {
     as('mem')
     expect(await del('mem2')).toBe(403)
@@ -169,6 +188,16 @@ describe('/api/v1/users/:id/meta/:key writes follow the same targets', () => {
     expect(deleteUserMeta).not.toHaveBeenCalled()
     as('dev')
     expect(await put('sa2')).toBe(200)
+  })
+
+  it('a superadmin does not write the metadata of a suspended developer or superadmin; a developer does', async () => {
+    as('sa')
+    expect(await put('susdev')).toBe(403)
+    expect(await put('sussa')).toBe(403)
+    expect(await remove('susdev')).toBe(403)
+    expect(await put('sus')).toBe(200)
+    as('dev')
+    expect(await put('susdev')).toBe(200)
   })
 
   it('a developer writes a developer\'s metadata; everyone writes their own', async () => {

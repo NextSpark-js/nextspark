@@ -20,3 +20,16 @@ export function canGrantUserRole(callerRole: string | null | undefined, role: st
 export function canActOnUser(callerRole: string | null | undefined, targetRole: string): boolean {
   return (targetRole !== 'superadmin' && targetRole !== 'developer') || callerRole === 'developer'
 }
+
+/**
+ * The role an admin acts on: a suspended user is acted on as the role they come back with, not as `suspended` (which
+ * canActOnUser lets anyone touch). Every caller of canActOnUser passes the target's role through this.
+ */
+export function effectiveUserRole(role: string, roleBeforeSuspension: string | null | undefined): string {
+  return role === 'suspended' ? restoredRole(roleBeforeSuspension) : role
+}
+
+/** The role unsuspending gives back: the one stored at suspension, `member` for a user suspended before migration 047. */
+export function restoredRole(roleBeforeSuspension: string | null | undefined): string {
+  return roleBeforeSuspension || 'member'
+}

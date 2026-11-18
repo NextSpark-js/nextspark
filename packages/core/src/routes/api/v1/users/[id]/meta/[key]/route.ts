@@ -31,7 +31,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { canAccessUser } from '@nextsparkjs/core/lib/api/auth/permissions'
-import { canActOnUser } from '@nextsparkjs/core/lib/auth/assignable-roles'
+import { canActOnUser, effectiveUserRole } from '@nextsparkjs/core/lib/auth/assignable-roles'
 import { queryOneWithRLS } from '@nextsparkjs/core/lib/db'
 import type { DualAuthResult } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import * as z from 'zod'
@@ -45,8 +45,8 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 async function targetRefused(authResult: DualAuthResult, id: string): Promise<boolean> {
   const { id: callerId, email, role } = authResult.user!
   if (id === callerId || id === email) return false
-  const target = await queryOneWithRLS<{ role: string }>('SELECT role FROM "users" WHERE id = $1 OR email = $1', [id], callerId)
-  return !!target && !canActOnUser(role, target.role)
+  const target = await queryOneWithRLS<{ role: string; roleBeforeSuspension: string | null }>('SELECT role, "roleBeforeSuspension" FROM "users" WHERE id = $1 OR email = $1', [id], callerId)
+  return !!target && !canActOnUser(role, effectiveUserRole(target.role, target.roleBeforeSuspension))
 }
 
 const metadataValueSchema = z.object({

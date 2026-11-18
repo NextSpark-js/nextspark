@@ -52,7 +52,7 @@ import { useRoleTranslations } from '../../../lib/role-helpers';
 import { useCommonText } from '../../../lib/i18n/common-text';
 import { useSession, type ClientSession } from '../../../lib/auth-client';
 import type { SessionUser } from '../../../lib/auth';
-import { canActOnUser, canGrantUserRole } from '../../../lib/auth/assignable-roles';
+import { canActOnUser, canGrantUserRole, effectiveUserRole } from '../../../lib/auth/assignable-roles';
 import { actionErrorMessage } from './action-error';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatLocaleDate } from '../../../lib/i18n/format';
@@ -68,6 +68,7 @@ interface User {
   lastName?: string;
   email: string;
   role: UserRole;
+  roleBeforeSuspension?: string | null;
   emailVerified?: boolean;
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -108,7 +109,9 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   // nobody acts on their own account
   const canGrantDeveloper = canGrantUserRole(viewerRole, 'developer');
   const restrictedKey = (user: User) => t(user.id === viewerId ? 'actions.ownAccount' : 'actions.restrictedTarget');
-  const canAct = (user: User) => user.id !== viewerId && canActOnUser(viewerRole, user.role);
+  // A suspended user is acted on as the role they come back with (the API checks that one too)
+  const effectiveRole = (user: User) => effectiveUserRole(user.role, user.roleBeforeSuspension);
+  const canAct = (user: User) => user.id !== viewerId && canActOnUser(viewerRole, effectiveRole(user));
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -221,7 +224,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
       case "unsuspend":
         return {
           title: t('confirm.unsuspendTitle'),
-          description: t('confirm.unsuspendDescription', { name }),
+          description: t('confirm.unsuspendDescription', { name, role: getRoleName(effectiveRole(user) as UserRole) }),
         };
       case "verify-email":
         return {

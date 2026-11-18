@@ -108,7 +108,8 @@ role: {
 | **Only a developer grants `developer`** | 403 |
 | Nobody changes their own role | 400 |
 | **Only a developer changes, suspends or deletes a developer or a superadmin** (their profile and metadata included); nobody acts on their own account | 403 |
-| A suspended user comes back only through `unsuspend` | 400 |
+| A suspended user comes back only through `unsuspend`, with the role they had (`users."roleBeforeSuspension"`, migration 047; `member` for an account suspended before it) | 400 |
+| **Only a developer unsuspends a user who comes back as a developer or a superadmin** | 403 |
 | The last account with the `superadmin` role is never demoted, suspended or deleted (`PATCH`/`DELETE /api/superadmin/users/:id` and `/api/v1/users/:id`; the superadmin rows are locked, so two concurrent requests cannot remove the last two) | 409 `LAST_SUPERADMIN` |
 
 A superadmin is created by the owner directly in the database.

@@ -127,7 +127,7 @@
       "done": "Done",
       "failed": "Action failed",
       "unsuspendTitle": "Unsuspend User",
-      "unsuspendDescription": "Are you sure you want to unsuspend {name}? They will regain access to the application as a member.",
+      "unsuspendDescription": "Are you sure you want to unsuspend {name}? They will regain access to the application as {role}.",
       "verifyEmailTitle": "Verify Email",
       "verifyEmailDescription": "Are you sure you want to manually verify the email for {name}?",
       "delete": "Delete"

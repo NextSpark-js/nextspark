@@ -116,6 +116,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         "lastName",
         email,
         role,
+        "roleBeforeSuspension",
         "emailVerified",
         "createdAt",
         "updatedAt"
@@ -140,6 +141,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         "lastName",
         email,
         role,
+        "roleBeforeSuspension",
         "emailVerified",
         "createdAt",
         "updatedAt"
@@ -233,12 +235,13 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const totalPages = Math.ceil(paginationTotal / limit);
 
     // Format user data
-    const formatUser = (user: User) => ({
+    const formatUser = (user: User & { roleBeforeSuspension?: string | null }) => ({
       id: user.id,
       firstName: user.firstName || '',
       lastName: user.lastName || '',
       email: user.email,
       role: user.role,
+      roleBeforeSuspension: user.role === 'suspended' ? user.roleBeforeSuspension ?? null : null,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

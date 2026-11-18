@@ -2,7 +2,7 @@
  * The superadmin users table offers the developer role only to a developer: only a developer grants it.
  */
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 let role = 'superadmin'
 let viewerId = 'viewer'
@@ -15,8 +15,10 @@ jest.mock('@/core/hooks/useToast', () => ({ useToast: () => ({ toast: jest.fn() 
 jest.mock('@/core/lib/role-helpers', () => ({ useRoleTranslations: () => (r: string) => r }))
 jest.mock('@/core/components/ui/dropdown-menu', () => {
   const Pass = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>
-  return Object.fromEntries(['DropdownMenu', 'DropdownMenuContent', 'DropdownMenuItem', 'DropdownMenuLabel', 'DropdownMenuSeparator', 'DropdownMenuTrigger',
-    'DropdownMenuSub', 'DropdownMenuSubTrigger', 'DropdownMenuSubContent', 'DropdownMenuRadioGroup', 'DropdownMenuRadioItem'].map(name => [name, Pass]))
+  const Item = ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => <div onClick={onClick}>{children}</div>
+  const rest = ['DropdownMenu', 'DropdownMenuContent', 'DropdownMenuLabel', 'DropdownMenuSeparator', 'DropdownMenuTrigger',
+    'DropdownMenuSub', 'DropdownMenuSubTrigger', 'DropdownMenuSubContent', 'DropdownMenuRadioGroup', 'DropdownMenuRadioItem']
+  return { DropdownMenuItem: Item, ...Object.fromEntries(rest.map(name => [name, Pass])) }
 })
 
 import { UsersTable } from '@/core/components/users/tables/UsersTable'
@@ -65,6 +67,29 @@ describe('actions on a row follow the API rule (canActOnUser)', () => {
     expect(screen.queryAllByText('Developer')).toHaveLength(0)
     for (const label of ['Unsuspend User', 'Verify Email', 'Delete User']) expect(screen.getAllByText(label)).toHaveLength(1)
     expect(screen.queryAllByText('Suspend User')).toHaveLength(0)
+  })
+
+  // A suspended user is acted on as the role they come back with (#486): the API answers 403 to a superadmin who
+  // unsuspends someone who comes back as a developer or superadmin
+  it.each([
+    ['superadmin', 'developer', false],
+    ['superadmin', 'superadmin', false],
+    ['superadmin', 'member', true],
+    ['superadmin', null, true],
+    ['developer', 'developer', true],
+    ['developer', 'superadmin', true],
+  ] as const)('as a %s, unsuspend of a user who comes back as %s is shown: %s', (r, before, shown) => {
+    role = r
+    render(<UsersTable users={[{ ...user('s', 'suspended'), roleBeforeSuspension: before }] as never} />)
+    expect(screen.queryAllByText('Unsuspend User')).toHaveLength(shown ? 1 : 0)
+    expect(screen.queryAllByText('Only a developer can modify this account')).toHaveLength(shown ? 0 : 1)
+  })
+
+  it('the unsuspend confirmation names the role the user comes back with', () => {
+    role = 'developer'
+    render(<UsersTable users={[{ ...user('s', 'suspended'), roleBeforeSuspension: 'superadmin' }, { ...user('t', 'suspended'), roleBeforeSuspension: null }] as never} />)
+    fireEvent.click(screen.getAllByText('Unsuspend User')[0])
+    expect(screen.getByText(/regain access to the application as superadmin\./)).toBeTruthy()
   })
 
   it('shows no actions on the viewer own row', () => {

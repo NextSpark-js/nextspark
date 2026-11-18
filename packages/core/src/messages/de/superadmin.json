@@ -127,7 +127,7 @@
       "done": "Erledigt",
       "failed": "Aktion fehlgeschlagen",
       "unsuspendTitle": "Benutzer entsperren",
-      "unsuspendDescription": "Möchten Sie {name} wirklich entsperren? Der Benutzer erhält als Mitglied wieder Zugriff auf die Anwendung.",
+      "unsuspendDescription": "Möchten Sie {name} wirklich entsperren? Der Benutzer erhält mit der Rolle {role} wieder Zugriff auf die Anwendung.",
       "verifyEmailTitle": "E-Mail verifizieren",
       "verifyEmailDescription": "Möchten Sie die E-Mail-Adresse von {name} wirklich manuell verifizieren?",
       "delete": "Löschen"
