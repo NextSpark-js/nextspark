@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Run `pnpm db:migrate` after `update-core`: migration `047_users_role_before_suspension.sql` adds `users."roleBeforeSuspension"`.** The suspend and unsuspend actions of the superadmin users route read and write it, so they fail on a database without it. The migration is idempotent and adds a nullable column; an account suspended before it has no stored role and comes back as `member`, as it did. If your project replaced the `users_rls_role_guard` trigger of migration 037 with its own, add `"roleBeforeSuspension"` to its `UPDATE OF` list and its role check.
 
+### Changed
+
+- **The unused `setupEnvironment` generator of the `nextspark` wizard is removed, with the environment prompts (`promptEnvSetup`, `getDefaultEnvSetupAnswers`, `EnvSetupAnswers`) that only it used.** Nothing called it (the generators index only re-exported it, and its only caller was a test), and it built a third `.env` next to the ones a new project gets from `generateEnvExample()` and `copyEnvExampleToEnv()`, so its text could drift from them. The wizard test of the Resend placeholder checks the real path only (#488).
+
 ### Fixed
 
 - **The summary of `update-core` no longer reports an upgrade it did not make.** A run that only finished work on packages already on the target (a `src/app/` generated from an older core, an older plugin copy) printed `<previous> -> <target>`, reading the "from" from the previous update that `core.version.json` remembers, for example `0.1.0-beta.203 -> 0.1.0-beta.204` on a project already on `0.1.0-beta.204`. The "from" is now the version the run started from, and a run that started on the target says that core is already installed and no version was updated. `template.version` in `nextspark.config.ts` is not read for it and stays the version the project was created with, and `core.version.json` is left as it was (#487).

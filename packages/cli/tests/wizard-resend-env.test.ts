@@ -1,11 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { copyEnvExampleToEnv, generateEnvExample } from '../src/wizard/generators/config-generator.js'
-import { setupEnvironment } from '../src/wizard/generators/env-setup.js'
 import type { WizardConfig } from '../src/wizard/types.js'
 import { silenceConsoleOutput } from './quiet-console.js'
 
@@ -34,11 +33,6 @@ test('wizard environment files leave the Resend placeholder commented out', asyn
 
     assertSafeResendConfig(await readFile(join(root, '.env.example'), 'utf8'))
     assertSafeResendConfig(await readFile(join(root, '.env'), 'utf8'))
-
-    const templateEnvRoot = join(root, 'template-env')
-    await mkdir(templateEnvRoot)
-    await setupEnvironment(templateEnvRoot, { setupEnv: true, generateSecrets: false }, config)
-    assertSafeResendConfig(await readFile(join(templateEnvRoot, '.env'), 'utf8'))
   } finally {
     process.chdir(previousCwd)
     await rm(root, { recursive: true, force: true })
