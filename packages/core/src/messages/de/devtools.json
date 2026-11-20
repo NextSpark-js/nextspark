@@ -932,8 +932,7 @@
     "intro": "Nutzen Sie diese Tools, um Ihre Theme-Konfiguration zu erkunden, die Testdokumentation einzusehen, API-Endpunkte zu prüfen und mehr. Jeder Bereich bietet spezialisierte Funktionen, die Sie beim Entwickeln und Debuggen Ihrer Anwendung unterstützen.",
     "systemInfo": "Systeminformationen",
     "systemInfoDescription": "Aktuelle Umgebung und Zugriffsdetails",
-    "accessLevel": "Zugriffsebene",
-    "hierarchy": "Hierarchieebene"
+    "accessLevel": "Zugriffsebene"
   },
   "style": {
     "description": "Komponentenstile und Design-Tokens durchsuchen",

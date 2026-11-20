@@ -932,8 +932,7 @@
     "intro": "Utilisez ces outils pour explorer la configuration de votre thème, consulter la documentation des tests, inspecter les endpoints de l'API et bien plus. Chaque section propose des fonctionnalités spécialisées pour vous aider à développer et déboguer votre application.",
     "systemInfo": "Informations système",
     "systemInfoDescription": "Environnement actuel et détails d'accès",
-    "accessLevel": "Niveau d'accès",
-    "hierarchy": "Niveau hiérarchique"
+    "accessLevel": "Niveau d'accès"
   },
   "style": {
     "description": "Parcourez les styles des composants et les tokens de design",

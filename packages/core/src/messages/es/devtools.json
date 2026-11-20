@@ -932,8 +932,7 @@
     "intro": "Usa estas herramientas para explorar la configuración de tu tema, consultar la documentación de los tests, inspeccionar los endpoints de la API y mucho más. Cada sección ofrece funciones especializadas para ayudarte a construir y depurar tu aplicación.",
     "systemInfo": "Información del sistema",
     "systemInfoDescription": "Entorno actual y detalles de acceso",
-    "accessLevel": "Nivel de acceso",
-    "hierarchy": "Nivel jerárquico"
+    "accessLevel": "Nivel de acceso"
   },
   "style": {
     "description": "Explora los estilos de los componentes y los tokens de diseño",

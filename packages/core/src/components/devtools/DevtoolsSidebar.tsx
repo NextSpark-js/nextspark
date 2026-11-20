@@ -1,26 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Palette,
-  FileText,
-  Settings,
   Shield,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Code,
-  Layers,
-  GitBranch,
-  LayoutGrid,
-  Tag,
-  Clock,
-  Puzzle,
-  Star,
-  Bell,
-  Globe
 } from "lucide-react";
 import { cn } from '../../lib/utils';
 import { FEATURES } from '../../lib/config/build-features';
@@ -29,19 +15,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { getPluginNavItems } from "@nextsparkjs/registries/plugin-registry.client";
 import type { PluginNavItem } from "../../types/plugin";
-import { isDevtoolsNavActive } from './devtools-nav';
-
-interface SidebarItem {
-  titleKey: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  descriptionKey?: string;
-  disabled?: boolean;
-}
-
-const PLUGIN_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  Puzzle, Settings, Star, Code, LayoutGrid, Bell, Globe, Layers, GitBranch, Tag
-};
+import { DevtoolsNav } from './DevtoolsNav';
 
 /**
  * DevTools Sidebar Component
@@ -51,101 +25,10 @@ const PLUGIN_ICON_MAP: Record<string, React.ComponentType<{ className?: string }
  * Includes collapsible functionality and purple/violet branding.
  */
 export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?: PluginNavItem[] } = {}) {
-  const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const t = useTranslations('devtools');
   const tCommon = useTranslations('common');
   const pluginItems = pluginItemsProp ?? getPluginNavItems('devtools');
-
-  const sidebarItems: SidebarItem[] = [
-    {
-      titleKey: "nav.home",
-      href: "/devtools",
-      icon: LayoutDashboard,
-      descriptionKey: "nav.homeDescription"
-    },
-    {
-      titleKey: "nav.styleGallery",
-      href: "/devtools/style",
-      icon: Palette,
-      descriptionKey: "nav.styleGalleryDescription"
-    },
-    {
-      titleKey: "nav.testCases",
-      href: "/devtools/tests",
-      icon: FileText,
-      descriptionKey: "nav.testCasesDescription"
-    },
-    {
-      titleKey: "nav.features",
-      href: "/devtools/features",
-      icon: Layers,
-      descriptionKey: "nav.featuresDescription"
-    },
-    {
-      titleKey: "nav.flows",
-      href: "/devtools/flows",
-      icon: GitBranch,
-      descriptionKey: "nav.flowsDescription"
-    },
-    {
-      titleKey: "nav.blocks",
-      href: "/devtools/blocks",
-      icon: LayoutGrid,
-      descriptionKey: "nav.blocksDescription"
-    },
-    {
-      titleKey: "nav.tags",
-      href: "/devtools/tags",
-      icon: Tag,
-      descriptionKey: "nav.tagsDescription"
-    },
-    {
-      titleKey: "nav.config",
-      href: "/devtools/config",
-      icon: Settings,
-      descriptionKey: "nav.configDescription"
-    },
-    {
-      titleKey: "nav.api",
-      href: "/devtools/api",
-      icon: Layers,
-      descriptionKey: "nav.apiDescription"
-    },
-    {
-      titleKey: "nav.scheduledActions",
-      href: "/devtools/scheduled-actions",
-      icon: Clock,
-      descriptionKey: "nav.scheduledActionsDescription"
-    },
-  ];
-
-  const renderPluginItem = (item: PluginNavItem) => {
-    const IconComponent = PLUGIN_ICON_MAP[item.icon ?? ''] ?? Puzzle;
-    const isActive = isDevtoolsNavActive(pathname, item.href);
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        data-cy={`devtools-plugin-nav-${item.href.split('/').pop()}`}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-          "hover:bg-accent hover:text-accent-foreground",
-          isActive ? "bg-violet-600 text-white dark:bg-violet-700" : "text-foreground",
-          isCollapsed && "justify-center"
-        )}
-        title={isCollapsed ? item.label : item.description}
-      >
-        <IconComponent className="h-5 w-5 flex-shrink-0" />
-        {!isCollapsed && (
-          <div className="flex-1">
-            <div className="text-sm font-medium">{item.label}</div>
-            {item.description && <p className="text-xs opacity-80">{item.description}</p>}
-          </div>
-        )}
-      </Link>
-    );
-  };
 
   return (
     <div
@@ -187,85 +70,7 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
 
       {/* Navigation Items */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-3 space-y-1">
-          {sidebarItems.map((item) => {
-            const IconComponent = item.icon;
-            const isActive = isDevtoolsNavActive(pathname, item.href);
-            const title = t(item.titleKey);
-            const description = item.descriptionKey ? t(item.descriptionKey) : undefined;
-
-            if (item.disabled) {
-              return (
-                <div
-                  key={item.titleKey}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground cursor-not-allowed opacity-60",
-                    isCollapsed && "justify-center"
-                  )}
-                  title={isCollapsed ? `${title} (${tCommon('comingSoon')})` : description}
-                >
-                  <IconComponent className="h-5 w-5 flex-shrink-0" />
-                  {!isCollapsed && (
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{title}</span>
-                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                          {tCommon('soon')}
-                        </span>
-                      </div>
-                      {description && (
-                        <p className="text-xs text-muted-foreground">{description}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={item.titleKey}
-                href={item.href}
-                data-cy={`devtools-nav-${item.titleKey.split('.').pop()?.toLowerCase().replace(/\s+/g, '-')}`}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  isActive
-                    ? "bg-violet-600 text-white dark:bg-violet-700"
-                    : "text-foreground",
-                  isCollapsed && "justify-center"
-                )}
-                title={isCollapsed ? title : description}
-              >
-                <IconComponent className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && (
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{title}</div>
-                    {description && (
-                      <p className="text-xs opacity-80">{description}</p>
-                    )}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-
-          {/* Plugin settings section */}
-          {pluginItems.length > 0 && (
-            <div className="pt-3 space-y-1">
-              {!isCollapsed && (
-                <p
-                  className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                  data-cy="devtools-plugins-section-label"
-                >
-                  {t('nav.plugins')}
-                </p>
-              )}
-              {isCollapsed && <div className="my-1 border-t border-border" />}
-              {pluginItems.map(renderPluginItem)}
-            </div>
-          )}
-        </div>
+        <DevtoolsNav pluginItems={pluginItems} isCollapsed={isCollapsed} />
       </div>
 
       {/* Exit Section */}
