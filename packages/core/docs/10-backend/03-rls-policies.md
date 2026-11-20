@@ -1066,7 +1066,8 @@ tables with RLS the role owns, and warns when RLS is not applied. It also warns 
 applies and `DATABASE_SERVICE_URL` is not set (in the environment, `.env.local` or `.env`):
 sign-in fails with 401 `User not found`. The same query runs
 once when a production server starts (not in development, not during `next build`) and
-logs one `[rls]` warning if the role skips RLS, nothing otherwise. The warning does not
+logs one `[rls]` warning if the role skips RLS or, when RLS applies, if `DATABASE_SERVICE_URL` is
+not set, nothing otherwise. The warning names the variable, never a URL, and does not
 stop or delay the start, and it is silent when the database is unreachable or the role
 cannot read `pg_roles`. By hand:
 
@@ -1080,7 +1081,8 @@ SELECT count(*) FROM pg_class
 ```
 
 RLS applies when `rolsuper` and `rolbypassrls` are false and the count is 0. After the
-cutover, the doctor passes and the start logs nothing. The check only reports; it never
+cutover, the doctor passes and the start logs nothing as long as `DATABASE_SERVICE_URL` is set
+(without it the doctor warns and the start logs the warning above). The check only reports; it never
 stops the server.
 
 **`USER_NOT_FOUND`, empty lists or 42501 after the cutover.** The policies are written `TO authenticated`, so `nextspark_app` has to be a member of `authenticated` that inherits it. Migration 022 does that `GRANT`, but when the migration role has no `CREATEROLE` and `nextspark_app` already exists (a shared cluster, a managed host) it prints a warning and goes on; `pnpm db:migrate` repeats it at the end under "Needs a superuser, by hand". Until the grant is made, `GET /api/v1/users/me` answers 404 `USER_NOT_FOUND`, `GET /api/v1/teams` returns an empty list and writes to `api_audit_log` fail with 42501. `nextspark doctor` reports it as `NS_APP_ROLE_NOT_AUTHENTICATED` with the statement; as a superuser:
