@@ -49,7 +49,8 @@ test('the owner skips RLS, nextspark_app does not; the script and the startup wa
   assert.equal(unreachable.status, 2)
   assert.doesNotMatch(unreachable.output, /secret-pw/)
 
-  // the startup warning: none for the runtime role, one line for the owner
+  // the startup warning: for the runtime role none with DATABASE_SERVICE_URL set and the line about the missing variable
+  // without it (#492), one line for the owner
   const lines: string[] = []
   const warn = console.warn
   console.warn = (...a: unknown[]) => { lines.push(a.join(' ')) }
@@ -57,8 +58,13 @@ test('the owner skips RLS, nextspark_app does not; the script and the startup wa
     const env = { NODE_ENV: 'production', DATABASE_URL: 'x' } as NodeJS.ProcessEnv
     const reset = () => delete (globalThis as Record<symbol, unknown>)[Symbol.for('nextspark.rlsBypassWarned')]
     reset()
-    await logRlsBypassAtStartup(q => app.query(q), env)
+    await logRlsBypassAtStartup(q => app.query(q), { ...env, DATABASE_SERVICE_URL: 'x' })
     assert.deepEqual(lines, [])
+    reset()
+    await logRlsBypassAtStartup(q => app.query(q), env)
+    assert.equal(lines.length, 1)
+    assert.match(lines[0], /DATABASE_SERVICE_URL is not set/)
+    lines.length = 0
     reset()
     await logRlsBypassAtStartup(q => owner.query(q), env)
     assert.equal(lines.length, 1)
