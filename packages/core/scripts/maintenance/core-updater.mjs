@@ -1425,11 +1425,18 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
 
     // The new core is only known now, and nextspark prepare refuses a host below its floors
     const found = flags.dependencyFloors ? findDependenciesBelowCore(out, cwd, manifest) : null
-    const toRaise = found ? [...floorsToRaise(found.below, found.coreManifest), ...exactNextToTilde(manifest, found.coreManifest, found.semver)] : []
+    const floors = found ? floorsToRaise(found.below, found.coreManifest) : []
+    const tildes = found ? exactNextToTilde(manifest, found.coreManifest, found.semver) : []
+    const toRaise = [...floors, ...tildes]
     // The other packages of the workspace are written before the install too, so the lockfile ends with one copy
-    const workspaceRaised = found ? raiseWorkspaceFloors(cwd, workspaceFloorsFor(cwd, root, git.top, manifest, found)) : []
+    const workspacePackages = found ? workspaceFloorsFor(cwd, root, git.top, manifest, found).filter((entry) => entry.writable) : []
+    const workspaceRaised = found ? raiseWorkspaceFloors(cwd, workspacePackages) : []
     if (toRaise.length > 0 || workspaceRaised.length > 0) {
-      out(`   Raising the dependencies below what ${CORE_PACKAGE} ${found.coreManifest.version} needs:`)
+      // An exact next that gets a tilde is not below anything: the header says which of the two was done (#490)
+      const raisesBelow = floors.length > 0 || workspacePackages.some((entry) => entry.below.length > 0)
+      const tildesNext = tildes.length > 0 || workspacePackages.some((entry) => entry.tilde.length > 0)
+      const header = raisesBelow ? `Raising the dependencies below what ${CORE_PACKAGE} ${found.coreManifest.version} needs` : ''
+      out(`   ${raisesBelow && tildesNext ? `${header}, and putting a tilde on an exact next` : raisesBelow ? header : 'Putting a tilde on an exact next'}:`)
       if (toRaise.length > 0) {
         const raised = toRaise.map(({ name, field, declared, required }) => {
           manifest[field][name] = required

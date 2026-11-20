@@ -2052,7 +2052,9 @@ test('puts a tilde on an exact next of the project and of a workspace package, i
 
   assert.equal(result.status, 0, result.output)
   assert.equal(JSON.parse(read(root, 'package.json')).dependencies.next, '~16.4.5')
-  assert.match(result.stdout, /next 16\.4\.5 -> ~16\.4\.5\n/)
+  assert.match(result.stdout, /Putting a tilde on an exact next:\n {5}next 16\.4\.5 -> ~16\.4\.5\n/)
+  // an exact next is not below anything: the header does not say so
+  assert.doesNotMatch(result.stdout, /Raising the dependencies below/)
   assert.equal(JSON.parse(read(root, 'plugins/foo/package.json')).dependencies.next, '~16.4.7')
   assert.match(result.stdout, /plugins\/foo\/package\.json:\n {5}next 16\.4\.7 -> ~16\.4\.7 \(dependencies\)/)
   // not the project's: left as it is
@@ -2087,4 +2089,13 @@ test('an exact next in a package of the workspace is never reported as below wha
   assert.equal(result.status, 0, result.output)
   assert.equal(JSON.parse(read(root, 'plugins/foo/package.json')).dependencies.next, '16.4.7')
   assert.doesNotMatch(result.stdout, /Not moved|core needs ~16\.4\.7/)
+})
+
+test('the header names both when a dependency below core is raised and an exact next gets a tilde', (t) => {
+  const root = createProject(t, { pins: { ...BEHIND, next: '16.4.5' } })
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /Raising the dependencies below what @nextsparkjs\/core 0\.1\.0-beta\.189 needs, and putting a tilde on an exact next:\n {5}better-auth ~1\.6\.33 -> ~1\.7\.7\n {5}zod \^4\.1\.5 -> \^4\.5\.4\n {5}next 16\.4\.5 -> ~16\.4\.5\n/)
 })
