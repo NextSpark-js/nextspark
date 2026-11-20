@@ -206,6 +206,11 @@ const ALLOWED = [
     why: 'the inline script that applies the stored theme before paint, which carries no URL',
   },
   {
+    file: 'packages/core/src/providers/account-theme.tsx',
+    text: 'script.toString()',
+    why: 'the inline script that applies the account theme before the area paints (#495), which carries no URL',
+  },
+  {
     file: 'apps/dev/blocks/video-hero/component.tsx',
     text: 'embedUrl',
     why: 'getEmbedUrl() returns a full YouTube or Vimeo URL, or null',
