@@ -21,6 +21,7 @@ import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
 import { loadState, saveState, draftKey } from './explorer-storage'
+import { defaultMethod } from './explorer-helpers'
 import {
   createPresetPlaceholderValues,
   readPresetRunToken,
@@ -403,7 +404,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       if (categoryRoutes.length > 0) {
         hasInitialized.current = true
         const firstRoute = categoryRoutes[0]
-        const firstMethod = (firstRoute.methods[0] || 'GET') as HttpMethod
+        const firstMethod = defaultMethod(firstRoute.methods)
         setSelectedEndpoint({ path: firstRoute.path, method: firstMethod, route: firstRoute })
         setMethod(firstMethod)
         applyEndpointState(firstMethod, firstRoute.path)

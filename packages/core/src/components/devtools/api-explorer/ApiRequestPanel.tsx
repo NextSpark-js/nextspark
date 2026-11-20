@@ -15,6 +15,7 @@ import { PathParamsEditor } from '../api-tester/PathParamsEditor'
 import { KeyValueEditor } from '../api-tester/KeyValueEditor'
 import { AuthSelector } from '../api-tester/AuthSelector'
 import { PayloadEditor } from '../api-tester/PayloadEditor'
+import { countFilledRows } from './explorer-helpers'
 import { buildUrl, validatePathParams, validateJsonBody } from '../api-tester/utils/url-builder'
 import type { HttpMethod, AuthType, KeyValuePair, PathParam, RequestStatus } from '../api-tester/types'
 import type { ApiRouteEntry } from '../../../lib/services/api-routes.service'
@@ -257,9 +258,9 @@ export function ApiRequestPanel({
                   <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title={t("tabs.modifiedByPreset")} />
                 )}
                 {t('tabs.params')}
-                {(pathParams.length > 0 || queryParams.length > 0) && (
+                {pathParams.length + countFilledRows(queryParams) > 0 && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
-                    {pathParams.length + queryParams.length}
+                    {pathParams.length + countFilledRows(queryParams)}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -272,9 +273,9 @@ export function ApiRequestPanel({
                   <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title={t("tabs.modifiedByPreset")} />
                 )}
                 {t('tabs.headers')}
-                {headers.length > 0 && (
+                {countFilledRows(headers) > 0 && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
-                    {headers.length}
+                    {countFilledRows(headers)}
                   </Badge>
                 )}
               </TabsTrigger>

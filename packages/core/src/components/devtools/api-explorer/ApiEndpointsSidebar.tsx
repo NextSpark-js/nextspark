@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Search, ChevronRight, ChevronDown, Code, Database, Layers, Puzzle, PanelLeftClose, PanelLeft, Folder, FolderOpen } from 'lucide-react'
 import { loadState, saveState } from './explorer-storage'
+import { splitRoutePath } from './explorer-helpers'
 import { Input } from '../../ui/input'
 import { Badge } from '../../ui/badge'
 import { Button } from '../../ui/button'
@@ -39,10 +40,8 @@ function groupByPathPrefix(routes: ApiRouteEntry[]): PathPrefixGroup[] {
   const groups = new Map<string, ApiRouteEntry[]>()
 
   for (const route of routes) {
-    // Extract first path segment after /api/v1/
-    // e.g., /api/v1/billing/checkout → billing
-    const pathWithoutBase = route.path.replace(/^\/api\/v1\//, '')
-    const firstSegment = pathWithoutBase.split('/')[0] || 'root'
+    // e.g., /api/v1/billing/checkout → billing, /api/ai/chat/stream → ai
+    const firstSegment = splitRoutePath(route.path).group
 
     if (!groups.has(firstSegment)) {
       groups.set(firstSegment, [])
@@ -321,7 +320,6 @@ export function ApiEndpointsSidebar({
                                   <EndpointItem
                                     key={`${route.path}-${idx}`}
                                     route={route}
-                                    prefix={group.prefix}
                                     selectedEndpoint={selectedEndpoint}
                                     onSelect={onSelectEndpoint}
                                   />
@@ -345,20 +343,19 @@ export function ApiEndpointsSidebar({
 
 interface EndpointItemProps {
   route: ApiRouteEntry
-  prefix: string
   selectedEndpoint: SelectedEndpoint | null
   onSelect: (path: string, method: HttpMethod, route: ApiRouteEntry) => void
 }
 
-function EndpointItem({ route, prefix, selectedEndpoint, onSelect }: EndpointItemProps) {
+function EndpointItem({ route, selectedEndpoint, onSelect }: EndpointItemProps) {
   // Show each method as a separate clickable item
   return (
     <>
       {route.methods.map((method: string) => {
         const isSelected =
           selectedEndpoint?.path === route.path && selectedEndpoint?.method === method
-        // Show path without /api/v1/{prefix}
-        const shortPath = route.path.replace(/^\/api\/v1\//, '').replace(new RegExp(`^${prefix}\/?`), '')
+        // Show path without the API base and the group prefix
+        const shortPath = splitRoutePath(route.path).shortPath
 
         return (
           <button
