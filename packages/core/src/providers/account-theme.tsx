@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useSyncExternalStore } from 'react'
 import { useTheme } from './theme-provider'
-import { ACCOUNT_THEME_COOKIE, readAccountThemeCookie } from '../lib/theme/account-theme-cookie'
+import { ACCOUNT_THEME_COOKIE } from '../lib/theme/account-theme-cookie'
 
 /** The theme provider's localStorage key (the root layouts keep its default) */
 const STORAGE_KEY = 'theme'
@@ -30,14 +30,14 @@ export function AccountTheme() {
 
   useLayoutEffect(() => {
     if (forcedTheme) return
-    let stored: string | null = null
+    // The same steps as the inline script (a client navigation never ran it), then the provider follows what is stored
+    script(STORAGE_KEY, ACCOUNT_THEME_COOKIE, themes)
     try {
-      stored = localStorage.getItem(STORAGE_KEY)
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored && stored !== theme) setTheme(stored)
     } catch {
-      return
+      // localStorage can throw (blocked storage)
     }
-    const next = stored ?? readAccountThemeCookie()
-    if (next && next !== theme && themes.includes(next)) setTheme(next)
     // Once per mount of the area: later changes are the visitor's
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

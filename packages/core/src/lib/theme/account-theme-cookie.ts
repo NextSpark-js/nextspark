@@ -40,10 +40,3 @@ export function accountThemeCookie(theme: AccountTheme | undefined, secure: bool
   }
 }
 
-/** The account theme this browser carries (client code only). */
-export function readAccountThemeCookie(): AccountTheme | undefined {
-  if (typeof document === 'undefined') return undefined
-  const prefix = `${ACCOUNT_THEME_COOKIE}=`
-  const part = document.cookie.split(';').map(p => p.trim()).find(p => p.startsWith(prefix))
-  return toAccountTheme(part?.slice(prefix.length))
-}
