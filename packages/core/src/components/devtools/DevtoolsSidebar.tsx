@@ -29,6 +29,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { getPluginNavItems } from "@nextsparkjs/registries/plugin-registry.client";
 import type { PluginNavItem } from "../../types/plugin";
+import { isDevtoolsNavActive } from './devtools-nav';
 
 interface SidebarItem {
   titleKey: string;
@@ -121,7 +122,7 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
 
   const renderPluginItem = (item: PluginNavItem) => {
     const IconComponent = PLUGIN_ICON_MAP[item.icon ?? ''] ?? Puzzle;
-    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+    const isActive = isDevtoolsNavActive(pathname, item.href);
     return (
       <Link
         key={item.href}
@@ -189,7 +190,7 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
         <div className="p-3 space-y-1">
           {sidebarItems.map((item) => {
             const IconComponent = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const isActive = isDevtoolsNavActive(pathname, item.href);
             const title = t(item.titleKey);
             const description = item.descriptionKey ? t(item.descriptionKey) : undefined;
 
