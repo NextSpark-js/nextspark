@@ -38,12 +38,44 @@ describe('logRlsBypassAtStartup', () => {
     expect(run).toHaveBeenCalledTimes(1)
   })
 
-  test('is silent when RLS applies, when no table has RLS and when the role is not found', async () => {
+  test('is silent when RLS applies and DATABASE_SERVICE_URL is set, when no table has RLS and when the role is not found', async () => {
     for (const r of [row(), row({ rlsTables: 0 }), undefined]) {
       reset()
-      await logRlsBypassAtStartup(returning(r), env)
+      await logRlsBypassAtStartup(returning(r), { ...env, DATABASE_SERVICE_URL: 'postgres://owner:secret@h/db' })
     }
+    reset()
+    await logRlsBypassAtStartup(returning(row({ rlsTables: 0 })), env)
+    await logRlsBypassAtStartup(returning(undefined), env)
     expect(warn).not.toHaveBeenCalled()
+  })
+
+  // #492: the app role is subject to RLS and the auth lookups have no service connection
+  test('warns once, naming DATABASE_SERVICE_URL and the docs and never a URL, when RLS applies and DATABASE_SERVICE_URL is not set', async () => {
+    const run = returning(row({ role: 'nextspark_app' }))
+    const withPassword = { ...env, DATABASE_URL: 'postgres://nextspark_app:s3cret@h/db' }
+    await logRlsBypassAtStartup(run, withPassword)
+    await logRlsBypassAtStartup(run, withPassword)
+    expect(warn).toHaveBeenCalledTimes(1)
+    const text = String(warn.mock.calls[0][0])
+    expect(text).toContain('DATABASE_SERVICE_URL is not set')
+    expect(text).toContain('docs/10-backend/03-rls-policies.md')
+    expect(text).not.toMatch(/s3cret|postgres:\/\//)
+    expect(run).toHaveBeenCalledTimes(1)
+  })
+
+  test.each([['empty', ''], ['blank', '  ']])('a %s DATABASE_SERVICE_URL counts as not set', async (_name, value) => {
+    await logRlsBypassAtStartup(returning(row()), { ...env, DATABASE_SERVICE_URL: value })
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
+  test('a role that skips RLS gets the bypass warning only, with or without DATABASE_SERVICE_URL', async () => {
+    await logRlsBypassAtStartup(returning(row({ ownedTables: 2 })), env)
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][0])).toContain('is not applied')
+    reset()
+    warn.mockClear()
+    await logRlsBypassAtStartup(returning(row({ superuser: true })), { ...env, DATABASE_SERVICE_URL: 'postgres://o@h/db' })
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 
   test('is silent, and does not throw, when the query fails (no database, no access to the catalogs)', async () => {

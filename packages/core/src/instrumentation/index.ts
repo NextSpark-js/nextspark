@@ -74,7 +74,7 @@ export async function register(): Promise<void> {
       }
     }
 
-    // Production only, not awaited: one warning when DATABASE_URL's role skips RLS, never a delay or an error at start
+    // Production only, not awaited: one warning when DATABASE_URL's role skips RLS, or applies RLS with no DATABASE_SERVICE_URL (#492), never a delay or an error at start
     void import('../lib/rls-runtime').then(({ logRlsBypassAtStartup }) => logRlsBypassAtStartup()).catch(() => {})
 
     console.log('[Instrumentation] Initializing scheduled actions system...')

@@ -51,7 +51,8 @@ export function rlsBypassReason(row: RlsRuntimeRow): string {
 const WARNED = Symbol.for('nextspark.rlsBypassWarned')
 
 /**
- * At production server start, one warning when the role of DATABASE_URL skips RLS. It only warns: it never throws,
+ * At production server start, one warning when the role of DATABASE_URL skips RLS, and one when it does not and
+ * DATABASE_SERVICE_URL is not set (#492). It only warns: it never throws,
  * and says nothing when there is no database, no permission to read the catalogs, or the role is subject to RLS.
  * register() does not await it, so it never delays the start. `run` is for tests; by default it uses the app pool.
  */
@@ -62,7 +63,21 @@ export async function logRlsBypassAtStartup(run?: Run, env: NodeJS.ProcessEnv = 
   try {
     const query = run ?? ((sql: string) => import('./db').then(({ pool }) => pool.query(sql) as unknown as ReturnType<Run>))
     const row = await readRlsRuntime(query)
-    if (!row || rlsRuntimeVerdict(row) !== 'bypassed') return
+    if (!row) return
+    const verdict = rlsRuntimeVerdict(row)
+    // RLS applies to the app role, so the auth lookups need the service connection: without DATABASE_SERVICE_URL the
+    // first sign-in answers 401 INVALID_EMAIL_OR_PASSWORD. Same query, no second one; the variable's name, never a URL (#492)
+    if (verdict === 'enforced') {
+      if (!env.DATABASE_SERVICE_URL?.trim()) {
+        console.warn(
+          `[rls] The role DATABASE_URL connects as (${row.role}) is subject to row-level security, and DATABASE_SERVICE_URL is not set: ` +
+            'sign-in fails with 401 INVALID_EMAIL_OR_PASSWORD because the auth lookups need a role that skips RLS. Set DATABASE_SERVICE_URL ' +
+            'to the owner or a BYPASSRLS role: see docs/10-backend/03-rls-policies.md ("Runtime role + cutover"), and check with `nextspark doctor`.'
+        )
+      }
+      return
+    }
+    if (verdict !== 'bypassed') return
     console.warn(
       `[rls] The role DATABASE_URL connects as (${row.role}) ${rlsBypassReason(row)}, so row-level security is not applied ` +
         'to the application\'s queries. Connect as nextspark_app: see docs/10-backend/03-rls-policies.md ("Runtime role + cutover"), ' +
