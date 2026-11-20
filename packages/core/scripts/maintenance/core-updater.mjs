@@ -579,7 +579,7 @@ function workspaceFloorsFor(cwd, root, top, projectManifest, { coreManifest, sem
       const inRepo = !path.relative(repo, realPath(member.dir)).startsWith('..')
       return { ...member, ...workspaceFloors(member.manifest, coreManifest, semver, own.has(member)), writable: own.has(member) && inRepo }
     })
-    .filter(({ below, protocols }) => below.length > 0 || protocols.length > 0)
+    .filter(({ below, protocols, tilde }) => below.length > 0 || protocols.length > 0 || tilde.length > 0)
 }
 
 /** The target of `pnpm add` for a workspace package: its name, or its directory from where the command runs when it has none; -w for the workspace root. */
@@ -591,12 +591,13 @@ function addTarget(cwd, root, { dir, manifest }) {
 /** Writes the raised floors into the writable packages, keeping each file's format; returns what it changed, one entry per package. */
 function raiseWorkspaceFloors(cwd, packages) {
   const changed = []
-  for (const { file, below } of packages.filter((entry) => entry.writable && entry.below.length > 0)) {
+  for (const { file, below, tilde } of packages.filter((entry) => entry.writable && entry.below.length + entry.tilde.length > 0)) {
     const text = fs.readFileSync(file, 'utf8')
     const manifest = JSON.parse(text)
-    for (const { name, field, required } of below) manifest[field][name] = required
+    const written = [...below, ...tilde]
+    for (const { name, field, required } of written) manifest[field][name] = required
     fs.writeFileSync(file, manifestText(manifest, text))
-    changed.push({ file: path.relative(cwd, file), below })
+    changed.push({ file: path.relative(cwd, file), below: written })
   }
   return changed
 }

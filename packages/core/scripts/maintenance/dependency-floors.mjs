@@ -105,10 +105,11 @@ export function workspaceFloors(manifest, coreManifest, semver, own = true) {
       if (required) below.push({ name, field, declared, required })
     }
   }
-  // a package that is not the project's is only listed, and an exact next in the range is not below anything
-  if (own) below.push(...exactNextToTilde(manifest, coreManifest, semver))
+  // An exact next in the range is not below anything: it is kept apart from `below`, which is what gets reported as
+  // below what core needs. Only the project's own packages are written, so only those carry it (#490)
+  const tilde = own ? exactNextToTilde(manifest, coreManifest, semver) : []
   const byName = (a, b) => a.name.localeCompare(b.name) || a.field.localeCompare(b.field)
-  return { below: below.sort(byName), protocols: protocols.sort(byName) }
+  return { below: below.sort(byName), protocols: protocols.sort(byName), tilde }
 }
 
 /** The `pnpm add` lines that move `below` in one workspace package: `target` is `--filter <name>`, or `-w` for the workspace root. */

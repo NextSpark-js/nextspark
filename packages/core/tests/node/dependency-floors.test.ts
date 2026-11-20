@@ -126,8 +126,10 @@ test('exactNextToTilde puts a tilde on an exact next inside core\'s range and le
   assert.deepEqual(exactNextToTilde({ dependencies: { next: '16.4.5' } }, { dependencies: {} }, semver), [])
 })
 
-test('workspaceFloors tilts an exact next of the project\'s own packages, and only those', () => {
+test('workspaceFloors keeps the tilde of an exact next of the project\'s own packages apart from what is below core, and only for those', () => {
   const manifest = { dependencies: { next: '16.4.5' } }
-  assert.deepEqual(workspaceFloors(manifest, core, semver, true).below.map(({ declared, required }) => [declared, required]), [['16.4.5', '~16.4.5']])
-  assert.deepEqual(workspaceFloors(manifest, core, semver, false).below, [])
+  const own = workspaceFloors(manifest, core, semver, true)
+  assert.deepEqual(own.tilde.map(({ declared, required }) => [declared, required]), [['16.4.5', '~16.4.5']])
+  assert.deepEqual(own.below, [])
+  assert.deepEqual(workspaceFloors(manifest, core, semver, false).tilde, [])
 })

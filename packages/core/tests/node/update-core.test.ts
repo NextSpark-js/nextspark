@@ -2074,3 +2074,17 @@ test('--no-dependency-floors leaves an exact next as it is', (t) => {
   assert.equal(result.status, 0, result.output)
   assert.equal(JSON.parse(read(root, 'package.json')).dependencies.next, '16.4.5')
 })
+
+test('an exact next in a package of the workspace is never reported as below what core needs', (t) => {
+  const root = createProject(t, {
+    pins: { ...ALIGNED, next: '~16.4.5' },
+    files: { 'plugins/foo/package.json': json({ name: 'acme-foo', dependencies: { next: '16.4.7' }, peerDependencies: { '@nextsparkjs/core': '*' } }) },
+    importers: ['plugins/foo'],
+  })
+
+  // --no-dependency-floors writes nothing, and says nothing false about it
+  const result = runUpdateCore(root, ['--version', TO, '--no-dependency-floors'], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+  assert.equal(result.status, 0, result.output)
+  assert.equal(JSON.parse(read(root, 'plugins/foo/package.json')).dependencies.next, '16.4.7')
+  assert.doesNotMatch(result.stdout, /Not moved|core needs ~16\.4\.7/)
+})
