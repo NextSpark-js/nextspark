@@ -13,7 +13,7 @@ import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
 import type { BlockConfig, BlockCategory } from '../../types/blocks';
-import { withBasePathIfInApp } from '../../lib/base-path'
+import { BlockThumbnail } from './BlockThumbnail'
 
 type CategoryFilter = "all" | BlockCategory;
 type CoverageFilter = "all" | "covered" | "uncovered";
@@ -227,18 +227,11 @@ export function BlocksViewer() {
           >
             {/* Thumbnail */}
             <div className="h-32 bg-muted flex items-center justify-center rounded-t-lg overflow-hidden">
-              {block.thumbnail ? (
-                <img
-                  src={withBasePathIfInApp(block.thumbnail.src)}
-                  alt={text(block.name)}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex flex-col items-center text-muted-foreground">
-                  <LayoutGrid className="h-8 w-8 mb-1" />
-                  <span className="text-xs">{t("noPreview")}</span>
-                </div>
-              )}
+              <BlockThumbnail
+                src={block.thumbnail?.src}
+                alt={text(block.name)}
+                emptyLabel={t("noPreview")}
+              />
             </div>
 
             <CardHeader className="pb-2">
