@@ -17,11 +17,18 @@ import type { TranslationFunction } from '../messages/types';
  */
 export function useRoleTranslations() {
   const t = useTranslations();
-  
-  return (role: UserRole): string => {
-    const translationKey = roleHelpers.getRoleDisplayKey(role);
-    return t(translationKey);
-  };
+
+  return (role: UserRole): string => translateRole(role, t as unknown as TranslationFunction);
+}
+
+/**
+ * A role without a configured display name (a suspended user's role is `suspended`) never reaches `t()` with
+ * `undefined`: `suspended` uses its catalog label, any other role shows its own name (#489).
+ */
+function translateRole(role: UserRole, t: TranslationFunction): string {
+  const translationKey = roleHelpers.getRoleDisplayKey(role);
+  if (translationKey) return t(translationKey);
+  return role === 'suspended' ? t('superadmin.usersPage.roles.suspended') : String(role);
 }
 
 /**
@@ -54,6 +61,5 @@ export function useRoleOptions() {
  * const roleName = getRoleDisplayName('admin', t);
  */
 export function getRoleDisplayName(role: UserRole, t: TranslationFunction): string {
-  const translationKey = roleHelpers.getRoleDisplayKey(role);
-  return t(translationKey);
+  return translateRole(role, t);
 }

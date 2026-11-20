@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The role of a suspended user shows in the superadmin users table instead of an empty cell and two console errors.** `useRoleTranslations` (and `getRoleDisplayName`) called `t()` with the display key of the role, and the configured display names have none for `suspended`, so the cell was empty and next-intl logged `MISSING_MESSAGE` and `INVALID_MESSAGE` on every render. A role without a display name no longer reaches `t()`: `suspended` uses the existing `superadmin.usersPage.roles.suspended` label and any other such role shows its own name (#489).
+
 ## [0.1.0-beta.205] - 2026-11-18
 
 ### Upgrading from 0.1.0-beta.204
