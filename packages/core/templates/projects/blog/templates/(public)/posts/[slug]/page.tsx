@@ -1,110 +1,32 @@
-'use client'
-
 /**
  * Blog Post Page
  *
  * Clean, minimal single post view with reading progress bar,
  * centered content, and optimized typography.
+ *
+ * Rendered on the server: the published post is read here, so the HTML carries its content and metadata,
+ * and a slug with no published post is a not-found. Only the reading progress bar and the date (locale) are client islands.
  */
 
-import { useLocale } from 'next-intl'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Calendar, Clock, Loader2, Share2, Bookmark } from 'lucide-react'
-import { use, useEffect, useState } from 'react'
-import { sanitizePostHtml } from '@/lib/sanitize-post-html'
+import { ArrowLeft, Calendar, Clock, Share2, Bookmark } from 'lucide-react'
+import { sanitizeBlockHtml } from '@nextsparkjs/core/lib/blocks/sanitize-html'
+import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
+import { getPublishedPostBySlug, getRelatedPosts } from '@/lib/public-posts'
 import { ReadingProgress } from '@/components/public/ReadingProgress'
+import { PostDate } from '@/components/public/PostDate'
 import { AuthorBio } from '@/components/public/AuthorBio'
 import { RelatedPosts } from '@/components/public/RelatedPosts'
 import { Button } from '@nextsparkjs/core/components/ui/button'
-import { withBasePath, withBasePathInHtml, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
-
-interface Post {
-  id: string
-  title: string
-  slug: string
-  content: string
-  excerpt: string | null
-  featuredImage: string | null
-  status: string
-  publishedAt: string | null
-  createdAt: string
-  updatedAt: string
-  category?: string | null
-}
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface PageProps {
   params: Promise<{
     slug: string
   }>
-}
-
-function getActiveTeamId(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('activeTeamId')
-}
-
-function buildHeaders(): HeadersInit {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  }
-  const teamId = getActiveTeamId()
-  if (teamId) {
-    headers['x-team-id'] = teamId
-  }
-  return headers
-}
-
-async function fetchPost(identifier: string): Promise<Post | null> {
-  try {
-    const headers = buildHeaders()
-
-    const byIdResponse = await fetch(withBasePath(`/api/v1/posts?ids=${encodeURIComponent(identifier)}&status=published&limit=1`), {
-      credentials: 'include',
-      headers,
-    })
-
-    if (byIdResponse.ok) {
-      const result = await byIdResponse.json()
-      if (result.data && result.data.length > 0) {
-        return result.data[0] as Post
-      }
-    }
-
-    const bySlugResponse = await fetch(withBasePath(`/api/v1/posts?slug=${encodeURIComponent(identifier)}&status=published&limit=1`), {
-      credentials: 'include',
-      headers,
-    })
-
-    if (bySlugResponse.ok) {
-      const result = await bySlugResponse.json()
-      if (result.data && result.data.length > 0) {
-        return result.data[0] as Post
-      }
-    }
-
-    return null
-  } catch (error) {
-    console.error('Error fetching post:', error)
-    return null
-  }
-}
-
-function formatDate(dateString: string | null, locale: string): string {
-  if (!dateString) return 'Not published'
-  const date = new Date(dateString)
-  return date.toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC'
-  })
-}
-
-function toISODateString(dateString: string | null): string {
-  if (!dateString) return ''
-  return new Date(dateString).toISOString()
 }
 
 function calculateReadTime(content: string): number {
@@ -135,81 +57,28 @@ function renderContent(content: string): string {
     .replace(/(?!>)$/, '</p>')
 }
 
-interface RelatedPost {
-  id: string
-  title: string
-  slug: string
-  featuredImage?: string | null
-  content?: string | null
+function postDescription(post: { excerpt: string | null; content: string }): string {
+  if (post.excerpt) return post.excerpt
+  const text = post.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  return text.length > 160 ? `${text.slice(0, 157)}...` : text
 }
 
-async function fetchRelatedPosts(currentPostId: string): Promise<RelatedPost[]> {
-  try {
-    const headers = buildHeaders()
-
-    // Fetch latest published posts
-    const response = await fetch(withBasePath('/api/v1/posts?status=published&limit=4&sortBy=publishedAt&sortOrder=desc'), {
-      credentials: 'include',
-      headers,
-    })
-
-    if (!response.ok) return []
-
-    const result = await response.json()
-    const posts = (result.data || []) as RelatedPost[]
-
-    // Filter out the current post and take first 3
-    return posts
-      .filter((p: RelatedPost) => p.id !== currentPostId)
-      .slice(0, 3)
-  } catch (error) {
-    console.error('Error fetching related posts:', error)
-    return []
-  }
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
+  const post = await getPublishedPostBySlug(slug)
+  if (!post) return { title: 'Post not found', robots: { index: false } }
+  return pageMetadata({ title: post.title, description: postDescription(post), path: `/posts/${encodeURIComponent(post.slug)}` })
 }
 
-export default function PostPage({ params }: PageProps) {
-  const locale = useLocale()
-  const { slug } = use(params)
-  const [post, setPost] = useState<Post | null>(null)
-  const [relatedPosts, setRelatedPosts] = useState<RelatedPost[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+export default async function PostPage({ params }: PageProps) {
+  const { slug } = await params
+  const post = await getPublishedPostBySlug(slug)
 
-  useEffect(() => {
-    async function loadPost() {
-      setLoading(true)
-      setError(false)
-
-      const fetchedPost = await fetchPost(slug)
-
-      if (!fetchedPost) {
-        setError(true)
-      } else {
-        setPost(fetchedPost)
-
-        // Fetch related posts after getting the current post
-        const related = await fetchRelatedPosts(fetchedPost.id)
-        setRelatedPosts(related)
-      }
-
-      setLoading(false)
-    }
-
-    loadPost()
-  }, [slug])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  if (error || !post) {
+  if (!post) {
     notFound()
   }
+
+  const relatedPosts = await getRelatedPosts(post.id)
 
   const readTime = calculateReadTime(post.content)
 
@@ -256,9 +125,7 @@ export default function PostPage({ params }: PageProps) {
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              <time dateTime={toISODateString(post.publishedAt)}>
-                {formatDate(post.publishedAt, locale)}
-              </time>
+              <PostDate value={post.publishedAt} />
             </span>
             <span className="text-border">|</span>
             <span className="flex items-center gap-1.5">
@@ -298,7 +165,7 @@ export default function PostPage({ params }: PageProps) {
 
         {/* Article Content */}
         <div className="article-content">
-          <div dangerouslySetInnerHTML={{ __html: withBasePathInHtml(sanitizePostHtml(renderContent(post.content))) }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizeBlockHtml(renderContent(post.content)) }} />
         </div>
 
         {/* Divider */}
