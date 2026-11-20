@@ -20,8 +20,8 @@ import { accountThemeCookie, toAccountTheme, type AccountTheme } from '../theme/
 type Ctx = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0]
 
 function setThemeCookie(ctx: Ctx, theme: AccountTheme | undefined) {
-  const secure = (ctx.request?.url ?? ctx.context.baseURL).startsWith('https:')
-  const { name, value, options } = accountThemeCookie(theme, secure)
+  // Secure exactly when the session cookie is (lib/auth.ts useSecureCookies, or an https baseURL)
+  const { name, value, options } = accountThemeCookie(theme, !!ctx.context.authCookies.sessionToken.attributes.secure)
   ctx.setCookie(name, value, options)
 }
 

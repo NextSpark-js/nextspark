@@ -42,7 +42,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import { resolveForcedTheme, type ForcedThemeRoutes } from "../lib/theme/forced-theme"
 import { ACCOUNT_THEME_COOKIE, readAccountThemeCookie } from "../lib/theme/account-theme-cookie"
-import { subscribeSessionHint } from "../lib/auth/session-hint"
+import { hasSessionHint, subscribeSessionHint } from "../lib/auth/session-hint"
 
 export type Attribute = `data-${string}` | "class"
 
@@ -278,10 +278,18 @@ function ColorModeProvider({
   }, [handleMediaQuery])
 
   // A sign-in or sign-out on this page changes the account theme cookie, and the client navigation that follows a
-  // sign-in does not run the blocking script again: follow the cookie while the visitor has no choice of their own
-  React.useEffect(() => subscribeSessionHint(() => setThemeState(initialTheme())),
+  // sign-in does not run the blocking script again: follow the cookie while the visitor has no choice of their own.
+  // Only when the hint flips: the subscription also fires on focus, where re-reading would undo a toggle that
+  // localStorage could not keep.
+  React.useEffect(() => {
+    let signedIn = hasSessionHint()
+    return subscribeSessionHint(() => {
+      if (hasSessionHint() === signedIn) return
+      signedIn = !signedIn
+      setThemeState(initialTheme())
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- storageKey, themes and defaultTheme are fixed per layout
-    [])
+  }, [])
 
   // Another tab changed the stored theme
   React.useEffect(() => {

@@ -274,6 +274,32 @@ describe('ThemeProvider and the account theme cookie (#495)', () => {
     expect(document.documentElement.className).toBe('light')
   })
 
+  it('a focus without a sign-in or sign-out does not re-read the cookie over a toggle localStorage could not keep', async () => {
+    document.cookie = 'nextspark.signed_in=1; Path=/'
+    document.cookie = 'nextspark.account_theme=dark; Path=/'
+    let api: UseThemeProps | undefined
+    function Grab() {
+      api = useTheme()
+      return null
+    }
+    render(<ThemeProvider attribute="class" {...toggle}><Grab /></ThemeProvider>)
+    expect(document.documentElement.className).toBe('dark')
+    // Blocked storage: the toggle lives only in the provider's state
+    const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+    try {
+      await act(async () => api!.setTheme('light'))
+      expect(document.documentElement.className).toBe('light')
+      await act(async () => {
+        window.dispatchEvent(new Event('focus'))
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
+      expect(api!.theme).toBe('light')
+      expect(document.documentElement.className).toBe('light')
+    } finally {
+      setItem.mockRestore()
+    }
+  })
+
   it('a choice stored in this browser still wins after a sign-in', async () => {
     localStorage.setItem('theme', 'light')
     render(<ThemeProvider attribute="class" {...toggle}><span /></ThemeProvider>)

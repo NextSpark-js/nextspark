@@ -27,10 +27,11 @@ test('the account theme cookie follows the sessions Better Auth issues', { skip:
   pool.on('error', () => {})
   let failRead = false
   const read = readAccountThemeFrom(pool)
-  const make = (baseURL: string) => betterAuth({
+  const make = (baseURL: string, advanced?: Parameters<typeof betterAuth>[0]['advanced']) => betterAuth({
     database: pool,
     secret: 'a-test-secret-with-enough-entropy-0123456789',
     baseURL,
+    advanced,
     emailAndPassword: { enabled: true },
     user: { modelName: 'users' },
     plugins: [accountThemePlugin(async (userId) => {
@@ -97,5 +98,13 @@ test('the account theme cookie follows the sessions Better Auth issues', { skip:
   const overHttps = await signIn('a@example.test', 'https://app.example.test', httpsAuth)
   assert.equal(overHttps.status, 200)
   assert.match(themeCookie(overHttps) ?? '', /^nextspark\.account_theme=light;.*Secure/i)
+
+  // Secure exactly when the session cookie is, not by the request URL: core's production config
+  // (useSecureCookies and a secure default attribute, lib/auth.ts) behind a proxy that speaks http to the app
+  const prodAuth = make('http://localhost:3000', { useSecureCookies: true, defaultCookieAttributes: { secure: true } })
+  const behindProxy = await signIn('a@example.test', 'http://localhost:3000', prodAuth)
+  assert.equal(behindProxy.status, 200)
+  assert.ok(behindProxy.headers.getSetCookie().some(c => /session_token=/.test(c) && /Secure/i.test(c)), 'the session cookie is Secure')
+  assert.match(themeCookie(behindProxy) ?? '', /^nextspark\.account_theme=light;.*Secure/i)
   await pool.end()
 })

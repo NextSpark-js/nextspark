@@ -62,10 +62,11 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
  * A saved theme also goes to the readable cookie the blocking theme script applies before the first paint (#495;
  * lib/theme/account-theme-cookie), so this browser's next page load starts in it.
  */
-function withAccountThemeCookie(request: NextRequest, meta: unknown, response: NextResponse): NextResponse {
+function withAccountThemeCookie(meta: unknown, response: NextResponse): NextResponse {
   const theme = toAccountTheme((meta as { uiPreferences?: { theme?: unknown } } | undefined)?.uiPreferences?.theme)
   if (theme) {
-    const { name, value, options } = accountThemeCookie(theme, request.nextUrl.protocol === 'https:')
+    // Secure as the session cookie and the other app cookies are (lib/auth.ts secure: isProd)
+    const { name, value, options } = accountThemeCookie(theme, process.env.NODE_ENV === 'production')
     response.cookies.set(name, value, options)
   }
   return response
@@ -91,7 +92,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
       // theme toggle sends only `theme`, the sidebar only `sidebarCollapsed`.
       await MetaService.mergeEntityMetaGroups('user', session.user.id, meta as Record<string, unknown>, session.user.id)
 
-      return withAccountThemeCookie(request, meta, NextResponse.json({
+      return withAccountThemeCookie(meta, NextResponse.json({
         message: 'Settings updated successfully',
         success: true
       }))
@@ -129,7 +130,7 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
       await MetaService.mergeEntityMetaGroups('user', session.user.id, meta as Record<string, unknown>, session.user.id)
     }
 
-    return withAccountThemeCookie(request, meta, NextResponse.json({
+    return withAccountThemeCookie(meta, NextResponse.json({
       message: 'Profile updated successfully',
       success: true
     }))

@@ -498,6 +498,18 @@ describe('PATCH /api/user/profile — the account theme cookie (#495)', () => {
     })
   })
 
+  test('in production it is Secure, as the session cookie (lib/auth.ts secure: isProd), whatever the request URL says', async () => {
+    const env = process.env as Record<string, string | undefined>
+    const previous = env.NODE_ENV
+    env.NODE_ENV = 'production'
+    try {
+      const response = await patchProfile({ meta: { uiPreferences: { theme: 'dark' } } })
+      expect(response.cookies.get('nextspark.account_theme')).toEqual(expect.objectContaining({ value: 'dark', secure: true }))
+    } finally {
+      env.NODE_ENV = previous
+    }
+  })
+
   test.each([
     ['the sidebar state', { meta: { uiPreferences: { sidebarCollapsed: false } } }],
     ['a value that is no theme', { meta: { uiPreferences: { theme: 'neon' } } }],
