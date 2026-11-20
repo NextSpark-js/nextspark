@@ -937,7 +937,6 @@
   },
   "style": {
     "description": "Parcourez les styles des composants et les tokens de design",
-    "back": "Retour à l’espace développeur",
     "title": "Galerie de styles",
     "subtitle": "Vitrine du design system et bibliothèque de composants",
     "exportTokens": "Exporter les tokens",

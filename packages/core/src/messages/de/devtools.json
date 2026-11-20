@@ -937,7 +937,6 @@
   },
   "style": {
     "description": "Komponentenstile und Design-Tokens durchsuchen",
-    "back": "Zurück zum Entwicklerbereich",
     "title": "Stilgalerie",
     "subtitle": "Showcase des Designsystems und Komponentenbibliothek",
     "exportTokens": "Tokens exportieren",

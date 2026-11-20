@@ -45,7 +45,6 @@
   },
   "style": {
     "description": "Browse component styles and design tokens",
-    "back": "Back to Dev Area",
     "title": "Style Gallery",
     "subtitle": "Design system showcase and component library",
     "exportTokens": "Export Tokens",

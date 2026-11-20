@@ -937,7 +937,6 @@
   },
   "style": {
     "description": "Explore os estilos dos componentes e os tokens de design",
-    "back": "Voltar à área de desenvolvimento",
     "title": "Galeria de estilos",
     "subtitle": "Vitrine do design system e biblioteca de componentes",
     "exportTokens": "Exportar tokens",

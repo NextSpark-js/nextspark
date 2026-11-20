@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@next
 import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@nextsparkjs/core/components/ui/tabs";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
-import { ArrowLeft, Palette, Package, Layers, BookOpen, Download, FormInput } from "lucide-react";
 import Link from "next/link";
+import { Palette, Package, Layers, BookOpen, Download, FormInput } from "lucide-react";
 import { ComponentGallery } from "@nextsparkjs/core/components/superadmin/misc/ComponentGallery";
 import { ThemePreview } from "@nextsparkjs/core/components/superadmin/misc/ThemePreview";
 import { FieldTypesGallery } from "@nextsparkjs/core/components/superadmin/misc/FieldTypesGallery";
@@ -25,18 +25,13 @@ export default function DevStylePage() {
   return (
     <div className="space-y-6" data-cy="devtools-style-page">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/devtools" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {t("back")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground">
-            {t("subtitle")}
-          </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center justify-center w-12 h-12 bg-violet-100 dark:bg-violet-950 rounded-lg">
+          <Palette className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+        </div>
+        <div className="min-w-[12rem] flex-1">
+          <h1 className="text-3xl font-bold">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button variant="outline" size="sm" className="flex items-center gap-2">
           <Download className="h-4 w-4" />
@@ -101,7 +96,7 @@ export default function DevStylePage() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="components" className="flex items-center gap-2" data-cy="devtools-style-tab-components">
             <Package className="h-4 w-4" />
             {t("tabs.components")}
