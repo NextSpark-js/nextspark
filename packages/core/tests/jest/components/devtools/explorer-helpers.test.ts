@@ -18,6 +18,10 @@ describe('splitRoutePath', () => {
     expect(`/${splitRoutePath('/api/ai/orchestrator').shortPath}`).not.toMatch(/^\/\//)
   })
 
+  test('a plugin route is grouped by its plugin, not under one "plugins" group', () => {
+    expect(splitRoutePath('/api/plugins/langchain/observability/metrics')).toEqual({ group: 'langchain', shortPath: 'observability/metrics' })
+  })
+
   test('a path with no segment falls in root', () => {
     expect(splitRoutePath('/api/v1/').group).toBe('root')
   })

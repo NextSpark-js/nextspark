@@ -6,7 +6,7 @@ import type { HttpMethod, KeyValuePair } from '../api-tester/types'
  * stripped (leaving the base on a theme route made every one of them a "root" entry shown as `//api/...`).
  */
 export function splitRoutePath(path: string): { group: string; shortPath: string } {
-  const [group = '', ...rest] = path.replace(/^\/api\/(?:v1\/)?/, '').replace(/^\/+/, '').split('/')
+  const [group = '', ...rest] = path.replace(/^\/api\/(?:v1\/)?(?:plugins\/)?/, '').replace(/^\/+/, '').split('/')
   return { group: group || 'root', shortPath: rest.join('/') }
 }
 
