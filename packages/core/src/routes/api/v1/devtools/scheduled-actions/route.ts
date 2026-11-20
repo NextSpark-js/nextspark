@@ -18,6 +18,7 @@ import {
 } from '@nextsparkjs/core/lib/api/auth/devtools-auth'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { ScheduledAction, ScheduledActionStatus } from '@nextsparkjs/core/lib/scheduled-actions/types'
+import type { ScheduledActionRow } from '@nextsparkjs/core/components/devtools/scheduled-actions/types'
 import { getAllRegisteredActions } from '@nextsparkjs/core/lib/scheduled-actions/registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
@@ -77,6 +78,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       status,
       payload,
       "teamId",
+      (SELECT t.name FROM "teams" t WHERE t.id = "scheduled_actions"."teamId") AS "teamName",
       "scheduledAt",
       "startedAt",
       "completedAt",
@@ -92,7 +94,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     LIMIT $${paramIndex++}
     OFFSET $${paramIndex}
   `
-  const actionsResult = await queryWithRLS<ScheduledAction>(actionsQuery, [...params, limit, offset], null)
+  const actionsResult = await queryWithRLS<ScheduledActionRow>(actionsQuery, [...params, limit, offset], null)
 
   // Get all registered action types
   const registeredActions = getAllRegisteredActions()

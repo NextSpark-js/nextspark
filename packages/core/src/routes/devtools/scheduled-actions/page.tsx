@@ -18,7 +18,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@nextsparkjs/core/components/ui/button'
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, Clock } from 'lucide-react'
 import { sel } from '@nextsparkjs/core/lib/selectors'
 import { Filters } from '@nextsparkjs/core/components/devtools/scheduled-actions/filters'
 import { ActionsTable } from '@nextsparkjs/core/components/devtools/scheduled-actions/actions-table'
@@ -81,13 +81,18 @@ export default function ScheduledActionsPage() {
 
   return (
     <div
-      className="container mx-auto p-6 max-w-7xl"
+      className="space-y-6"
       data-cy={sel('devtools.scheduledActions.page')}
     >
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground mt-2">{t('description')}</p>
+      {/* Header: the same icon, title and description as the other devtools pages */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-12 h-12 bg-violet-100 dark:bg-violet-950 rounded-lg shrink-0">
+          <Clock className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
+        </div>
       </div>
 
       {/* Filters */}
@@ -119,7 +124,7 @@ export default function ScheduledActionsPage() {
           {/* Pagination */}
           {data.data.pagination.totalPages > 1 && (
             <div
-              className="flex items-center justify-between mt-6"
+              className="flex items-center justify-between"
               data-cy={sel('devtools.scheduledActions.pagination')}
             >
               <p className="text-sm text-muted-foreground">

@@ -21,12 +21,12 @@ import {
 import { Button } from '../../ui/button'
 import { ChevronDownIcon, ChevronRightIcon, RotateCcwIcon, PlayIcon } from 'lucide-react'
 import { sel } from '../../../lib/test'
-import type { ScheduledAction } from '../../../lib/scheduled-actions/types'
+import type { ScheduledActionRow } from './types'
 import { toast } from 'sonner'
 import { withBasePath } from '../../../lib/base-path'
 
 interface ActionsTableProps {
-  actions: ScheduledAction[]
+  actions: ScheduledActionRow[]
 }
 
 async function retryAction(actionId: string, fallbackError: string): Promise<{ newActionId: string }> {
@@ -107,7 +107,7 @@ export function ActionsTable({ actions }: ActionsTableProps) {
     })
   }
 
-  const getStatusBadge = (status: ScheduledAction['status']) => {
+  const getStatusBadge = (status: ScheduledActionRow['status']) => {
     const variants = {
       pending: { variant: 'secondary' as const, cy: sel('devtools.scheduledActions.statusPending') },
       running: { variant: 'default' as const, cy: sel('devtools.scheduledActions.statusRunning') },
@@ -256,9 +256,11 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                   </TableCell>
                   <TableCell className="text-sm py-4">
                     {action.teamId ? (
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {action.teamId.slice(0, 8)}
-                      </code>
+                      <span className="whitespace-nowrap" title={action.teamId}>
+                        {action.teamName ?? (
+                          <code className="text-xs bg-muted px-2 py-1 rounded">{action.teamId.slice(0, 8)}</code>
+                        )}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">{t('table.noTeam')}</span>
                     )}
@@ -303,6 +305,16 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                             {action.id}
                           </code>
                         </div>
+
+                        {/* Team */}
+                        {action.teamId && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">{t('table.team')}</p>
+                            <code className="text-xs font-mono bg-background px-2 py-1 rounded border">
+                              {action.teamName ? `${action.teamName} (${action.teamId})` : action.teamId}
+                            </code>
+                          </div>
+                        )}
 
                         {/* Payload */}
                         <div>

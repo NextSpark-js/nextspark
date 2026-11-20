@@ -47,7 +47,7 @@ export function Filters({ filters, onFiltersChange, registeredActionTypes }: Fil
   const hasActiveFilters = filters.status || filters.actionType
 
   return (
-    <div className="flex flex-wrap gap-4 mb-6">
+    <div className="flex flex-wrap gap-4">
       {/* Status Filter */}
       <div className="flex flex-col gap-2">
         <label className="text-sm font-medium text-muted-foreground">
