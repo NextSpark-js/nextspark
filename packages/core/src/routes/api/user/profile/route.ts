@@ -4,6 +4,7 @@ import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorizatio
 import { queryOneWithRLS, mutateWithRLS, queryOne } from '@nextsparkjs/core/lib/db'
 import { profileSchema } from '@nextsparkjs/core/lib/validation'
 import { MetaService, MetaValueTooLargeError } from '@nextsparkjs/core/lib/services/meta.service'
+import { accountThemeCookie, toAccountTheme } from '@nextsparkjs/core/lib/theme/account-theme-cookie'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 
@@ -57,6 +58,19 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   }
 }, 'read');
 
+/**
+ * A saved theme also goes to the readable cookie the blocking theme script applies before the first paint (#495;
+ * lib/theme/account-theme-cookie), so this browser's next page load starts in it.
+ */
+function withAccountThemeCookie(request: NextRequest, meta: unknown, response: NextResponse): NextResponse {
+  const theme = toAccountTheme((meta as { uiPreferences?: { theme?: unknown } } | undefined)?.uiPreferences?.theme)
+  if (theme) {
+    const { name, value, options } = accountThemeCookie(theme, request.nextUrl.protocol === 'https:')
+    response.cookies.set(name, value, options)
+  }
+  return response
+}
+
 export const PATCH = withRateLimitTier(async (request: NextRequest) => {
   try {
     const sessionHeaders = request.headers
@@ -77,10 +91,10 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
       // theme toggle sends only `theme`, the sidebar only `sidebarCollapsed`.
       await MetaService.mergeEntityMetaGroups('user', session.user.id, meta as Record<string, unknown>, session.user.id)
 
-      return NextResponse.json({ 
+      return withAccountThemeCookie(request, meta, NextResponse.json({
         message: 'Settings updated successfully',
         success: true
-      })
+      }))
     }
     
     // Handle profile data updates
@@ -115,10 +129,10 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
       await MetaService.mergeEntityMetaGroups('user', session.user.id, meta as Record<string, unknown>, session.user.id)
     }
 
-    return NextResponse.json({
+    return withAccountThemeCookie(request, meta, NextResponse.json({
       message: 'Profile updated successfully',
       success: true
-    })
+    }))
   } catch (error) {
     if (error instanceof MetaValueTooLargeError) {
       return createApiError(error.message, 413, undefined, 'PAYLOAD_TOO_LARGE')

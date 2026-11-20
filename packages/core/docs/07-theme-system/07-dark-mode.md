@@ -235,7 +235,7 @@ export function ThemeToggle() {
 When `enableSystem` is true:
 
 ```text
-1. Check localStorage for saved preference
+1. Check localStorage for saved preference, then the account theme cookie
 2. If no preference, detect system theme
 3. Listen for system theme changes
 4. Update theme automatically
@@ -296,7 +296,14 @@ async function handleThemeChange(newTheme: string) {
 }
 ```
 
-**Across devices:** the root layout renders the configured `defaultMode` and never reads the account. In a browser with no stored theme (a new device), `<SessionCookieRefresher />` reads the saved preference once and applies it with `setTheme()`, which also stores it locally from then on.
+**Across devices:** the root layout renders the configured `defaultMode` and never reads the account. The server copies the saved preference into a readable cookie, `nextspark.account_theme` (`light`, `dark` or `system`; `SameSite=Lax`, scoped to the base path, `Secure` over HTTPS), and the theme script applies it before the first paint in a browser with no stored theme (#495):
+
+- It is written whenever Better Auth issues a session, so by every sign-in method (email and password, email code, magic link, OAuth callback), from one read of the account's `uiPreferences`. An account with no saved theme expires it, so the previous account's theme does not stay behind.
+- It is written again when the user saves a theme (`PATCH /api/user/profile` with `meta.uiPreferences.theme`).
+- Sign-out expires it, so the next page goes back to `defaultMode` (unless the visitor stored a choice in this browser).
+- After a sign-in on the page (the form navigates on the client, without running the script again), the provider re-reads it when the session hint changes.
+
+The cookie is not a stored choice: it never writes `localStorage`, so a choice made in this browser (ThemeToggle) still wins over any account's theme. For a session issued before the cookie existed, `<SessionCookieRefresher />` still reads the saved preference once after hydration and applies it with `setTheme()`, which stores it locally from then on; such a session gets the cookie the next time Better Auth renews it.
 
 ## Default Theme Mode
 
@@ -324,12 +331,13 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
 
 It reads configuration only: no session, no request data, no request back to the app. That keeps the root layout from making every page dynamic, and it costs nothing per render.
 
-**Where the rendered theme comes from:**
+**Where the rendered theme comes from** (all applied by the theme script before first paint):
 1. A route in `forcedThemeRoutes`, or `defaultMode` when `allowUserToggle` is `false` (forced)
-2. The visitor's stored choice (`localStorage`, applied by the theme script before first paint)
-3. Theme config `defaultMode`, falling back to `'system'`
+2. The visitor's stored choice (`localStorage`)
+3. The signed-in account's saved theme (the `nextspark.account_theme` cookie)
+4. Theme config `defaultMode`, falling back to `'system'`
 
-A signed-in user's saved preference is not read while rendering: see [User Profile](#user-profile).
+A signed-in user's saved preference is not read while rendering: the server leaves it in a cookie at sign-in, see [User Profile](#user-profile).
 
 `getDefaultThemeMode()` still exists but is **deprecated**: it returns only `defaultMode` and drops `allowUserToggle`, which is how the root layout once ended up hardcoding `enableSystem` (#79).
 

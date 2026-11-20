@@ -21,6 +21,7 @@ import {
 } from './teams/helpers';
 import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
+import { accountThemePlugin, readAccountThemeFrom } from './auth/account-theme-plugin';
 import { registrationError } from './auth/registration-errors';
 import { resolveSessionConfig } from './auth/session-config';
 import { resolveMagicLinkExpiresIn, resolveOtpConfig } from './auth/otp-config';
@@ -385,6 +386,8 @@ export const auth = betterAuth({
           disableSignUp: false, // auto-create user on the first use of a link
         })]
       : []),
+    // The account's saved theme in a readable cookie, for the blocking theme script (#495). One indexed read per issued session.
+    accountThemePlugin(readAccountThemeFrom(pool)),
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],
   // The proxy reads the session on every request; that lookup only reads the

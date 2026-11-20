@@ -479,6 +479,45 @@ describe('PATCH /api/user/profile — preference groups', () => {
   })
 })
 
+describe('PATCH /api/user/profile — the account theme cookie (#495)', () => {
+  test.each([
+    ['a theme alone', { meta: { uiPreferences: { theme: 'dark' } } }],
+    ['a theme with a profile update', { firstName: 'Ada', lastName: 'Lovelace', country: 'AR', timezone: 'America/Argentina/Buenos_Aires', language: 'en', meta: { uiPreferences: { theme: 'dark' } } }],
+  ])('saving %s writes it to the readable cookie the theme script applies', async (_case, body) => {
+    const response = await patchProfile(body)
+
+    expect(response.status).toBe(200)
+    expect(response.cookies.get('nextspark.account_theme')).toEqual({
+      name: 'nextspark.account_theme',
+      value: 'dark',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 400,
+      sameSite: 'lax',
+      secure: false,
+      httpOnly: false, // the inline script reads it
+    })
+  })
+
+  test.each([
+    ['the sidebar state', { meta: { uiPreferences: { sidebarCollapsed: false } } }],
+    ['a value that is no theme', { meta: { uiPreferences: { theme: 'neon' } } }],
+  ])('saving %s leaves the cookie alone', async (_case, body) => {
+    const response = await patchProfile(body)
+
+    expect(response.status).toBe(200)
+    expect(response.cookies.get('nextspark.account_theme')).toBeUndefined()
+  })
+
+  test('a refused request writes no cookie', async () => {
+    mockGetSession.mockResolvedValue(null)
+
+    const response = await patchProfile({ meta: { uiPreferences: { theme: 'dark' } } })
+
+    expect(response.status).toBe(401)
+    expect(response.cookies.get('nextspark.account_theme')).toBeUndefined()
+  })
+})
+
 /**
  * The double above stands in for Postgres, so it has to answer the way Postgres
  * would: by what the clause does, not by how it is spelled. Rewriting the same
