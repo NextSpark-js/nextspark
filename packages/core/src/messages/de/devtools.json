@@ -69,16 +69,16 @@
     "selectFileDescription": "Wählen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
     "error": "Fehler beim Laden der Datei",
     "dashboard": {
-      "title": "Test-Abdeckungs-Dashboard",
-      "features": "Features",
+      "title": "Übersicht der Testabdeckung",
+      "features": "Funktionen",
       "flows": "Abläufe",
       "testFiles": "Testdateien",
       "tags": "Tags",
       "coverage": "Abdeckung",
       "gaps": "Abdeckungslücken",
-      "noGaps": "Alle Features und Abläufe haben Tests!",
+      "noGaps": "Alle Funktionen und Abläufe haben Tests!",
       "criticalPath": "Kritischer Pfad",
-      "backToDashboard": "Dashboard",
+      "backToDashboard": "Übersicht",
       "withTests": "mit Tests",
       "withoutTests": "ohne Tests",
       "categories": {
@@ -99,7 +99,7 @@
       "clickToCopy": "Zum Kopieren klicken",
       "expectedResults": "Erwartete Ergebnisse",
       "clickToCopyCommand": "Zum Kopieren klicken: {command}",
-      "untitledFeature": "Feature ohne Titel"
+      "untitledFeature": "Funktion ohne Titel"
     }
   },
   "api": {
@@ -852,7 +852,7 @@
       "contentAbove": "Inhalt oben",
       "contentBelow": "Inhalt unten",
       "iconButtons": "Symbol-Schaltflächen",
-      "dashboardMetrics": "Dashboard-Kennzahlen",
+      "dashboardMetrics": "Kennzahlen der Übersicht",
       "revenueSubscriptionsAndKey": "Umsatz, Abonnements und wichtige Leistungskennzahlen",
       "totalRevenue": "Gesamtumsatz",
       "fromLastMonth": "{change} gegenüber dem Vormonat",
@@ -1014,6 +1014,6 @@
     "sessionNotFound": "Sitzung nicht gefunden. Bitte melden Sie sich erneut an.",
     "signIn": "Anmelden",
     "goBack": "Zurück",
-    "dashboard": "Dashboard"
+    "dashboard": "Übersicht"
   }
 }

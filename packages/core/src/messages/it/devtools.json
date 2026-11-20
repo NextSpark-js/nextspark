@@ -69,7 +69,7 @@
     "selectFileDescription": "Scegli un file di test dall'albero per visualizzarne il contenuto",
     "error": "Errore caricamento file",
     "dashboard": {
-      "title": "Dashboard Copertura Test",
+      "title": "Pannello Copertura Test",
       "features": "Funzionalità",
       "flows": "Flussi",
       "testFiles": "File di Test",
@@ -78,7 +78,7 @@
       "gaps": "Lacune di Copertura",
       "noGaps": "Tutte le funzionalità e i flussi hanno test!",
       "criticalPath": "Percorso Critico",
-      "backToDashboard": "Dashboard",
+      "backToDashboard": "Pannello",
       "withTests": "con test",
       "withoutTests": "senza test",
       "categories": {
@@ -168,14 +168,14 @@
     "headers": "Header Personalizzati",
     "headersInfo": "Content-Type viene impostato automaticamente. Aggiungi header personalizzati sotto.",
     "authentication": "Autenticazione",
-    "requestBody": "Corpo della Request (JSON)",
-    "sendRequest": "Invia Request",
+    "requestBody": "Corpo della richiesta (JSON)",
+    "sendRequest": "Invia richiesta",
     "sending": "Invio...",
     "cancel": "Annulla",
     "response": "Risposta",
     "responseBody": "Corpo",
     "responseHeaders": "Header",
-    "noResponse": "Invia una request per vedere la risposta",
+    "noResponse": "Invia una richiesta per vedere la risposta",
     "auth": {
       "useSession": "Usa sessione attuale",
       "useApiKey": "Usa API key",
@@ -196,8 +196,8 @@
       "enterPlaceholder": "Inserisci {name}..."
     },
     "responseStates": {
-      "idle": "Invia una request per vedere la risposta",
-      "loading": "Invio request...",
+      "idle": "Invia una richiesta per vedere la risposta",
+      "loading": "Invio richiesta...",
       "error": "Si è verificato un errore",
       "cancelled": "Richiesta annullata"
     },
@@ -852,7 +852,7 @@
       "contentAbove": "Contenuto sopra",
       "contentBelow": "Contenuto sotto",
       "iconButtons": "Pulsanti con icona",
-      "dashboardMetrics": "Metriche della dashboard",
+      "dashboardMetrics": "Metriche del pannello",
       "revenueSubscriptionsAndKey": "Ricavi, abbonamenti e indicatori chiave di prestazione",
       "totalRevenue": "Ricavi totali",
       "fromLastMonth": "{change} rispetto al mese scorso",
@@ -1014,6 +1014,6 @@
     "sessionNotFound": "Sessione non trovata. Accedi di nuovo.",
     "signIn": "Accedi",
     "goBack": "Indietro",
-    "dashboard": "Dashboard"
+    "dashboard": "Pannello"
   }
 }

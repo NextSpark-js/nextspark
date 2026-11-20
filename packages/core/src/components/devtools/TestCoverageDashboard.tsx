@@ -66,7 +66,7 @@ function StatCard({ icon, label, value, percentage, dataCy, subtext }: StatCardP
             {icon}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-muted-foreground truncate">{label}</p>
+            <p className="text-sm text-muted-foreground break-words">{label}</p>
             <p className="text-2xl font-bold">{value}</p>
             {subtext && (
               <p className="text-xs text-muted-foreground">{subtext}</p>
