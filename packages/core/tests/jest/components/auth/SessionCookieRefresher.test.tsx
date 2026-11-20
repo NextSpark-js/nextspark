@@ -96,18 +96,6 @@ describe('SessionCookieRefresher', () => {
     expect(mockSetTheme).not.toHaveBeenCalled()
   })
 
-  test('a session that came with the account theme cookie reads no profile: the theme script already applied it (#495)', async () => {
-    document.cookie = 'nextspark.signed_in=1; Path=/'
-    document.cookie = 'nextspark.account_theme=dark; Path=/'
-    mockRefreshSessionCookie.mockResolvedValue({ data: { user: { id: 'user-1', language: 'en' } }, error: null })
-
-    await mountRefresher()
-
-    expect(mockRefreshSessionCookie).toHaveBeenCalledTimes(1)
-    expect(fetchMock).not.toHaveBeenCalled()
-    expect(mockSetTheme).not.toHaveBeenCalled()
-  })
-
   test('no session any more clears the hint', async () => {
     document.cookie = 'nextspark.signed_in=1; Path=/'
     mockRefreshSessionCookie.mockResolvedValue({ data: null, error: null })

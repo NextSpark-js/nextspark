@@ -2,8 +2,9 @@
  * Account theme cookie
  *
  * The theme saved to a signed-in account (`uiPreferences.theme`), copied into a
- * readable cookie so the theme provider's blocking script can apply it before
- * the first paint without the render reading the session (#495). The server
+ * readable cookie so the areas with a session (dashboard, superadmin, devtools:
+ * providers/account-theme) can apply it before their first paint without the
+ * render reading the session (#495). The server
  * writes it when it issues a session (any sign-in method, through
  * lib/auth/account-theme-plugin) and when the user saves a theme
  * (PATCH /api/user/profile), and expires it on sign-out.

@@ -386,7 +386,7 @@ export const auth = betterAuth({
           disableSignUp: false, // auto-create user on the first use of a link
         })]
       : []),
-    // The account's saved theme in a readable cookie, for the blocking theme script (#495). One indexed read per issued session.
+    // The account's saved theme in a readable cookie, for the areas with a session (#495). One indexed read per issued session.
     accountThemePlugin(readAccountThemeFrom(pool)),
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],

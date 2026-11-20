@@ -59,7 +59,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 }, 'read');
 
 /**
- * A saved theme also goes to the readable cookie the blocking theme script applies before the first paint (#495;
+ * A saved theme also goes to the readable cookie the areas with a session apply before their first paint (#495;
  * lib/theme/account-theme-cookie), so this browser's next page load starts in it.
  */
 function withAccountThemeCookie(meta: unknown, response: NextResponse): NextResponse {

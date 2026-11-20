@@ -9,7 +9,6 @@ import { setUserLocaleClient } from '../lib/locale-client'
 import { setSessionHint } from '../lib/auth/session-hint'
 import type { SessionRefreshContext, SessionRefreshResult } from './useSessionCookieRefresh'
 import { withBasePath } from '../lib/base-path'
-import { readAccountThemeCookie } from '../lib/theme/account-theme-cookie'
 
 /** The theme provider keeps the visitor's own choice under this localStorage key. */
 const THEME_STORAGE_KEY = 'theme'
@@ -86,9 +85,6 @@ function releaseAccountThemeCheck(userId: string) {
  * - A user: keep the hint; make the locale cookie name the account's language,
  *   refreshing the page when it was rendered in another one; and, in a browser
  *   where the visitor never chose a theme, apply the one saved to the account.
- *   The server leaves that theme in a cookie the blocking script applies before
- *   the first paint (#495, lib/theme/account-theme-cookie); the profile is read
- *   here only for a session issued before that cookie existed.
  */
 export function useAccountPreferencesSync() {
   const router = useRouter()
@@ -119,7 +115,7 @@ export function useAccountPreferencesSync() {
     }
 
     const userId = typeof user.id === 'string' ? user.id : 'signed-in'
-    if (!forcedTheme && !hasStoredTheme() && !readAccountThemeCookie() && claimAccountThemeCheck(userId)) {
+    if (!forcedTheme && !hasStoredTheme() && claimAccountThemeCheck(userId)) {
       fetch(withBasePath('/api/user/profile?includeMeta=true'))
         .then(response => {
           // No answer about the theme: look again with the next session read

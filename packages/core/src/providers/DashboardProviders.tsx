@@ -6,6 +6,7 @@ import { QueryProvider } from './query-provider'
 import { TeamProvider, useOptionalTeamContext } from '../contexts/TeamContext'
 import { SubscriptionProvider } from '../contexts/SubscriptionContext'
 import { HtmlLang } from './html-lang'
+import { AccountTheme } from './account-theme'
 import { Toaster } from '../components/ui/sonner'
 
 /**
@@ -30,7 +31,8 @@ import { Toaster } from '../components/ui/sonner'
  */
 export function DashboardProviders({ children }: { children: React.ReactNode }) {
   // these areas render per request: `<html lang>` follows their locale (#413)
-  return <><HtmlLang /><AreaProviders>{children}</AreaProviders></>
+  // and the theme saved to the account applies before they paint (#495)
+  return <><HtmlLang /><AccountTheme /><AreaProviders>{children}</AreaProviders></>
 }
 
 function AreaProviders({ children }: { children: React.ReactNode }) {

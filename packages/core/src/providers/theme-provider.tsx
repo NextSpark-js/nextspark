@@ -41,8 +41,6 @@ SOFTWARE.
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import { resolveForcedTheme, type ForcedThemeRoutes } from "../lib/theme/forced-theme"
-import { ACCOUNT_THEME_COOKIE, readAccountThemeCookie } from "../lib/theme/account-theme-cookie"
-import { hasSessionHint, subscribeSessionHint } from "../lib/auth/session-hint"
 
 export type Attribute = `data-${string}` | "class"
 
@@ -125,12 +123,6 @@ function getStoredTheme(key: string, fallback?: string): string | undefined {
   return theme || fallback
 }
 
-/** The account theme cookie, when it names one of these themes */
-function accountTheme(themes: string[], enableSystem: boolean): string | undefined {
-  const theme = readAccountThemeCookie()
-  return theme && (themes.includes(theme) || (enableSystem && theme === "system")) ? theme : undefined
-}
-
 function disableAnimation(nonce?: string): () => void {
   const style = document.createElement("style")
   if (nonce) style.setAttribute("nonce", nonce)
@@ -153,7 +145,6 @@ const script = (
   value: Record<string, string> | undefined,
   enableSystem: boolean,
   enableColorScheme: boolean,
-  accountCookie: string,
 ) => {
   const el = document.documentElement
   const systemThemes = ["light", "dark"]
@@ -176,11 +167,7 @@ const script = (
     updateDOM(forcedTheme === "system" && enableSystem ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : forcedTheme)
   } else {
     try {
-      // The theme saved to the signed-in account, when the server left it in a cookie and it names a theme here (#495)
-      let accountTheme: string | undefined = ("; " + document.cookie).split("; " + accountCookie + "=")[1]
-      accountTheme = accountTheme && accountTheme.split(";")[0]
-      if (!accountTheme || !(themes.includes(accountTheme) || (enableSystem && accountTheme === "system"))) accountTheme = undefined
-      const themeName = localStorage.getItem(storageKey) || accountTheme || defaultTheme
+      const themeName = localStorage.getItem(storageKey) || defaultTheme
       const isSystem = enableSystem && themeName === "system"
       updateDOM(isSystem ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : themeName)
     } catch {
@@ -193,7 +180,7 @@ type ThemeScriptProps = Required<Pick<ThemeProviderProps, "attribute" | "storage
   Pick<ThemeProviderProps, "forcedTheme" | "value" | "nonce" | "scriptProps">
 
 const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, attribute, enableSystem, enableColorScheme, defaultTheme, value, themes, nonce, scriptProps }: ThemeScriptProps) {
-  const args = JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme, ACCOUNT_THEME_COOKIE]).slice(1, -1)
+  const args = JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme]).slice(1, -1)
   return (
     <script
       {...scriptProps}
@@ -219,9 +206,7 @@ function ColorModeProvider({
   nonce,
   scriptProps,
 }: Omit<ThemeProviderProps, "forcedThemeRoutes">) {
-  // As the blocking script: the visitor's choice, then the theme saved to the signed-in account, then the default
-  const initialTheme = () => getStoredTheme(storageKey, accountTheme(themes, enableSystem) ?? defaultTheme)
-  const [theme, setThemeState] = React.useState(initialTheme)
+  const [theme, setThemeState] = React.useState(() => getStoredTheme(storageKey, defaultTheme))
   // Read at the first render in the browser, not first in the mount effect: the effect below then sets the same
   // value, React bails out, and the context does not change after hydration (#371). The server has no preference.
   const [systemTheme, setSystemTheme] = React.useState<"dark" | "light" | undefined>(() => (isServer ? undefined : getSystemTheme()))
@@ -276,20 +261,6 @@ function ColorModeProvider({
     handleMediaQuery(media)
     return () => media.removeListener(handleMediaQuery)
   }, [handleMediaQuery])
-
-  // A sign-in or sign-out on this page changes the account theme cookie, and the client navigation that follows a
-  // sign-in does not run the blocking script again: follow the cookie while the visitor has no choice of their own.
-  // Only when the hint flips: the subscription also fires on focus, where re-reading would undo a toggle that
-  // localStorage could not keep.
-  React.useEffect(() => {
-    let signedIn = hasSessionHint()
-    return subscribeSessionHint(() => {
-      if (hasSessionHint() === signedIn) return
-      signedIn = !signedIn
-      setThemeState(initialTheme())
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- storageKey, themes and defaultTheme are fixed per layout
-  }, [])
 
   // Another tab changed the stored theme
   React.useEffect(() => {

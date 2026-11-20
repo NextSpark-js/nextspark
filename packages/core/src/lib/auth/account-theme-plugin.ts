@@ -1,9 +1,9 @@
 /**
  * Better Auth Plugin: Account Theme Cookie
  *
- * Copies the account's saved theme into the readable cookie the theme
- * provider's blocking script applies before the first paint (#495;
- * lib/theme/account-theme-cookie). Every way of signing in ends in Better Auth
+ * Copies the account's saved theme into the readable cookie the areas with a
+ * session apply before their first paint (#495; lib/theme/account-theme-cookie,
+ * providers/account-theme). Every way of signing in ends in Better Auth
  * issuing a session cookie (email and password, an email code, a magic link, an
  * OAuth callback), so the cookie is written wherever a response issues one: one
  * read of the user's `uiPreferences`. An account without a saved theme expires

@@ -5,8 +5,8 @@
  * `defaultMode` and `forcedThemeRoutes` from theme.config.ts, `allowUserToggle`
  * from app.config.ts. Nothing is read from the request, so the pages that use it
  * can be prerendered. A visitor's own choice is the theme provider's to apply from
- * localStorage before first paint, and a signed-in user's saved choice from the
- * cookie the server writes at sign-in (lib/theme/account-theme-cookie, #495).
+ * localStorage before first paint; a signed-in user's saved choice reaches a
+ * browser that has none through SessionCookieRefresher.
  */
 
 import { ThemeService } from '../services/theme.service'
