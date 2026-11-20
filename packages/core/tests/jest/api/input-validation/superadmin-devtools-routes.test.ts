@@ -230,6 +230,20 @@ describe('/api/v1/devtools/scheduled-actions', () => {
     expect((await list(query)).status).toBe(200)
   })
 
+  test('GET reads each action\'s team name in the same query as the actions, not one lookup per row (#501)', async () => {
+    const rows = [
+      { id: 'a1', teamId: 't1', teamName: 'Team One' },
+      { id: 'a2', teamId: 't1', teamName: 'Team One' },
+    ]
+    mocks.queryWithRLS.mockImplementation(async (sql: string) => (/LIMIT \$\d+\s+OFFSET/.test(sql) ? rows : [{ count: '2' }]))
+    const res = await list('')
+    expect((await res.json()).data.actions).toEqual(rows)
+    const calls = (mocks.queryWithRLS.mock.calls as Array<[string, unknown[]]>).map(([sql]) => sql)
+    const listSql = calls.find((sql) => /LIMIT \$\d+\s+OFFSET/.test(sql))!
+    expect(listSql).toMatch(/\bFROM "teams"[\s\S]*"teamName"/)
+    expect(calls.filter((sql) => /"teams"/.test(sql))).toHaveLength(1)
+  })
+
   test.each([
     ['a page of zero', '?page=0'],
     ['a negative page', '?page=-2'],
