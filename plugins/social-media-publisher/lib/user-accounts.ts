@@ -5,7 +5,7 @@
  */
 
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
-import { queryWithRLS } from '@nextsparkjs/core/lib/db'
+import { mutateWithRLS, queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { FacebookAPI } from './providers/facebook'
 
 interface StoredSocialAccount {
@@ -36,10 +36,64 @@ export interface UserAccount {
 
 /**
  * What a user is told when a platform account they connect or assign already has a social_accounts row of another
- * user: the upserts change only the user's own row (`ON CONFLICT ... DO UPDATE ... WHERE` the row's userId is the
- * user's), so that row is left as it is and no row comes back.
+ * user: saveOwnSocialAccount changes only the user's own row, so that row is left as it is and no row comes back.
  */
 export const ACCOUNT_CONNECTED_ELSEWHERE = 'This account is already connected by another user'
+
+export interface SocialAccountWrite {
+  platform: string
+  platformAccountId: string
+  username: string
+  /** Decrypted: stored encrypted */
+  accessToken: string
+  tokenExpiresAt: Date
+  permissions: unknown
+  accountMetadata: unknown
+}
+
+/**
+ * Stores a platform account in the user's social_accounts row: a new row, or the user's own row for that account
+ * updated (its token, expiry, permissions and metadata, active again). A row of another user is left as it is and
+ * null comes back.
+ *
+ * Two statements, not `INSERT ... ON CONFLICT DO UPDATE ... WHERE "userId" = ...`: on the app's connection PostgreSQL
+ * checks the conflicting row against the UPDATE policy before that WHERE (15.20, 16.16, 17.12, 18.7 and later), so
+ * another user's row raises an error there instead of being skipped. The insert does nothing on a conflict, and the
+ * update only matches the user's own row, so neither reads nor changes another user's.
+ */
+export async function saveOwnSocialAccount<T = { id: string }>(userId: string, account: SocialAccountWrite): Promise<T | null> {
+  const encrypted = await TokenEncryption.encrypt(account.accessToken)
+  const token = `${encrypted.encrypted}:${encrypted.iv}:${encrypted.keyId}`
+  const tokenExpiresAt = account.tokenExpiresAt.toISOString()
+  const permissions = JSON.stringify(account.permissions)
+  const accountMetadata = JSON.stringify(account.accountMetadata)
+
+  const inserted = await mutateWithRLS<T>(
+    `INSERT INTO "social_accounts"
+      ("userId", platform, "platformAccountId", "username", "accessToken", "tokenExpiresAt", permissions, "accountMetadata", "isActive")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+     ON CONFLICT ("platformAccountId") DO NOTHING
+     RETURNING *`,
+    [userId, account.platform, account.platformAccountId, account.username, token, tokenExpiresAt, permissions, accountMetadata],
+    userId
+  )
+  if (inserted.rows[0]) return inserted.rows[0]
+
+  const updated = await mutateWithRLS<T>(
+    `UPDATE "social_accounts" SET
+       "accessToken" = $3,
+       "tokenExpiresAt" = $4,
+       permissions = $5,
+       "accountMetadata" = $6,
+       "isActive" = true,
+       "updatedAt" = CURRENT_TIMESTAMP
+     WHERE "platformAccountId" = $2 AND "userId" = $1
+     RETURNING *`,
+    [userId, account.platformAccountId, token, tokenExpiresAt, permissions, accountMetadata],
+    userId
+  )
+  return updated.rows[0] ?? null
+}
 
 function parseJson<T>(value: unknown, fallback: T): T {
   if (typeof value !== 'string') return (value as T) || fallback

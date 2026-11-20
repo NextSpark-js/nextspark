@@ -25,17 +25,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
-import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../../lib/providers/facebook'
 import {
   exchangeCodeForToken,
   getOAuthConfig
 } from '../../../../lib/oauth-helper'
-import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import { getAdapter, ensureAdapter } from '../../../../lib/adapter'
 import { auditTeamId, recordAuditLog } from '../../../../lib/audit-log'
-import { ACCOUNT_CONNECTED_ELSEWHERE } from '../../../../lib/user-accounts'
+import { ACCOUNT_CONNECTED_ELSEWHERE, saveOwnSocialAccount } from '../../../../lib/user-accounts'
 
 // Type for social account data
 interface SocialAccountData {
@@ -234,41 +232,11 @@ const getHandler = async (request: NextRequest) => {
     let connectedElsewhere = 0
 
     for (const account of accountsToConnect) {
-      // Encrypt access token
-      const encryptedToken = await TokenEncryption.encrypt(account.accessToken)
-      const tokenString = `${encryptedToken.encrypted}:${encryptedToken.iv}:${encryptedToken.keyId}`
+      // STEP 1: The user's social_accounts row (USER level - plugin-owned table)
+      const saved = await saveOwnSocialAccount(userId, { ...account, accountMetadata: account.metadata, tokenExpiresAt })
 
-      // STEP 1: Upsert to social_accounts (USER level - plugin-owned table)
-      const socialAccountResult = await mutateWithRLS<{ id: string }>(
-        `INSERT INTO "social_accounts"
-          ("userId", platform, "platformAccountId", "username", "accessToken",
-           "tokenExpiresAt", permissions, "accountMetadata", "isActive")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
-         ON CONFLICT ("platformAccountId")
-         DO UPDATE SET
-           "accessToken" = EXCLUDED."accessToken",
-           "tokenExpiresAt" = EXCLUDED."tokenExpiresAt",
-           permissions = EXCLUDED.permissions,
-           "accountMetadata" = EXCLUDED."accountMetadata",
-           "isActive" = true,
-           "updatedAt" = CURRENT_TIMESTAMP
-         WHERE "social_accounts"."userId" = EXCLUDED."userId"
-         RETURNING id`,
-        [
-          userId,
-          account.platform,
-          account.platformAccountId,
-          account.username,
-          tokenString,
-          tokenExpiresAt.toISOString(),
-          JSON.stringify(account.permissions),
-          JSON.stringify(account.metadata),
-        ],
-        userId
-      )
-
-      // No row: the account's row is another user's, and the upsert left it as it is
-      const socialAccountId = socialAccountResult.rows[0]?.id
+      // No row: the account's row is another user's, and it is left as it is
+      const socialAccountId = saved?.id
       if (!socialAccountId) {
         console.warn(`[oauth-callback] ${account.platformAccountId} has a social_accounts row of another user: not connected`)
         connectedElsewhere++

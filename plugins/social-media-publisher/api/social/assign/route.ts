@@ -22,11 +22,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
-import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
-import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { getAdapter, ensureAdapter, adapterRequiredResponse } from '../../../lib/adapter'
 import { auditTeamId, recordAuditLog } from '../../../lib/audit-log'
-import { ACCOUNT_CONNECTED_ELSEWHERE, listUserAccounts } from '../../../lib/user-accounts'
+import { ACCOUNT_CONNECTED_ELSEWHERE, listUserAccounts, saveOwnSocialAccount } from '../../../lib/user-accounts'
 
 interface AccountToAssign {
   platformAccountId: string
@@ -145,38 +143,10 @@ const postHandler = async (request: NextRequest) => {
 
         // STEP 1: An account found through Graph gets its own social_accounts row (USER level - plugin-owned table)
         if (!account.stored) {
-          const encryptedToken = await TokenEncryption.encrypt(account.accessToken)
-          const tokenString = `${encryptedToken.encrypted}:${encryptedToken.iv}:${encryptedToken.keyId}`
-          const socialAccountResult = await mutateWithRLS<{ id: string }>(
-            `INSERT INTO "social_accounts"
-              ("userId", platform, "platformAccountId", "username", "accessToken",
-               "tokenExpiresAt", permissions, "accountMetadata", "isActive")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
-             ON CONFLICT ("platformAccountId")
-             DO UPDATE SET
-               "accessToken" = EXCLUDED."accessToken",
-               "tokenExpiresAt" = EXCLUDED."tokenExpiresAt",
-               permissions = EXCLUDED.permissions,
-               "accountMetadata" = EXCLUDED."accountMetadata",
-               "isActive" = true,
-               "updatedAt" = CURRENT_TIMESTAMP
-             WHERE "social_accounts"."userId" = EXCLUDED."userId"
-             RETURNING id`,
-            [
-              userId,
-              account.platform,
-              account.platformAccountId,
-              account.username,
-              tokenString,
-              tokenExpiresAt.toISOString(),
-              JSON.stringify(account.permissions),
-              JSON.stringify(account.accountMetadata),
-            ],
-            userId
-          )
+          const saved = await saveOwnSocialAccount(userId, { ...account, tokenExpiresAt })
 
-          // No row: the account's row is another user's, and the upsert left it as it is
-          const rowId = socialAccountResult?.rows?.[0]?.id
+          // No row: the account's row is another user's, and it is left as it is
+          const rowId = saved?.id
           if (!rowId) {
             console.warn(`[assign-accounts] ${account.platformAccountId} has a social_accounts row of another user: not assigned`)
             results.push({

@@ -9,14 +9,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
-import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../lib/providers/facebook'
 import { ConnectAccountSchema } from '../../../lib/validation'
 import { exchangeCodeForToken, getOAuthConfig, generateAuthorizationUrl } from '../../../lib/oauth-helper'
 import type { SocialPlatform } from '../../../types/social.types'
-import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 import { recordAuditLog } from '../../../lib/audit-log'
-import { ACCOUNT_CONNECTED_ELSEWHERE } from '../../../lib/user-accounts'
+import { ACCOUNT_CONNECTED_ELSEWHERE, saveOwnSocialAccount } from '../../../lib/user-accounts'
 
 /**
  * GET - Initiate OAuth flow
@@ -241,44 +239,16 @@ const postHandler = async (request: NextRequest) => {
     const notConnected: Array<{ platformAccountId: string; accountName: string; error: string }> = []
 
     for (const account of accountsToConnect) {
-      // Encrypt access token
-      const encryptedToken = await TokenEncryption.encrypt(account.accessToken)
-
-      // Calculate expiration date
       const now = new Date()
       const expiresAt = new Date(now.getTime() + expiresIn * 1000)
 
-      // Insert social account into database
-      const result = await mutateWithRLS<{ id: string; platform: string; username: string; createdAt: string; permissions: string; accountMetadata: string }>(
-        `INSERT INTO "social_accounts"
-          ("userId", platform, "platformAccountId", "username", "accessToken", "tokenExpiresAt", permissions, "accountMetadata", "isActive")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         ON CONFLICT ("platformAccountId")
-         DO UPDATE SET
-           "accessToken" = EXCLUDED."accessToken",
-           "tokenExpiresAt" = EXCLUDED."tokenExpiresAt",
-           permissions = EXCLUDED.permissions,
-           "accountMetadata" = EXCLUDED."accountMetadata",
-           "isActive" = EXCLUDED."isActive",
-           "updatedAt" = CURRENT_TIMESTAMP
-         WHERE "social_accounts"."userId" = EXCLUDED."userId"
-         RETURNING *`,
-        [
-          authResult.user!.id,
-          platform,
-          account.platformAccountId,
-          account.username,
-          `${encryptedToken.encrypted}:${encryptedToken.iv}:${encryptedToken.keyId}`,
-          expiresAt.toISOString(),
-          JSON.stringify(account.permissions),
-          JSON.stringify(account.metadata),
-          true
-        ],
-        authResult.user!.id
+      const savedAccount = await saveOwnSocialAccount<{ id: string; platform: string; username: string; createdAt: string; permissions: string; accountMetadata: string }>(
+        authResult.user!.id,
+        { platform, platformAccountId: account.platformAccountId, username: account.username, accessToken: account.accessToken,
+          tokenExpiresAt: expiresAt, permissions: account.permissions, accountMetadata: account.metadata }
       )
 
-      // No row: the account's row is another user's, and the upsert left it as it is
-      const savedAccount = result.rows[0]
+      // No row: the account's row is another user's, and it is left as it is
       if (!savedAccount) {
         console.warn(`[social-connect] ${account.platformAccountId} has a social_accounts row of another user: not connected`)
         notConnected.push({ platformAccountId: account.platformAccountId, accountName: account.username, error: ACCOUNT_CONNECTED_ELSEWHERE })
