@@ -244,7 +244,7 @@
     "noResults": "Nenhum recurso encontrado",
     "noResultsHint": "Tente ajustar os filtros ou a busca",
     "stats": {
-      "total": "Total Recursos",
+      "total": "Total de recursos",
       "covered": "Com Testes",
       "uncovered": "Sem Testes",
       "coverage": "Cobertura"

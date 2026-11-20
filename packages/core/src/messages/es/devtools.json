@@ -69,7 +69,7 @@
     "selectFileDescription": "Elige un archivo de test del árbol para ver su contenido",
     "error": "Error cargando archivo",
     "dashboard": {
-      "title": "Panel de Cobertura de Pruebas",
+      "title": "Panel de Cobertura de Tests",
       "features": "Características",
       "flows": "Flujos",
       "testFiles": "Archivos de Test",
@@ -244,7 +244,7 @@
     "noResults": "No se encontraron características",
     "noResultsHint": "Intenta ajustar los filtros o la búsqueda",
     "stats": {
-      "total": "Total Características",
+      "total": "Total de características",
       "covered": "Con Tests",
       "uncovered": "Sin Tests",
       "coverage": "Cobertura"
