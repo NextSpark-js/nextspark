@@ -2038,3 +2038,39 @@ test('a copy whose symlink points elsewhere, or whose entry changed type, is rep
     })
   }
 })
+
+// #490: an exact next inside the range core supports (a project created with 0.1.0-beta.204) gets a tilde
+
+test('puts a tilde on an exact next of the project and of a workspace package, installs again, and a second run does nothing', (t) => {
+  const root = createProject(t, {
+    pins: { ...ALIGNED, next: '16.4.5' },
+    files: { 'plugins/foo/package.json': json({ name: 'acme-foo', dependencies: { next: '16.4.7' }, peerDependencies: { '@nextsparkjs/core': '*' } }), 'apps/other/package.json': json({ name: 'acme-other', dependencies: { next: '16.4.5' } }) },
+    importers: ['plugins/foo', 'apps/other'],
+  })
+
+  const result = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.equal(JSON.parse(read(root, 'package.json')).dependencies.next, '~16.4.5')
+  assert.match(result.stdout, /next 16\.4\.5 -> ~16\.4\.5\n/)
+  assert.equal(JSON.parse(read(root, 'plugins/foo/package.json')).dependencies.next, '~16.4.7')
+  assert.match(result.stdout, /plugins\/foo\/package\.json:\n {5}next 16\.4\.7 -> ~16\.4\.7 \(dependencies\)/)
+  // not the project's: left as it is
+  assert.equal(JSON.parse(read(root, 'apps/other/package.json')).dependencies.next, '16.4.5')
+  assert.equal(result.calls.filter((call) => call === 'install').length, 2, result.calls.join('\n'))
+
+  git(root, 'add', '-A')
+  git(root, 'commit', '-q', '-m', 'Updated')
+  const again = runUpdateCore(root, ['--version', TO], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+  assert.equal(again.status, 0, again.output)
+  assert.doesNotMatch(again.stdout, /Raising the dependencies/)
+})
+
+test('--no-dependency-floors leaves an exact next as it is', (t) => {
+  const root = createProject(t, { pins: { ...ALIGNED, next: '16.4.5' } })
+
+  const result = runUpdateCore(root, ['--version', TO, '--no-dependency-floors'], { coreManifest: CORE_WITH_NEXT_PEER, installShell: WITH_SEMVER })
+
+  assert.equal(result.status, 0, result.output)
+  assert.equal(JSON.parse(read(root, 'package.json')).dependencies.next, '16.4.5')
+})

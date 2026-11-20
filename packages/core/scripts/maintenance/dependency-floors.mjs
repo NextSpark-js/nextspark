@@ -49,6 +49,20 @@ export function floorsToRaise(below, coreManifest) {
   return below.filter(({ name }) => RAISED_ALWAYS.includes(name) || coreManifest?.peerDependencies?.[name] !== undefined)
 }
 
+/**
+ * An exact `next` inside the range core supports gets a tilde (`16.4.5` becomes `~16.4.5`), so the project takes later
+ * patches on `pnpm update`: the rule the create-nextspark-app wizard applies to a new project (#485). Only a version
+ * that is exact (`semver.valid`) and satisfies core's range moves; a range, a protocol, a path or a tag stays. Returns the
+ * entries as `{ name, field, declared, required }`, only in `dependencies`, `devDependencies` and `optionalDependencies`
+ * (a peer range is the package's own to declare).
+ */
+export function exactNextToTilde(manifest, coreManifest, semver) {
+  const range = coreManifest?.peerDependencies?.next
+  if (!range || !semver.validRange(range)) return []
+  return PROJECT_FIELDS.filter((field) => semver.valid(manifest?.[field]?.next) && semver.satisfies(manifest[field].next, range))
+    .map((field) => ({ name: 'next', field, declared: manifest[field].next, required: `~${manifest[field].next}` }))
+}
+
 /** The `pnpm add` lines for these entries: one for dependencies, and one each with -D for devDependencies and -O for optionalDependencies. */
 export function addCommands(below) {
   const word = ({ name, required }) => `'${`${name}@${required}`.replace(/'/g, "'\\''")}'`
@@ -91,6 +105,8 @@ export function workspaceFloors(manifest, coreManifest, semver, own = true) {
       if (required) below.push({ name, field, declared, required })
     }
   }
+  // a package that is not the project's is only listed, and an exact next in the range is not below anything
+  if (own) below.push(...exactNextToTilde(manifest, coreManifest, semver))
   const byName = (a, b) => a.name.localeCompare(b.name) || a.field.localeCompare(b.field)
   return { below: below.sort(byName), protocols: protocols.sort(byName) }
 }

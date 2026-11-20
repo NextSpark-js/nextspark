@@ -27,7 +27,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { addCommands, dependenciesBelowCore, floorsToRaise, workspaceAddCommands, workspaceFloors } from './dependency-floors.mjs'
+import { addCommands, dependenciesBelowCore, exactNextToTilde, floorsToRaise, workspaceAddCommands, workspaceFloors } from './dependency-floors.mjs'
 import { CODE_MIGRATIONS } from './code-migrations.mjs'
 import { stepCommand } from '../utils/package-manager.mjs'
 
@@ -1424,7 +1424,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
 
     // The new core is only known now, and nextspark prepare refuses a host below its floors
     const found = flags.dependencyFloors ? findDependenciesBelowCore(out, cwd, manifest) : null
-    const toRaise = found ? floorsToRaise(found.below, found.coreManifest) : []
+    const toRaise = found ? [...floorsToRaise(found.below, found.coreManifest), ...exactNextToTilde(manifest, found.coreManifest, found.semver)] : []
     // The other packages of the workspace are written before the install too, so the lockfile ends with one copy
     const workspaceRaised = found ? raiseWorkspaceFloors(cwd, workspaceFloorsFor(cwd, root, git.top, manifest, found)) : []
     if (toRaise.length > 0 || workspaceRaised.length > 0) {

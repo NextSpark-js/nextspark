@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 0.1.0-beta.205
+
+- **A project created with `create-nextspark-app` 0.1.0-beta.204 has `"next": "16.4.5"` (exact), and `update-core` now puts the tilde on it (`~16.4.5`).** The update prints `next 16.4.5 -> ~16.4.5` and installs again. With `--no-dependency-floors` it does not write it: run `pnpm add next@~16.4.5` (use your version of `next` after the tilde) by hand, so the project takes later 16.4.x patches on `pnpm update` (#490).
+
 ### Fixed
 
+- **`update-core` puts a tilde on an exact `next` that is inside the range core supports, as the `create-nextspark-app` wizard does for a new project (#485).** A project created with 0.1.0-beta.204 kept `"next": "16.4.5"` after the update and so missed later 16.4.x patches. The tilde goes on `next` in `dependencies`, `devDependencies` and `optionalDependencies` of the project and of the packages of its workspace that `update-core` already writes for the dependency floors, in the same step and the same install; a range, a `workspace:`, `file:` or `catalog:` spec, a tag, or a version outside core's range stays, a second run changes nothing, and `--no-dependency-floors` writes nothing (#490).
 - **The role of a suspended user shows in the superadmin users table instead of an empty cell and two console errors.** `useRoleTranslations` (and `getRoleDisplayName`) called `t()` with the display key of the role, and the configured display names have none for `suspended`, so the cell was empty and next-intl logged `MISSING_MESSAGE` and `INVALID_MESSAGE` on every render. A role without a display name no longer reaches `t()`: `suspended` uses the existing `superadmin.usersPage.roles.suspended` label and any other such role shows its own name (#489).
 
 ## [0.1.0-beta.205] - 2026-11-18

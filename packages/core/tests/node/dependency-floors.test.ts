@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { addCommands, dependenciesBelowCore, floorsToRaise, workspaceAddCommands, workspaceFloors } from '../../scripts/maintenance/dependency-floors.mjs'
+import { addCommands, dependenciesBelowCore, exactNextToTilde, floorsToRaise, workspaceAddCommands, workspaceFloors } from '../../scripts/maintenance/dependency-floors.mjs'
 
 const CORE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 // The semver package of the CLI, as update-core resolves it
@@ -110,4 +110,24 @@ test('workspaceAddCommands names the target and a flag per field, with --save-pe
     "pnpm add --filter acme-foo --save-peer 'next@~16.4.5'",
   ])
   assert.deepEqual(workspaceAddCommands('-w', below.filter(({ name }) => name === 'zod')), ["pnpm add -w 'zod@^4.5.4'"])
+})
+
+// #490: an exact next inside core's range gets a tilde
+
+test('exactNextToTilde puts a tilde on an exact next inside core\'s range and leaves everything else', () => {
+  const entries = (manifest: object) => exactNextToTilde(manifest, core, semver).map(({ field, declared, required }) => [field, declared, required])
+  assert.deepEqual(entries({ dependencies: { next: '16.4.5' }, devDependencies: { next: '16.4.9' } }), [
+    ['dependencies', '16.4.5', '~16.4.5'],
+    ['devDependencies', '16.4.9', '~16.4.9'],
+  ])
+  // already a range, outside the range, a protocol, a tag, a peer range: untouched
+  for (const next of ['~16.4.5', '^16.4.5', '16.3.0', '17.0.0', 'workspace:*', 'catalog:', 'file:../next', 'latest']) assert.deepEqual(entries({ dependencies: { next } }), [], next)
+  assert.deepEqual(entries({ peerDependencies: { next: '16.4.5' } }), [])
+  assert.deepEqual(exactNextToTilde({ dependencies: { next: '16.4.5' } }, { dependencies: {} }, semver), [])
+})
+
+test('workspaceFloors tilts an exact next of the project\'s own packages, and only those', () => {
+  const manifest = { dependencies: { next: '16.4.5' } }
+  assert.deepEqual(workspaceFloors(manifest, core, semver, true).below.map(({ declared, required }) => [declared, required]), [['16.4.5', '~16.4.5']])
+  assert.deepEqual(workspaceFloors(manifest, core, semver, false).below, [])
 })
