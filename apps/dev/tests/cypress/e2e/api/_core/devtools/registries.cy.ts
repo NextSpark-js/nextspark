@@ -303,6 +303,15 @@ describe('DevTools Registries API', {
         expect(data.summary).to.have.property('flows')
         expect(data).to.have.property('meta')
 
+        // The registry entries the dashboard lists the gaps from
+        expect(data.features).to.be.an('array')
+        expect(data.flows).to.be.an('array')
+        ;[...data.features, ...data.flows].forEach((entry: Record<string, unknown>) => {
+          expect(entry).to.have.property('key')
+          expect(entry).to.have.property('name')
+          expect(entry).to.have.nested.property('testing.hasTests')
+        })
+
         cy.log(`Total tags: ${data.summary.totalTags}, Test files: ${data.summary.testFiles}`)
       })
     })
