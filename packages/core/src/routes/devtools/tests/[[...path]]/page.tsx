@@ -27,7 +27,7 @@ async function DevTestsPageContent({ params }: DevTestsPageProps) {
 
   return (
     <div
-      className="space-y-6 2xl:w-[calc(100%+500px)] 2xl:-ml-[250px]"
+      className="space-y-6"
       data-cy="devtools-tests-page"
     >
       {/* Header */}

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The devtools Test Cases page fits its container on a wide screen.** From the `2xl` breakpoint the page made itself 500 px wider than the content area with a negative left margin, which is more than the area has beside its content, so at 1920 px the left column and the coverage cards were cut by the area. The page uses the width of the content area, and a test fails if a devtools page or component sizes itself with `w-[calc(100%+...)]` (#497).
 - **The devtools Style Gallery uses the header of the other devtools pages.** It had its own "Back to Dev Area" button (the sidebar already links to the dashboard) and a header laid out differently from the rest. It now shows the icon, title and subtitle like Features or Blocks. The unused `devtools.style.back` message is removed from the six catalogs (#502).
 - **The devtools sidebar highlights only the current page.** The Dashboard item (`/devtools`) was marked active on every devtools page because its href is a prefix of all of them; the area root is now matched exactly and the other items keep prefix matching (#496).
 - **Expanding a tag in the devtools Tags page no longer logs `Invalid selector path`.** The files panel asked for `devtools.tags.files-panel` and the selector is declared as `filesPanel`, so the panel had no `data-cy`. A test checks that every literal `sel()` path used by the devtools components is declared (#504).
