@@ -4,7 +4,8 @@
  * Suspending a user signs out their sessions, deactivates their API keys and refuses them a new session; unsuspending
  * lets them sign in again (their keys stay deactivated). Nobody suspends a superadmin or themselves.
  *
- * Users (password Test1234): superadmin@nextspark.dev (superadmin), developer@nextspark.dev (developer), sarah.davis@nextspark.dev (usr-sarah-008, member)
+ * Users: superadmin@nextspark.dev (superadmin) and developer@nextspark.dev (developer) use the password of the core sample
+ * data (Pandora1234, or CYPRESS_SUPERADMIN_PASSWORD / CYPRESS_DEVELOPER_PASSWORD); sarah.davis@nextspark.dev (usr-sarah-008, member) uses Test1234
  *
  * Tags: @api, @superadmin, @permissions
  */
@@ -16,8 +17,12 @@ describe('Superadmin - suspend users', { tags: ['@api', '@superadmin', '@permiss
   const SUPERADMIN = 'superadmin@nextspark.dev'
   const TARGET = { id: 'usr-sarah-008', email: 'sarah.davis@nextspark.dev' }
 
+  const passwordOf = (email: string) =>
+    email === TARGET.email ? 'Test1234'
+      : email === SUPERADMIN ? Cypress.env('SUPERADMIN_PASSWORD') || 'Pandora1234'
+      : Cypress.env('DEVELOPER_PASSWORD') || 'Pandora1234'
   const signIn = (email: string) =>
-    cy.request({ method: 'POST', url: `${BASE_URL}/api/auth/sign-in/email`, body: { email, password: 'Test1234' }, failOnStatusCode: false })
+    cy.request({ method: 'POST', url: `${BASE_URL}/api/auth/sign-in/email`, body: { email, password: passwordOf(email) }, failOnStatusCode: false })
   const action = (userId: string, body: object) =>
     cy.request({ method: 'PATCH', url: `${BASE_URL}/api/superadmin/users/${userId}`, body, failOnStatusCode: false })
 
