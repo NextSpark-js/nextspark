@@ -63,6 +63,20 @@ describe.each([['dashboard home', Home], ['posts list', PostsList], ['edit', Edi
   })
 })
 
+describe('blog dashboard home', () => {
+  test('the view link of a recent published post points at its slug', async () => {
+    mockTeamId = 'team-1'
+    const now = new Date().toISOString()
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id: 'p1', slug: 'my-first-post', title: 'My first post', status: 'published', createdAt: now, updatedAt: now }] }),
+    })
+    render(<Home />)
+    await waitFor(() => expect(document.querySelector('a[href="/posts/my-first-post"]')).not.toBeNull())
+    expect(document.querySelector('a[href*="undefined"]')).toBeNull()
+  })
+})
+
 describe('blog create', () => {
   test('saves with the resolved team, even when it is not in localStorage yet', async () => {
     mockTeamId = 'team-1'

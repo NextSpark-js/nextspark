@@ -63,17 +63,18 @@ async function fetchPosts(teamId: string): Promise<{ stats: PostStats; recent: R
     }
 
     const result = await response.json()
-    const posts = result.data || []
+    const posts: RecentPost[] = result.data || []
 
     const stats: PostStats = {
       total: posts.length,
-      published: posts.filter((p: RecentPost) => p.status === 'published').length,
-      drafts: posts.filter((p: RecentPost) => p.status === 'draft').length
+      published: posts.filter((p) => p.status === 'published').length,
+      drafts: posts.filter((p) => p.status === 'draft').length
     }
 
-    const recent = posts.slice(0, 5).map((post: RecentPost) => ({
+    const recent = posts.slice(0, 5).map((post) => ({
       id: post.id,
       title: post.title,
+      slug: post.slug,
       status: post.status,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt
