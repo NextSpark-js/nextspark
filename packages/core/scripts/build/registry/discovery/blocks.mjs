@@ -9,6 +9,7 @@
 import { readdir, stat, readFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync, readFileSync } from 'fs'
+import { createHash } from 'crypto'
 
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { log, verbose } from '../../../utils/index.mjs'
@@ -94,6 +95,9 @@ export function readSchemaExport(source, fileName, ts) {
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
+/** The flat 320x180 fill that scaffolds up to 0.1.0-beta.205 shipped as every block's thumbnail.png: it shows nothing. */
+const PLACEHOLDER_THUMBNAIL = { size: 460, sha256: 'ccafd38e05be5fcf3a4fa8440c26f65fbb98bff7ab5a93f24088f79025c0a547' }
+
 /**
  * The block's thumbnail import specifier, only when thumbnail.png really is a PNG: Next fails the
  * build on an image it cannot decode (older scaffolds shipped text placeholders with that name).
@@ -101,16 +105,21 @@ const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0
 export function thumbnailImport(blockPath, blockSlug) {
   const file = join(blockPath, 'thumbnail.png')
   if (!existsSync(file)) return null
-  let head
+  let data
   try {
     // The whole file is read: the registry build may not use fd-level fs calls (see safe-fs.test.mjs), and a thumbnail is small
-    head = readFileSync(file).subarray(0, 8)
+    data = readFileSync(file)
   } catch (error) {
     log(`WARNING: Block "${blockSlug}": blocks/${blockSlug}/thumbnail.png cannot be read (${error.code ?? error.message}); it is ignored (no thumbnail)`, 'warning')
     return null
   }
+  const head = data.subarray(0, 8)
   if (!head.equals(PNG_SIGNATURE)) {
     log(`WARNING: Block "${blockSlug}": blocks/${blockSlug}/thumbnail.png is not a PNG image; it is ignored (no thumbnail)`, 'warning')
+    return null
+  }
+  if (data.length === PLACEHOLDER_THUMBNAIL.size && createHash('sha256').update(data).digest('hex') === PLACEHOLDER_THUMBNAIL.sha256) {
+    log(`WARNING: Block "${blockSlug}": blocks/${blockSlug}/thumbnail.png is the blank placeholder older scaffolds shipped; it is ignored (no thumbnail)`, 'warning')
     return null
   }
   return `@/blocks/${blockSlug}/thumbnail.png`

@@ -22,7 +22,7 @@ import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { getBlockComponent } from '../../lib/blocks/loader';
 import { sel } from '../../lib/test';
 import type { FieldDefinition, BlockConfig } from '../../types/blocks';
-import { withBasePathIfInApp } from '../../lib/base-path'
+import { BlockThumbnail } from './BlockThumbnail'
 
 interface BlockDetailViewerProps {
   slug: string;
@@ -157,15 +157,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
       <div className="flex items-start gap-4">
         {/* Thumbnail */}
         <div className="w-32 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-          {block.thumbnail ? (
-            <img
-              src={withBasePathIfInApp(block.thumbnail.src)}
-              alt={text(block.name)}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <LayoutGrid className="h-8 w-8 text-muted-foreground" />
-          )}
+          <BlockThumbnail src={block.thumbnail?.src} alt={text(block.name)} />
         </div>
 
         <div className="flex-1">

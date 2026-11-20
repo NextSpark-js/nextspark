@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Expanding a tag in the devtools Tags page no longer logs `Invalid selector path`.** The files panel asked for `devtools.tags.files-panel` and the selector is declared as `filesPanel`, so the panel had no `data-cy`. A test checks that every literal `sel()` path used by the devtools components is declared (#504).
 - **The devtools Scheduled Actions table shows the team's name instead of a cut id (the id is on hover and in the expanded row), read in the same query as the actions, and the page uses the same header as the other devtools pages.** (#501)
 
-- **A devtools Blocks card whose thumbnail is a flat fill, or fails to load, shows the "No preview" placeholder instead of an empty white box.** (#500)
+- **The devtools block list and block detail show the "No preview" placeholder instead of an empty grey box.** Every block scaffold shipped the same blank `thumbnail.png`; the scaffolds no longer ship it, the registry build ignores that exact file in a project that already has it (with a warning), and a thumbnail that fails to load shows the placeholder. (#500)
 
 - **The devtools API Explorer lists a project's own endpoints under their first path segment instead of a `root` group of `//api/...` paths, opens on a `GET` (not `OPTIONS`) when it picks the first endpoint, and counts only the params and headers that have a key.** The Params and Headers tabs showed the blank rows the editors keep to type into as "Params 2" and "Headers 2". (#499)
 

@@ -37,7 +37,7 @@ pnpm build:registries
 
 ### 3. Thumbnails
 
-Nothing to copy: the generated block registry imports each block's `thumbnail.png` statically, so Next.js serves it as an asset (`BLOCK_REGISTRY[slug].thumbnail.src`).
+Nothing to copy: a block that has a `thumbnail.png` gets it imported statically by the generated block registry, so Next.js serves it as an asset (`BLOCK_REGISTRY[slug].thumbnail.src`). The blocks here ship without one; the devtools show a placeholder.
 
 ## Block Structure
 
@@ -50,7 +50,7 @@ block-name/
 ├── fields.ts       # Field definitions for the editor UI
 ├── component.tsx   # React component
 ├── index.ts        # Re-exports all modules
-└── thumbnail.png   # Preview image for block picker
+└── thumbnail.png   # Optional preview image for block picker
 ```
 
 ## Customization
@@ -60,7 +60,7 @@ After copying a block, you can customize it:
 1. **Change metadata**: Edit `config.ts` (name, description, icon)
 2. **Add/remove fields**: Modify `schema.ts` and `fields.ts`
 3. **Update UI**: Modify `component.tsx`
-4. **Update thumbnail**: Replace `thumbnail.png` with actual preview image
+4. **Add a thumbnail** (optional): put a `thumbnail.png` preview image next to the block
 
 ## Creating New Blocks
 

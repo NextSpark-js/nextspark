@@ -12,7 +12,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, mkdirSync, chmodSync, readFileSync, existsSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -159,6 +159,33 @@ test('a thumbnail is imported only when the file is a PNG; a placeholder is igno
   assert.equal(thumbnailImport(dir, 'hero'), '@/blocks/hero/thumbnail.png')
   writeFileSync(join(dir, 'thumbnail.png'), 'Placeholder thumbnail')
   assert.equal(thumbnailImport(dir, 'hero'), null, 'text placeholder is not imported')
+})
+
+test('the blank PNG older scaffolds shipped is ignored, a PNG that differs by one byte is not (#500)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'block-thumb-blank-'))
+  const blank = readFileSync(join(import.meta.dirname, 'fixtures', 'blank-thumbnail.png'))
+  assert.equal(blank.length, 460)
+  writeFileSync(join(dir, 'thumbnail.png'), blank)
+  assert.equal(thumbnailImport(dir, 'hero'), null, 'the blank placeholder shows nothing')
+  const other = Buffer.from(blank)
+  other[other.length - 1] ^= 1
+  writeFileSync(join(dir, 'thumbnail.png'), other)
+  assert.equal(thumbnailImport(dir, 'hero'), '@/blocks/hero/thumbnail.png')
+})
+
+test('no block ships the blank thumbnail placeholder (#500)', () => {
+  const blank = readFileSync(join(import.meta.dirname, 'fixtures', 'blank-thumbnail.png'))
+  const root = join(import.meta.dirname, '..', '..', '..', '..', '..', '..')
+  const found = []
+  for (const base of ['apps/dev/blocks', 'packages/core/templates/blocks', 'packages/core/templates/projects/starter/blocks']) {
+    const dir = join(root, base)
+    if (!existsSync(dir)) continue
+    for (const slug of readdirSync(dir)) {
+      const file = join(dir, slug, 'thumbnail.png')
+      if (existsSync(file) && readFileSync(file).equals(blank)) found.push(`${base}/${slug}/thumbnail.png`)
+    }
+  }
+  assert.deepEqual(found, [])
 })
 
 test('an unreadable thumbnail.png (a directory, no permission) gives no thumbnail instead of dropping the block', () => {
