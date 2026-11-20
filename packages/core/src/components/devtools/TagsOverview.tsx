@@ -301,7 +301,7 @@ export function TagsOverview() {
                       <div
                         key={`panel-${key}`}
                         className="mt-3 p-4 bg-muted/50 rounded-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200"
-                        data-cy={sel("devtools.tags.files-panel", { tag: key })}
+                        data-cy={sel("devtools.tags.filesPanel", { tag: key })}
                       >
                         <div className="flex items-center gap-2 mb-3">
                           <FileCode2 className="h-4 w-4 text-muted-foreground" />
