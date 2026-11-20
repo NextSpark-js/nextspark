@@ -11,15 +11,12 @@ interface DevtoolsNavProps {
   pluginItems: PluginNavItem[];
   /** Icons only (the collapsed sidebar). */
   isCollapsed?: boolean;
-  /** Called when a link is followed (the mobile menu closes itself). */
-  onNavigate?: () => void;
 }
 
 /**
- * The links of the devtools area: its sections and, below them, the plugins' pages. Rendered by the
- * sidebar and by the mobile menu, so both show the same navigation.
+ * The links of the devtools area, rendered by the sidebar: its sections and, below them, the plugins' pages.
  */
-export function DevtoolsNav({ pluginItems, isCollapsed = false, onNavigate }: DevtoolsNavProps) {
+export function DevtoolsNav({ pluginItems, isCollapsed = false }: DevtoolsNavProps) {
   const pathname = usePathname();
   const t = useTranslations('devtools');
 
@@ -40,7 +37,6 @@ export function DevtoolsNav({ pluginItems, isCollapsed = false, onNavigate }: De
           <Link
             key={item.titleKey}
             href={item.href}
-            onClick={onNavigate}
             data-cy={`devtools-nav-${item.titleKey.split('.').pop()?.toLowerCase().replace(/\s+/g, '-')}`}
             className={linkClass(isDevtoolsNavActive(pathname, item.href))}
             title={isCollapsed ? title : description}
@@ -74,7 +70,6 @@ export function DevtoolsNav({ pluginItems, isCollapsed = false, onNavigate }: De
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={onNavigate}
                 data-cy={`devtools-plugin-nav-${item.href.split('/').pop()}`}
                 className={linkClass(isDevtoolsNavActive(pathname, item.href))}
                 title={isCollapsed ? item.label : item.description}

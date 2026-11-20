@@ -13,7 +13,7 @@ export interface DevtoolsNavItem {
   descriptionKey: string
 }
 
-/** The sections of the devtools area: the one list the sidebar, the mobile menu and the dashboard render. */
+/** The sections of the devtools area: the one list the sidebar and the dashboard render. */
 export const DEVTOOLS_NAV_ITEMS: DevtoolsNavItem[] = [
   { titleKey: 'nav.home', href: DEVTOOLS_ROOT, icon: LayoutDashboard, descriptionKey: 'nav.homeDescription' },
   { titleKey: 'nav.styleGallery', href: '/devtools/style', icon: Palette, descriptionKey: 'nav.styleGalleryDescription' },
