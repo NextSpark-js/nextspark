@@ -217,7 +217,8 @@ export function FlowsViewer() {
         {filteredFlows.map((flow) => (
           <Card
             key={flow.key}
-            className="hover:shadow-md transition-shadow"
+            id={flow.key}
+            className="scroll-mt-4 hover:shadow-md transition-shadow"
             data-cy={sel("devtools.flows.card", { slug: flow.key })}
           >
             <CardHeader className="pb-2">

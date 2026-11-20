@@ -51,6 +51,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     success: true,
     data: {
       tags: TAGS_REGISTRY,
+      features: Object.values(FEATURE_REGISTRY),
+      flows: Object.values(FLOW_REGISTRY),
       summary: {
         totalTags,
         testFiles: COVERAGE_SUMMARY.tags.testFiles,

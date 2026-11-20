@@ -14,9 +14,9 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { sel } from "../../lib/test";
 import { withBasePath } from "../../lib/base-path"
+import Link from "next/link";
 
 interface CoverageSummary {
   features: { total: number; withTests: number; withoutTests: number };
@@ -26,27 +26,15 @@ interface CoverageSummary {
   byCategory: Record<string, number>;
 }
 
+/** An entry of the feature or flow registry, as `/api/v1/devtools/testing` returns it. */
 interface FeatureItem {
-  slug: string;
-  title: string;
-  category: string;
-  testing: {
-    hasTests: boolean;
-    testCount: number;
-    files: string[];
-  };
+  key: string;
+  name: string;
+  testing: { hasTests: boolean; testCount: number };
 }
 
-interface FlowItem {
-  slug: string;
-  title: string;
-  category: string;
-  criticalPath: boolean;
-  testing: {
-    hasTests: boolean;
-    testCount: number;
-    files: string[];
-  };
+interface FlowItem extends FeatureItem {
+  criticalPath?: boolean;
 }
 
 interface CoverageData {
@@ -93,6 +81,20 @@ function StatCard({ icon, label, value, percentage, dataCy, subtext }: StatCardP
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** A feature or flow without tests, linking to its card in the Features or Flows page. */
+function GapLink({ href, entry, variant = "outline" }: { href: string; entry: FeatureItem; variant?: "outline" | "destructive" }) {
+  return (
+    <Link href={href} data-cy={sel('devtools.tests.dashboardGapItem', { slug: entry.key })}>
+      <Badge
+        variant={variant}
+        className={variant === "outline" ? "border-amber-500 text-amber-600 dark:text-amber-400" : undefined}
+      >
+        {entry.name}
+      </Badge>
+    </Link>
   );
 }
 
@@ -150,7 +152,9 @@ export function TestCoverageDashboard() {
   const uncoveredFeatures = features.filter(f => !f.testing.hasTests);
   const uncoveredFlows = flows.filter(f => !f.testing.hasTests);
   const criticalUncoveredFlows = uncoveredFlows.filter(f => f.criticalPath);
-  const hasGaps = uncoveredFeatures.length > 0 || uncoveredFlows.length > 0;
+  // The cards count from the summary, the lists come from the entries: an all-clear needs both to agree.
+  const hasGaps = uncoveredFeatures.length > 0 || uncoveredFlows.length > 0
+    || summary.features.withoutTests > 0 || summary.flows.withoutTests > 0;
 
   return (
     <div className="space-y-6 h-full overflow-y-auto" data-cy={sel('devtools.tests.dashboard')}>
@@ -225,13 +229,7 @@ export function TestCoverageDashboard() {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {criticalUncoveredFlows.map((flow) => (
-                      <Badge
-                        key={flow.slug}
-                        variant="destructive"
-                        data-cy={sel('devtools.tests.dashboardGapItem', { slug: flow.slug })}
-                      >
-                        {flow.title}
-                      </Badge>
+                      <GapLink key={flow.key} href={`/devtools/flows#${flow.key}`} entry={flow} variant="destructive" />
                     ))}
                   </div>
                 </div>
@@ -245,14 +243,7 @@ export function TestCoverageDashboard() {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {uncoveredFeatures.slice(0, 10).map((feature) => (
-                      <Badge
-                        key={feature.slug}
-                        variant="outline"
-                        className="border-amber-500 text-amber-600 dark:text-amber-400"
-                        data-cy={sel('devtools.tests.dashboardGapItem', { slug: feature.slug })}
-                      >
-                        {feature.title}
-                      </Badge>
+                      <GapLink key={feature.key} href={`/devtools/features#${feature.key}`} entry={feature} />
                     ))}
                     {uncoveredFeatures.length > 10 && (
                       <Badge variant="secondary">
@@ -271,14 +262,7 @@ export function TestCoverageDashboard() {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {uncoveredFlows.filter(f => !f.criticalPath).slice(0, 10).map((flow) => (
-                      <Badge
-                        key={flow.slug}
-                        variant="outline"
-                        className="border-amber-500 text-amber-600 dark:text-amber-400"
-                        data-cy={sel('devtools.tests.dashboardGapItem', { slug: flow.slug })}
-                      >
-                        {flow.title}
-                      </Badge>
+                      <GapLink key={flow.key} href={`/devtools/flows#${flow.key}`} entry={flow} />
                     ))}
                     {uncoveredFlows.filter(f => !f.criticalPath).length > 10 && (
                       <Badge variant="secondary">
