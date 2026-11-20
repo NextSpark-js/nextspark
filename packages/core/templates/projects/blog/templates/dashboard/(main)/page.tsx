@@ -42,6 +42,7 @@ interface PostStats {
 interface RecentPost {
   id: string
   title: string
+  slug: string
   status: string
   createdAt: string
   updatedAt: string
@@ -320,7 +321,7 @@ export default function BlogDashboardPage() {
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       {post.status === 'published' && (
                         <Link
-                          href={`/posts/${post.id}`}
+                          href={`/posts/${post.slug}`}
                           target="_blank"
                           onClick={(e) => e.stopPropagation()}
                         >

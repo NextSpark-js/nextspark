@@ -22,6 +22,9 @@ test('a published post passes', async () => {
   queryWithRLS.mockResolvedValue([{ found: 1 }])
   expect(await get('/posts/a-post')).toBeNull()
   expect(queryWithRLS.mock.calls[0][1]).toEqual(['a-post'])
+  // the mock cannot filter: the SQL has to ask for published posts whose date has come
+  expect(queryWithRLS.mock.calls[0][0]).toContain("status = 'published'")
+  expect(queryWithRLS.mock.calls[0][0]).toContain('"publishedAt" <= NOW()')
 })
 
 test('a slug with no published post is rewritten to the not-found path', async () => {
