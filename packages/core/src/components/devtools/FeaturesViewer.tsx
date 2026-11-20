@@ -9,6 +9,7 @@ import { Copy, Check, Search, TestTube2, CheckCircle2, XCircle } from "lucide-re
 import { useTranslations } from "next-intl";
 import { FEATURE_REGISTRY, COVERAGE_SUMMARY, type FeatureEntry } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
+import { useScrollToHash } from "./use-scroll-to-hash";
 
 type CategoryFilter = "all" | FeatureEntry["category"];
 type CoverageFilter = "all" | "covered" | "uncovered";
@@ -35,6 +36,7 @@ const CATEGORY_COLORS: Record<FeatureEntry["category"], string> = {
  */
 export function FeaturesViewer() {
   const t = useTranslations("devtools.features");
+  useScrollToHash();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");

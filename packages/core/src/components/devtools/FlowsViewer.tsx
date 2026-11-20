@@ -9,6 +9,7 @@ import { Copy, Check, Search, TestTube2, CheckCircle2, XCircle, Zap, AlertTriang
 import { useTranslations } from "next-intl";
 import { FLOW_REGISTRY, COVERAGE_SUMMARY, type FlowEntry } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
+import { useScrollToHash } from "./use-scroll-to-hash";
 
 type CategoryFilter = "all" | FlowEntry["category"];
 type CoverageFilter = "all" | "covered" | "uncovered";
@@ -36,6 +37,7 @@ const CATEGORY_COLORS: Record<FlowEntry["category"], string> = {
  */
 export function FlowsViewer() {
   const t = useTranslations("devtools.flows");
+  useScrollToHash();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
