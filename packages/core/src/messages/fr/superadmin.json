@@ -528,23 +528,6 @@
     "usage": "Utilisation actuelle",
     "usageDescription": "Utilisation des ressources pendant la période de facturation en cours.",
     "usagePeriod": "Période : {period}",
-    "limitNames": {
-      "team_members": "Membres de l'équipe",
-      "tasks": "Tâches",
-      "customers": "Clients",
-      "api_calls": "Appels API / mois",
-      "storage": "Stockage",
-      "file_uploads": "Téléchargements de fichiers / mois",
-      "webhooks_count": "Webhooks",
-      "posts": "Publications",
-      "monthly_views": "Vues mensuelles",
-      "authors": "Auteurs",
-      "contacts": "Contacts",
-      "deals": "Affaires",
-      "pipelines": "Pipelines",
-      "workspaces": "Espaces de travail",
-      "storage_gb": "Stockage"
-    },
     "usageAllTime": "Depuis toujours"
   },
   "teamRoles": {

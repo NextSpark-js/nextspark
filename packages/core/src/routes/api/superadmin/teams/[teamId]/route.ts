@@ -265,10 +265,12 @@ export const GET = withRateLimitTier(async (
           current: u.currentValue,
           periodKey: u.periodKey,
           limit: (subscription && billing.matrix.limits[u.limitSlug]?.[subscription.planSlug]) ?? null,
-          unit: billing.limits[u.limitSlug]?.unit ?? null
+          unit: billing.limits[u.limitSlug]?.unit ?? null,
+          // the i18n key of the limit's name in the billing registry (a project's own limit has its own)
+          name: billing.limits[u.limitSlug]?.name ?? null
         };
         return acc;
-      }, {} as Record<string, { current: number; periodKey: string; limit: number | null; unit: string | null }>),
+      }, {} as Record<string, { current: number; periodKey: string; limit: number | null; unit: string | null; name: string | null }>),
       metadata: {
         requestedBy: session.user.id,
         requestedAt: new Date().toISOString(),

@@ -528,23 +528,6 @@
     "usage": "Uso actual",
     "usageDescription": "Uso de recursos durante el período de facturación actual.",
     "usagePeriod": "Período: {period}",
-    "limitNames": {
-      "team_members": "Miembros del Equipo",
-      "tasks": "Tareas",
-      "customers": "Clientes",
-      "api_calls": "Llamadas API / mes",
-      "storage": "Almacenamiento",
-      "file_uploads": "Subidas de Archivo / mes",
-      "webhooks_count": "Webhooks",
-      "posts": "Publicaciones",
-      "monthly_views": "Vistas Mensuales",
-      "authors": "Autores",
-      "contacts": "Contactos",
-      "deals": "Negocios",
-      "pipelines": "Pipelines",
-      "workspaces": "Espacios de Trabajo",
-      "storage_gb": "Almacenamiento"
-    },
     "usageAllTime": "Todo el tiempo"
   },
   "teamRoles": {

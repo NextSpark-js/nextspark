@@ -528,23 +528,6 @@
     "usage": "Current Usage",
     "usageDescription": "Resource usage for the current billing period.",
     "usagePeriod": "Period: {period}",
-    "limitNames": {
-      "team_members": "Team Members",
-      "tasks": "Tasks",
-      "customers": "Customers",
-      "api_calls": "API Calls / month",
-      "storage": "Storage",
-      "file_uploads": "File Uploads / month",
-      "webhooks_count": "Webhooks",
-      "posts": "Posts",
-      "monthly_views": "Monthly Views",
-      "authors": "Authors",
-      "contacts": "Contacts",
-      "deals": "Deals",
-      "pipelines": "Pipelines",
-      "workspaces": "Workspaces",
-      "storage_gb": "Storage"
-    },
     "usageAllTime": "All time"
   },
   "teamRoles": {

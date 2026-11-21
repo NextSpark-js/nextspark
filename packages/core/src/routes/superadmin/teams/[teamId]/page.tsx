@@ -124,6 +124,8 @@ interface UsageData {
     /** The limit of the team's plan: -1 unlimited, null when the plan does not define it */
     limit: number | null;
     unit: string | null;
+    /** i18n key of the limit's name, from the billing registry */
+    name: string | null;
   };
 }
 
@@ -162,6 +164,7 @@ const roleColors = {
 function TeamDetailPage() {
   const t = useTranslations("superadmin");
   const tTeams = useTranslations("teams");
+  const tAll = useTranslations();
   const locale = useLocale();
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
   // a status the catalog does not know (a provider's own) is shown as it comes
@@ -700,21 +703,26 @@ function TeamDetailPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {Object.entries(teamData.usage).map(([limitSlug, usage]) => {
-                const name = t.has(`teamDetail.limitNames.${limitSlug}`)
-                  ? t(`teamDetail.limitNames.${limitSlug}`)
+                // the registry's name key (billing.limits.*, or a project's own); the slug in words when it has no translation
+                const name = usage.name && tAll.has(usage.name)
+                  ? tAll(usage.name)
                   : limitSlug.charAt(0).toUpperCase() + limitSlug.replace(/_/g, " ").slice(1);
                 const amount = (value: number) =>
                   usage.unit === "bytes" ? t("planMatrix.gigabytes", { value: formatLocaleNumber(value, locale) }) : formatLocaleNumber(value, locale);
                 const unlimited = usage.limit === -1;
-                const bounded = usage.limit != null && usage.limit >= 0;
-                const percent = !bounded ? 0 : usage.limit === 0 ? (usage.current > 0 ? 100 : 0) : Math.min(100, (usage.current / usage.limit!) * 100);
+                // a limit of 0 is a plan without it: "—", as in the plan matrix, and no bar
+                const notIncluded = usage.limit === 0;
+                const bounded = usage.limit != null && usage.limit > 0;
+                const percent = bounded ? Math.min(100, (usage.current / usage.limit!) * 100) : 0;
                 return (
                   <div key={limitSlug} className="p-4 bg-muted/50 rounded-lg" data-cy={`usage-${limitSlug}`}>
                     <div className="text-sm font-medium text-muted-foreground">{name}</div>
                     <div className="text-2xl font-bold mt-1">
                       {bounded
                         ? `${formatLocaleNumber(usage.current, locale)} / ${amount(usage.limit!)}`
-                        : unlimited
+                        : notIncluded
+                          ? `${amount(usage.current)} / —`
+                          : unlimited
                           ? `${amount(usage.current)} / ${t("planMatrix.unlimited")}`
                           : amount(usage.current)}
                     </div>

@@ -1,5 +1,5 @@
 /**
- * GET /api/superadmin/teams/:id: each usage counter carries the limit of the team's plan and its unit (#534).
+ * GET /api/superadmin/teams/:id: each usage counter carries the limit of the team's plan, its unit and the i18n key of its name (#534).
  */
 import { NextRequest } from 'next/server'
 
@@ -10,7 +10,7 @@ jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({ withRateLimitTier: (h
 jest.mock('@nextsparkjs/core/lib/billing/gateways/factory', () => ({ getBillingGatewayOrNull: async () => null }))
 jest.mock('@nextsparkjs/core/lib/billing/queries', () => ({
   getFullBillingMatrix: () => ({
-    limits: { storage_gb: { unit: 'bytes' }, tasks: { unit: 'count' } },
+    limits: { storage_gb: { unit: 'bytes', name: 'billing.limits.storage' }, tasks: { unit: 'count', name: 'billing.limits.tasks' } },
     matrix: { limits: { storage_gb: { pro: 50, free: 1 }, tasks: { pro: -1, free: 20 } } },
   }),
 }))
@@ -37,7 +37,7 @@ beforeEach(() => {
 it('adds the plan limit and the unit to each usage counter, null when the plan or the registry does not define them', async () => {
   const response = await GET(new NextRequest('http://localhost/api/superadmin/teams/t1'), { params: Promise.resolve({ teamId: 't1' }) } as never)
   const { usage } = await response.json()
-  expect(usage.storage_gb).toEqual({ current: 25, periodKey: 'all_time', limit: 50, unit: 'bytes' })
-  expect(usage.tasks).toEqual({ current: 7, periodKey: '2026-11', limit: -1, unit: 'count' })
-  expect(usage.custom).toEqual({ current: 1, periodKey: '2026', limit: null, unit: null })
+  expect(usage.storage_gb).toEqual({ current: 25, periodKey: 'all_time', limit: 50, unit: 'bytes', name: 'billing.limits.storage' })
+  expect(usage.tasks).toEqual({ current: 7, periodKey: '2026-11', limit: -1, unit: 'count', name: 'billing.limits.tasks' })
+  expect(usage.custom).toEqual({ current: 1, periodKey: '2026', limit: null, unit: null, name: null })
 })

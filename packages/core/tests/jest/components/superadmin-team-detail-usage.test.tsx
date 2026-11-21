@@ -15,13 +15,13 @@ const base = {
 }
 
 jest.mock('next/navigation', () => ({ useParams: () => ({ teamId: 't1' }) }))
-const KNOWN = new Set(['teamDetail.limitNames.storage_gb', 'teamDetail.limitNames.tasks'])
+const KNOWN = new Set(['billing.limits.storage', 'billing.limits.tasks'])
 jest.mock('next-intl', () => ({
   useLocale: () => 'en',
   useTranslations: () => Object.assign(
     (key: string, values?: Record<string, unknown>) => {
-      if (key === 'teamDetail.limitNames.storage_gb') return 'Storage'
-      if (key === 'teamDetail.limitNames.tasks') return 'Tasks'
+      if (key === 'billing.limits.storage') return 'Storage'
+      if (key === 'billing.limits.tasks') return 'Tasks'
       if (key === 'planMatrix.gigabytes') return `${values?.value} GB`
       if (key === 'planMatrix.unlimited') return 'Unlimited'
       if (key === 'teamDetail.usageAllTime') return 'All time'
@@ -45,10 +45,11 @@ const show = (patch: Partial<typeof base>) => {
 it('shows each counter with its translated name, the plan limit, a bar and a readable period', () => {
   show({
     usage: {
-      storage_gb: { current: 25, periodKey: 'all_time', limit: 50, unit: 'bytes' },
-      tasks: { current: 7, periodKey: '2026-11', limit: -1, unit: 'count' },
-      file_uploads: { current: 3, periodKey: '2026', limit: null, unit: null },
-      bandwidth: { current: 150, periodKey: 'all_time', limit: -1, unit: 'bytes' },
+      storage_gb: { current: 25, periodKey: 'all_time', limit: 50, unit: 'bytes', name: 'billing.limits.storage' },
+      tasks: { current: 7, periodKey: '2026-11', limit: -1, unit: 'count', name: 'billing.limits.tasks' },
+      file_uploads: { current: 3, periodKey: '2026', limit: null, unit: null, name: null },
+      seats: { current: 2, periodKey: 'all_time', limit: 0, unit: 'count', name: 'project.limits.seats' }, // a project's own limit, with no translation
+      bandwidth: { current: 150, periodKey: 'all_time', limit: -1, unit: 'bytes', name: null },
     },
   })
   const storage = document.querySelector('[data-cy="usage-storage_gb"]')!
@@ -63,6 +64,11 @@ it('shows each counter with its translated name, the plan limit, a bar and a rea
   expect(tasks.querySelector('[role="progressbar"]')).toBeNull()
 
   expect(document.querySelector('[data-cy="usage-bandwidth"]')).toHaveTextContent('150 GB / Unlimited') // the unit stays when the limit is open
+
+  const seats = document.querySelector('[data-cy="usage-seats"]')!
+  expect(seats).toHaveTextContent('Seats') // the slug in words when the registry's name has no translation
+  expect(seats).toHaveTextContent('2 / —') // a plan without the limit: a dash, not "2 / 0" and a full bar
+  expect(seats.querySelector('[role="progressbar"]')).toBeNull()
 
   const other = document.querySelector('[data-cy="usage-file_uploads"]')!
   expect(other).toHaveTextContent('File uploads') // a counter with no translation is humanized, never the raw key
