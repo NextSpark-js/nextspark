@@ -18,12 +18,11 @@ import {
 } from '@nextsparkjs/core/lib/api/auth/devtools-auth'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { ScheduledAction, ScheduledActionStatus } from '@nextsparkjs/core/lib/scheduled-actions/types'
-import type { ScheduledActionRow } from '@nextsparkjs/core/components/devtools/scheduled-actions/types'
 import { getAllRegisteredActions } from '@nextsparkjs/core/lib/scheduled-actions/registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions/scheduler'
-import { ALREADY_RETRIED_SQL, RETRY_LINK_COLUMNS } from '@nextsparkjs/core/lib/scheduled-actions/retry-links'
+import { listScheduledActions } from '@nextsparkjs/core/lib/scheduled-actions/devtools-list'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request; the API-key scope is declared at the entry point,
@@ -45,58 +44,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const actionType = searchParams.get('action_type')
   const { page, limit, offset } = parsePaginationParams(request, 20)
 
-  // Build query
-  const conditions: string[] = []
-  const params: unknown[] = []
-  let paramIndex = 1
-
-  if (status) {
-    conditions.push(`status = $${paramIndex++}`)
-    params.push(status)
-  }
-
-  if (actionType) {
-    conditions.push(`"actionType" = $${paramIndex++}`)
-    params.push(actionType)
-  }
-
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-
-  // Query total count
-  const countQuery = `
-    SELECT COUNT(*) as count
-    FROM "scheduled_actions"
-    ${whereClause}
-  `
-  const countResult = await queryWithRLS<{ count: string }>(countQuery, params, null)
-  const total = parseInt(countResult[0]?.count || '0', 10)
-
-  // Query actions with pagination
-  const actionsQuery = `
-    SELECT
-      id,
-      "actionType",
-      status,
-      payload,
-      "teamId",
-      (SELECT t.name FROM "teams" t WHERE t.id = "scheduled_actions"."teamId") AS "teamName",
-      "scheduledAt",
-      "startedAt",
-      "completedAt",
-      "errorMessage",
-      attempts,
-      "maxRetries",
-      "recurringInterval",
-      "createdAt",
-      "updatedAt",
-      ${RETRY_LINK_COLUMNS}
-    FROM "scheduled_actions"
-    ${whereClause}
-    ORDER BY "createdAt" DESC
-    LIMIT $${paramIndex++}
-    OFFSET $${paramIndex}
-  `
-  const actionsResult = await queryWithRLS<ScheduledActionRow>(actionsQuery, [...params, limit, offset], null)
+  const { actions: actionsResult, total } = await listScheduledActions({ status, actionType, limit, offset })
 
   // Get all registered action types
   const registeredActions = getAllRegisteredActions()
@@ -183,8 +131,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         status,
         payload,
         "teamId",
-        "lockGroup",
-        "recurringInterval"
+        "lockGroup"
       FROM "scheduled_actions"
       WHERE id = $1`,
       [actionId],
@@ -202,47 +149,27 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Only failed actions can be retried', 400, undefined, 'VALIDATION_ERROR')
     }
 
-    // A failed action is retried once: a later action of the same type and payload is its retry (see retry-links.ts),
-    // whatever state that one is in now. If it failed too, it is the one to retry.
-    if (failedAction.recurringInterval == null) {
-      const retried = await queryWithRLS<{ id: string }>(
-        ALREADY_RETRIED_SQL,
-        [failedAction.actionType, JSON.stringify(failedAction.payload), failedAction.id],
-        null
+    // Create a new action with the same payload. "retryOf" is unique: a failed action is retried once, and a second retry
+    // (two clicks, two tabs) fails the insert, atomically. If the retry fails too, it is the one to retry.
+    let newActionId: string
+    try {
+      newActionId = await scheduleAction(
+        failedAction.actionType,
+        failedAction.payload,
+        {
+          scheduledAt: new Date(), // Schedule immediately
+          teamId: failedAction.teamId ?? undefined,
+          lockGroup: failedAction.lockGroup ?? undefined,
+          retryOf: failedAction.id,
+        }
       )
-      if (retried.length > 0) {
-        return createApiError('This action was already retried', 409, undefined, 'ACTION_ALREADY_RETRIED', { retryActionId: retried[0].id })
+    } catch (error) {
+      // 23505 = unique_violation: another request already retried this action
+      if ((error as { code?: string }).code === '23505') {
+        return createApiError('This action was already retried', 409, undefined, 'ACTION_ALREADY_RETRIED')
       }
+      throw error
     }
-
-    // Check if there's already a pending action with the same actionType and payload
-    // Use JSONB containment operator for reliable comparison
-    const existingPending = await queryWithRLS<{ id: string }>(
-      `SELECT id
-       FROM "scheduled_actions"
-       WHERE "actionType" = $1
-         AND payload @> $2::jsonb
-         AND $2::jsonb @> payload
-         AND status = 'pending'
-       LIMIT 1`,
-      [failedAction.actionType, JSON.stringify(failedAction.payload)],
-      null
-    )
-
-    if (existingPending.length > 0) {
-      return createApiError('A pending action with the same payload already exists', 409, undefined, 'ACTION_ALREADY_PENDING', { existingActionId: existingPending[0].id })
-    }
-
-    // Create a new action with the same payload
-    const newActionId = await scheduleAction(
-      failedAction.actionType,
-      failedAction.payload,
-      {
-        scheduledAt: new Date(), // Schedule immediately
-        teamId: failedAction.teamId ?? undefined,
-        lockGroup: failedAction.lockGroup ?? undefined
-      }
-    )
 
     return NextResponse.json({
       success: true,

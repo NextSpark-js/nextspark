@@ -7,7 +7,7 @@ import type { ScheduledAction, ScheduledActionStatus } from '../../../lib/schedu
 /** A listed action: the team's name comes with the row (read in the same query), so the table needs no lookup per row. */
 export type ScheduledActionRow = ScheduledAction & {
   teamName?: string | null
-  /** The action that retried this failed one, and the failed action this one retried (derived, see lib/scheduled-actions/retry-links). */
+  /** The action that retried this failed one, and the failed action this one retried ("retryOf" is a column, migration 048; "retriedBy" is the action whose retryOf is this one). */
   retriedBy?: string | null
   retryOf?: string | null
 }

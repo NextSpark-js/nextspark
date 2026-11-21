@@ -65,7 +65,7 @@ export async function scheduleAction(
   // - windowSeconds is 0 or negative (disabled)
   // - No entityId in payload (can't deduplicate)
   // - This is a recurring action (handled by the idempotent registration below, not the entityId window)
-  const shouldDeduplicate = windowSeconds > 0 && entityId && !options?.recurringInterval
+  const shouldDeduplicate = windowSeconds > 0 && entityId && !options?.recurringInterval && !options?.retryOf
 
   // Prepare action data
   const actionId = globalThis.crypto.randomUUID()
@@ -75,6 +75,8 @@ export async function scheduleAction(
   const lockGroup = options?.lockGroup || null
   const maxRetries = options?.maxRetries ?? 3 // Default: 3 retries
   const recurrenceType = options?.recurrenceType || null
+  // "retryOf" is only named when set: a database that has not run migration 048 still schedules everything else
+  const retryOf = options?.retryOf || null
 
   // With a caller's transaction the caller owns commit and rollback; without one, the client opened here does.
   const tx = options?.tx
@@ -100,9 +102,9 @@ export async function scheduleAction(
         "recurringInterval",
         "lockGroup",
         "maxRetries",
-        "recurrenceType"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [actionId, actionType, 'pending', payload, teamId, scheduledAt.toISOString(), recurringInterval, lockGroup, maxRetries, recurrenceType]
+        "recurrenceType"${retryOf ? ', "retryOf"' : ''}
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10${retryOf ? ', $11' : ''})`,
+      [actionId, actionType, 'pending', payload, teamId, scheduledAt.toISOString(), recurringInterval, lockGroup, maxRetries, recurrenceType, ...(retryOf ? [retryOf] : [])]
     )
 
   if (recurringInterval) {
@@ -243,8 +245,8 @@ export async function scheduleAction(
       "recurringInterval",
       "lockGroup",
       "maxRetries",
-      "recurrenceType"
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      "recurrenceType"${retryOf ? ', "retryOf"' : ''}
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10${retryOf ? ', $11' : ''})`,
     [
       actionId,
       actionType,
@@ -255,7 +257,8 @@ export async function scheduleAction(
       recurringInterval,
       lockGroup,
       maxRetries,
-      recurrenceType
+      recurrenceType,
+      ...(retryOf ? [retryOf] : [])
     ],
     null // System operation, no RLS context needed
   )
