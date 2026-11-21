@@ -411,27 +411,32 @@ describe('createMcpEngine', () => {
   });
 });
 
-describe('the scope a tool call needs (#541)', () => {
+describe('the scopes a tool call needs (#541)', () => {
   it('is <entity>:read, :write or :delete for the generated entity tools, as the API handler declares it', () => {
     const engine = createMcpEngine({ customers: makeEntity({ slug: 'customers' }) }, { toolPrefix: 'acme', executor: jest.fn() });
-    const scopes = Object.fromEntries(engine.tools.map(tool => [tool.name, engine.requiredScopeFor(tool.name)]));
+    const scopes = Object.fromEntries(engine.tools.map(tool => [tool.name, engine.requiredScopesFor(tool.name)]));
     expect(scopes).toEqual({
-      acme_list_customers: 'customers:read',
-      acme_get_customer: 'customers:read',
-      acme_create_customer: 'customers:write',
-      acme_update_customer: 'customers:write',
-      acme_delete_customer: 'customers:delete',
+      acme_list_customers: ['customers:read'],
+      acme_get_customer: ['customers:read'],
+      acme_create_customer: ['customers:write'],
+      acme_update_customer: ['customers:write'],
+      acme_delete_customer: ['customers:delete'],
     });
   });
 
-  it('is undefined for a tool that is not an entity operation and for an unknown name', () => {
+  it('is what a composite tool declares, and none for one that declares nothing or an unknown name', () => {
+    const tool = (name: string, meta: object) => ({ name, description: name, inputSchema: {}, handler: jest.fn(), meta });
     const overrides = {
       customers: {
-        extraTools: () => [{ name: 'acme_customer_report', description: 'report', inputSchema: {}, handler: jest.fn(), meta: { entitySlug: 'customers', operation: 'workflow' as const } }],
+        extraTools: () => [
+          tool('acme_customer_report', { entitySlug: 'customers', operation: 'workflow' }),
+          tool('acme_customer_merge', { entitySlug: 'customers', operation: 'workflow', requiredScopes: ['customers:read', 'customers:delete'] }),
+        ],
       },
     };
     const engine = createMcpEngine({ customers: makeEntity({ slug: 'customers' }) }, { toolPrefix: 'acme', executor: jest.fn(), overrides: overrides as never });
-    expect(engine.requiredScopeFor('acme_customer_report')).toBeUndefined();
-    expect(engine.requiredScopeFor('no_such_tool')).toBeUndefined();
+    expect(engine.requiredScopesFor('acme_customer_report')).toEqual([]);
+    expect(engine.requiredScopesFor('acme_customer_merge')).toEqual(['customers:read', 'customers:delete']);
+    expect(engine.requiredScopesFor('no_such_tool')).toEqual([]);
   });
 });

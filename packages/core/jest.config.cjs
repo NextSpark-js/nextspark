@@ -56,7 +56,7 @@ module.exports = {
     '^better-auth/next-js$':'<rootDir>/tests/jest/__mocks__/better-auth-next.js',
     '^better-auth/plugins$': '<rootDir>/tests/jest/__mocks__/better-auth-plugins.js',
     '^better-auth/social-providers$': '<rootDir>/tests/jest/__mocks__/better-auth-social-providers.js',
-    '^@better-auth/(mcp|cimd|cimd/node|oauth-provider/client)$': '<rootDir>/tests/jest/__mocks__/better-auth-oauth.js',
+    '^@better-auth/(mcp|cimd|cimd/node|oauth-provider/client|core/context)$': '<rootDir>/tests/jest/__mocks__/better-auth-oauth.js',
     '^next-intl/server$': '<rootDir>/tests/jest/__mocks__/next-intl-server.js',
     '^use-intl/react$': '<rootDir>/tests/jest/__mocks__/use-intl-react.js',
   },

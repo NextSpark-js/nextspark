@@ -18,7 +18,8 @@ import { queryOne } from '../../db'
 import { ScopeService } from '../../services/scope.service'
 import { APIError } from 'better-auth'
 import { isSuspendedRole } from '../../auth/suspension'
-import { clearTeamSelection, selectableTeams, selectedTeam, selectTeam } from './team-selection'
+import { tryGetCurrentAuthEndpointContext } from '@better-auth/core/context'
+import { isAuthorizationKey, selectableTeams, selectedTeam, selectTeam } from './team-selection'
 import { isMcpOAuthEnabled, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
 import { latestRevocation } from './revocation'
 
@@ -44,6 +45,20 @@ async function refuseSuspendedNow(userId: string): Promise<void> {
   refuseSuspended({ role: row?.role ?? 'suspended' })
 }
 
+/**
+ * The authorization request the current auth endpoint is handling, as its PKCE challenge: from the request's query
+ * (authorize, and the continuation after the team picker) or from the signed query the consent screen sends back.
+ * Better Auth verifies that signature before it asks for the consent's reference.
+ */
+function currentAuthorization(): string | undefined {
+  const ctx = tryGetCurrentAuthEndpointContext() as { query?: Record<string, unknown>; body?: Record<string, unknown> } | undefined
+  const fromQuery = ctx?.query?.code_challenge
+  if (isAuthorizationKey(fromQuery)) return fromQuery
+  const signed = ctx?.body?.oauth_query
+  const fromBody = typeof signed === 'string' ? new URLSearchParams(signed).get('code_challenge') : undefined
+  return isAuthorizationKey(fromBody) ? fromBody : undefined
+}
+
 const noTeam = () =>
   new APIError('BAD_REQUEST', { error: 'access_denied', error_description: 'choose the team this connection is for' })
 
@@ -63,23 +78,23 @@ export function mcpOAuthPlugins() {
       accessTokenExpiresIn: 600,
       postLogin: {
         page: withBasePath('/oauth/select-team'),
-        // After sign-in and before consent: a user in several teams picks the one to connect. A new authorization
-        // always asks again; the continuation of the picker goes on once a team is chosen.
-        shouldRedirect: async ({ user, session, isContinuation }) => {
+        // After sign-in and before consent: a user in several teams picks the one to connect. Every authorization
+        // asks, since the choice is kept for that authorization alone.
+        shouldRedirect: async ({ user, session }) => {
           await refuseSuspendedNow(user.id)
+          const authorization = currentAuthorization()
+          if (!authorization) throw noTeam()
           const teams = await selectableTeams(user.id)
           if (teams.length === 0) throw noTeam()
           if (teams.length === 1) {
-            await selectTeam(session.id, user.id, teams[0].id)
+            await selectTeam(session.id, authorization, user.id, teams[0].id)
             return false
           }
-          if (isContinuation && (await selectedTeam(session.id, user.id))) return false
-          await clearTeamSelection(session.id)
-          return true
+          return !(await selectedTeam(session.id, authorization, user.id))
         },
         consentReferenceId: async ({ user, session }) => {
           await refuseSuspendedNow(user.id)
-          const teamId = await selectedTeam(session.id, user.id)
+          const teamId = await selectedTeam(session.id, currentAuthorization(), user.id)
           if (!teamId) throw noTeam()
           return teamId
         },
@@ -88,7 +103,7 @@ export function mcpOAuthPlugins() {
         // Every token, refreshed ones included, is issued through here: none for a suspended account
         if (user) refuseSuspended(user, 'invalid_grant')
         if (!user || !referenceId) return {}
-        return { [TEAM_CLAIM]: referenceId, [REVOCATION_CLAIM]: await latestRevocation(user.id, referenceId) }
+        return { [TEAM_CLAIM]: referenceId, [REVOCATION_CLAIM]: await latestRevocation(user.id) }
       },
     }),
     cimd({ fetchClientMetadataResource, metadataProfile: 'mcp-2026-07-28' }),

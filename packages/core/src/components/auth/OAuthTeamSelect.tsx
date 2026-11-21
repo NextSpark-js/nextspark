@@ -5,6 +5,7 @@
  * to the server, which keeps it for this session, and the authorization then continues to the consent screen.
  */
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { authClient } from '../../lib/auth-client'
 import { withBasePath } from '../../lib/base-path'
@@ -19,6 +20,8 @@ type OAuthContinue = {
 
 export function OAuthTeamSelect() {
   const t = useTranslations('auth.oauthTeam')
+  // The authorization this page is a step of: its PKCE challenge, in the signed query of the URL
+  const authorization = useSearchParams().get('code_challenge') ?? ''
   const [teams, setTeams] = useState<Team[] | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState(false)
@@ -38,7 +41,7 @@ export function OAuthTeamSelect() {
         method: 'POST',
         credentials: 'include',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ teamId }),
+        body: JSON.stringify({ teamId, authorization }),
       })
       if (!saved.ok) throw new Error('not saved')
       const { data } = await (authClient as unknown as { oauth2: OAuthContinue }).oauth2.continue({ postLogin: true })

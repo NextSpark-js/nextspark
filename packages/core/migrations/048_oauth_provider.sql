@@ -18,7 +18,7 @@
 -- required, and its migration planner reports a nullable column there as drift.
 --
 -- Additive only: no existing table changes; two triggers on existing tables (account, users). Undoing it is
--- dropping the four triggers and their two functions, then the ten tables (in reverse order of creation), which
+-- dropping the four triggers and their three functions, then the ten tables (in reverse order of creation), which
 -- signs every MCP client out and makes them authorize again.
 
 -- ============================================
@@ -156,12 +156,15 @@ CREATE TABLE IF NOT EXISTS public."oauthClientAssertion" (
   "expiresAt"  TIMESTAMPTZ NOT NULL
 );
 
--- The team a user in several teams picked for the authorization in progress (lib/mcp/oauth/team-selection): one row
--- per browser session, read back as the consent's reference. Ours, not Better Auth's.
+-- The team a user in several teams picked for an authorization in progress (lib/mcp/oauth/team-selection): one row
+-- per browser session and authorization request (its PKCE challenge), read back as the consent's reference. Ours,
+-- not Better Auth's.
 CREATE TABLE IF NOT EXISTS public."oauthTeamSelection" (
-  "sessionId"  TEXT PRIMARY KEY REFERENCES public."session"(id) ON DELETE CASCADE,
-  "teamId"     TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
-  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+  "sessionId"      TEXT NOT NULL REFERENCES public."session"(id) ON DELETE CASCADE,
+  "authorization"  TEXT NOT NULL,
+  "teamId"         TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
+  "createdAt"      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY ("sessionId", "authorization")
 );
 
 -- ============================================
@@ -209,9 +212,9 @@ END $$;
 -- REVOCATION: ended connections, recorded where every instance reads them
 -- ============================================
 -- An access token is a signed JWT that lives ten minutes; a revocation must not wait for that. Each event that ends
--- a connection leaves a numbered row here. A token carries the number of the newest row that covered its user and
--- team when it was issued, and /api/mcp refuses it once a newer one exists (lib/mcp/oauth/revocation): no clock is
--- compared. A row with no team covers every connection of the user. The client is kept for the record.
+-- a connection leaves a numbered row here. A token carries the number of its user's newest row when it was issued,
+-- and /api/mcp refuses it once a newer row covers it (lib/mcp/oauth/revocation): no clock is compared. A row with
+-- a client and a team covers that client's connection to that team; one with neither, every connection of the user.
 --
 -- The rows are written by triggers, so they hold on every instance and for every path, Better Auth's included:
 --   - a refresh token revoked or deleted while it was live: the revocation endpoint, a detected reuse of a rotated
@@ -231,6 +234,19 @@ DROP POLICY IF EXISTS "oauthRevocation service all" ON public."oauthRevocation";
 CREATE POLICY "oauthRevocation service all" ON public."oauthRevocation"
   FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls());
 
+-- Removes a user's rows that no access token can still be older than (they live minutes), keeping the newest: it is
+-- the number new tokens carry. Called on every new row, so the table stays a few rows per user.
+CREATE OR REPLACE FUNCTION public.purge_oauth_revocations(target TEXT)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  DELETE FROM public."oauthRevocation"
+   WHERE "userId" = target AND "revokedAt" < now() - interval '1 day'
+     AND id < (SELECT MAX(id) FROM public."oauthRevocation" WHERE "userId" = target);
+$$;
+
 CREATE OR REPLACE FUNCTION public.record_oauth_connection_revoked()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -239,12 +255,15 @@ SET search_path = public
 AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
-    -- a live token removed; an expired or already revoked one is housekeeping
-    IF OLD.revoked IS NULL AND OLD."expiresAt" > now() THEN
+    -- A live token removed; an expired or already revoked one is housekeeping. When the user itself is being deleted
+    -- (the token goes by cascade) there is nobody left to record it for: every token of a deleted user is refused.
+    IF OLD.revoked IS NULL AND OLD."expiresAt" > now() AND EXISTS (SELECT 1 FROM public."users" WHERE id = OLD."userId") THEN
+      PERFORM public.purge_oauth_revocations(OLD."userId");
       INSERT INTO public."oauthRevocation" ("userId", "clientId", "teamId") VALUES (OLD."userId", OLD."clientId", OLD."referenceId");
     END IF;
     RETURN OLD;
   END IF;
+  PERFORM public.purge_oauth_revocations(NEW."userId");
   INSERT INTO public."oauthRevocation" ("userId", "clientId", "teamId") VALUES (NEW."userId", NEW."clientId", NEW."referenceId");
   RETURN NEW;
 END $$;
@@ -276,10 +295,7 @@ BEGIN
   ELSE
     target := NEW.id;
   END IF;
-  -- rows no access token can still be older than (they live minutes), keeping the newest: it is the number new tokens carry
-  DELETE FROM public."oauthRevocation"
-   WHERE "userId" = target AND "revokedAt" < now() - interval '1 day'
-     AND id < (SELECT MAX(id) FROM public."oauthRevocation" WHERE "userId" = target);
+  PERFORM public.purge_oauth_revocations(target);
   INSERT INTO public."oauthRevocation" ("userId") VALUES (target);
   UPDATE public."oauthRefreshToken" SET revoked = now() WHERE "userId" = target AND revoked IS NULL;
   RETURN NEW;

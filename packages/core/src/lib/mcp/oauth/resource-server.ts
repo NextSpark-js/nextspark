@@ -10,7 +10,8 @@
  * Two checks the signature cannot make are made on every request:
  * - the connection was not ended since the token was issued (lib/mcp/oauth/revocation): an access token lives ten
  *   minutes, a revocation must not wait for that.
- * - the token was granted what the call needs. A call to an entity tool whose scope was never granted is answered
+ * - the token was granted what the call needs. A call to a tool whose scope was never granted (an entity tool, or
+ *   another tool that declares `meta.requiredScopes`) is answered
  *   403 with an RFC 6750 `insufficient_scope` challenge naming it, before anything runs, so the client can ask the
  *   user for more. A scope that was granted and the user's role no longer allows is refused by the tool instead:
  *   asking again would not help.
@@ -36,8 +37,8 @@ type McpDispatch = (body: unknown, ctx: ToolExecutionContext) => Promise<JSONRPC
 
 export interface OAuthMcpHandlers {
   dispatch: McpDispatch
-  /** The scope a call to a generated entity tool needs; undefined for any other tool. */
-  requiredScopeFor: (toolName: string) => string | undefined
+  /** The scopes a call to a tool needs before it runs; none for a tool that declares none. */
+  requiredScopesFor: (toolName: string) => string[]
 }
 
 const API_KEY_BEARER = /^Bearer\s+sk_(live|test)_/i
@@ -84,7 +85,7 @@ async function principalFromClaims(
     return jsonRpcError(403, -32002, 'The account is no longer a member of the team this connection was approved for.')
   }
 
-  if (await isRevokedSince(userId, teamId, claims[REVOCATION_CLAIM])) {
+  if (await isRevokedSince(userId, clientId, teamId, claims[REVOCATION_CLAIM])) {
     return jsonRpcError(401, -32001, 'This connection was revoked. Connect again.')
   }
 
@@ -107,14 +108,18 @@ async function principalFromClaims(
   }
 }
 
-/** The scopes the calls in a JSON-RPC body need and the token was never granted. */
-function missingScopes(body: unknown, granted: readonly string[], requiredScopeFor: OAuthMcpHandlers['requiredScopeFor']): string[] {
+/**
+ * The scopes the calls in a JSON-RPC body need and the token was never granted. Only well-formed calls count: a
+ * message that is not JSON-RPC is the engine's to refuse as an invalid request.
+ */
+function missingScopes(body: unknown, granted: readonly string[], requiredScopesFor: OAuthMcpHandlers['requiredScopesFor']): string[] {
   const missing = new Set<string>()
   for (const message of Array.isArray(body) ? body : [body]) {
-    const call = message as { method?: unknown; params?: { name?: unknown } } | null
-    if (call?.method !== 'tools/call' || typeof call.params?.name !== 'string') continue
-    const scope = requiredScopeFor(call.params.name)
-    if (scope && !granted.includes(scope)) missing.add(scope)
+    const call = message as { jsonrpc?: unknown; method?: unknown; params?: { name?: unknown } } | null
+    if (call?.jsonrpc !== '2.0' || call.method !== 'tools/call' || typeof call.params?.name !== 'string') continue
+    for (const scope of requiredScopesFor(call.params.name)) {
+      if (!granted.includes(scope)) missing.add(scope)
+    }
   }
   return [...missing].sort()
 }
@@ -130,7 +135,7 @@ function insufficientScope(scopes: string[]): NextResponse {
   return response
 }
 
-export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopeFor }: OAuthMcpHandlers): Promise<NextResponse> {
+export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopesFor }: OAuthMcpHandlers): Promise<NextResponse> {
   const protectedHandler = requireMcpAuth(
     auth,
     async (_request, claims) => {
@@ -160,7 +165,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
       }
 
       // Before anything runs: one missing scope refuses the whole body, a batch included, so nothing is half done
-      const missing = missingScopes(body, granted, requiredScopeFor)
+      const missing = missingScopes(body, granted, requiredScopesFor)
       if (missing.length) return insufficientScope(missing)
 
       const ctx: ToolExecutionContext = {

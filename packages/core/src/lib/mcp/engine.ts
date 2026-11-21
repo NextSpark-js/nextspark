@@ -49,8 +49,8 @@ export interface McpEngine {
     ctx: ToolExecutionContext
   ) => Promise<JSONRPCMessage | JSONRPCMessage[] | null>
   api: EngineApi
-  /** The scope a call to a generated entity tool needs; undefined for any other tool. */
-  requiredScopeFor: (toolName: string) => string | undefined
+  /** The scopes a call to a tool needs before it runs: an entity tool's own, or the ones a tool declares in `meta.requiredScopes`. */
+  requiredScopesFor: (toolName: string) => string[]
 }
 
 export function createMcpEngine(
@@ -231,18 +231,20 @@ export function createMcpEngine(
   }
 
   /**
-   * The scope a call to `toolName` needs, when it is one of the generated entity tools: `<slug>:read|write|delete`,
-   * as the API handler it runs declares it. Undefined for a tool that makes its own calls (each is checked where
-   * it is made) and for an unknown name.
+   * The scopes a call to `toolName` needs before it runs. A generated entity tool: `<slug>:read|write|delete`, as
+   * the API handler it runs declares it. A tool that makes several calls (a workflow, an extra or utility tool)
+   * says so in `meta.requiredScopes`; one that does not is checked call by call where it makes them. None for an
+   * unknown name.
    */
-  function requiredScopeFor(toolName: string): string | undefined {
+  function requiredScopesFor(toolName: string): string[] {
     const meta = tools.find(tool => tool.name === toolName)?.meta
-    if (!meta?.entitySlug || !meta.operation || meta.operation === 'workflow') return undefined
+    if (meta?.requiredScopes) return [...meta.requiredScopes]
+    if (!meta?.entitySlug || !meta.operation || meta.operation === 'workflow') return []
     const action = meta.operation === 'list' || meta.operation === 'get' ? 'read' : meta.operation === 'delete' ? 'delete' : 'write'
-    return `${meta.entitySlug}:${action}`
+    return [`${meta.entitySlug}:${action}`]
   }
 
-  return { tools, handleJsonRpc, api, requiredScopeFor }
+  return { tools, handleJsonRpc, api, requiredScopesFor }
 }
 
 function assertUniqueNames(tools: McpToolDefinition[]): void {

@@ -71,7 +71,11 @@ export interface McpToolDefinition {
   annotations?: McpToolAnnotations
   handler: (args: Record<string, unknown>, ctx: ToolExecutionContext) => Promise<McpToolResult>
   /** Metadata for audit entries. */
-  meta?: { entitySlug?: string; operation?: McpOperation | 'workflow' }
+  /**
+   * `requiredScopes`: the scopes every call of this tool needs, for a tool that makes several API calls. An OAuth
+   * client missing one is told which before the tool runs (#541); without it each call is checked where it is made.
+   */
+  meta?: { entitySlug?: string; operation?: McpOperation | 'workflow'; requiredScopes?: string[] }
 }
 
 /** Thrown by overrides/handlers to short-circuit with an actionable message. */

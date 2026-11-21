@@ -39,15 +39,16 @@ export function OAuthConsent() {
     oauth2.publicClient({ query: { client_id: clientId } }).then(({ data }) => setClient(data)).catch(() => setClient(null))
   }, [clientId, oauth2])
 
-  // The team this connection is for: the one chosen (or the only one) in this session
+  // The team this connection is for: the one chosen (or the only one) for this authorization
   useEffect(() => {
-    fetch(withBasePath('/api/internal/oauth-team'), { credentials: 'include' })
+    const authorization = encodeURIComponent(params.get('code_challenge') ?? '')
+    fetch(withBasePath(`/api/internal/oauth-team?authorization=${authorization}`), { credentials: 'include' })
       .then(response => (response.ok ? response.json() : null))
       .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null } | null) => {
         setTeam(body?.data?.find(candidate => candidate.id === body.selected)?.name ?? null)
       })
       .catch(() => setTeam(null))
-  }, [])
+  }, [params])
 
   const decide = async (accept: boolean) => {
     setPending(accept ? 'accept' : 'deny')
