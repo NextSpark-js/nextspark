@@ -93,11 +93,6 @@
     "specifier": "@nextsparkjs/core/routes/.well-known/oauth-protected-resource/[[...path]]/route"
   },
   {
-    "kind": "route",
-    "target": ".well-known/openid-configuration/[[...path]]/route.ts",
-    "specifier": "@nextsparkjs/core/routes/.well-known/openid-configuration/[[...path]]/route"
-  },
-  {
     "kind": "page",
     "target": "403/page.tsx",
     "specifier": "@nextsparkjs/core/routes/403/page"

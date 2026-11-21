@@ -171,7 +171,6 @@ test('features.mcpOAuth is opt-in: its routes are left out unless it is true, an
     '(auth)/oauth/select-team/page.tsx',
     '.well-known/oauth-authorization-server/[[...path]]/route.ts',
     '.well-known/oauth-protected-resource/[[...path]]/route.ts',
-    '.well-known/openid-configuration/[[...path]]/route.ts',
     'api/internal/oauth-team/route.ts',
   ]
   for (const features of [{}, { mcpOAuth: false }, { billing: true, superadmin: true }]) {

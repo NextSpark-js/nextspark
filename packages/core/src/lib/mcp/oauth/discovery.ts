@@ -4,8 +4,8 @@
  * them when the request reaches Better Auth's handler. 404 while MCP browser sign-in is off.
  *
  * An app under a Next.js basePath serves them inside it: the 401 challenge of `/api/mcp` names the resource document
- * there, and a client finds the authorization server's at `<issuer>/.well-known/openid-configuration`, which the
- * auth route answers. The RFC locations at the origin's root are outside what such an app can serve.
+ * there, and a client finds the authorization server's at `<issuer>/.well-known/openid-configuration` (or
+ * `<issuer>/.well-known/oauth-authorization-server`), which the auth route answers. The RFC locations at the origin's root are outside what such an app can serve.
  */
 import { auth } from '../../auth'
 import { isMcpOAuthEnabled, oauthDiscoveryPath } from './config'

@@ -41,30 +41,40 @@ describe('MCP browser sign-in switch (#541)', () => {
   });
 });
 
-describe('discovery under a Next.js basePath (#541)', () => {
-  const saved = { base: process.env.__NEXT_ROUTER_BASEPATH, url: process.env.BETTER_AUTH_URL };
+describe('the URLs of MCP browser sign-in (#541)', () => {
+  const saved = { base: process.env.__NEXT_ROUTER_BASEPATH, auth: process.env.BETTER_AUTH_URL, app: process.env.NEXT_PUBLIC_APP_URL };
   afterEach(() => {
-    process.env.__NEXT_ROUTER_BASEPATH = saved.base;
-    process.env.BETTER_AUTH_URL = saved.url;
+    for (const [name, value] of [['__NEXT_ROUTER_BASEPATH', saved.base], ['BETTER_AUTH_URL', saved.auth], ['NEXT_PUBLIC_APP_URL', saved.app]] as const) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
     jest.resetModules();
   });
-  const load = (basePath: string) => {
+  const load = ({ basePath = '', auth, app = 'https://app.example' }: { basePath?: string; auth?: string; app?: string }) => {
     jest.resetModules();
     if (basePath) process.env.__NEXT_ROUTER_BASEPATH = basePath;
     else delete process.env.__NEXT_ROUTER_BASEPATH;
-    process.env.BETTER_AUTH_URL = 'https://app.example';
+    if (auth) process.env.BETTER_AUTH_URL = auth;
+    else delete process.env.BETTER_AUTH_URL;
+    process.env.NEXT_PUBLIC_APP_URL = app;
     return require('@/core/lib/mcp/oauth/config') as typeof import('@/core/lib/mcp/oauth/config');
   };
 
-  it('without one, the documents are at the RFC locations', () => {
-    const config = load('');
+  it('one origin, no basePath: the documents are at the RFC locations', () => {
+    const config = load({});
     expect(config.mcpResourceUrl()).toBe('https://app.example/api/mcp');
+    expect(config.mcpOAuthIssuer()).toBe('https://app.example/api/auth');
     expect(config.mcpResourceMetadataUrl()).toBe('https://app.example/.well-known/oauth-protected-resource/api/mcp');
     expect(config.oauthDiscoveryPath('/.well-known/oauth-protected-resource/api/mcp')).toBe('/.well-known/oauth-protected-resource/api/mcp');
+    expect(config.oauthDiscoveryPath('/.well-known/oauth-authorization-server/api/auth')).toBe('/.well-known/oauth-authorization-server/api/auth');
   });
 
-  it('with one, the resource, the issuer and the metadata are inside it, and Better Auth is asked at the RFC location', () => {
-    const config = load('/base');
+  it('a trailing slash in the app URL changes nothing', () => {
+    expect(load({ app: 'https://app.example/' }).mcpResourceUrl()).toBe('https://app.example/api/mcp');
+  });
+
+  it('under a basePath the resource, the issuer and the metadata are inside it, and Better Auth is asked at the RFC location', () => {
+    const config = load({ basePath: '/base' });
     expect(config.mcpResourceUrl()).toBe('https://app.example/base/api/mcp');
     expect(config.mcpOAuthIssuer()).toBe('https://app.example/base/api/auth');
     expect(config.mcpResourceMetadataUrl()).toBe('https://app.example/base/.well-known/oauth-protected-resource/api/mcp');
@@ -72,5 +82,20 @@ describe('discovery under a Next.js basePath (#541)', () => {
     expect(config.oauthDiscoveryPath('/.well-known/oauth-authorization-server/api/auth')).toBe('/.well-known/oauth-authorization-server/base/api/auth');
     expect(config.oauthDiscoveryPath('/.well-known/oauth-protected-resource')).toBe('/.well-known/oauth-protected-resource');
     expect(config.oauthDiscoveryPath('/somewhere/else')).toBe('/somewhere/else');
+  });
+
+  it('a BETTER_AUTH_URL on another origin with a path of its own: the resource is the app\'s, the issuer is that URL as it is', () => {
+    const config = load({ basePath: '/base', auth: 'https://auth.example.com/custom-auth', app: 'https://app.example.com' });
+    expect(config.mcpResourceUrl()).toBe('https://app.example.com/base/api/mcp');
+    expect(config.mcpResourceMetadataUrl()).toBe('https://app.example.com/base/.well-known/oauth-protected-resource/api/mcp');
+    expect(config.mcpOAuthIssuer()).toBe('https://auth.example.com/custom-auth');
+    expect(config.oauthDiscoveryPath('/.well-known/oauth-authorization-server/api/auth')).toBe('/.well-known/oauth-authorization-server/custom-auth');
+    expect(config.oauthDiscoveryPath('/.well-known/oauth-protected-resource/api/mcp')).toBe('/.well-known/oauth-protected-resource/base/api/mcp');
+  });
+
+  it('a BETTER_AUTH_URL on another origin without a path: the issuer is that origin with the base path and /api/auth', () => {
+    const config = load({ auth: 'https://auth.example.com', app: 'https://app.example.com' });
+    expect(config.mcpResourceUrl()).toBe('https://app.example.com/api/mcp');
+    expect(config.mcpOAuthIssuer()).toBe('https://auth.example.com/api/auth');
   });
 });

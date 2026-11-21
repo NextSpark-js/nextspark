@@ -11,7 +11,7 @@
  */
 import { FEATURES } from '@nextsparkjs/registries/features'
 import { withBasePath } from '../../base-path'
-import { resolveBaseUrl } from '../../utils/base-url'
+import { resolveAppUrl, resolveBaseUrl } from '../../utils/base-url'
 
 /** MCP kill switch: on in development unless 'false', off in production unless 'true'. */
 export function isMcpEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -31,12 +31,16 @@ export function isMcpOAuthEnabled(env: NodeJS.ProcessEnv = process.env): boolean
 
 const trimSlash = (url: string) => url.replace(/\/+$/, '')
 
-/** The canonical MCP resource (RFC 8707 / RFC 9728): tokens are issued for it and it is the audience `/api/mcp` accepts. */
+/**
+ * The canonical MCP resource (RFC 8707 / RFC 9728): tokens are issued for it and it is the audience `/api/mcp`
+ * accepts. It is a URL of the app (`NEXT_PUBLIC_APP_URL`), not of the auth server: BETTER_AUTH_URL may name another
+ * origin or carry a path of its own.
+ */
 export function mcpResourceUrl(): string {
-  return `${trimSlash(resolveBaseUrl())}${withBasePath('/api/mcp')}`
+  return `${new URL(resolveAppUrl()).origin}${withBasePath('/api/mcp')}`
 }
 
-const WELL_KNOWN = /^\/\.well-known\/(oauth-protected-resource|oauth-authorization-server|openid-configuration)(\/.*)?$/
+const WELL_KNOWN = /^\/\.well-known\/(oauth-protected-resource|oauth-authorization-server)(\/.*)?$/
 
 /**
  * Where the resource's RFC 9728 metadata is served, which the 401 challenge of `/api/mcp` names.
@@ -53,18 +57,29 @@ export function mcpResourceMetadataUrl(): string {
 /**
  * The path Better Auth answers for a discovery request the app received at `pathname` (without the basePath, as
  * Next.js hands it to a route). The plugins match the RFC locations, where the suffix is the full path of the
- * resource or issuer, basePath included: `/.well-known/<document>/api/mcp` is `/.well-known/<document>/base/api/mcp`
- * to them. Unchanged without a basePath, and for the root document (no suffix).
+ * resource (for its metadata) or of the issuer (for the authorization server's): the app serves the documents at
+ * `/.well-known/oauth-protected-resource/api/mcp` and `/.well-known/oauth-authorization-server/api/auth`, and asks
+ * for them with the resource's and the issuer's real paths, whatever basePath or BETTER_AUTH_URL path they carry.
+ * Unchanged for the root document (no suffix) and for any other path.
  */
 export function oauthDiscoveryPath(pathname: string): string {
   const match = WELL_KNOWN.exec(pathname)
   if (!match || !match[2]) return pathname
-  return `/.well-known/${match[1]}${withBasePath(match[2])}`
+  if (match[1] === 'oauth-protected-resource') {
+    return match[2] === '/api/mcp' ? `/.well-known/oauth-protected-resource${new URL(mcpResourceUrl()).pathname}` : pathname
+  }
+  return match[2] === '/api/auth' ? `/.well-known/oauth-authorization-server${new URL(mcpOAuthIssuer()).pathname}` : pathname
 }
 
-/** The authorization server's issuer: Better Auth's base URL with its path. */
+/**
+ * The authorization server's issuer: the URL Better Auth serves its routes under. A BETTER_AUTH_URL that already
+ * has a path is that URL as it is (Better Auth then ignores its `basePath` option, see lib/auth.ts); otherwise it
+ * is the origin with the app's base path and `/api/auth`.
+ */
 export function mcpOAuthIssuer(): string {
-  return `${trimSlash(resolveBaseUrl())}${withBasePath('/api/auth')}`
+  const base = new URL(resolveBaseUrl())
+  const ownPath = trimSlash(base.pathname)
+  return ownPath ? `${base.origin}${ownPath}` : `${base.origin}${withBasePath('/api/auth')}`
 }
 
 /** Identity scopes: part of sign-in, never an MCP permission. */

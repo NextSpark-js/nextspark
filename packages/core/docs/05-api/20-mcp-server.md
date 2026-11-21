@@ -325,6 +325,8 @@ How it behaves:
 - **A tool that makes several API calls** declares the scopes it needs in `meta.requiredScopes` to get the `403`
   up front; without it each call is checked where it is made.
 - **Under a Next.js `basePath`** the discovery documents are served inside it and the challenge points there.
+- **URLs.** The MCP resource is a URL of the app (`NEXT_PUBLIC_APP_URL`); the issuer is where Better Auth is served
+  (`BETTER_AUTH_URL`, with its own path when it has one).
 
 Not done yet: a screen to list and disconnect connected applications, shared (multi-instance) rate limits, and a
 run against the hosted Claude and ChatGPT applications.

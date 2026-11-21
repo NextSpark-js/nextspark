@@ -46,7 +46,7 @@ export const OMITTED_CORE_ROUTES = Object.freeze({
  * the flag the host has none of them, so a project's own routes at those paths are its own.
  */
 export const OPT_IN_CORE_ROUTES = Object.freeze({
-  mcpOAuth: [/^\.well-known\/(oauth-protected-resource|oauth-authorization-server|openid-configuration)\//, /^\(auth\)\/oauth\//, /^api\/internal\/oauth-team\//],
+  mcpOAuth: [/^\.well-known\/(oauth-protected-resource|oauth-authorization-server)\//, /^\(auth\)\/oauth\//, /^api\/internal\/oauth-team\//],
 })
 
 /** The flag that leaves out the core route at `target` (set to false, or an opt-in one not set to true), or null. */
