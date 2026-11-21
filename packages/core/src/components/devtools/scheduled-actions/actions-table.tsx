@@ -231,7 +231,7 @@ export function ActionsTable({ actions, focusId, onViewRelated }: ActionsTablePr
                     {/* The reason a failed action failed, under its type: opening the row for it was a click per row. */}
                     {action.status === 'failed' && action.errorMessage && (
                       <p
-                        className="mt-1 max-w-[16rem] truncate font-sans text-xs text-destructive"
+                        className="mt-1 line-clamp-2 font-sans text-xs text-destructive [overflow-wrap:anywhere]"
                         title={action.errorMessage}
                         data-cy={`scheduled-action-error-${action.id}`}
                       >

@@ -184,7 +184,6 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         payload,
         "teamId",
         "lockGroup",
-        "createdAt",
         "recurringInterval"
       FROM "scheduled_actions"
       WHERE id = $1`,
@@ -208,7 +207,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     if (failedAction.recurringInterval == null) {
       const retried = await queryWithRLS<{ id: string }>(
         ALREADY_RETRIED_SQL,
-        [failedAction.actionType, JSON.stringify(failedAction.payload), failedAction.createdAt],
+        [failedAction.actionType, JSON.stringify(failedAction.payload), failedAction.id],
         null
       )
       if (retried.length > 0) {

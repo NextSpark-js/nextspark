@@ -28,8 +28,13 @@ export const RETRY_LINK_COLUMNS = `
     ORDER BY o."createdAt" DESC LIMIT 1
   ) AS "retryOf"`
 
-/** Parameters `$1` action type, `$2` payload (JSON text), `$3` createdAt of the failed action: the action that already retried it, if any. */
+/**
+ * Parameters `$1` action type, `$2` payload (JSON text), `$3` id of the failed action: the action that already retried it, if any.
+ * The failed action's `createdAt` is read here, not passed in: a JavaScript Date keeps milliseconds and the column keeps
+ * microseconds, so the Date compares as earlier than the row it came from and the action would count as its own retry.
+ */
 export const ALREADY_RETRIED_SQL = `
   SELECT n.id FROM "scheduled_actions" n
-  WHERE n."actionType" = $1 AND n.payload = $2::jsonb AND n."createdAt" > $3
+  WHERE n."actionType" = $1 AND n.payload = $2::jsonb
+    AND n."createdAt" > (SELECT f."createdAt" FROM "scheduled_actions" f WHERE f.id = $3)
   ORDER BY n."createdAt" LIMIT 1`

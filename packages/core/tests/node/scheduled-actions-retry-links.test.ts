@@ -30,7 +30,7 @@ test('retry links between scheduled actions', { skip: !HAS_POSTGRES }, async (t)
   const REC2 = '00000000-0000-0000-0000-0000000000e2'
 
   await t.test('a failed action and its retry point at each other, down a chain of retries', async () => {
-    await insert(A, 'test:hook', 'failed', { url: 'x', n: 1 }, '2026-01-01T10:00:00Z')
+    await insert(A, 'test:hook', 'failed', { url: 'x', n: 1 }, '2026-01-01T10:00:00.123456Z') // microseconds, which a JS Date cannot carry
     await insert(B, 'test:hook', 'failed', { n: 1, url: 'x' }, '2026-01-01T11:00:00Z') // same payload, key order aside
     await insert(C, 'test:hook', 'pending', { url: 'x', n: 1 }, '2026-01-01T12:00:00Z')
     await insert(OTHER, 'test:hook', 'failed', { url: 'x', n: 2 }, '2026-01-01T10:30:00Z') // another payload: unrelated
@@ -50,9 +50,10 @@ test('retry links between scheduled actions', { skip: !HAS_POSTGRES }, async (t)
   })
 
   await t.test('the retry endpoint can tell a failed action was already retried', async () => {
-    const asked = async (id: string, type: string, payload: object, createdAt: string) =>
-      (await owner.query(ALREADY_RETRIED_SQL, [type, JSON.stringify(payload), createdAt])).rows.map((r: { id: string }) => r.id)
-    assert.deepEqual(await asked(A, 'test:hook', { url: 'x', n: 1 }, '2026-01-01T10:00:00Z'), [B])
-    assert.deepEqual(await asked(OTHER, 'test:hook', { url: 'x', n: 2 }, '2026-01-01T10:30:00Z'), [])
+    const asked = async (id: string, type: string, payload: object) =>
+      (await owner.query(ALREADY_RETRIED_SQL, [type, JSON.stringify(payload), id])).rows.map((r: { id: string }) => r.id)
+    assert.deepEqual(await asked(A, 'test:hook', { url: 'x', n: 1 }), [B])
+    assert.deepEqual(await asked(C, 'test:hook', { url: 'x', n: 1 }), [], 'the last of a chain is not its own retry')
+    assert.deepEqual(await asked(OTHER, 'test:hook', { url: 'x', n: 2 }), [])
   })
 })
