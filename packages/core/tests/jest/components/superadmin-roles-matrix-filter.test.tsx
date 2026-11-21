@@ -31,6 +31,10 @@ describe('filterMatrixPermissions', () => {
   it('keeps only the permissions some roles have and others do not', () => {
     expect(filterMatrixPermissions(all, data, roles, rolePermissions, '', true)).toEqual(['teams.invite', 'teams.delete'])
   })
+
+  it('hides a permission no role has: all of them agree on it', () => {
+    expect(filterMatrixPermissions([...all, 'orphan.use'], data, roles, rolePermissions, '', true)).toEqual(['teams.invite', 'teams.delete'])
+  })
 })
 
 it('shows the description and filters rows from the toolbar', () => {
