@@ -5,6 +5,7 @@
  * with no published post is a real notFound() (#493). As a client component it fetched in an effect: the server HTML
  * was empty and an unknown slug answered like an existing one.
  */
+import { Suspense, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 class NotFound extends Error {}
@@ -51,6 +52,17 @@ beforeEach(() => {
 
 const params = (slug: string) => Promise.resolve({ slug })
 
+/**
+ * The page awaits `params` behind a Suspense boundary of its own (Cache Components: without it the dev server reports
+ * runtime data outside <Suspense> and a navigation to a post waits for the request). Renders what is inside it.
+ */
+async function renderPost(slug: string) {
+  const page = PostPage({ params: params(slug) }) as ReactElement<{ children: ReactElement<{ params: Promise<{ slug: string }> }> }>
+  expect(page.type).toBe(Suspense)
+  const post = page.props.children
+  return (post.type as (props: typeof post.props) => Promise<ReactElement>)(post.props)
+}
+
 test('is not a client component', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const source = require('fs').readFileSync(require.resolve('../../../templates/projects/blog/templates/(public)/posts/[slug]/page.tsx'), 'utf8')
@@ -58,7 +70,7 @@ test('is not a client component', () => {
 })
 
 test('the server render carries the title, the body and the related posts, with the body sanitised', async () => {
-  const html = renderToStaticMarkup(await PostPage({ params: params(post.slug) }))
+  const html = renderToStaticMarkup(await renderPost(post.slug))
   expect(html).toContain('A post about caching')
   expect(html).toContain('The body of the post.')
   expect(html).toContain('Another post')
@@ -67,7 +79,7 @@ test('the server render carries the title, the body and the related posts, with 
 })
 
 test('a slug with no published post is a notFound(), and the related posts are not read', async () => {
-  await expect(PostPage({ params: params('does-not-exist') })).rejects.toBeInstanceOf(NotFound)
+  await expect(renderPost('does-not-exist')).rejects.toBeInstanceOf(NotFound)
   expect(getRelatedPosts).not.toHaveBeenCalled()
 })
 

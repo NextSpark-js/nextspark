@@ -6,7 +6,12 @@
  *
  * Rendered on the server: the published post is read here, so the HTML carries its content and metadata,
  * and a slug with no published post is a not-found. Only the reading progress bar and the date (locale) are client islands.
+ *
+ * Cache Components: the post is read with cached functions (lib/public-posts.ts), and the part that awaits `params` is
+ * behind its own Suspense boundary, so the layout shell is prerendered and a navigation to a post does not wait for
+ * request data (#493). A slug with no published post never gets here: the request hook answers it with a 404.
  */
+import { Suspense } from 'react'
 
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -70,7 +75,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return pageMetadata({ title: post.title, description: postDescription(post), path: `/posts/${encodeURIComponent(post.slug)}` })
 }
 
-export default async function PostPage({ params }: PageProps) {
+export default function PostPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={null}>
+      <Post params={params} />
+    </Suspense>
+  )
+}
+
+async function Post({ params }: PageProps) {
   const { slug } = await params
   const post = await getPublishedPostBySlug(slug)
 

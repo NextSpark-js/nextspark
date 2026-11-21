@@ -6,6 +6,7 @@
  * Simple, clean footer with copyright, social links, and attribution.
  */
 
+import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Github, Twitter, Linkedin, Mail, Heart } from 'lucide-react'
 import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
@@ -30,13 +31,20 @@ const iconMap = {
   email: Mail
 }
 
+const subscribeToNothing = () => () => {}
+const readYear = () => new Date().getFullYear()
+const noYearOnServer = () => null
+
 export function BlogFooter({
   blogTitle = 'My Blog',
   authorName = 'Author',
   socialLinks = [],
   showNewsletter = false
 }: BlogFooterProps) {
-  const currentYear = new Date().getFullYear()
+  // The year is read in the browser only: reading the clock while the page is prerendered (Cache Components) stops the
+  // layout from rendering on the server, so every public page was rendered in the browser only, and a page with
+  // request-time content got React error #419 (#493). The server HTML has no year; it appears on hydration.
+  const currentYear = useSyncExternalStore(subscribeToNothing, readYear, noYearOnServer)
 
   return (
     <footer data-cy="blog-footer" className="border-t border-border bg-muted/30">

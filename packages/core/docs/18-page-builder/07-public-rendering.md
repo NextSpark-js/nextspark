@@ -334,7 +334,7 @@ Every write of an entity that has public pages (`access.basePath`) expires its c
 - **Cache Components:** the tag `entity:<entity>` is on every cached read of the entity's items, including the "not found" answer for a slug that did not exist yet, so one `revalidateTag` covers the old and the new slug of a rename, an unpublished item and a deleted one. The other items of the entity are read again by their next visit. Writing a pattern expires the `patterns` tag.
 - **ISR (`cacheComponents` off):** `revalidatePath` with the route group the generator puts these routes in: `/(public)<basePath>` (layout: the item pages and the archive) or `/(public)/[slug]` / `/(public)/[...slug]` for an entity at `/`. Next tags a page by its route file path, group included, so a path without `(public)` expires nothing.
 
-A deleted or unpublished item shows the not-found page on the next request, an edit shows the new content. A write outside a request (a script) has no cache to expire and is not affected. A project's own item template that reads the database itself is not cached by core and needs nothing.
+A deleted or unpublished item shows the not-found page on the next request, an edit shows the new content. A write outside a request (a script) has no cache to expire and is not affected. A project's own item template that reads the database itself is not cached by core and needs nothing. A project page that caches its own reads of a public entity (`'use cache'` with `cacheTag('entity:<entity>')`) is expired by the same writes, also for a public entity without a base path (`access.public: true`, no core route): the blog template's post page does this (#493).
 
 ## Pattern References Are Scoped to the Team of the Page
 

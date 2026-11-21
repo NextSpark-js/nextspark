@@ -17,6 +17,8 @@ import { revalidateTag } from './revalidate-tag'
  *   'layout' (item pages and archive of a base path) or the root item route with 'page'. `(public)` is the group the
  *   host generator puts those routes in (scripts/build/registry/host/entity-routes.mjs); a test keeps them equal.
  * - Patterns are tagged `patterns` and are expired by their own writes.
+ * - A public entity without a base path (`access.public: true`) has no core route, but a project's own public page can
+ *   cache its reads under the same `entity:<slug>` tag (the blog template's post page does), so its writes expire it too.
  *
  * Outside a request (a script, a test) Next refuses the call; there is no cache to expire there.
  */
@@ -28,7 +30,10 @@ export function expirePublicEntity(config: Pick<EntityConfig, 'slug' | 'access' 
   try {
     if (config.slug === 'patterns') revalidateTag('patterns')
     const basePath = getEntityBasePath(config as EntityConfig)
-    if (!basePath) return
+    if (!basePath) {
+      if (config.access?.public === true) revalidateTag(`entity:${config.slug}`)
+      return
+    }
     revalidateTag(`entity:${config.slug}`)
     const group = `/${PUBLIC_ROUTE_GROUP}`
     if (basePath === '/') revalidatePath(`${group}${config.access?.allowNestedSlugs ? '/[...slug]' : '/[slug]'}`, 'page')

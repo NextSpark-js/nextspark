@@ -37,8 +37,15 @@ describe('expirePublicEntity', () => {
     expect(tag).toHaveBeenCalledWith('entity:posts', { expire: 0 })
   })
 
+  it('expires the tag of a public entity without a base path, which a project page can cache its reads under', () => {
+    expirePublicEntity({ slug: 'posts', access: { public: true } } as never)
+    expect(tag).toHaveBeenCalledWith('entity:posts', { expire: 0 })
+    expect(path).not.toHaveBeenCalled()
+  })
+
   it('leaves an entity without public pages alone', () => {
     expirePublicEntity({ slug: 'tasks', access: {} } as never)
+    expirePublicEntity({ slug: 'tasks', access: { public: false } } as never)
     expirePublicEntity(undefined)
     expect(tag).not.toHaveBeenCalled()
     expect(path).not.toHaveBeenCalled()
