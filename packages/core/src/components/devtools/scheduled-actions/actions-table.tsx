@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '../../ui/table'
 import { Button } from '../../ui/button'
-import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, RotateCcwIcon, PlayIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronRightIcon, RotateCcwIcon, PlayIcon } from 'lucide-react'
 import { sel } from '../../../lib/test'
 import { cn } from '../../../lib/utils'
 import type { ScheduledActionRow } from './types'
@@ -325,8 +325,7 @@ export function ActionsTable({ actions, focusId, onViewRelated }: ActionsTablePr
                           onClick={() => onViewRelated?.(action.retriedBy as string)}
                           data-cy={`scheduled-action-retried-${action.id}`}
                         >
-                          {t('retry.retried')}
-                          <ArrowRightIcon className="h-3.5 w-3.5 ml-1.5" />
+                          <span className="underline underline-offset-2">{t('retry.retried')}</span>
                         </Button>
                       )}
                       {action.status === 'failed' && !action.retriedBy && (

@@ -459,7 +459,7 @@
       "success": "Action programmée pour réessai",
       "error": "Échec du réessai de l'action: {message}",
       "fallback": "Échec de la nouvelle tentative",
-      "retried": "Relancée, voir",
+      "retried": "Relancée",
       "retryOf": "Nouvelle tentative de"
     },
     "run": {

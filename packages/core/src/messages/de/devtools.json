@@ -459,7 +459,7 @@
       "success": "Aktion zur Wiederholung geplant",
       "error": "Fehler beim Wiederholen der Aktion: {message}",
       "fallback": "Wiederholung fehlgeschlagen",
-      "retried": "Wiederholt, ansehen",
+      "retried": "Wiederholt",
       "retryOf": "Wiederholung von"
     },
     "run": {

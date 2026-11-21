@@ -459,7 +459,7 @@
       "success": "Azione programmata per il ritentativo",
       "error": "Errore nel ritentativo dell'azione: {message}",
       "fallback": "Nuovo tentativo non riuscito",
-      "retried": "Riprovata, vedi",
+      "retried": "Riprovata",
       "retryOf": "Nuovo tentativo di"
     },
     "run": {

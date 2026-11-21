@@ -540,7 +540,7 @@
       "success": "Action scheduled for retry",
       "error": "Failed to retry action: {message}",
       "fallback": "Failed to retry",
-      "retried": "Retried, view",
+      "retried": "Retried",
       "retryOf": "Retry of"
     },
     "run": {

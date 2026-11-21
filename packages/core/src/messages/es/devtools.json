@@ -457,7 +457,7 @@
       "success": "Acción programada para reintentar",
       "error": "Error al reintentar acción: {message}",
       "fallback": "No se pudo reintentar",
-      "retried": "Reintentada, ver",
+      "retried": "Reintentada",
       "retryOf": "Reintento de"
     },
     "run": {

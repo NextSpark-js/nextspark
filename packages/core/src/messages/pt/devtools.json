@@ -459,7 +459,7 @@
       "success": "Ação agendada para nova tentativa",
       "error": "Falha ao tentar novamente a ação: {message}",
       "fallback": "Falha ao tentar novamente",
-      "retried": "Repetida, ver",
+      "retried": "Repetida",
       "retryOf": "Nova tentativa de"
     },
     "run": {
