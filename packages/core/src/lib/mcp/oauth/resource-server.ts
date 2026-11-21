@@ -16,6 +16,7 @@ import { queryOne } from '../../db'
 import { validateScopesForUser } from '../../api/auth'
 import { apiKeyRateLimitResponse } from '../../api/rate-limit'
 import type { DualAuthResult } from '../../api/auth/dual-auth'
+import { oauthRateLimitKey } from '../../api/auth/in-process-principal'
 import { TeamService } from '../../services/team.service'
 import { TeamMemberService } from '../../services/team-member.service'
 import { RATE_LIMIT_MESSAGE } from '../errors'
@@ -28,7 +29,8 @@ const API_KEY_BEARER = /^Bearer\s+sk_(live|test)_/i
 
 /** The request presents an API key: `x-api-key`, or a bearer in the key format. */
 export function presentsApiKey(request: Request): boolean {
-  return request.headers.has('x-api-key') || API_KEY_BEARER.test(request.headers.get('authorization') ?? '')
+  // An empty x-api-key (a proxy that always sets the header) is not a credential
+  return !!request.headers.get('x-api-key')?.trim() || API_KEY_BEARER.test(request.headers.get('authorization') ?? '')
 }
 
 /** The request presents a bearer that is not an API key. */
@@ -93,10 +95,11 @@ export async function handleOAuthMcpRequest(request: NextRequest, dispatch: McpD
       if (resolved instanceof NextResponse) return resolved
       const { principal, teamId } = resolved
 
-      // The per-credential limit API keys have, counted once per MCP request for this client and user
+      // The per-credential limit API keys have, for this client and user: counted here for the MCP request and,
+      // as for a key, once more by each API handler a tool calls (authenticateRequest)
       const limited = apiKeyRateLimitResponse(request, {
         userId: principal.user!.id,
-        keyId: `oauth:${principal.oauth!.clientId}:${principal.user!.id}`,
+        keyId: oauthRateLimitKey(principal),
         scopes: principal.scopes ?? [],
       })
       if (limited) {

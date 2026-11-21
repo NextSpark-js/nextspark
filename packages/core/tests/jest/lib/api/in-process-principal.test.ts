@@ -50,6 +50,17 @@ describe('in-process principal', () => {
     expect(result.error).toMatchObject({ status: 403 });
   });
 
+  it('counts against the per-credential limit of its OAuth client and user, once per request', async () => {
+    const { checkRateLimit } = jest.requireActual('@/core/lib/api/rate-limit');
+    const key = 'oauth:https://client.example/metadata.json:user-1';
+    const before = checkRateLimit(key).remaining;
+    const req = request();
+    attachInProcessPrincipal(req, principal);
+    await authenticateRequest(req, { requiredScope: 'tasks:read' });
+    await authenticateRequest(req, { requiredScope: 'tasks:read' });
+    expect(checkRateLimit(key).remaining).toBe(before - 2); // one for the request, one for this read
+  });
+
   it('does not exist for any other request: an identical one is anonymous', async () => {
     attachInProcessPrincipal(request(), principal);
     const result = await authenticateRequest(request(), { requiredScope: 'tasks:read' });

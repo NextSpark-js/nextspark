@@ -37,6 +37,8 @@ export function mcpOAuthPlugins() {
       loginPage: withBasePath('/login'),
       consentPage: withBasePath('/oauth/consent'),
       scopes: [...OIDC_SCOPES, ...resourceScopes],
+      // A token for /api/mcp is always a user's in a team: no client_credentials
+      grantTypes: ['authorization_code', 'refresh_token'],
       accessTokenExpiresIn: 600,
       postLogin: {
         page: withBasePath('/oauth/consent'),

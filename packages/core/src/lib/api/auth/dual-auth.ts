@@ -25,7 +25,7 @@ import {
   scopesSatisfy,
 } from './scope-policy'
 
-import { inProcessPrincipal } from './in-process-principal'
+import { inProcessPrincipal, oauthRateLimitKey } from './in-process-principal'
 export type { AuthenticateOptions, DualAuthFailure, DualAuthFailureCode } from './scope-policy'
 
 // ==========================================
@@ -116,7 +116,22 @@ export async function authenticateRequest(
   const injected = inProcessPrincipal(request)
   if (injected) {
     const failure = resolveApiKeyScopeFailure(injected.scopes, options, describeRoute(request))
-    return failure ? { ...injected, success: false, error: failure } : injected
+    if (failure) return { ...injected, success: false, error: failure }
+    // The per-credential limit, counted on this request exactly as an API key's is
+    const rateLimitResponse = apiKeyRateLimitResponse(request, {
+      userId: injected.user!.id,
+      keyId: oauthRateLimitKey(injected),
+      scopes: injected.scopes ?? [],
+    })
+    if (rateLimitResponse) {
+      return {
+        ...injected,
+        success: false,
+        rateLimitResponse,
+        error: { code: 'RATE_LIMIT_EXCEEDED', status: 429, message: 'Rate limit exceeded' },
+      }
+    }
+    return injected
   }
 
   // First try API Key authentication

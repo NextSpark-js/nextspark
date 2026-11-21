@@ -11,6 +11,11 @@ import type { DualAuthResult } from './dual-auth'
 
 const principals = new WeakMap<Request, DualAuthResult>()
 
+/** The per-credential rate-limit key of an OAuth principal: the client acting for the user. */
+export function oauthRateLimitKey(principal: DualAuthResult): string {
+  return `oauth:${principal.oauth?.clientId ?? 'unknown'}:${principal.user?.id ?? 'unknown'}`
+}
+
 export function attachInProcessPrincipal(request: Request, principal: DualAuthResult): void {
   principals.set(request, principal)
 }

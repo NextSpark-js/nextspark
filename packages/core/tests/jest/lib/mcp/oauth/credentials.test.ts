@@ -31,3 +31,10 @@ describe('which credential an MCP request presents (#541)', () => {
     expect(presentsApiKey(both) && presentsOAuthBearer(both)).toBe(true);
   });
 });
+
+describe('an empty x-api-key header (#541)', () => {
+  it('is not a credential, so the request still gets the OAuth challenge', () => {
+    expect(presentsApiKey(request({ 'x-api-key': '' }))).toBe(false);
+    expect(presentsApiKey(request({ 'x-api-key': '   ' }))).toBe(false);
+  });
+});

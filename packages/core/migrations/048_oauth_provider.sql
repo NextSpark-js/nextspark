@@ -13,6 +13,13 @@
 -- other auth tables (002). Every policy is service-only: `jwks` holds the signing private
 -- key and the token tables hold credentials.
 
+--
+-- `oauthAccessToken.token` is NOT NULL: Better Auth 1.7.27 declares the field without `required: false`, which is
+-- required, and its migration planner reports a nullable column there as drift.
+--
+-- Additive only: no existing table changes. Undoing it is dropping the eight tables (in reverse order of creation),
+-- which signs every MCP client out and makes them authorize again.
+
 -- ============================================
 -- TABLES
 -- ============================================
