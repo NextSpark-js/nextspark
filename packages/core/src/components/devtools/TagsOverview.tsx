@@ -66,13 +66,13 @@ const CATEGORY_COLORS: Record<TagCategory, string> = {
 // The open tag: its own color, solid, with dark text in light mode and light text in dark mode, and no hover shift
 // (the hover colors above wash the label out on top of it).
 const CATEGORY_SELECTED: Record<TagCategory, string> = {
-  layers: "bg-blue-200 text-blue-950 hover:bg-blue-200 hover:text-blue-950 dark:bg-blue-800 dark:text-blue-50 dark:hover:bg-blue-800 dark:hover:text-blue-50",
-  priorities: "bg-amber-200 text-amber-950 hover:bg-amber-200 hover:text-amber-950 dark:bg-amber-800 dark:text-amber-50 dark:hover:bg-amber-800 dark:hover:text-amber-50",
-  features: "bg-violet-200 text-violet-950 hover:bg-violet-200 hover:text-violet-950 dark:bg-violet-800 dark:text-violet-50 dark:hover:bg-violet-800 dark:hover:text-violet-50",
-  flows: "bg-emerald-200 text-emerald-950 hover:bg-emerald-200 hover:text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50 dark:hover:bg-emerald-800 dark:hover:text-emerald-50",
-  blocks: "bg-pink-200 text-pink-950 hover:bg-pink-200 hover:text-pink-950 dark:bg-pink-800 dark:text-pink-50 dark:hover:bg-pink-800 dark:hover:text-pink-50",
-  roles: "bg-cyan-200 text-cyan-950 hover:bg-cyan-200 hover:text-cyan-950 dark:bg-cyan-800 dark:text-cyan-50 dark:hover:bg-cyan-800 dark:hover:text-cyan-50",
-  operations: "bg-orange-200 text-orange-950 hover:bg-orange-200 hover:text-orange-950 dark:bg-orange-800 dark:text-orange-50 dark:hover:bg-orange-800 dark:hover:text-orange-50",
+  layers: "bg-blue-200 text-blue-950 hover:bg-blue-200 hover:text-blue-950 dark:bg-blue-700 dark:text-blue-50 dark:hover:bg-blue-700 dark:hover:text-blue-50",
+  priorities: "bg-amber-200 text-amber-950 hover:bg-amber-200 hover:text-amber-950 dark:bg-amber-700 dark:text-amber-50 dark:hover:bg-amber-700 dark:hover:text-amber-50",
+  features: "bg-violet-200 text-violet-950 hover:bg-violet-200 hover:text-violet-950 dark:bg-violet-700 dark:text-violet-50 dark:hover:bg-violet-700 dark:hover:text-violet-50",
+  flows: "bg-emerald-200 text-emerald-950 hover:bg-emerald-200 hover:text-emerald-950 dark:bg-emerald-700 dark:text-emerald-50 dark:hover:bg-emerald-700 dark:hover:text-emerald-50",
+  blocks: "bg-pink-200 text-pink-950 hover:bg-pink-200 hover:text-pink-950 dark:bg-pink-700 dark:text-pink-50 dark:hover:bg-pink-700 dark:hover:text-pink-50",
+  roles: "bg-cyan-200 text-cyan-950 hover:bg-cyan-200 hover:text-cyan-950 dark:bg-cyan-700 dark:text-cyan-50 dark:hover:bg-cyan-700 dark:hover:text-cyan-50",
+  operations: "bg-orange-200 text-orange-950 hover:bg-orange-200 hover:text-orange-950 dark:bg-orange-700 dark:text-orange-50 dark:hover:bg-orange-700 dark:hover:text-orange-50",
   other: "bg-gray-300 text-gray-950 hover:bg-gray-300 hover:text-gray-950 dark:bg-gray-600 dark:text-gray-50 dark:hover:bg-gray-600 dark:hover:text-gray-50",
   selectors: "bg-gray-300 text-gray-950 hover:bg-gray-300 hover:text-gray-950 dark:bg-gray-600 dark:text-gray-50 dark:hover:bg-gray-600 dark:hover:text-gray-50",
 };
