@@ -60,7 +60,7 @@ CREATE POLICY "posts_public_select_policy" ON "posts"
   FOR SELECT TO anon
   USING (
     "status" = 'published'
-    AND "publishedAt" <= NOW()
+    AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())
   );
 
 -- Policy: Users can insert their own posts

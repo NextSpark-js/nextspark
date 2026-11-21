@@ -96,8 +96,8 @@ const getHandler = async (
       FROM posts
       WHERE "userId" = $1
         AND status = 'published'
-        AND "publishedAt" <= NOW()
-      ORDER BY "publishedAt" DESC
+        AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())
+      ORDER BY "publishedAt" DESC NULLS LAST
       LIMIT 50
     `
 
@@ -109,7 +109,7 @@ const getHandler = async (
       FROM posts
       WHERE "userId" = $1
         AND status = 'published'
-        AND "publishedAt" <= NOW()
+        AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())
     `
 
     const countResult = await queryWithRLS<{ total: string }>(countQuery, [author.id])

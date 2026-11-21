@@ -27,7 +27,7 @@ test('the post read asks for a published post whose date has come, by slug', asy
   expect(await getPublishedPostBySlug('a-post')).toBeNull()
   const [sql, params] = queryWithRLS.mock.calls[0]
   expect(sql).toContain("status = 'published'")
-  expect(sql).toContain('"publishedAt" <= NOW()')
+  expect(sql).toContain('("publishedAt" IS NULL OR "publishedAt" <= NOW())')
   expect(params).toEqual(['a-post'])
 })
 
@@ -35,8 +35,30 @@ test('the related read asks for published posts whose date has come, other than 
   await getRelatedPosts('p1')
   const [sql, params] = queryWithRLS.mock.calls[0]
   expect(sql).toContain("status = 'published'")
-  expect(sql).toContain('"publishedAt" <= NOW()')
+  expect(sql).toContain('("publishedAt" IS NULL OR "publishedAt" <= NOW())')
   expect(params).toEqual(['p1', 3])
+})
+
+test('a published post with no date is public now and sorts after the dated ones, as in core\'s public reads (#542)', async () => {
+  await getPublishedPostBySlug('undated')
+  await getRelatedPosts('p1')
+  for (const [sql] of queryWithRLS.mock.calls) {
+    expect(sql).toContain('"publishedAt" IS NULL OR')
+    expect(sql).toContain('ORDER BY "publishedAt" DESC NULLS LAST')
+  }
+})
+
+test('no public read of the blog template requires a date: every one lets an undated published post through (#542)', () => {
+  const blog = join(__dirname, '../../../templates/projects/blog')
+  const files = ['lib/public-posts.ts', 'config/hooks/proxy.ts', 'api/posts/public/route.ts', 'api/authors/route.ts', 'api/authors/[username]/route.ts', 'entities/posts/migrations/001_posts_table.sql']
+  for (const file of files) {
+    const source = readFileSync(join(blog, file), 'utf8')
+    const dateRules = source.match(/(?:[a-z]\.)?"publishedAt" <= NOW\(\)/g) ?? []
+    const withNull = source.match(/\((?:[a-z]\.)?"publishedAt" IS NULL OR (?:[a-z]\.)?"publishedAt" <= NOW\(\)\)/g) ?? []
+    expect([file, dateRules.length]).toEqual([file, withNull.length])
+    expect(dateRules.length).toBeGreaterThan(0)
+    expect(source).not.toMatch(/ORDER BY (?:[a-z]\.)?"publishedAt" DESC(?! NULLS LAST)/)
+  }
 })
 
 test('both reads are cached functions, tagged with the tag core expires when a post is written', async () => {

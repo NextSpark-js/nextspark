@@ -47,8 +47,8 @@ export async function getPublishedPostBySlug(slug: string): Promise<PublicPost |
   const rows = await queryWithRLS<PublicPost>(
     `SELECT id, title, slug, content, excerpt, "featuredImage", category, "publishedAt"
      FROM posts
-     WHERE slug = $1 AND status = 'published' AND "publishedAt" <= NOW()
-     ORDER BY "publishedAt" DESC
+     WHERE slug = $1 AND status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())
+     ORDER BY "publishedAt" DESC NULLS LAST
      LIMIT 1`,
     [slug],
   )
@@ -65,8 +65,8 @@ export async function getRelatedPosts(postId: string, limit = 3): Promise<Relate
   return queryWithRLS<RelatedPost>(
     `SELECT id, title, slug, "featuredImage", content
      FROM posts
-     WHERE status = 'published' AND "publishedAt" <= NOW() AND id <> $1
-     ORDER BY "publishedAt" DESC
+     WHERE status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW()) AND id <> $1
+     ORDER BY "publishedAt" DESC NULLS LAST
      LIMIT $2`,
     [postId, limit],
   )

@@ -29,7 +29,7 @@ test('a published post passes', async () => {
   expect(queryWithRLS.mock.calls[0][1]).toEqual(['a-post'])
   // the mock cannot filter: the SQL has to ask for published posts whose date has come
   expect(queryWithRLS.mock.calls[0][0]).toContain("status = 'published'")
-  expect(queryWithRLS.mock.calls[0][0]).toContain('"publishedAt" <= NOW()')
+  expect(queryWithRLS.mock.calls[0][0]).toContain('("publishedAt" IS NULL OR "publishedAt" <= NOW())')
 })
 
 test('the id of a published post redirects to its slug, the URL of its page (the archive cards link by id, #540)', async () => {

@@ -19,7 +19,7 @@ const POST_URL = /^\/posts\/([^/]+)\/?$/
 async function publishedPostSlug(segment: string): Promise<string | null> {
   const rows = await queryWithRLS<{ slug: string }>(
     `SELECT slug FROM posts
-     WHERE (slug = $1 OR id = $1) AND status = 'published' AND "publishedAt" <= NOW()
+     WHERE (slug = $1 OR id = $1) AND status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())
      ORDER BY (slug = $1) DESC
      LIMIT 1`,
     [segment],
