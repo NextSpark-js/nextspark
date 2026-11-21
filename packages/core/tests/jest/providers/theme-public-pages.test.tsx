@@ -210,6 +210,19 @@ describe('the provider', () => {
     expect(document.documentElement.className).toBe('light')
   })
 
+  it('keeps a dark default as the public theme from the first render in the browser, over a stored light choice', async () => {
+    localStorage.setItem('theme', 'light')
+    const seen: UseThemeProps[] = []
+    function Probe() {
+      seen.push(useTheme())
+      return null
+    }
+    await hydrateAt('/', <ThemeProvider {...root} defaultTheme="dark"><Probe /></ThemeProvider>, seen)
+    expect(document.documentElement.className).toBe('dark')
+    expect(seen[0]?.forcedTheme).toBe('dark')
+    expect(seen.at(-1)?.forcedTheme).toBe('dark')
+  })
+
   it('applies the public theme whatever the system does', async () => {
     localStorage.setItem('theme', 'system')
     render(<ThemeProvider {...root}><span /></ThemeProvider>)
