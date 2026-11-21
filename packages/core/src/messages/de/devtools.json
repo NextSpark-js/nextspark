@@ -367,7 +367,10 @@
       "hasCoverage": "Der Block hat Testabdeckung",
       "noTests": "Keine Tests für diesen Block",
       "testFiles": "Testdateien:",
-      "grepCommand": "Grep-Befehl:"
+      "grepCommand": "Grep-Befehl:",
+      "expandSubfields": "Unterfelder von {name} anzeigen",
+      "collapseSubfields": "Unterfelder von {name} ausblenden",
+      "subfieldsCount": "{count, plural, one {# Unterfeld} other {# Unterfelder}}"
     },
     "noPreview": "Keine Vorschau"
   },

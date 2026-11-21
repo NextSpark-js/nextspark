@@ -119,6 +119,8 @@ export const DEVTOOLS_SELECTORS = {
       exampleBtn: 'devtools-block-example-btn-{index}',
       exampleName: 'devtools-block-example-name',
       exampleDescription: 'devtools-block-example-description',
+      fieldRow: 'devtools-block-field-{name}',
+      fieldToggle: 'devtools-block-field-toggle-{name}',
     },
   },
   tags: {

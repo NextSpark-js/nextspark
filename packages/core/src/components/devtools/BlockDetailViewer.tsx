@@ -14,14 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
-import { ArrowLeft, LayoutGrid, TestTube2, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, LayoutGrid, TestTube2, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocalizedText } from '../../hooks/useLocalizedText';
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { getBlockComponent } from '../../lib/blocks/loader';
 import { sel } from '../../lib/test';
-import type { FieldDefinition, BlockConfig } from '../../types/blocks';
+import type { FieldDefinition } from '../../types/blocks';
+import { groupFieldsByTab } from './block-field-utils';
 import { BlockThumbnail } from './BlockThumbnail'
 
 interface BlockDetailViewerProps {
@@ -66,6 +67,91 @@ function BlockPreviewError({ error }: { error: string }) {
   );
 }
 
+
+/**
+ * One row of the fields table. Array fields with `itemFields` expand to show
+ * their subfields as nested rows.
+ */
+export function FieldRows({ field, depth }: { field: FieldDefinition; depth: number }) {
+  const t = useTranslations("devtools.blocks.detail");
+  const [open, setOpen] = useState(false);
+  const subfields = field.itemFields ?? [];
+  const expandable = subfields.length > 0;
+
+  return (
+    <>
+      <TableRow data-cy={sel("devtools.blocks.detail.fieldRow", { name: field.name })}>
+        <TableCell className="font-mono text-sm" style={{ paddingLeft: `${depth * 20 + 8}px` }}>
+          <div className="flex items-start gap-1">
+            {expandable ? (
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                aria-label={t(open ? "collapseSubfields" : "expandSubfields", { name: field.name })}
+                className="mt-0.5 text-muted-foreground hover:text-foreground"
+                data-cy={sel("devtools.blocks.detail.fieldToggle", { name: field.name })}
+              >
+                {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </button>
+            ) : null}
+            <div>
+              {field.name}
+              {field.label && (
+                <div className="text-xs text-muted-foreground font-sans">{field.label}</div>
+              )}
+              {expandable && (
+                <div className="text-xs text-muted-foreground font-sans">
+                  {t("subfieldsCount", { count: subfields.length })}
+                </div>
+              )}
+            </div>
+          </div>
+        </TableCell>
+        <TableCell>
+          <Badge variant="secondary" className="font-mono text-xs">
+            {field.type}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          {field.required ? (
+            <span className="text-green-600">{t("yes")}</span>
+          ) : (
+            <span className="text-muted-foreground">{t("no")}</span>
+          )}
+        </TableCell>
+        <TableCell className="font-mono text-xs">
+          {field.default !== undefined ? (
+            <code className="bg-muted px-1 py-0.5 rounded">{JSON.stringify(field.default)}</code>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </TableCell>
+        <TableCell className="text-xs">
+          {field.options ? (
+            <div className="flex flex-wrap gap-1">
+              {field.options.slice(0, 5).map((opt, i) => (
+                <Badge key={i} variant="outline" className="text-xs">
+                  {opt.label || String(opt.value)}
+                </Badge>
+              ))}
+              {field.options.length > 5 && (
+                <Badge variant="outline" className="text-xs">
+                  +{field.options.length - 5}
+                </Badge>
+              )}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </TableCell>
+      </TableRow>
+      {open &&
+        subfields.map((sub) => <FieldRows key={sub.name} field={sub} depth={depth + 1} />)}
+    </>
+  );
+}
+
 /**
  * BlockDetailViewer Component
  *
@@ -94,21 +180,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
     };
   }, [slug]);
 
-  const fieldsByTab = useMemo(() => {
-    if (!block?.fieldDefinitions) return {};
-
-    const grouped: Record<string, Record<string, FieldDefinition>> = {};
-
-    for (const [fieldKey, field] of Object.entries(block.fieldDefinitions)) {
-      const tab = field.tab || "content";
-      if (!grouped[tab]) {
-        grouped[tab] = {};
-      }
-      grouped[tab][fieldKey] = field;
-    }
-
-    return grouped;
-  }, [block]);
+  const fieldsByTab = useMemo(() => groupFieldsByTab(block?.fieldDefinitions), [block]);
 
   // Get examples from block registry
   const examples = useMemo(() => block?.examples || [], [block]);
@@ -202,7 +274,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
             {t("preview")}
           </TabsTrigger>
           <TabsTrigger value="fields" data-cy={sel("devtools.blocks.detail.tabFields")}>
-            {t("fieldsTab")} ({Object.keys(block.fieldDefinitions || {}).length})
+            {t("fieldsTab")} ({(block.fieldDefinitions || []).length})
           </TabsTrigger>
           <TabsTrigger value="overview" data-cy={sel("devtools.blocks.detail.tabOverview")}>
             {t("overview")}
@@ -305,7 +377,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg capitalize">{tabName}</CardTitle>
                 <CardDescription>
-                  {t("fieldsCount", { count: Object.keys(fields).length })}
+                  {t("fieldsCount", { count: fields.length })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -320,56 +392,8 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.entries(fields).map(([fieldKey, field]) => (
-                      <TableRow key={fieldKey}>
-                        <TableCell className="font-mono text-sm">
-                          {fieldKey}
-                          {field.label && (
-                            <div className="text-xs text-muted-foreground font-sans">
-                              {field.label}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-mono text-xs">
-                            {field.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {field.required ? (
-                            <span className="text-green-600">{t("yes")}</span>
-                          ) : (
-                            <span className="text-muted-foreground">{t("no")}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {field.default !== undefined ? (
-                            <code className="bg-muted px-1 py-0.5 rounded">
-                              {JSON.stringify(field.default)}
-                            </code>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {field.options ? (
-                            <div className="flex flex-wrap gap-1">
-                              {field.options.slice(0, 5).map((opt, i) => (
-                                <Badge key={i} variant="outline" className="text-xs">
-                                  {opt.label || String(opt.value)}
-                                </Badge>
-                              ))}
-                              {field.options.length > 5 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{field.options.length - 5}
-                                </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
+                    {fields.map((field) => (
+                      <FieldRows key={field.name} field={field} depth={0} />
                     ))}
                   </TableBody>
                 </Table>

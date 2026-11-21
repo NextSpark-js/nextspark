@@ -448,7 +448,10 @@
       "hasCoverage": "Block has test coverage",
       "noTests": "No tests for this block",
       "testFiles": "Test files:",
-      "grepCommand": "Grep command:"
+      "grepCommand": "Grep command:",
+      "expandSubfields": "Show subfields of {name}",
+      "collapseSubfields": "Hide subfields of {name}",
+      "subfieldsCount": "{count, plural, one {# subfield} other {# subfields}}"
     },
     "noPreview": "No preview"
   },

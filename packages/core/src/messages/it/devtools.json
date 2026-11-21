@@ -367,7 +367,10 @@
       "hasCoverage": "Il blocco ha copertura di test",
       "noTests": "Nessun test per questo blocco",
       "testFiles": "File di test:",
-      "grepCommand": "Comando grep:"
+      "grepCommand": "Comando grep:",
+      "expandSubfields": "Mostra i sottocampi di {name}",
+      "collapseSubfields": "Nascondi i sottocampi di {name}",
+      "subfieldsCount": "{count, plural, one {# sottocampo} other {# sottocampi}}"
     },
     "noPreview": "Nessuna anteprima"
   },
