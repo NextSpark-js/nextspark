@@ -2,6 +2,7 @@ import { Shield } from "lucide-react";
 import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { sel } from "@nextsparkjs/core/lib/selectors"
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader"
 import { BusinessMetrics } from "@nextsparkjs/core/components/superadmin/misc/BusinessMetrics"
 
 /**
@@ -16,17 +17,7 @@ function SuperadminDashboard() {
     <div className="space-y-6" data-cy={sel('superadmin.dashboard.container')}>
       {/* Header */}
       <div className="border-b pb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex items-center justify-center w-10 h-10 bg-red-100 rounded-lg">
-            <Shield className="h-6 w-6 text-red-600" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("panelTitle")}</h1>
-            <p className="text-muted-foreground">
-              {t("subtitle")}
-            </p>
-          </div>
-        </div>
+        <AreaPageHeader icon={Shield} tone="red" title={t("panelTitle")} subtitle={t("subtitle")} className="mb-4" />
 
         <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
           <Shield className="h-4 w-4 text-destructive" />

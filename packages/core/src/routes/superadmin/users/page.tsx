@@ -19,7 +19,6 @@ import {
 } from "@nextsparkjs/core/components/ui/tabs";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
 import {
-  ArrowLeft,
   Users,
   Users2,
   Shield,
@@ -43,6 +42,7 @@ import { sel } from "@nextsparkjs/core/lib/selectors";
 import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 import { formatLocaleDate } from "@nextsparkjs/core/lib/i18n/format"
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
 
 interface UsersData {
   regularUsers: User[];
@@ -192,20 +192,12 @@ function UsersPage() {
   if (isLoading && !usersData) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {t("users.title")}
-            </h1>
-            <p className="text-muted-foreground">{t("usersPage.loading")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users}
+          tone="red"
+          title={t("users.title")}
+          subtitle={t("usersPage.loading")}
+        />
 
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -218,20 +210,12 @@ function UsersPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {t("users.title")}
-            </h1>
-            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users}
+          tone="red"
+          title={t("users.title")}
+          subtitle={t("shared.errorLoadingData")}
+        />
 
         <Card>
           <CardHeader>
@@ -263,29 +247,23 @@ function UsersPage() {
   return (
     <div className="space-y-6" data-cy={sel('superadmin.users.container')}>
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {t("shared.backToSuperAdmin")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("users.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("users.subtitle")}
-          </p>
-        </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {t("users.refresh")}
-        </Button>
-      </div>
+      <AreaPageHeader
+        icon={Users}
+        tone="red"
+        title={t("users.title")}
+        subtitle={t("users.subtitle")}
+        actions={
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {t("users.refresh")}
+          </Button>
+        }
+      />
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

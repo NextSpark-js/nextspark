@@ -73,7 +73,7 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
 
                 {/* Content area with scrolling */}
                 <main className="flex-1 overflow-y-auto">
-                  <div className="container mx-auto p-6 max-w-7xl">
+                  <div className="w-full p-6">
                     {children}
                   </div>
                 </main>

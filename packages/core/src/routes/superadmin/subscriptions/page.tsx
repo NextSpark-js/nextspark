@@ -52,6 +52,7 @@ import {
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { RefreshButton } from "@nextsparkjs/core/components/superadmin/misc/RefreshButton";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
 
 interface SubscriptionPlan {
   id: string;
@@ -258,12 +259,12 @@ function SubscriptionsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-            <p className="text-muted-foreground">{t("loading")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={CreditCard}
+          tone="red"
+          title={t("title")}
+          subtitle={t("loading")}
+        />
 
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -276,12 +277,12 @@ function SubscriptionsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-            <p className="text-muted-foreground">{tShared("errorLoadingData")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={CreditCard}
+          tone="red"
+          title={t("title")}
+          subtitle={tShared("errorLoadingData")}
+        />
 
         <Card>
           <CardHeader>
@@ -314,15 +315,15 @@ function SubscriptionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground">
-            {t("subtitle")}
-          </p>
-        </div>
-        <RefreshButton onRefresh={() => refetch()} metadata={data?.metadata} />
-      </div>
+      <AreaPageHeader
+        icon={CreditCard}
+        tone="red"
+        title={t("title")}
+        subtitle={t("subtitle")}
+        actions={
+          <RefreshButton onRefresh={() => refetch()} metadata={data?.metadata} />
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4" data-cy={sel('superadmin.subscriptions.container')}>

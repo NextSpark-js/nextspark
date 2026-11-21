@@ -25,6 +25,7 @@ import { ActionsTable } from '@nextsparkjs/core/components/devtools/scheduled-ac
 import type { ScheduledActionsFilters, ScheduledActionsResponse } from '@nextsparkjs/core/components/devtools/scheduled-actions/types'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import { useAreaUrlState } from '@nextsparkjs/core/hooks/useAreaUrlState'
+import { AreaPageHeader } from '@nextsparkjs/core/components/area/AreaPageHeader'
 import { formatLocaleRelative } from '@nextsparkjs/core/lib/i18n/format'
 
 /** What the screen keeps in the URL (#519): the filters and the page. */
@@ -122,27 +123,24 @@ export default function ScheduledActionsPage() {
       className="space-y-6"
       data-cy={sel('devtools.scheduledActions.page')}
     >
-      {/* Header: the same icon, title and description as the other devtools pages */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-12 h-12 bg-violet-100 dark:bg-violet-950 rounded-lg shrink-0">
-          <Clock className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-        </div>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground">{t('description')}</p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {dataUpdatedAt > 0 && (
-            <span className="text-sm text-muted-foreground" data-cy="scheduled-actions-updated">
-              {t('updated', { when: formatLocaleRelative(dataUpdatedAt, locale, now) })}
-            </span>
-          )}
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} data-cy="scheduled-actions-refresh">
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            {t('refresh')}
-          </Button>
-        </div>
-      </div>
+      <AreaPageHeader
+        icon={Clock}
+        title={t('title')}
+        subtitle={t('description')}
+        actions={
+          <>
+            {dataUpdatedAt > 0 && (
+              <span className="text-sm text-muted-foreground" data-cy="scheduled-actions-updated">
+                {t('updated', { when: formatLocaleRelative(dataUpdatedAt, locale, now) })}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} data-cy="scheduled-actions-refresh">
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('refresh')}
+            </Button>
+          </>
+        }
+      />
 
       {/* Filters */}
       <Filters

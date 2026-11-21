@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@next
 import { getTranslations } from "next-intl/server";
 import { getAllPluginNavItems } from "@nextsparkjs/core/lib/plugins/nav-items";
 import { DEVTOOLS_NAV_ITEMS, DEVTOOLS_ROOT, pluginNavIcon } from "@nextsparkjs/core/components/devtools/devtools-nav";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
 
 /** The selectors the first three links already had. */
 const HOME_LINK_CY: Record<string, string> = {
@@ -45,15 +46,7 @@ async function DevHomePageContent() {
   return (
     <div className="space-y-6" data-cy="devtools-home-page">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-12 h-12 bg-violet-100 dark:bg-violet-950 rounded-lg">
-          <Code className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-violet-600 dark:text-violet-400">{t('title')}</h1>
-          <p className="text-muted-foreground">{t('subtitle')}</p>
-        </div>
-      </div>
+      <AreaPageHeader icon={Code} title={t('title')} subtitle={t('subtitle')} />
 
       {/* Welcome Card */}
       <Card>

@@ -12,7 +12,6 @@ import {
 import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@nextsparkjs/core/components/ui/tabs";
 import {
-  ArrowLeft,
   Users,
   Shield,
   Users2,
@@ -20,7 +19,6 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
-import Link from "next/link";
 import { TeamsTable, type TeamSortKey } from "@nextsparkjs/core/components/superadmin/tables/TeamsTable";
 import type { SortState } from "@nextsparkjs/core/components/users/tables/SortableHead";
 import {
@@ -31,6 +29,7 @@ import { sel } from "@nextsparkjs/core/lib/selectors";
 import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { useSuperadminTeams } from "@nextsparkjs/core/hooks/superadmin/useSuperadminTeams";
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
 
 /** What the screen keeps in the URL (#519); a value outside these falls back to the default. */
 const URL_STATE = {
@@ -87,18 +86,12 @@ function TeamsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
-            <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users2}
+          tone="red"
+          title={t("teamsPage.title")}
+          subtitle={t("teamsPage.loading")}
+        />
 
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -111,18 +104,12 @@ function TeamsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
-            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users2}
+          tone="red"
+          title={t("teamsPage.title")}
+          subtitle={t("shared.errorLoadingData")}
+        />
 
         <Card>
           <CardHeader>
@@ -152,29 +139,23 @@ function TeamsPage() {
   return (
     <div className="space-y-6" data-cy={sel('superadmin.teams.container')}>
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {t("shared.backToSuperAdmin")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("teamsPage.subtitle")}
-          </p>
-        </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {t("shared.refresh")}
-        </Button>
-      </div>
+      <AreaPageHeader
+        icon={Users2}
+        tone="red"
+        title={t("teamsPage.title")}
+        subtitle={t("teamsPage.subtitle")}
+        actions={
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {t("shared.refresh")}
+          </Button>
+        }
+      />
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

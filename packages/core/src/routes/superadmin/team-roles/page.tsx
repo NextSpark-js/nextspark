@@ -29,6 +29,7 @@ import { RolesPermissionsMatrix } from "@nextsparkjs/core/components/superadmin/
 import { PlanFeaturesMatrix } from "@nextsparkjs/core/components/superadmin/tables/PlanFeaturesMatrix";
 import { formatLocaleDollars } from "@nextsparkjs/core/lib/i18n/format";
 import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
 
 /** What the screen keeps in the URL (#519): the tab and the roles matrix search. */
 const URL_STATE = {
@@ -106,16 +107,12 @@ function TeamRolesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-muted-foreground">
-            {t("subtitle")}
-          </p>
-        </div>
-      </div>
+      <AreaPageHeader
+        icon={Shield}
+        tone="red"
+        title={t("title")}
+        subtitle={t("subtitle")}
+      />
 
       {/* Tabs for switching between matrices */}
       <Tabs value={url.tab} onValueChange={(tab) => setUrl({ tab })} className="space-y-6">
