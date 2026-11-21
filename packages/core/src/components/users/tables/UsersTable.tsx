@@ -152,7 +152,7 @@ export function UsersTable({ users, isLoading, onRefresh, sort, onSortChange }: 
                         {user.fullName || tPage('noName')}
                       </Link>
                     </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
+                    <div className="flex items-center whitespace-nowrap text-sm text-muted-foreground">
                       {t('table.id', { id: `${user.id.slice(0, 8)}...` })}
                       <CopyIdButton id={user.id} />
                     </div>
@@ -185,8 +185,8 @@ export function UsersTable({ users, isLoading, onRefresh, sort, onSortChange }: 
 
               {/* Join Date */}
               <TableCell>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
+                <div className="flex items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4 shrink-0" />
                   {user.createdAt ? formatLocaleDate(user.createdAt, locale) : tShared('unknown')}
                 </div>
               </TableCell>
