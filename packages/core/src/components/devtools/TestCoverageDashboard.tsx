@@ -17,6 +17,7 @@ import {
 import { sel } from "../../lib/test";
 import { withBasePath } from "../../lib/base-path"
 import Link from "next/link";
+import { isSelectorTag } from "./tag-utils";
 
 interface CoverageSummary {
   features: { total: number; withTests: number; withoutTests: number };
@@ -152,6 +153,15 @@ export function TestCoverageDashboard() {
     ? Math.round((summary.flows.withTests / summary.flows.total) * 100)
     : 0;
 
+  // `@SEL_*` tags are in "other" in the summary, but the Tags page lists them in their own group: count them apart
+  // so each tile's number is what its destination shows.
+  const selectorCount = Object.values(data.data.tags?.other ?? {}).filter((d) => isSelectorTag(d.tag)).length;
+  const categoryCounts = Object.entries(summary.byCategory ?? {}).flatMap(([category, count]): [string, number][] =>
+    category === "other" && selectorCount > 0
+      ? [["other", count - selectorCount], ["selectors", selectorCount]]
+      : [[category, count]]
+  );
+
   // Get uncovered features and flows
   const uncoveredFeatures = features.filter(f => !f.testing.hasTests);
   const uncoveredFlows = flows.filter(f => !f.testing.hasTests);
@@ -286,14 +296,14 @@ export function TestCoverageDashboard() {
       </Card>
 
       {/* Coverage by Category */}
-      {summary.byCategory && Object.keys(summary.byCategory).length > 0 && (
+      {categoryCounts.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">{t("coverage")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {Object.entries(summary.byCategory).map(([category, count]) => (
+              {categoryCounts.map(([category, count]) => (
                 <Link
                   key={category}
                   href={`/devtools/tags#${category}`}

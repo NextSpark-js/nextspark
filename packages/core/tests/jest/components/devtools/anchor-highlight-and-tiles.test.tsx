@@ -60,4 +60,26 @@ describe('TestCoverageDashboard tiles', () => {
     expect(href('devtools-tests-dashboard-stat-tags')).toBe('/devtools/tags')
     expect(href('devtools-tests-dashboard-category-layers')).toBe('/devtools/tags#layers')
   })
+
+  test('selector tags are counted apart from "other", so each tile matches its destination', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          meta: {}, features: [], flows: [],
+          tags: { other: { a: { tag: '@smoke2' }, b: { tag: '@SEL_x' }, c: { tag: '@SEL_y' } } },
+          summary: {
+            totalTags: 3, testFiles: 1, byCategory: { other: 3 },
+            features: { total: 0, withTests: 0, withoutTests: 0 }, flows: { total: 0, withTests: 0, withoutTests: 0 },
+          },
+        },
+      }),
+    })) as unknown as typeof fetch
+    const { container } = render(<TestCoverageDashboard />)
+    await screen.findByText('features')
+    const n = (c: string) => container.querySelector(`[data-cy="devtools-tests-dashboard-category-${c}"] p`)?.textContent
+    expect(n('other')).toBe('1')
+    expect(n('selectors')).toBe('2')
+  })
 })
