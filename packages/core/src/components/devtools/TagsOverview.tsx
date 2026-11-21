@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -12,7 +12,8 @@ import { TAGS_REGISTRY, COVERAGE_SUMMARY } from '@nextsparkjs/registries/testing
 import { sel } from '../../lib/test';
 import { cn } from '../../lib/utils';
 import { grepCommand, useCopy } from './use-copy';
-import { isSelectorTag, testDocPath } from './tag-utils';
+import { docPaths, isSelectorTag, testDocPath } from './tag-utils';
+import { withBasePath } from '../../lib/base-path';
 import { useScrollToHash } from './use-scroll-to-hash';
 
 type RegistryCategory = keyof typeof TAGS_REGISTRY;
@@ -96,6 +97,19 @@ export function TagsOverview() {
     new Set(CATEGORY_DISPLAY_ORDER.filter((c) => !COLLAPSED_BY_DEFAULT.includes(c)))
   );
   const [expandedTag, setExpandedTag] = useState<string | null>(null);
+
+  // The documentation files that exist, asked for the first time a tag is opened: a test file links to its page
+  // only when it has one (until the tree arrives, or if it fails, files show as plain text).
+  const [docs, setDocs] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (!expandedTag || docs) return;
+    let cancelled = false;
+    fetch(withBasePath("/api/devtools/tests"))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => { if (!cancelled && json?.data?.tree) setDocs(docPaths(json.data.tree)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [expandedTag, docs]);
 
   // Count total tags
   const totalTags = useMemo(() => {
@@ -362,7 +376,7 @@ export function TagsOverview() {
                             const shortPath = getShortPath(file);
                             const isHighlighted = searchQuery && file.toLowerCase().includes(searchQuery.toLowerCase());
 
-                            const href = testDocPath(file);
+                            const href = docs ? testDocPath(file, docs) : null;
                             const label = (
                               <>
                                 <span className="text-muted-foreground">{shortPath.replace(fileName, "")}</span>

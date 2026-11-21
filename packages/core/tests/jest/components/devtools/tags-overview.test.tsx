@@ -4,8 +4,8 @@
  * #528: an open tag lists its test files as links to their Test Cases page, selector tags (`@SEL_*`) live in their own
  * collapsed group instead of "Other", and every tag has its own data-cy (two categories can share a key).
  */
-import { describe, test, expect, jest } from '@jest/globals'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, test, expect, jest, beforeEach } from '@jest/globals'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
@@ -16,7 +16,7 @@ jest.mock('next/link', () => ({
 jest.mock('@nextsparkjs/registries/testing-registry', () => ({
   COVERAGE_SUMMARY: { tags: { testFiles: 3 } },
   TAGS_REGISTRY: {
-    features: { billing: { tag: '@feat-billing', testCount: 1, files: ['tests/cypress/e2e/billing/pay.cy.ts'] } },
+    features: { billing: { tag: '@feat-billing', testCount: 1, files: ['tests/cypress/e2e/billing/pay.cy.ts', 'tests/cypress/e2e/billing/nodoc.cy.ts'] } },
     blocks: { billing: { tag: '@b-billing', testCount: 1, files: ['contents/themes/x/tests/cypress/e2e/blocks/b.cy.ts', 'other/file.ts'] } },
     other: {
       smoke2: { tag: '@smoke2', testCount: 1, files: [] },
@@ -26,16 +26,26 @@ jest.mock('@nextsparkjs/registries/testing-registry', () => ({
 }))
 
 import { TagsOverview } from '@/core/components/devtools/TagsOverview'
-import { testDocPath, isSelectorTag } from '@/core/components/devtools/tag-utils'
+import { testDocPath, docPaths, isSelectorTag } from '@/core/components/devtools/tag-utils'
+
+const DOCS = new Set(['auth/login.bdd.md', 'a/b.bdd.md', 'blocks/b.bdd.md', 'billing/pay.bdd.md'])
+
+describe('docPaths', () => {
+  test('flattens the tree of documentation files', () => {
+    const tree = [{ path: 'x', type: 'folder' as const, children: [{ path: 'x/y.bdd.md', type: 'file' as const }] }, { path: 'z.bdd.md', type: 'file' as const }]
+    expect([...docPaths(tree)].sort()).toEqual(['x/y.bdd.md', 'z.bdd.md'])
+  })
+})
 
 describe('testDocPath', () => {
-  test('maps a Cypress file to the documentation page, wherever the project root is', () => {
-    expect(testDocPath('tests/cypress/e2e/auth/login.cy.ts')).toBe('/devtools/tests/auth/login.bdd.md')
-    expect(testDocPath('contents/themes/x/tests/cypress/e2e/a/b.cy.tsx')).toBe('/devtools/tests/a/b.bdd.md')
+  test('maps a Cypress file that has a doc to its page, wherever the project root is', () => {
+    expect(testDocPath('tests/cypress/e2e/auth/login.cy.ts', DOCS)).toBe('/devtools/tests/auth/login.bdd.md')
+    expect(testDocPath('contents/themes/x/tests/cypress/e2e/a/b.cy.tsx', DOCS)).toBe('/devtools/tests/a/b.bdd.md')
   })
-  test('is null for a file outside the e2e directory or not a Cypress file', () => {
-    expect(testDocPath('other/file.ts')).toBeNull()
-    expect(testDocPath('tests/cypress/e2e/a/readme.txt')).toBeNull()
+  test('is null for a Cypress file with no doc, outside the e2e directory, or not a Cypress file', () => {
+    expect(testDocPath('tests/cypress/e2e/auth/other.cy.ts', DOCS)).toBeNull()
+    expect(testDocPath('other/file.ts', DOCS)).toBeNull()
+    expect(testDocPath('tests/cypress/e2e/a/readme.txt', DOCS)).toBeNull()
   })
 })
 
@@ -47,6 +57,16 @@ describe('isSelectorTag', () => {
 })
 
 describe('TagsOverview', () => {
+  beforeEach(() => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ data: { tree: [
+        { path: 'blocks', type: 'folder', children: [{ path: 'blocks/b.bdd.md', type: 'file' }] },
+        { path: 'billing', type: 'folder', children: [{ path: 'billing/pay.bdd.md', type: 'file' }] },
+      ] } }),
+    })) as unknown as typeof fetch
+  })
+
   test('selector tags are in their own group, collapsed, and out of Other', () => {
     render(<TagsOverview />)
     expect(screen.getByText('@smoke2')).toBeTruthy()
@@ -62,12 +82,17 @@ describe('TagsOverview', () => {
     expect(cys).toEqual(expect.arrayContaining(['devtools-tags-tag-@feat-billing', 'devtools-tags-tag-@b-billing']))
   })
 
-  test('an open tag lists its files as links to the tests page, plain text when there is no page', () => {
+  test('an open tag links the files that have a doc and shows the rest as plain text', async () => {
     render(<TagsOverview />)
     fireEvent.click(screen.getByText('@b-billing'))
-    const links = screen.getAllByRole('link').map((a) => a.getAttribute('href'))
-    expect(links).toContain('/devtools/tests/blocks/b.bdd.md')
-    expect(screen.getByText('file.ts')).toBeTruthy()
+    await waitFor(() => expect(screen.getAllByRole('link').map((a) => a.getAttribute('href'))).toContain('/devtools/tests/blocks/b.bdd.md'))
     expect(screen.getByText('file.ts').closest('a')).toBeNull()
+  })
+
+  test('a test file without a doc is plain text, not a link to a page that does not exist', async () => {
+    render(<TagsOverview />)
+    fireEvent.click(screen.getByText('@feat-billing'))
+    await waitFor(() => expect(screen.getByText('pay.cy.ts').closest('a')).not.toBeNull())
+    expect(screen.getByText('nodoc.cy.ts').closest('a')).toBeNull()
   })
 })
