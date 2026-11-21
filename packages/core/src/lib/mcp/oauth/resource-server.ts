@@ -28,6 +28,7 @@ import type { DualAuthResult } from '../../api/auth/dual-auth'
 import { oauthRateLimitKey } from '../../api/auth/in-process-principal'
 import { TeamService } from '../../services/team.service'
 import { TeamMemberService } from '../../services/team-member.service'
+import { withBasePathRequest } from '../../base-path'
 import { RATE_LIMIT_MESSAGE } from '../errors'
 import type { ToolExecutionContext } from '../types'
 import { mcpOAuthIssuer, mcpResourceMetadataUrl, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
@@ -124,6 +125,12 @@ function missingScopes(body: unknown, granted: readonly string[], requiredScopes
   return [...missing].sort()
 }
 
+/** RFC 9728's location for the resource's metadata: the well-known path at the origin, then the resource's path. */
+function rfcResourceMetadataUrl(): string {
+  const resource = new URL(mcpResourceUrl())
+  return `${resource.origin}/.well-known/oauth-protected-resource${resource.pathname}`
+}
+
 function insufficientScope(scopes: string[]): NextResponse {
   const response = jsonRpcError(403, -32003, `This connection was not granted: ${scopes.join(', ')}.`)
   // RFC 6750 section 3.1, with the RFC 9728 pointer a client needs to start the new authorization
@@ -138,7 +145,7 @@ function insufficientScope(scopes: string[]): NextResponse {
 export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopesFor }: OAuthMcpHandlers): Promise<NextResponse> {
   const protectedHandler = requireMcpAuth(
     auth,
-    async (_request, claims) => {
+    async (verified, claims) => {
       const resolved = await principalFromClaims(claims as Record<string, unknown>)
       if (resolved instanceof NextResponse) return resolved
       const { principal, teamId, granted } = resolved
@@ -159,7 +166,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
 
       let body: unknown
       try {
-        body = await request.json()
+        body = await verified.json()
       } catch {
         return jsonRpcError(400, -32700, 'Parse error: body must be JSON-RPC')
       }
@@ -190,6 +197,14 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
     { resource: mcpResourceUrl(), issuer: mcpOAuthIssuer() }
   )
 
-  const response = await protectedHandler(request)
-  return response instanceof NextResponse ? response : new NextResponse(response.body, response)
+  // With the basePath in the URL, as the client wrote it: a DPoP proof is made for that URL
+  const response = await protectedHandler(withBasePathRequest(request))
+  const next = response instanceof NextResponse ? response : new NextResponse(response.body, response)
+  // Better Auth names the RFC location of the resource metadata; under a basePath the app serves it inside it
+  const challenge = next.headers.get('WWW-Authenticate')
+  const rfcLocation = rfcResourceMetadataUrl()
+  if (challenge && rfcLocation !== mcpResourceMetadataUrl()) {
+    next.headers.set('WWW-Authenticate', challenge.split(rfcLocation).join(mcpResourceMetadataUrl()))
+  }
+  return next
 }

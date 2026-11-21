@@ -16,7 +16,7 @@ test('loads defineConfig and applies root-first defaults', async () => {
     assert.deepEqual(loadNextSparkConfigSync(root), {
       plugins: ['local'],
       apiDir: 'api',
-      features: { billing: true, superadmin: true },
+      features: { billing: true, superadmin: true, mcpOAuth: false },
     })
   } finally {
     await rm(root, { recursive: true, force: true })

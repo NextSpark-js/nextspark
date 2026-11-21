@@ -241,10 +241,11 @@ from a team-role permission problem.
 
 ## Known Limitations
 
-- **No OAuth flow yet** — connecting a client today means manually generating and configuring
-  an API key. An OAuth-based "connect in two clicks" flow for claude.ai custom connectors
-  (via Better Auth's `mcp`/`oidc-provider` plugins) is tracked as a follow-up, not part of this
-  initial version.
+- **Browser sign-in is opt-in and experimental** (#541). With `features: { mcpOAuth: true }` in
+  `nextspark.config.ts` the app is the OAuth 2.1 authorization server of its own MCP endpoint: a client such as
+  Claude or ChatGPT connects by sending the user to sign in, choose a team and approve the scopes, and no API key is
+  copied. Without the flag the host has none of its routes and the endpoint takes an API key only, as described
+  above. See [Browser sign-in](#browser-sign-in-experimental).
 - **One rate-limit tier for the whole surface** — see [Security Model](#security-model) above;
   size your `'api'` tier limits with MCP traffic in mind.
 - **`access.api` is a boolean or a per-operation object** — with `api: false` API-key requests to the REST
@@ -285,3 +286,45 @@ is never audited. Only calls that reach `tool.handler` are recorded.
 - [Error Handling](./08-error-handling.md) — the underlying REST error codes MCP translates
 
 **Documentation:** `core/docs/05-api/20-mcp-server.md`
+
+
+## Browser sign-in (experimental)
+
+Turn it on in `nextspark.config.ts` and run the migrations (`048_oauth_provider.sql` adds the tables):
+
+```ts
+export default defineConfig({
+  features: { mcpOAuth: true },
+})
+```
+
+`MCP_ENABLED` still has to allow the endpoint, and `MCP_OAUTH_ENABLED=false` switches browser sign-in off at
+runtime without a build.
+
+What the host then serves:
+
+| URL | What it is |
+|---|---|
+| `/.well-known/oauth-protected-resource/api/mcp` | The resource's metadata (RFC 9728). The 401 of `/api/mcp` names it in `WWW-Authenticate` |
+| `/api/auth/.well-known/openid-configuration`, `/.well-known/oauth-authorization-server/api/auth` | The authorization server's metadata (RFC 8414) |
+| `/api/auth/oauth2/authorize`, `/api/auth/oauth2/token`, `/api/auth/oauth2/revoke` | Authorization code with PKCE (S256), refresh, revocation |
+| `/oauth/select-team`, `/oauth/consent` | The team picker (for a user in several teams) and the consent screen |
+
+How it behaves:
+
+- **Clients** identify themselves with a Client ID Metadata Document, as Claude and ChatGPT do. Dynamic client
+  registration is closed.
+- **One team per connection.** The access token carries the team the user chose; `x-team-id` cannot change it.
+- **Scopes** are the entity scopes an API key uses (`<entity>:read|write|delete`). A call whose scope was not
+  granted is answered `403` with an `insufficient_scope` challenge before anything runs. What the token may do is
+  also cut down, on every request, to what the user's role in the team allows at that moment.
+- **Access tokens** are JWTs for `/api/mcp` only and live ten minutes; refresh tokens rotate.
+- **Ending a connection.** Revoking it, a reused refresh token, a changed password and a suspended account end
+  access on the next call, on every instance. Signing out of the browser does not disconnect an application.
+- **An API key keeps working** on the same endpoint. A request that presents both is refused.
+- **A tool that makes several API calls** declares the scopes it needs in `meta.requiredScopes` to get the `403`
+  up front; without it each call is checked where it is made.
+- **Under a Next.js `basePath`** the discovery documents are served inside it and the challenge points there.
+
+Not done yet: a screen to list and disconnect connected applications, shared (multi-instance) rate limits, and a
+run against the hosted Claude and ChatGPT applications.

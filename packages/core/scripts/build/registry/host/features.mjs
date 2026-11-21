@@ -15,6 +15,8 @@
  *   role check is part of the area's layout, so a page, layout or Route Handler a project or plugin puts under
  *   `/superadmin` would be served to anyone: it stops prepare instead. `/devtools` and the developer role stay.
  *
+ * - `mcpOAuth` is the other way round (#541): its routes are left out unless it is `true` (OPT_IN_CORE_ROUTES).
+ *
  * Other routes a project or plugin provides itself at those paths are not touched.
  *
  * @module core/scripts/build/registry/host/features
@@ -38,10 +40,22 @@ export const OMITTED_CORE_ROUTES = Object.freeze({
   superadmin: [/^superadmin\//, /^api\/superadmin\//],
 })
 
-/** The flag (set to false in `features`) that leaves out the core route at `target`, or null. */
+/**
+ * The core route targets of an opt-in flag: left out unless the flag is `true`.
+ * `mcpOAuth` (#541): the OAuth discovery documents, the consent and team pages and the team picker's API. Without
+ * the flag the host has none of them, so a project's own routes at those paths are its own.
+ */
+export const OPT_IN_CORE_ROUTES = Object.freeze({
+  mcpOAuth: [/^\.well-known\/(oauth-protected-resource|oauth-authorization-server|openid-configuration)\//, /^\(auth\)\/oauth\//, /^api\/internal\/oauth-team\//],
+})
+
+/** The flag that leaves out the core route at `target` (set to false, or an opt-in one not set to true), or null. */
 export function omittingFeature(target, features = {}) {
   for (const [flag, patterns] of Object.entries(OMITTED_CORE_ROUTES)) {
     if (features[flag] === false && patterns.some(pattern => pattern.test(target))) return flag
+  }
+  for (const [flag, patterns] of Object.entries(OPT_IN_CORE_ROUTES)) {
+    if (features[flag] !== true && patterns.some(pattern => pattern.test(target))) return flag
   }
   return null
 }

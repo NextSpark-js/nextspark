@@ -9,6 +9,13 @@ export interface NextSparkFeatureConfig {
   billing?: boolean
   superadmin?: boolean
   /**
+   * MCP browser sign-in (#541): the app is the OAuth 2.1 authorization server of its own MCP endpoint, so Claude,
+   * ChatGPT and other MCP clients connect by signing in. Off unless `true`: only then does the host get the OAuth
+   * discovery routes, the consent and team pages and the authorization server. `MCP_OAUTH_ENABLED=false` turns it
+   * off at runtime without a build.
+   */
+  mcpOAuth?: boolean
+  /**
    * @deprecated Not read, and it will be removed (#425): core has no AI chat. The AI features come from plugins, which
    * a project turns on in `plugins`.
    */
@@ -108,6 +115,7 @@ export type NextSparkConfigValidationResult =
 const DEFAULT_FEATURES: ResolvedNextSparkFeatures = {
   billing: true,
   superadmin: true,
+  mcpOAuth: false,
 }
 
 /** Flags still accepted but not read (#425): the warning that says what to do instead. */

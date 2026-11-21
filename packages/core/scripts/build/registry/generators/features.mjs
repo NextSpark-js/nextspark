@@ -8,8 +8,8 @@
  * @module core/scripts/build/registry/generators/features
  */
 
-/** The flags that are read, and their default. */
-const DEFAULT_FEATURES = { billing: true, superadmin: true }
+/** The flags that are read, and their default. `mcpOAuth` is opt-in (#541). */
+const DEFAULT_FEATURES = { billing: true, superadmin: true, mcpOAuth: false }
 
 /**
  * @param {Record<string, boolean>|undefined} features - the resolved `features` of nextspark.config.ts

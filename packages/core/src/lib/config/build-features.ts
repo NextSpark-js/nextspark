@@ -20,7 +20,8 @@ export function servedLinks<T extends { href?: string }>(items: readonly T[] | u
   return items?.filter(item => typeof item.href !== 'string' || isServedPath(item.href))
 }
 
-const allOn = () => Object.values(FEATURES).every(Boolean)
+// the flags that leave pages out when off; an opt-in flag (mcpOAuth) has no links to drop
+const allOn = () => FEATURES.billing && FEATURES.superadmin
 
 type MobileNavLinks = { mobileNav?: { items?: { href?: string }[]; moreSheetItems?: { href?: string }[] } }
 

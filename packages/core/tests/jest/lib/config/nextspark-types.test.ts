@@ -16,6 +16,7 @@ describe('nextspark.config.ts source contract', () => {
         apiDir: 'api',
         features: {
           billing: true,
+          mcpOAuth: false,
           superadmin: true,
         },
       },
@@ -27,7 +28,7 @@ describe('nextspark.config.ts source contract', () => {
 
     expect(result.valid).toBe(true)
     if (!result.valid) return
-    expect(result.config.features).toEqual({ billing: true, superadmin: true })
+    expect(result.config.features).toEqual({ billing: true, superadmin: true, mcpOAuth: false })
     expect(result.warnings).toEqual([expect.stringContaining("features.teams is not read and will be removed")])
     expect(result.warnings[0]).toContain("teams.mode: 'single-user'")
     expect(validateNextSparkConfig({ features: { teams: 'no' } })).toEqual({ valid: false, errors: ['features.teams must be a boolean; received string.'] })
@@ -38,7 +39,7 @@ describe('nextspark.config.ts source contract', () => {
 
     expect(result.valid).toBe(true)
     if (!result.valid) return
-    expect(result.config.features).toEqual({ billing: true, superadmin: true })
+    expect(result.config.features).toEqual({ billing: true, superadmin: true, mcpOAuth: false })
     expect(result.warnings).toEqual([expect.stringContaining('features.aiChat is not read and will be removed: core has no AI chat')])
   })
 
@@ -56,6 +57,7 @@ describe('nextspark.config.ts source contract', () => {
     expect(result.config.plugins).toEqual(['analytics', 'billing-local', '@nextsparkjs/plugin-langchain'])
     expect(result.config.features).toEqual({
       billing: false,
+      mcpOAuth: false,
       superadmin: true,
     })
     expect(result.config.template).toEqual({ name: 'crm', version: '0.1.0-beta.193' })

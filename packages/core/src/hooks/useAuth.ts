@@ -11,6 +11,7 @@ import { resolveHomeRoute } from '../lib/auth/home-route'
 import { DASHBOARD_HOME_CONFIG } from '../lib/config/public-config-client'
 import { withBasePath } from '../lib/base-path'
 import { oauthAuthorizePath } from '../lib/mcp/oauth/sign-in-continuation'
+import { isMcpOAuthBuilt } from '../lib/mcp/oauth/config'
 import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { clearQueryCaches } from '../lib/auth/query-caches'
@@ -56,14 +57,14 @@ type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
 function continueOAuthSignIn(data: unknown): boolean {
   const next = data as { redirect?: unknown; url?: unknown } | null
   if (!next || next.redirect !== true || typeof next.url !== 'string') return false
-  if (typeof window === 'undefined' || !new URLSearchParams(window.location.search).has('sig')) return false
+  if (typeof window === 'undefined' || !isMcpOAuthBuilt() || !new URLSearchParams(window.location.search).has('sig')) return false
   window.location.assign(next.url)
   return true
 }
 
 function signInCallbackURL(method: SocialLoginMethod | 'email', redirectTo?: string): string {
   // From the login page of an MCP authorization (#541), a provider or a sign-in link comes back to the authorization
-  const authorization = typeof window === 'undefined' ? null : oauthAuthorizePath(window.location.search)
+  const authorization = typeof window === 'undefined' || !isMcpOAuthBuilt() ? null : oauthAuthorizePath(window.location.search)
   if (authorization) return withBasePath(authorization)
   const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
   url.searchParams.set('auth_method', method)
