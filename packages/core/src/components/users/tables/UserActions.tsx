@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
@@ -196,9 +196,14 @@ export function useUserActions({ onDone }: { onDone?: (type: UserActionType, use
     });
   };
 
+  // The dialog keeps the text of the action it closes on, so it does not empty while it fades out
+  const lastAction = useRef<PendingAction | null>(null);
+  if (pendingAction) lastAction.current = pendingAction;
+  const shown = pendingAction ?? lastAction.current;
+
   const dialogText = () => {
-    if (!pendingAction) return { title: "", description: "", action: "" };
-    const { type, user, role } = pendingAction;
+    if (!shown) return { title: "", description: "", action: "" };
+    const { type, user, role } = shown;
     const name = user.fullName || user.email;
     switch (type) {
       case "suspend":
@@ -226,7 +231,7 @@ export function useUserActions({ onDone }: { onDone?: (type: UserActionType, use
     }
   };
 
-  const destructive = pendingAction?.type === "delete" || (pendingAction?.type === "change-role" && isDestructiveRoleChange(pendingAction.role));
+  const destructive = shown?.type === "delete" || (shown?.type === "change-role" && isDestructiveRoleChange(shown.role));
   const text = dialogText();
 
   const saving = mutation.isPending;
