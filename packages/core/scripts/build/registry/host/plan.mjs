@@ -452,14 +452,15 @@ export function planHost({ coreRoutes: manifestRoutes, entityRoutes = [], entity
     routes.push(chosen)
   }
 
+  // A parallel-route slot or an intercepting route renders beside or over the page, never instead of it: a hard load of the URL would be a 404
+  const replaces = other => !posix.dirname(other.target).split('/').some(part => part.startsWith('@') || /^\(\.{1,3}\)/.test(part))
+
   // A core page or Route Handler that `yieldsToUrl` gives way to any project or plugin page or Route Handler at its URL,
   // whatever the route group: the same file replaces it above, but a page in another group would be a second route for the URL (#452).
   for (let index = routes.length - 1; index >= 0; index--) {
     const route = routes[index]
     if (route.layer !== 'core' || !route.yieldsToUrl) continue
     const url = servedUrlSegments(route.target).join('/')
-    // A parallel-route slot or an intercepting route renders beside or over the page, never instead of it: a hard load of the URL would be a 404
-    const replaces = other => !posix.dirname(other.target).split('/').some(part => part.startsWith('@') || /^\(\.{1,3}\)/.test(part))
     if (routes.some(other => other.layer !== 'core' && (other.kind === 'page' || other.kind === 'route') && !other.mode && replaces(other) && servedUrlSegments(other.target).join('/') === url)) routes.splice(index, 1)
   }
 
@@ -471,7 +472,8 @@ export function planHost({ coreRoutes: manifestRoutes, entityRoutes = [], entity
     if (route.layer !== 'core' || !route.entityRoute?.listOnlyUnderDynamic) continue
     const url = servedUrlSegments(route.target).slice(0, -1)
     const dynamicBelow = routes.some(other => {
-      if (other.layer === 'core' || other.kind !== 'page') return false
+      // a slot (`@modal/[slug]`) or an intercepting route (`(.)posts/[slug]`) does not serve the URL on a hard load
+      if (other.layer === 'core' || other.kind !== 'page' || !replaces(other)) return false
       const served = servedUrlSegments(other.target)
       return served.length > url.length && url.every((segment, i) => served[i] === segment) && Boolean(dynamicKind(served[url.length]))
     })

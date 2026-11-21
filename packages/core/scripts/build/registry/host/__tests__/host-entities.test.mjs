@@ -611,16 +611,19 @@ test('a public entity with an archive page and no builder basePath gets an archi
 test('the archive is served at the entity URL only when the project has a dynamic page under it, so post URLs have one route (#540)', async () => {
   const customers = "slug: 'customers', enabled: true, access: { public: true }, ui: { public: { hasArchivePage: true } }"
   const publicRoutes = routes => targets(routes).filter(target => target.startsWith('(public)'))
-  for (const [files, expected, why] of [
+  for (const [files, expected, why, codes] of [
     [{ 'templates/(public)/customers/[slug]/page.tsx': PAGE }, ['(public)/customers/[slug]/page.tsx', '(public)/customers/page.tsx'], 'a dynamic page'],
     [{ 'templates/(public)/customers/[...path]/page.tsx': PAGE }, ['(public)/customers/[...path]/page.tsx', '(public)/customers/page.tsx'], 'a catch-all page'],
     [{ 'templates/(public)/customers/about/page.tsx': PAGE }, ['(public)/customers/[[...rest]]/page.tsx', '(public)/customers/about/page.tsx'], 'a static page keeps the catch-all'],
     [{ 'templates/(public)/other/[slug]/page.tsx': PAGE }, ['(public)/customers/[[...rest]]/page.tsx', '(public)/other/[slug]/page.tsx'], 'a dynamic page elsewhere'],
+    [{ 'templates/(public)/@modal/customers/[slug]/page.tsx': PAGE, 'templates/(public)/@modal/default.tsx': PAGE }, ['(public)/@modal/customers/[slug]/page.tsx', '(public)/@modal/default.tsx', '(public)/customers/[[...rest]]/page.tsx'], 'a parallel-route slot does not serve the URL'],
+    [{ 'templates/(public)/(.)customers/[slug]/page.tsx': PAGE }, ['(public)/(.)customers/[slug]/page.tsx', '(public)/customers/[[...rest]]/page.tsx'], 'an intercepting route does not serve the URL'],
+    [{ 'templates/(public)/customers/page.tsx': PAGE, 'templates/(public)/customers/[slug]/page.tsx': PAGE }, ['(public)/customers/[[...rest]]/page.tsx', '(public)/customers/[slug]/page.tsx', '(public)/customers/page.tsx'], 'a page already at the URL keeps the catch-all, and the conflict is reported', ['NS_HOST_URL_CONFLICT']],
   ]) {
     const w = world(files)
     try {
       const { routes, diagnostics } = await plan(w, [entity('customers', 'customersEntityConfig')], { customers: await factsOf(customers) })
-      assert.deepEqual(diagnostics, [], why)
+      assert.deepEqual([...new Set(diagnostics.map(d => d.code))], codes ?? [], why)
       assert.deepEqual(publicRoutes(routes), expected, why)
     } finally {
       w.cleanup()
