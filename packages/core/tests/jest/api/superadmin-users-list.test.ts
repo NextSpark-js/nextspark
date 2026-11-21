@@ -26,7 +26,8 @@ beforeEach(() => {
   queryWithRLS.mockImplementation(async (sql: string) => {
     if (/FILTER \(WHERE role = 'superadmin'\)/.test(sql)) return [{ total: 85, superadmins: 2, verified: 80, unverified: 5, suspended: 3, active: 82 }]
     if (/GROUP BY 1/.test(sql)) return [{ role: 'member', count: 70 }, { role: 'developer', count: 13 }]
-    if (/FROM "teams"/.test(sql)) return [{ total: 7, workTeams: 6 }]
+    if (/FROM "teams"/.test(sql) && !/team_members/.test(sql)) return [{ total: 7, workTeams: 6 }]
+    if (/LIMIT/.test(sql) && /role != \$1/.test(sql)) return [{ id: 'u1', email: 'u1@x', firstName: 'U', lastName: 'One', role: 'member', roleBeforeSuspension: null, emailVerified: true, createdAt: 'x', updatedAt: 'x', teamCount: 5, teams: [{ id: 't1', name: 'Acme' }] }]
     if (/COUNT\(\*\)::int as total\s+FROM "users"/.test(sql)) return [{ total: 1 }]
     return []
   })
@@ -85,5 +86,15 @@ describe('counts', () => {
     const body = await (await call('')).json()
     expect(body.counts.workTeams).toBe(6)
     expect(body.counts.teams).toBe(7)
+  })
+})
+
+describe('teams of each user (#521)', () => {
+  it('asks for the count and the first three teams of each user and returns them', async () => {
+    const body = await (await call('')).json()
+    const [sql] = listQuery()
+    expect(sql).toContain('"teamCount"')
+    expect(sql).toMatch(/LIMIT 3/)
+    expect(body.regularUsers[0]).toMatchObject({ teamCount: 5, teams: [{ id: 't1', name: 'Acme' }] })
   })
 })

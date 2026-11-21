@@ -314,7 +314,13 @@ function TeamDetailPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">{team?.owner.name}</div>
+                  <div className="font-medium">
+                    {team ? (
+                      <Link href={`/superadmin/users/${team.owner.id}`} className="hover:underline">
+                        {team.owner.name}
+                      </Link>
+                    ) : null}
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     {team?.owner.email}
                   </div>
@@ -397,7 +403,11 @@ function TeamDetailPage() {
                                 {member.name?.[0]?.toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="font-medium">{member.name}</div>
+                            <div className="font-medium">
+                              <Link href={`/superadmin/users/${member.userId}`} className="hover:underline">
+                                {member.name}
+                              </Link>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>

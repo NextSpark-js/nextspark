@@ -414,7 +414,11 @@ function UserDetailPage() {
                     return (
                       <TableRow key={team.teamId}>
                         <TableCell>
-                          <div className="font-medium">{team.teamName}</div>
+                          <div className="font-medium">
+                            <Link href={`/superadmin/teams/${team.teamId}`} className="hover:underline">
+                              {team.teamName}
+                            </Link>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={roleColors[team.role]} className="gap-1">

@@ -88,7 +88,9 @@
       "you": "Vous",
       "id": "ID : {id}",
       "active": "Actif",
-      "suspended": "Suspendu"
+      "suspended": "Suspendu",
+      "teams": "Équipes",
+      "moreTeams": "+{count} de plus"
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -368,12 +370,14 @@
       "owner": "Propriétaire",
       "members": "Membres",
       "created": "Créé",
-      "actions": "Actions"
+      "actions": "Actions",
+      "plan": "Forfait"
     },
     "id": "ID : {id}",
     "memberWord": "{count, plural, one {membre} other {membres}}",
     "unknown": "Inconnu",
-    "viewDetails": "Voir les détails"
+    "viewDetails": "Voir les détails",
+    "noPlan": "Aucun forfait"
   },
   "rolesMatrix": {
     "permission": "Permission",
@@ -685,7 +689,8 @@
     "pricePerMonth": "{price}/mois",
     "pricePerYear": "{price}/an",
     "trialEnds": "L’essai se termine le {date}",
-    "viewTeam": "Voir l’équipe"
+    "viewTeam": "Voir l’équipe",
+    "noProviderLink": "Aucun abonnement Stripe lié : forfait gratuit ou attribué manuellement"
   },
   "guard": {
     "title": "Accès refusé",

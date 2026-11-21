@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 import { useTranslations } from 'next-intl';
 import { Badge } from '../../ui/badge';
@@ -43,6 +44,31 @@ export function UserStatusBadges({ user }: { user: BadgeUser }) {
         </span>
       ) : (
         <Badge variant="outline" className="text-yellow-600 border-yellow-600">{t('table.pending')}</Badge>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The teams of a user in the list: the first two linked to their page, "+N" for the rest (linked to the user's page,
+ * which lists them all), a dash when the user is in none.
+ */
+export function UserTeamLinks({ user }: { user: { id: string; teamCount?: number; teams?: { id: string; name: string }[] } }) {
+  const t = useTranslations('superadmin.users');
+  const shown = (user.teams ?? []).slice(0, 2);
+  const more = (user.teamCount ?? shown.length) - shown.length;
+  if (!shown.length) return <span className="text-sm text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-col gap-0.5 text-sm" data-cy={`superadmin-user-teams-${user.id}`}>
+      {shown.map((team) => (
+        <Link key={team.id} href={`/superadmin/teams/${team.id}`} className="max-w-[10rem] truncate hover:underline" title={team.name}>
+          {team.name}
+        </Link>
+      ))}
+      {more > 0 && (
+        <Link href={`/superadmin/users/${user.id}`} className="text-xs text-muted-foreground hover:underline">
+          {t('table.moreTeams', { count: more })}
+        </Link>
       )}
     </div>
   );

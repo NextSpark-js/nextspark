@@ -23,6 +23,7 @@ import {
 } from '../../ui/dropdown-menu';
 import { Button } from '../../ui/button';
 import { Avatar, AvatarFallback } from '../../ui/avatar';
+import { Badge } from '../../ui/badge';
 import {
   MoreHorizontal,
   Users,
@@ -42,6 +43,8 @@ interface Team {
   name: string;
   owner: TeamOwner;
   memberCount: number;
+  /** The team's newest subscription; null when it has none */
+  plan?: { name: string | null; slug: string | null; status: string | null } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,6 +118,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
             <TableHead>{t('columns.team')}</TableHead>
             <TableHead>{t('columns.owner')}</TableHead>
             <TableHead>{t('columns.members')}</TableHead>
+            <TableHead>{t('columns.plan')}</TableHead>
             <TableHead>{t('columns.created')}</TableHead>
             <TableHead className="text-right">{t('columns.actions')}</TableHead>
           </TableRow>
@@ -137,7 +141,11 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{team.name}</div>
+                      <div className="font-medium">
+                        <Link href={`/superadmin/teams/${team.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {team.name}
+                        </Link>
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {t('id', { id: `${team.id.slice(0, 12)}...` })}
                       </div>
@@ -154,7 +162,11 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="text-sm font-medium">{team.owner.name}</div>
+                      <div className="text-sm font-medium">
+                        <Link href={`/superadmin/users/${team.owner.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {team.owner.name}
+                        </Link>
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {team.owner.email}
                       </div>
@@ -171,6 +183,20 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                       {t('memberWord', { count: team.memberCount })}
                     </span>
                   </div>
+                </TableCell>
+
+                {/* Plan: the newest subscription's, with its status when it is not active */}
+                <TableCell>
+                  {team.plan ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="secondary">{team.plan.name || team.plan.slug}</Badge>
+                      {team.plan.status && team.plan.status !== 'active' && (
+                        <span className="text-xs text-muted-foreground">{team.plan.status}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{t('noPlan')}</span>
+                  )}
                 </TableCell>
 
                 {/* Created Date */}

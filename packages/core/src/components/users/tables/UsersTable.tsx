@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sel } from '../../../lib/test';
 import { UserActionsMenu, useUserActions } from './UserActions';
-import { UserRoleBadge, UserStatusBadges } from './UserBadges';
+import { UserRoleBadge, UserStatusBadges, UserTeamLinks } from './UserBadges';
 
 interface User {
   id: string;
@@ -30,6 +30,9 @@ interface User {
   createdAt?: string | Date;
   updatedAt?: string | Date;
   fullName: string;
+  /** How many teams the user is in, and the first of them */
+  teamCount?: number;
+  teams?: { id: string; name: string }[];
 }
 
 interface UsersTableProps {
@@ -107,6 +110,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
             <TableHead>{t('table.email')}</TableHead>
             <TableHead>{t('table.role')}</TableHead>
             <TableHead>{t('table.status')}</TableHead>
+            <TableHead>{t('table.teams')}</TableHead>
             <TableHead>{t('table.joined')}</TableHead>
             <TableHead className="text-right">{t('table.actions')}</TableHead>
           </TableRow>
@@ -157,6 +161,11 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
               {/* Status: Active or Suspended, and whether the email is verified */}
               <TableCell>
                 <UserStatusBadges user={user} />
+              </TableCell>
+
+              {/* Teams: the first ones linked, the rest counted */}
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                <UserTeamLinks user={user} />
               </TableCell>
 
               {/* Join Date */}

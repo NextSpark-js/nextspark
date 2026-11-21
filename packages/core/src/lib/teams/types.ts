@@ -201,6 +201,8 @@ export interface TeamWithOwner {
     email: string
   }
   memberCount: number
+  /** The team's newest subscription; null when it has none */
+  plan?: { name: string | null; slug: string | null; status: string | null } | null
   createdAt: string
   updatedAt: string
 }

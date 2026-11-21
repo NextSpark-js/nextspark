@@ -88,7 +88,9 @@
       "you": "Tu",
       "id": "ID: {id}",
       "active": "Attivo",
-      "suspended": "Sospeso"
+      "suspended": "Sospeso",
+      "teams": "Team",
+      "moreTeams": "+{count} altri"
     },
     "actions": {
       "openMenu": "Apri menu",
@@ -368,12 +370,14 @@
       "owner": "Proprietario",
       "members": "Membri",
       "created": "Creato",
-      "actions": "Azioni"
+      "actions": "Azioni",
+      "plan": "Piano"
     },
     "id": "ID: {id}",
     "memberWord": "{count, plural, one {membro} other {membri}}",
     "unknown": "Sconosciuto",
-    "viewDetails": "Vedi dettagli"
+    "viewDetails": "Vedi dettagli",
+    "noPlan": "Nessun piano"
   },
   "rolesMatrix": {
     "permission": "Permesso",
@@ -685,7 +689,8 @@
     "pricePerMonth": "{price}/mese",
     "pricePerYear": "{price}/anno",
     "trialEnds": "La prova termina il {date}",
-    "viewTeam": "Vedi team"
+    "viewTeam": "Vedi team",
+    "noProviderLink": "Nessun abbonamento Stripe collegato: piano gratuito o assegnato manualmente"
   },
   "guard": {
     "title": "Accesso negato",

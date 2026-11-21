@@ -141,7 +141,12 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         "roleBeforeSuspension",
         "emailVerified",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        (SELECT COUNT(*)::int FROM "team_members" tm WHERE tm."userId" = "users".id) AS "teamCount",
+        (SELECT COALESCE(json_agg(x), '[]'::json) FROM (
+           SELECT t.id, t.name FROM "team_members" tm JOIN "teams" t ON t.id = tm."teamId"
+           WHERE tm."userId" = "users".id ORDER BY tm."createdAt" LIMIT 3
+         ) x) AS teams
       FROM "users"
       ${regularWhere.whereClause}
       ORDER BY "createdAt" DESC
@@ -166,7 +171,12 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         "roleBeforeSuspension",
         "emailVerified",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        (SELECT COUNT(*)::int FROM "team_members" tm WHERE tm."userId" = "users".id) AS "teamCount",
+        (SELECT COALESCE(json_agg(x), '[]'::json) FROM (
+           SELECT t.id, t.name FROM "team_members" tm JOIN "teams" t ON t.id = tm."teamId"
+           WHERE tm."userId" = "users".id ORDER BY tm."createdAt" LIMIT 3
+         ) x) AS teams
       FROM "users"
       ${superadminWhere.whereClause}
       ORDER BY "createdAt" DESC
@@ -272,7 +282,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const totalPages = Math.ceil(paginationTotal / limit);
 
     // Format user data
-    const formatUser = (user: User & { roleBeforeSuspension?: string | null }) => ({
+    const formatUser = (user: User & { roleBeforeSuspension?: string | null; teamCount?: number; teams?: { id: string; name: string }[] }) => ({
       id: user.id,
       firstName: user.firstName || '',
       lastName: user.lastName || '',
@@ -282,6 +292,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      // How many teams the user is in, and the first three
+      teamCount: user.teamCount ?? 0,
+      teams: user.teams ?? [],
       fullName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
     });
 

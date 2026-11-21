@@ -42,6 +42,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@nextsparkjs/core/components/ui/tooltip";
 import { useLocale, useTranslations } from "next-intl";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path";
 import { formatLocaleDate, formatLocaleDollars, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
@@ -594,6 +595,19 @@ function SubscriptionsPage() {
                                 {t("viewTeam")}
                               </Link>
                             </Button>
+                            {!sub.providerDashboardUrl && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0} className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground/40" data-cy="subscription-no-provider-link">
+                                      <ExternalLink className="h-4 w-4" />
+                                      <span className="sr-only">{t("noProviderLink")}</span>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t("noProviderLink")}</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             {sub.providerDashboardUrl && (
                                 <Button
                                   variant="ghost"

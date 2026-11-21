@@ -15,6 +15,9 @@ interface TeamWithStats {
   ownerName: string;
   ownerEmail: string;
   memberCount: number;
+  planName: string | null;
+  planSlug: string | null;
+  subscriptionStatus: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -95,13 +98,25 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         COALESCE(u."firstName" || ' ' || u."lastName", u.email) as "ownerName",
         u.email as "ownerEmail",
         COUNT(tm.id)::int as "memberCount",
+        sub."planName",
+        sub."planSlug",
+        sub."subscriptionStatus",
         t."createdAt",
         t."updatedAt"
       FROM "teams" t
       LEFT JOIN "users" u ON t."ownerId" = u.id
       LEFT JOIN "team_members" tm ON t.id = tm."teamId"
+      LEFT JOIN LATERAL (
+        SELECT p.name AS "planName", p.slug AS "planSlug", s.status AS "subscriptionStatus"
+        FROM "subscriptions" s
+        LEFT JOIN "plans" p ON s."planId" = p.id
+        WHERE s."teamId" = t.id
+        ORDER BY s."createdAt" DESC
+        LIMIT 1
+      ) sub ON true
       ${whereClause}
-      GROUP BY t.id, t.name, t."ownerId", u."firstName", u."lastName", u.email, t."createdAt", t."updatedAt"
+      GROUP BY t.id, t.name, t."ownerId", u."firstName", u."lastName", u.email, t."createdAt", t."updatedAt",
+               sub."planName", sub."planSlug", sub."subscriptionStatus"
       ORDER BY t."createdAt" DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
@@ -154,6 +169,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
           email: team.ownerEmail
         },
         memberCount: team.memberCount,
+        // The team's newest subscription, null when it has none
+        plan: team.planSlug || team.planName ? { name: team.planName, slug: team.planSlug, status: team.subscriptionStatus } : null,
         createdAt: team.createdAt,
         updatedAt: team.updatedAt
       })),

@@ -88,7 +88,9 @@
       "you": "You",
       "id": "ID: {id}",
       "active": "Active",
-      "suspended": "Suspended"
+      "suspended": "Suspended",
+      "teams": "Teams",
+      "moreTeams": "+{count} more"
     },
     "actions": {
       "openMenu": "Open menu",
@@ -368,12 +370,14 @@
       "owner": "Owner",
       "members": "Members",
       "created": "Created",
-      "actions": "Actions"
+      "actions": "Actions",
+      "plan": "Plan"
     },
     "id": "ID: {id}",
     "memberWord": "{count, plural, one {member} other {members}}",
     "unknown": "Unknown",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "noPlan": "No plan"
   },
   "rolesMatrix": {
     "permission": "Permission",
@@ -685,7 +689,8 @@
     "pricePerMonth": "{price}/mo",
     "pricePerYear": "{price}/yr",
     "trialEnds": "Trial ends {date}",
-    "viewTeam": "View Team"
+    "viewTeam": "View Team",
+    "noProviderLink": "No Stripe subscription linked: a free or manually assigned plan"
   },
   "guard": {
     "title": "Access Denied",
