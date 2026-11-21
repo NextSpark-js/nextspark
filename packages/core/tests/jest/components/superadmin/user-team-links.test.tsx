@@ -40,7 +40,8 @@ describe('Teams: Plan column and owner link', () => {
     render(<TeamsTable teams={[team('a', { plan: { name: 'Pro', slug: 'pro', status: 'active' } }), team('b', { plan: { name: 'Pro', slug: 'pro', status: 'past_due' } }), team('c', { plan: null })] as never} />)
     expect(row('Team a').getByText('Pro')).toBeInTheDocument()
     expect(row('Team a').queryByText('active')).toBeNull()
-    expect(row('Team b').getByText('past_due')).toBeInTheDocument()
+    expect(row('Team b').getByText('Past Due')).toBeInTheDocument()
+    expect(row('Team b').queryByText('past_due')).toBeNull()
     expect(row('Team c').getByText('No plan')).toBeInTheDocument()
   })
 

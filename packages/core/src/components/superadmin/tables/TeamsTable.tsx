@@ -71,6 +71,8 @@ interface TeamsTableProps {
 export function TeamsTable({ teams, isLoading, sort, onSortChange }: TeamsTableProps) {
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
   const t = useTranslations('superadmin.teamsTable');
+  // the plan's status, in the words of the Subscriptions page
+  const tStatus = useTranslations('superadmin.subscriptions');
   const locale = useLocale();
   const router = useRouter();
 
@@ -206,7 +208,7 @@ export function TeamsTable({ teams, isLoading, sort, onSortChange }: TeamsTableP
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge variant="secondary">{team.plan.name || team.plan.slug}</Badge>
                       {team.plan.status && team.plan.status !== 'active' && (
-                        <span className="text-xs text-muted-foreground">{team.plan.status}</span>
+                        <span className="text-xs text-muted-foreground">{tStatus.has(`statuses.${team.plan.status}`) ? tStatus(`statuses.${team.plan.status}`) : team.plan.status}</span>
                       )}
                     </div>
                   ) : (
