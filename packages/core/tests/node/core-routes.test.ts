@@ -240,7 +240,7 @@ test('the Cache Components variants are the routes whose segment config Next.js 
   assert.deepEqual(
     Object.keys(VARIANT_FILES.cacheComponents).sort(),
     [
-      '(auth)/layout.cc.tsx', '(auth)/login/page.cc.tsx', '(auth)/oauth/consent/page.cc.tsx', '(auth)/signup/page.cc.tsx', '(public)/docs/[section]/[page]/page.cc.tsx', '(public)/layout.cc.tsx', '(public)/page.cc.tsx',
+      '(auth)/layout.cc.tsx', '(auth)/login/page.cc.tsx', '(auth)/oauth/consent/page.cc.tsx', '(auth)/oauth/select-team/page.cc.tsx', '(auth)/signup/page.cc.tsx', '(public)/docs/[section]/[page]/page.cc.tsx', '(public)/layout.cc.tsx', '(public)/page.cc.tsx',
       'dashboard/(main)/layout.cc.tsx', 'dashboard/layout.cc.tsx', 'devtools/layout.cc.tsx', 'layout.ppr.tsx', 'superadmin/docs/[section]/[page]/page.cc.tsx', 'superadmin/layout.cc.tsx',
     ]
   )

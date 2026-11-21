@@ -39,8 +39,9 @@ describe('/oauth/consent and MCP_OAUTH_ENABLED (#541)', () => {
     env.MCP_ENABLED = saved.mcp
   })
 
-  test('off: the consent path is rewritten to the not-found page', async () => {
+  test('off: the consent and team picker paths are rewritten to the not-found page', async () => {
     delete env.MCP_OAUTH_ENABLED
+    expect(await rewrite('/oauth/select-team')).toBe('http://localhost:3000/_ns/not-found')
     expect(await rewrite('/oauth/consent')).toBe('http://localhost:3000/_ns/not-found')
     expect(await rewrite('/oauth/consent?client_id=x&sig=y')).toMatch(/\/_ns\/not-found/)
   })
@@ -53,8 +54,9 @@ describe('/oauth/consent and MCP_OAUTH_ENABLED (#541)', () => {
     expect(oauthPath.headers.get('x-middleware-rewrite') ?? '').not.toMatch(/not-found/)
   })
 
-  test('on: the consent path reaches its page', async () => {
+  test('on: both paths reach their pages', async () => {
     env.MCP_OAUTH_ENABLED = 'true'
     expect((await rewrite('/oauth/consent')) ?? '').not.toMatch(/not-found/)
+    expect((await rewrite('/oauth/select-team')) ?? '').not.toMatch(/not-found/)
   })
 })

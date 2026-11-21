@@ -6,6 +6,14 @@
  * fails, gets its 401 with the RFC 9728 `WWW-Authenticate` challenge. A verified token becomes a principal here:
  * the user it names, the team the grant is bound to, and the scopes the user may hold in that team today. The token
  * itself goes no further: tools receive the principal, not a credential.
+ *
+ * Two checks the signature cannot make are made on every request:
+ * - the connection was not ended since the token was issued (lib/mcp/oauth/revocation): an access token lives ten
+ *   minutes, a revocation must not wait for that.
+ * - the token was granted what the call needs. A call to an entity tool whose scope was never granted is answered
+ *   403 with an RFC 6750 `insufficient_scope` challenge naming it, before anything runs, so the client can ask the
+ *   user for more. A scope that was granted and the user's role no longer allows is refused by the tool instead:
+ *   asking again would not help.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { requireMcpAuth } from '@better-auth/mcp'
@@ -21,9 +29,16 @@ import { TeamService } from '../../services/team.service'
 import { TeamMemberService } from '../../services/team-member.service'
 import { RATE_LIMIT_MESSAGE } from '../errors'
 import type { ToolExecutionContext } from '../types'
-import { mcpOAuthIssuer, mcpResourceUrl, OIDC_SCOPES, TEAM_CLAIM } from './config'
+import { mcpOAuthIssuer, mcpResourceMetadataUrl, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
+import { isRevokedSince } from './revocation'
 
 type McpDispatch = (body: unknown, ctx: ToolExecutionContext) => Promise<JSONRPCMessage | JSONRPCMessage[] | null>
+
+export interface OAuthMcpHandlers {
+  dispatch: McpDispatch
+  /** The scope a call to a generated entity tool needs; undefined for any other tool. */
+  requiredScopeFor: (toolName: string) => string | undefined
+}
 
 const API_KEY_BEARER = /^Bearer\s+sk_(live|test)_/i
 
@@ -51,7 +66,7 @@ const claimString = (value: unknown): string | undefined => (typeof value === 's
  */
 async function principalFromClaims(
   claims: Record<string, unknown>
-): Promise<{ principal: DualAuthResult; teamId: string } | NextResponse> {
+): Promise<{ principal: DualAuthResult; teamId: string; granted: string[] } | NextResponse> {
   const userId = claimString(claims.sub)
   const teamId = claimString(claims[TEAM_CLAIM])
   const clientId = claimString(claims.azp) ?? claimString(claims.client_id)
@@ -69,6 +84,10 @@ async function principalFromClaims(
     return jsonRpcError(403, -32002, 'The account is no longer a member of the team this connection was approved for.')
   }
 
+  if (await isRevokedSince(userId, teamId, claims[REVOCATION_CLAIM])) {
+    return jsonRpcError(401, -32001, 'This connection was revoked. Connect again.')
+  }
+
   const granted = (claimString(claims.scope) ?? '')
     .split(/\s+/)
     .filter(scope => scope && !(OIDC_SCOPES as readonly string[]).includes(scope) && !scope.includes('*'))
@@ -77,6 +96,7 @@ async function principalFromClaims(
 
   return {
     teamId,
+    granted,
     principal: {
       success: true,
       type: 'api-key',
@@ -87,13 +107,36 @@ async function principalFromClaims(
   }
 }
 
-export async function handleOAuthMcpRequest(request: NextRequest, dispatch: McpDispatch): Promise<NextResponse> {
+/** The scopes the calls in a JSON-RPC body need and the token was never granted. */
+function missingScopes(body: unknown, granted: readonly string[], requiredScopeFor: OAuthMcpHandlers['requiredScopeFor']): string[] {
+  const missing = new Set<string>()
+  for (const message of Array.isArray(body) ? body : [body]) {
+    const call = message as { method?: unknown; params?: { name?: unknown } } | null
+    if (call?.method !== 'tools/call' || typeof call.params?.name !== 'string') continue
+    const scope = requiredScopeFor(call.params.name)
+    if (scope && !granted.includes(scope)) missing.add(scope)
+  }
+  return [...missing].sort()
+}
+
+function insufficientScope(scopes: string[]): NextResponse {
+  const response = jsonRpcError(403, -32003, `This connection was not granted: ${scopes.join(', ')}.`)
+  // RFC 6750 section 3.1, with the RFC 9728 pointer a client needs to start the new authorization
+  response.headers.set(
+    'WWW-Authenticate',
+    `Bearer error="insufficient_scope", scope="${scopes.join(' ')}", resource_metadata="${mcpResourceMetadataUrl()}"`
+  )
+  response.headers.set('Access-Control-Expose-Headers', 'WWW-Authenticate')
+  return response
+}
+
+export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopeFor }: OAuthMcpHandlers): Promise<NextResponse> {
   const protectedHandler = requireMcpAuth(
     auth,
     async (_request, claims) => {
       const resolved = await principalFromClaims(claims as Record<string, unknown>)
       if (resolved instanceof NextResponse) return resolved
-      const { principal, teamId } = resolved
+      const { principal, teamId, granted } = resolved
 
       // The per-credential limit API keys have, for this client and user: counted here for the MCP request and,
       // as for a key, once more by each API handler a tool calls (authenticateRequest)
@@ -115,6 +158,10 @@ export async function handleOAuthMcpRequest(request: NextRequest, dispatch: McpD
       } catch {
         return jsonRpcError(400, -32700, 'Parse error: body must be JSON-RPC')
       }
+
+      // Before anything runs: one missing scope refuses the whole body, a batch included, so nothing is half done
+      const missing = missingScopes(body, granted, requiredScopeFor)
+      if (missing.length) return insufficientScope(missing)
 
       const ctx: ToolExecutionContext = {
         userId: principal.user!.id,

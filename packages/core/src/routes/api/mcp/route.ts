@@ -112,7 +112,10 @@ async function handleMcpPost(request: NextRequest): Promise<NextResponse> {
       return jsonRpcError(400, -32600, 'Present one credential: an API key or an OAuth access token, not both.')
     }
     if (!apiKey) {
-      return handleOAuthMcpRequest(request, (body, ctx) => engine.handleJsonRpc(body, ctx))
+      return handleOAuthMcpRequest(request, {
+        dispatch: (body, ctx) => engine.handleJsonRpc(body, ctx),
+        requiredScopeFor: engine.requiredScopeFor,
+      })
     }
   }
 

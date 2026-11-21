@@ -687,10 +687,10 @@ async function handle(request: NextRequest, { authenticatedPaths, hookTimeoutMs,
     return finishCoreResponse(NextResponse.redirect(newUrl, 301))
   }
 
-  // The consent screen of MCP browser sign-in (#541) is a page only while MCP_OAUTH_ENABLED is on: a real 404
-  // otherwise (a notFound() in the page arrives after the layout has begun streaming a 200).
-  // Only that path: a project's own routes under /oauth are not core's to refuse.
-  if (pathname === '/oauth/consent' && !isMcpOAuthEnabled()) {
+  // The two pages of MCP browser sign-in (#541), consent and team picker, are pages only while MCP_OAUTH_ENABLED is
+  // on: a real 404 otherwise (a notFound() in the page arrives after the layout has begun streaming a 200).
+  // Only those paths: a project's own routes under /oauth are not core's to refuse.
+  if ((pathname === '/oauth/consent' || pathname === '/oauth/select-team') && !isMcpOAuthEnabled()) {
     return rewriteToNotFound(request, requestHeaders, themeResponse)
   }
 

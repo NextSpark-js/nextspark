@@ -17,8 +17,9 @@
 -- `oauthAccessToken.token` is NOT NULL: Better Auth 1.7.27 declares the field without `required: false`, which is
 -- required, and its migration planner reports a nullable column there as drift.
 --
--- Additive only: no existing table changes. Undoing it is dropping the eight tables (in reverse order of creation),
--- which signs every MCP client out and makes them authorize again.
+-- Additive only: no existing table changes; two triggers on existing tables (account, users). Undoing it is
+-- dropping the four triggers and their two functions, then the ten tables (in reverse order of creation), which
+-- signs every MCP client out and makes them authorize again.
 
 -- ============================================
 -- TABLES
@@ -155,6 +156,14 @@ CREATE TABLE IF NOT EXISTS public."oauthClientAssertion" (
   "expiresAt"  TIMESTAMPTZ NOT NULL
 );
 
+-- The team a user in several teams picked for the authorization in progress (lib/mcp/oauth/team-selection): one row
+-- per browser session, read back as the consent's reference. Ours, not Better Auth's.
+CREATE TABLE IF NOT EXISTS public."oauthTeamSelection" (
+  "sessionId"  TEXT PRIMARY KEY REFERENCES public."session"(id) ON DELETE CASCADE,
+  "teamId"     TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
+  "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ============================================
 -- INDEXES
 -- ============================================
@@ -185,7 +194,7 @@ DECLARE
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'jwks', 'oauthClient', 'oauthResource', 'oauthClientResource',
-    'oauthRefreshToken', 'oauthAccessToken', 'oauthConsent', 'oauthClientAssertion'
+    'oauthRefreshToken', 'oauthAccessToken', 'oauthConsent', 'oauthClientAssertion', 'oauthTeamSelection'
   ] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || ' service all', t);
@@ -195,3 +204,97 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- ============================================
+-- REVOCATION: ended connections, recorded where every instance reads them
+-- ============================================
+-- An access token is a signed JWT that lives ten minutes; a revocation must not wait for that. Each event that ends
+-- a connection leaves a numbered row here. A token carries the number of the newest row that covered its user and
+-- team when it was issued, and /api/mcp refuses it once a newer one exists (lib/mcp/oauth/revocation): no clock is
+-- compared. A row with no team covers every connection of the user. The client is kept for the record.
+--
+-- The rows are written by triggers, so they hold on every instance and for every path, Better Auth's included:
+--   - a refresh token revoked or deleted while it was live: the revocation endpoint, a detected reuse of a rotated
+--     token, a replayed authorization code, a disconnect. A rotation is not one: it marks the old token rotated.
+--   - a changed password (change, reset, an administrator's write) and a suspension: every connection of the user,
+--     whose refresh tokens are revoked as well.
+CREATE TABLE IF NOT EXISTS public."oauthRevocation" (
+  id           BIGSERIAL PRIMARY KEY,
+  "userId"     TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
+  "clientId"   TEXT,
+  "teamId"     TEXT,
+  "revokedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_revocation_user ON public."oauthRevocation"("userId", id);
+ALTER TABLE public."oauthRevocation" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "oauthRevocation service all" ON public."oauthRevocation";
+CREATE POLICY "oauthRevocation service all" ON public."oauthRevocation"
+  FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls());
+
+CREATE OR REPLACE FUNCTION public.record_oauth_connection_revoked()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    -- a live token removed; an expired or already revoked one is housekeeping
+    IF OLD.revoked IS NULL AND OLD."expiresAt" > now() THEN
+      INSERT INTO public."oauthRevocation" ("userId", "clientId", "teamId") VALUES (OLD."userId", OLD."clientId", OLD."referenceId");
+    END IF;
+    RETURN OLD;
+  END IF;
+  INSERT INTO public."oauthRevocation" ("userId", "clientId", "teamId") VALUES (NEW."userId", NEW."clientId", NEW."referenceId");
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS oauth_refresh_token_revoked ON public."oauthRefreshToken";
+CREATE TRIGGER oauth_refresh_token_revoked
+  AFTER UPDATE OF revoked ON public."oauthRefreshToken"
+  FOR EACH ROW
+  WHEN (OLD.revoked IS NULL AND NEW.revoked IS NOT NULL AND NEW."rotatedAt" IS NULL)
+  EXECUTE FUNCTION public.record_oauth_connection_revoked();
+
+DROP TRIGGER IF EXISTS oauth_refresh_token_deleted ON public."oauthRefreshToken";
+CREATE TRIGGER oauth_refresh_token_deleted
+  AFTER DELETE ON public."oauthRefreshToken"
+  FOR EACH ROW
+  EXECUTE FUNCTION public.record_oauth_connection_revoked();
+
+CREATE OR REPLACE FUNCTION public.revoke_oauth_connections_of_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  target TEXT;
+BEGIN
+  IF TG_TABLE_NAME = 'account' THEN
+    target := NEW."userId";
+  ELSE
+    target := NEW.id;
+  END IF;
+  -- rows no access token can still be older than (they live minutes), keeping the newest: it is the number new tokens carry
+  DELETE FROM public."oauthRevocation"
+   WHERE "userId" = target AND "revokedAt" < now() - interval '1 day'
+     AND id < (SELECT MAX(id) FROM public."oauthRevocation" WHERE "userId" = target);
+  INSERT INTO public."oauthRevocation" ("userId") VALUES (target);
+  UPDATE public."oauthRefreshToken" SET revoked = now() WHERE "userId" = target AND revoked IS NULL;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS oauth_revoke_on_password_change ON public."account";
+CREATE TRIGGER oauth_revoke_on_password_change
+  AFTER UPDATE OF password ON public."account"
+  FOR EACH ROW
+  WHEN (OLD.password IS DISTINCT FROM NEW.password)
+  EXECUTE FUNCTION public.revoke_oauth_connections_of_user();
+
+DROP TRIGGER IF EXISTS oauth_revoke_on_suspension ON public."users";
+CREATE TRIGGER oauth_revoke_on_suspension
+  AFTER UPDATE OF role ON public."users"
+  FOR EACH ROW
+  WHEN (NEW.role = 'suspended' AND OLD.role IS DISTINCT FROM NEW.role)
+  EXECUTE FUNCTION public.revoke_oauth_connections_of_user();

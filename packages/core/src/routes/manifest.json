@@ -35,6 +35,11 @@
   },
   {
     "kind": "page",
+    "target": "(auth)/oauth/select-team/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/oauth/select-team/page"
+  },
+  {
+    "kind": "page",
     "target": "(auth)/reset-password/page.tsx",
     "specifier": "@nextsparkjs/core/routes/(auth)/reset-password/page"
   },
@@ -136,6 +141,11 @@
     "kind": "route",
     "target": "api/health/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/health/route"
+  },
+  {
+    "kind": "route",
+    "target": "api/internal/oauth-team/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/internal/oauth-team/route"
   },
   {
     "kind": "route",

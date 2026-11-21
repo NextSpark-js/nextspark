@@ -410,3 +410,28 @@ describe('createMcpEngine', () => {
     expect(responses).toHaveLength(1);
   });
 });
+
+describe('the scope a tool call needs (#541)', () => {
+  it('is <entity>:read, :write or :delete for the generated entity tools, as the API handler declares it', () => {
+    const engine = createMcpEngine({ customers: makeEntity({ slug: 'customers' }) }, { toolPrefix: 'acme', executor: jest.fn() });
+    const scopes = Object.fromEntries(engine.tools.map(tool => [tool.name, engine.requiredScopeFor(tool.name)]));
+    expect(scopes).toEqual({
+      acme_list_customers: 'customers:read',
+      acme_get_customer: 'customers:read',
+      acme_create_customer: 'customers:write',
+      acme_update_customer: 'customers:write',
+      acme_delete_customer: 'customers:delete',
+    });
+  });
+
+  it('is undefined for a tool that is not an entity operation and for an unknown name', () => {
+    const overrides = {
+      customers: {
+        extraTools: () => [{ name: 'acme_customer_report', description: 'report', inputSchema: {}, handler: jest.fn(), meta: { entitySlug: 'customers', operation: 'workflow' as const } }],
+      },
+    };
+    const engine = createMcpEngine({ customers: makeEntity({ slug: 'customers' }) }, { toolPrefix: 'acme', executor: jest.fn(), overrides: overrides as never });
+    expect(engine.requiredScopeFor('acme_customer_report')).toBeUndefined();
+    expect(engine.requiredScopeFor('no_such_tool')).toBeUndefined();
+  });
+});

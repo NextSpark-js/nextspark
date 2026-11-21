@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { authClient } from '../../lib/auth-client'
+import { withBasePath } from '../../lib/base-path'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 
@@ -28,6 +29,7 @@ export function OAuthConsent() {
   const clientId = params.get('client_id') ?? ''
   const scopes = useMemo(() => (params.get('scope') ?? '').split(/\s+/).filter(Boolean), [params])
   const [client, setClient] = useState<PublicClient | null>(null)
+  const [team, setTeam] = useState<string | null>(null)
   const [pending, setPending] = useState<'accept' | 'deny' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const oauth2 = (authClient as unknown as { oauth2: OAuthCalls }).oauth2
@@ -36,6 +38,16 @@ export function OAuthConsent() {
     if (!clientId) return
     oauth2.publicClient({ query: { client_id: clientId } }).then(({ data }) => setClient(data)).catch(() => setClient(null))
   }, [clientId, oauth2])
+
+  // The team this connection is for: the one chosen (or the only one) in this session
+  useEffect(() => {
+    fetch(withBasePath('/api/internal/oauth-team'), { credentials: 'include' })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null } | null) => {
+        setTeam(body?.data?.find(candidate => candidate.id === body.selected)?.name ?? null)
+      })
+      .catch(() => setTeam(null))
+  }, [])
 
   const decide = async (accept: boolean) => {
     setPending(accept ? 'accept' : 'deny')
@@ -62,6 +74,7 @@ export function OAuthConsent() {
         <CardDescription>{clientHost ? t('description', { host: clientHost }) : t('descriptionUnknown')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {team && <p className="text-sm font-medium" data-cy="oauth-consent-team">{t('team', { team })}</p>}
         {ACTIONS.map(action => {
           const entities = resourceScopes.filter(scope => scope.endsWith(`:${action}`)).map(scope => scope.slice(0, -action.length - 1))
           if (!entities.length) return null

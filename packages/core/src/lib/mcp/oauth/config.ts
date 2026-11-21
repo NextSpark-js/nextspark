@@ -26,6 +26,12 @@ export function mcpResourceUrl(): string {
   return `${trimSlash(resolveBaseUrl())}${withBasePath('/api/mcp')}`
 }
 
+/** Where the resource's RFC 9728 metadata is served: the well-known path at the origin, suffixed with the resource's path. */
+export function mcpResourceMetadataUrl(): string {
+  const resource = new URL(mcpResourceUrl())
+  return `${resource.origin}/.well-known/oauth-protected-resource${resource.pathname}`
+}
+
 /** The authorization server's issuer: Better Auth's base URL with its path. */
 export function mcpOAuthIssuer(): string {
   return `${trimSlash(resolveBaseUrl())}${withBasePath('/api/auth')}`
@@ -36,3 +42,6 @@ export const OIDC_SCOPES = ['openid', 'profile', 'email', 'offline_access'] as c
 
 /** The access-token claim that carries the team the grant is bound to. */
 export const TEAM_CLAIM = 'team_id'
+
+/** The access-token claim that carries the newest revocation the token was issued after (see lib/mcp/oauth/revocation). */
+export const REVOCATION_CLAIM = 'rev'

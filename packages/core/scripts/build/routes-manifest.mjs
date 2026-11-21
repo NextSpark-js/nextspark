@@ -14,7 +14,7 @@
  *   enables a Next.js mode. Today only `cacheComponents`: the root layout
  *   `layout.ppr.tsx`, the `layout.cc.tsx` files of the five layouts that load messages (their
  *   `getMessages()` cannot be awaited outside Suspense while prerendering) and the `page.cc.tsx`
- *   files of the routes whose segment config Next.js rejects under Cache Components (login, the MCP consent page,
+ *   files of the routes whose segment config Next.js rejects under Cache Components (login, the MCP consent and team pages,
  *   signup, both docs pages).
  * - A layout that wraps whatever layout the host resolves (the root layout and the four group
  *   layouts) carries `compose: { wrapper, specifier }` (`COMPOSED_ROUTES`): a project override
@@ -71,6 +71,7 @@ export const VARIANT_FILES = Object.freeze({
     '(auth)/login/page.cc.tsx': '(auth)/login/page.tsx',
     '(auth)/signup/page.cc.tsx': '(auth)/signup/page.tsx',
     '(auth)/oauth/consent/page.cc.tsx': '(auth)/oauth/consent/page.tsx',
+    '(auth)/oauth/select-team/page.cc.tsx': '(auth)/oauth/select-team/page.tsx',
     '(public)/docs/[section]/[page]/page.cc.tsx': '(public)/docs/[section]/[page]/page.tsx',
     'superadmin/docs/[section]/[page]/page.cc.tsx': 'superadmin/docs/[section]/[page]/page.tsx',
   }),

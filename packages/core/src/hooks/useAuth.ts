@@ -10,6 +10,7 @@ import { safeCallbackPath } from '../lib/auth/callback-url'
 import { resolveHomeRoute } from '../lib/auth/home-route'
 import { DASHBOARD_HOME_CONFIG } from '../lib/config/public-config-client'
 import { withBasePath } from '../lib/base-path'
+import { oauthAuthorizePath } from '../lib/mcp/oauth/sign-in-continuation'
 import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { clearQueryCaches } from '../lib/auth/query-caches'
@@ -61,6 +62,9 @@ function continueOAuthSignIn(data: unknown): boolean {
 }
 
 function signInCallbackURL(method: SocialLoginMethod | 'email', redirectTo?: string): string {
+  // From the login page of an MCP authorization (#541), a provider or a sign-in link comes back to the authorization
+  const authorization = typeof window === 'undefined' ? null : oauthAuthorizePath(window.location.search)
+  if (authorization) return withBasePath(authorization)
   const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
   url.searchParams.set('auth_method', method)
   return withBasePath(`${url.pathname}${url.search.replace(/\*/g, '%2A')}`)

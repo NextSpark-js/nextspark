@@ -49,6 +49,8 @@ export interface McpEngine {
     ctx: ToolExecutionContext
   ) => Promise<JSONRPCMessage | JSONRPCMessage[] | null>
   api: EngineApi
+  /** The scope a call to a generated entity tool needs; undefined for any other tool. */
+  requiredScopeFor: (toolName: string) => string | undefined
 }
 
 export function createMcpEngine(
@@ -228,7 +230,19 @@ export function createMcpEngine(
     }
   }
 
-  return { tools, handleJsonRpc, api }
+  /**
+   * The scope a call to `toolName` needs, when it is one of the generated entity tools: `<slug>:read|write|delete`,
+   * as the API handler it runs declares it. Undefined for a tool that makes its own calls (each is checked where
+   * it is made) and for an unknown name.
+   */
+  function requiredScopeFor(toolName: string): string | undefined {
+    const meta = tools.find(tool => tool.name === toolName)?.meta
+    if (!meta?.entitySlug || !meta.operation || meta.operation === 'workflow') return undefined
+    const action = meta.operation === 'list' || meta.operation === 'get' ? 'read' : meta.operation === 'delete' ? 'delete' : 'write'
+    return `${meta.entitySlug}:${action}`
+  }
+
+  return { tools, handleJsonRpc, api, requiredScopeFor }
 }
 
 function assertUniqueNames(tools: McpToolDefinition[]): void {
