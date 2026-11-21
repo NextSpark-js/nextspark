@@ -12,8 +12,11 @@ import { TAGS_REGISTRY, COVERAGE_SUMMARY } from '@nextsparkjs/registries/testing
 import { sel } from '../../lib/test';
 import { cn } from '../../lib/utils';
 import { grepCommand, useCopy } from './use-copy';
+import { isSelectorTag, testDocPath } from './tag-utils';
 
-type TagCategory = keyof typeof TAGS_REGISTRY;
+type RegistryCategory = keyof typeof TAGS_REGISTRY;
+// "selectors" is not a registry category: it is the `@SEL_*` tags split out of "other"
+type TagCategory = RegistryCategory | "selectors";
 
 interface TagData {
   tag: string;
@@ -30,7 +33,22 @@ const CATEGORY_DISPLAY_ORDER: TagCategory[] = [
   "roles",
   "operations",
   "other",
+  "selectors",
 ];
+
+// Selector tags start collapsed: there are hundreds of them
+const COLLAPSED_BY_DEFAULT: TagCategory[] = ["selectors"];
+
+/** The tags of a display category, with the selector tags moved from "other" to "selectors". */
+function tagsOf(category: TagCategory): Record<string, TagData> | undefined {
+  const source = (category === "selectors" ? TAGS_REGISTRY.other : TAGS_REGISTRY[category]) as
+    | Record<string, TagData>
+    | undefined;
+  if (!source || (category !== "other" && category !== "selectors")) return source;
+  return Object.fromEntries(
+    Object.entries(source).filter(([key, data]) => isSelectorTag(data.tag ?? key) === (category === "selectors"))
+  );
+}
 
 const CATEGORY_COLORS: Record<TagCategory, string> = {
   layers: "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300",
@@ -41,6 +59,21 @@ const CATEGORY_COLORS: Record<TagCategory, string> = {
   roles: "bg-cyan-100 text-cyan-800 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300",
   operations: "bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-300",
   other: "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300",
+  selectors: "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300",
+};
+
+// The open tag: its own color, solid, with dark text in light mode and light text in dark mode, and no hover shift
+// (the hover colors above wash the label out on top of it).
+const CATEGORY_SELECTED: Record<TagCategory, string> = {
+  layers: "bg-blue-200 text-blue-950 hover:bg-blue-200 hover:text-blue-950 dark:bg-blue-800 dark:text-blue-50 dark:hover:bg-blue-800 dark:hover:text-blue-50",
+  priorities: "bg-amber-200 text-amber-950 hover:bg-amber-200 hover:text-amber-950 dark:bg-amber-800 dark:text-amber-50 dark:hover:bg-amber-800 dark:hover:text-amber-50",
+  features: "bg-violet-200 text-violet-950 hover:bg-violet-200 hover:text-violet-950 dark:bg-violet-800 dark:text-violet-50 dark:hover:bg-violet-800 dark:hover:text-violet-50",
+  flows: "bg-emerald-200 text-emerald-950 hover:bg-emerald-200 hover:text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50 dark:hover:bg-emerald-800 dark:hover:text-emerald-50",
+  blocks: "bg-pink-200 text-pink-950 hover:bg-pink-200 hover:text-pink-950 dark:bg-pink-800 dark:text-pink-50 dark:hover:bg-pink-800 dark:hover:text-pink-50",
+  roles: "bg-cyan-200 text-cyan-950 hover:bg-cyan-200 hover:text-cyan-950 dark:bg-cyan-800 dark:text-cyan-50 dark:hover:bg-cyan-800 dark:hover:text-cyan-50",
+  operations: "bg-orange-200 text-orange-950 hover:bg-orange-200 hover:text-orange-950 dark:bg-orange-800 dark:text-orange-50 dark:hover:bg-orange-800 dark:hover:text-orange-50",
+  other: "bg-gray-300 text-gray-950 hover:bg-gray-300 hover:text-gray-950 dark:bg-gray-600 dark:text-gray-50 dark:hover:bg-gray-600 dark:hover:text-gray-50",
+  selectors: "bg-gray-300 text-gray-950 hover:bg-gray-300 hover:text-gray-950 dark:bg-gray-600 dark:text-gray-50 dark:hover:bg-gray-600 dark:hover:text-gray-50",
 };
 
 /**
@@ -58,7 +91,7 @@ export function TagsOverview() {
   const [searchQuery, setSearchQuery] = useState("");
   const { copy, copied } = useCopy();
   const [expandedCategories, setExpandedCategories] = useState<Set<TagCategory>>(
-    new Set(CATEGORY_DISPLAY_ORDER)
+    new Set(CATEGORY_DISPLAY_ORDER.filter((c) => !COLLAPSED_BY_DEFAULT.includes(c)))
   );
   const [expandedTag, setExpandedTag] = useState<string | null>(null);
 
@@ -66,7 +99,7 @@ export function TagsOverview() {
   const totalTags = useMemo(() => {
     let count = 0;
     for (const category of CATEGORY_DISPLAY_ORDER) {
-      const categoryData = TAGS_REGISTRY[category];
+      const categoryData = tagsOf(category);
       if (categoryData) {
         count += Object.keys(categoryData).length;
       }
@@ -82,7 +115,7 @@ export function TagsOverview() {
     >;
 
     for (const category of CATEGORY_DISPLAY_ORDER) {
-      const categoryData = TAGS_REGISTRY[category] as Record<string, TagData> | undefined;
+      const categoryData = tagsOf(category);
       if (!categoryData) continue;
 
       const filteredTags: Record<string, TagData> = {};
@@ -239,13 +272,15 @@ export function TagsOverview() {
                               variant="ghost"
                               size="sm"
                               className={cn(
-                                CATEGORY_COLORS[category],
                                 "font-mono text-sm px-3 py-1 h-auto",
-                                isExpanded && "ring-2 ring-offset-1 ring-violet-500"
+                                isExpanded
+                                  ? [CATEGORY_SELECTED[category], "font-semibold ring-2 ring-offset-2 ring-offset-background ring-violet-500"]
+                                  : CATEGORY_COLORS[category]
                               )}
+                              aria-expanded={isExpanded}
                               onClick={() => toggleTagExpand(tagKey)}
                               title={t("expandHint")}
-                              data-cy={sel("devtools.tags.tag", { tag: key })}
+                              data-cy={sel("devtools.tags.tag", { tag: data.tag })}
                             >
                               {isExpanded ? (
                                 <ChevronDown className="h-3 w-3 mr-1" />
@@ -297,7 +332,7 @@ export function TagsOverview() {
                       <div
                         key={`panel-${key}`}
                         className="mt-3 p-4 bg-muted/50 rounded-lg border border-border animate-in fade-in slide-in-from-top-2 duration-200"
-                        data-cy={sel("devtools.tags.filesPanel", { tag: key })}
+                        data-cy={sel("devtools.tags.filesPanel", { tag: data.tag })}
                       >
                         <div className="flex items-center gap-2 mb-3">
                           <FileCode2 className="h-4 w-4 text-muted-foreground" />
@@ -325,19 +360,36 @@ export function TagsOverview() {
                             const shortPath = getShortPath(file);
                             const isHighlighted = searchQuery && file.toLowerCase().includes(searchQuery.toLowerCase());
 
+                            const href = testDocPath(file);
+                            const label = (
+                              <>
+                                <span className="text-muted-foreground">{shortPath.replace(fileName, "")}</span>
+                                <span className="font-medium">{fileName}</span>
+                              </>
+                            );
+
                             return (
                               <li
                                 key={idx}
                                 className={cn(
-                                  "text-xs font-mono px-2 py-1.5 rounded",
+                                  "text-xs font-mono rounded",
                                   isHighlighted
                                     ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-200"
                                     : "bg-background hover:bg-muted"
                                 )}
                                 title={file}
                               >
-                                <span className="text-muted-foreground">{shortPath.replace(fileName, "")}</span>
-                                <span className="font-medium">{fileName}</span>
+                                {href ? (
+                                  <Link
+                                    href={href}
+                                    className="block px-2 py-1.5 rounded hover:underline"
+                                    data-cy={sel("devtools.tags.fileLink", { tag: data.tag, index: String(idx) })}
+                                  >
+                                    {label}
+                                  </Link>
+                                ) : (
+                                  <span className="block px-2 py-1.5">{label}</span>
+                                )}
                               </li>
                             );
                           })}

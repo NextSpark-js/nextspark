@@ -136,6 +136,7 @@ export const DEVTOOLS_SELECTORS = {
     filesPanel: 'devtools-tags-files-panel-{tag}',
     copyTag: 'devtools-tags-copy-{tag}',
     copyCommand: 'devtools-tags-copy-command-{tag}',
+    fileLink: 'devtools-tags-file-link-{tag}-{index}',
   },
   scheduledActions: {
     page: 'devtools-scheduled-actions-page',

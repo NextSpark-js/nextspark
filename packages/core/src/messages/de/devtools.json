@@ -392,7 +392,8 @@
       "blocks": "Blöcke",
       "roles": "Rollen",
       "operations": "Operationen",
-      "other": "Andere"
+      "other": "Andere",
+      "selectors": "Selektoren"
     },
     "viewDetails": "Details anzeigen",
     "copyTag": "Tag kopieren",

@@ -392,7 +392,8 @@
       "blocks": "Blocs",
       "roles": "Rôles",
       "operations": "Opérations",
-      "other": "Autres"
+      "other": "Autres",
+      "selectors": "Sélecteurs"
     },
     "viewDetails": "Voir les détails",
     "copyTag": "Copier le tag",

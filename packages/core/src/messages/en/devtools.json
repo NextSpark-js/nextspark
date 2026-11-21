@@ -473,7 +473,8 @@
       "blocks": "Blocks",
       "roles": "Roles",
       "operations": "Operations",
-      "other": "Other"
+      "other": "Other",
+      "selectors": "Selectors"
     },
     "viewDetails": "View details",
     "copyTag": "Copy tag",
