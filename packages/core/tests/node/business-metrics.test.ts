@@ -16,7 +16,7 @@ test('business metrics: users, sign-ups, paying teams and users, MRR per currenc
   assert.equal(empty.totalUsers, 0)
   assert.equal(empty.signupsPerDay.length, SIGNUP_DAYS)
   assert.ok(empty.signupsPerDay.every(d => d.count === 0))
-  assert.deepEqual([empty.payingUsers, empty.payingTeams, empty.mrr], [0, 0, []])
+  assert.deepEqual([empty.payingUsers, empty.payingTeams, empty.payingSubscriptions, empty.mrr], [0, 0, 0, []])
 
   // users: two today, one 3 days ago, one 29 days ago (first day of the window), one 30 days ago (outside it)
   const ago = (days: number) => `now() - interval '${days} days'`
@@ -73,6 +73,7 @@ test('business metrics: users, sign-ups, paying teams and users, MRR per currenc
   // paying teams: monthly, yearly, eur, eur-yearly, end, shared, odd (7). payers: u1 (two teams), u2 (two), u7, u10, and u8's
   // owner is not involved; t-eur-yearly has no userId, so its owner counts: teams[7] is owned by u8.
   assert.equal(m.payingTeams, 7)
+  assert.equal(m.payingSubscriptions, 7) // one per paying team
   assert.equal(m.payingUsers, 5) // u1, u2, u7, u10, u8 (owner of t-eur-yearly)
 
   // usd: 1000 + 12000/12 + 1000 (t-end) + 1000 (t-shared) + 999 (odd, default currency) = 4999; eur: 2000 + 1666.67 = 3667

@@ -49,6 +49,7 @@ it('renders every metric, with MRR per currency and a bar for each of the 30 day
   expect(screen.getByText('€3,667.00')).toBeInTheDocument()
   expect(screen.getByText('signups.description:5')).toBeInTheDocument()
   expect(screen.getAllByRole('listitem')).toHaveLength(30)
+  expect(screen.getByLabelText('mrrHelpLabel')).toBeInTheDocument() // the card explains the definition (#517)
 })
 
 it('shows a zero MRR when nothing is paying', async () => {

@@ -1,4 +1,6 @@
+import { Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip";
 import { getLocale, getTranslations } from "next-intl/server";
 import { sel } from "../../../lib/selectors";
 import { formatPrice } from "../../../lib/billing/helpers";
@@ -53,7 +55,19 @@ export async function BusinessMetrics() {
         ))}
         <Card data-cy={sel('superadmin.dashboard.metrics.card', { name: "mrr" })}>
           <CardHeader className="pb-2">
-            <CardDescription>{t("mrr")}</CardDescription>
+            <CardDescription className="flex items-center gap-1">
+              {t("mrr")}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" aria-label={t("mrrHelpLabel")} className="text-muted-foreground">
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">{t("mrrHelp")}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardDescription>
             {metrics.mrr.length === 0 ? (
               <CardTitle className="text-3xl">{money(0, "usd")}</CardTitle>
             ) : (

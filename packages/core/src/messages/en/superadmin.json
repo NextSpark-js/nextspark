@@ -47,7 +47,9 @@
         "title": "Sign-ups, last 30 days",
         "description": "{count, plural, one {# new user} other {# new users}} in the last 30 days (UTC)"
       },
-      "unavailable": "Metrics unavailable"
+      "unavailable": "Metrics unavailable",
+      "mrrHelpLabel": "How MRR is calculated",
+      "mrrHelp": "Monthly recurring revenue of the subscriptions that are active on a paid plan, for teams that still exist. Yearly plans count a twelfth of their price. Trials, past-due, canceled and free subscriptions are not counted. Subscriptions shows the same number."
     },
     "panelTitle": "Super Admin Panel",
     "soon": "Soon",
@@ -640,14 +642,16 @@
     "stats": {
       "mrr": "Monthly Recurring Revenue",
       "arr": "Annual Recurring Revenue",
-      "fromMonthly": "{count, plural, one {From # monthly subscription} other {From # monthly subscriptions}}",
-      "fromYearly": "{count, plural, one {From # yearly subscription} other {From # yearly subscriptions}}",
       "active": "Active Subscriptions",
       "inTrial": "{count} in trial",
       "total": "Total Subscriptions",
       "freeAndPaid": "{free} free, {paid} paid",
       "needsAttention": "Needs Attention",
-      "pastDue": "Past due payments"
+      "pastDue": "Past due payments",
+      "mrrHelpLabel": "How MRR is calculated",
+      "mrrHelp": "Monthly recurring revenue of the subscriptions that are active on a paid plan, for teams that still exist. Yearly plans count a twelfth of their price. Trials, past-due, canceled and free subscriptions are not counted. The dashboard shows the same number.",
+      "fromPaying": "{count, plural, one {From # paying subscription} other {From # paying subscriptions}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Plan Distribution",
     "planDistributionDescription": "Active subscriptions by plan",

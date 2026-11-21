@@ -47,7 +47,9 @@
         "title": "Inscriptions, 30 derniers jours",
         "description": "{count, plural, one {# nouvel utilisateur} other {# nouveaux utilisateurs}} sur les 30 derniers jours (UTC)"
       },
-      "unavailable": "Métriques indisponibles"
+      "unavailable": "Métriques indisponibles",
+      "mrrHelpLabel": "Comment le MRR est calculé",
+      "mrrHelp": "Revenu mensuel récurrent des abonnements actifs sur un forfait payant, pour les équipes qui existent encore. Les forfaits annuels comptent un douzième de leur prix. Les essais, impayés, annulés et gratuits ne sont pas comptés. Abonnements affiche le même nombre."
     },
     "panelTitle": "Panneau Super Admin",
     "soon": "Bientôt",
@@ -640,14 +642,16 @@
     "stats": {
       "mrr": "Revenu mensuel récurrent",
       "arr": "Revenu annuel récurrent",
-      "fromMonthly": "{count, plural, one {Issu de # abonnement mensuel} other {Issu de # abonnements mensuels}}",
-      "fromYearly": "{count, plural, one {Issu de # abonnement annuel} other {Issu de # abonnements annuels}}",
       "active": "Abonnements actifs",
       "inTrial": "{count} en essai",
       "total": "Total des abonnements",
       "freeAndPaid": "{free} gratuits, {paid} payants",
       "needsAttention": "À surveiller",
-      "pastDue": "Paiements en retard"
+      "pastDue": "Paiements en retard",
+      "mrrHelpLabel": "Comment le MRR est calculé",
+      "mrrHelp": "Revenu mensuel récurrent des abonnements actifs sur un forfait payant, pour les équipes qui existent encore. Les forfaits annuels comptent un douzième de leur prix. Les essais, impayés, annulés et gratuits ne sont pas comptés. Le tableau de bord affiche le même nombre.",
+      "fromPaying": "{count, plural, one {Issu de # abonnement payant} other {Issu de # abonnements payants}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Répartition des forfaits",
     "planDistributionDescription": "Abonnements actifs par forfait",

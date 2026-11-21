@@ -47,7 +47,9 @@
         "title": "Registros, últimos 30 días",
         "description": "{count, plural, one {# usuario nuevo} other {# usuarios nuevos}} en los últimos 30 días (UTC)"
       },
-      "unavailable": "Métricas no disponibles"
+      "unavailable": "Métricas no disponibles",
+      "mrrHelpLabel": "Cómo se calcula el MRR",
+      "mrrHelp": "Ingreso mensual recurrente de las suscripciones activas en un plan de pago, de equipos que siguen existiendo. Los planes anuales cuentan una doceava parte de su precio. No se cuentan pruebas, pagos vencidos, canceladas ni gratuitas. Suscripciones muestra el mismo número."
     },
     "panelTitle": "Panel de Super Admin",
     "soon": "Pronto",
@@ -640,14 +642,16 @@
     "stats": {
       "mrr": "Ingresos recurrentes mensuales",
       "arr": "Ingresos recurrentes anuales",
-      "fromMonthly": "{count, plural, one {De # suscripción mensual} other {De # suscripciones mensuales}}",
-      "fromYearly": "{count, plural, one {De # suscripción anual} other {De # suscripciones anuales}}",
       "active": "Suscripciones activas",
       "inTrial": "{count} en prueba",
       "total": "Suscripciones en total",
       "freeAndPaid": "{free} gratuitas, {paid} de pago",
       "needsAttention": "Requiere atención",
-      "pastDue": "Pagos vencidos"
+      "pastDue": "Pagos vencidos",
+      "mrrHelpLabel": "Cómo se calcula el MRR",
+      "mrrHelp": "Ingreso mensual recurrente de las suscripciones activas en un plan de pago, de equipos que siguen existiendo. Los planes anuales cuentan una doceava parte de su precio. No se cuentan pruebas, pagos vencidos, canceladas ni gratuitas. El panel principal muestra el mismo número.",
+      "fromPaying": "{count, plural, one {De # suscripción de pago} other {De # suscripciones de pago}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Distribución de planes",
     "planDistributionDescription": "Suscripciones activas por plan",

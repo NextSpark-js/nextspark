@@ -47,7 +47,9 @@
         "title": "Cadastros, últimos 30 dias",
         "description": "{count, plural, one {# novo usuário} other {# novos usuários}} nos últimos 30 dias (UTC)"
       },
-      "unavailable": "Métricas indisponíveis"
+      "unavailable": "Métricas indisponíveis",
+      "mrrHelpLabel": "Como o MRR é calculado",
+      "mrrHelp": "Receita mensal recorrente das assinaturas ativas em um plano pago, de equipes que ainda existem. Planos anuais contam um doze avos do preço. Testes, pagamentos em atraso, cancelamentos e assinaturas gratuitas não entram. Assinaturas mostra o mesmo número."
     },
     "panelTitle": "Painel de Super Admin",
     "soon": "Em breve",
@@ -640,14 +642,16 @@
     "stats": {
       "mrr": "Receita recorrente mensal",
       "arr": "Receita recorrente anual",
-      "fromMonthly": "{count, plural, one {De # assinatura mensal} other {De # assinaturas mensais}}",
-      "fromYearly": "{count, plural, one {De # assinatura anual} other {De # assinaturas anuais}}",
       "active": "Assinaturas ativas",
       "inTrial": "{count} em teste",
       "total": "Total de assinaturas",
       "freeAndPaid": "{free} gratuitas, {paid} pagas",
       "needsAttention": "Requer atenção",
-      "pastDue": "Pagamentos vencidos"
+      "pastDue": "Pagamentos vencidos",
+      "mrrHelpLabel": "Como o MRR é calculado",
+      "mrrHelp": "Receita mensal recorrente das assinaturas ativas em um plano pago, de equipes que ainda existem. Planos anuais contam um doze avos do preço. Testes, pagamentos em atraso, cancelamentos e assinaturas gratuitas não entram. O painel mostra o mesmo número.",
+      "fromPaying": "{count, plural, one {De # assinatura paga} other {De # assinaturas pagas}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Distribuição de planos",
     "planDistributionDescription": "Assinaturas ativas por plano",

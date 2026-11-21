@@ -47,7 +47,9 @@
         "title": "Registrierungen, letzte 30 Tage",
         "description": "{count, plural, one {# neuer Benutzer} other {# neue Benutzer}} in den letzten 30 Tagen (UTC)"
       },
-      "unavailable": "Kennzahlen nicht verfügbar"
+      "unavailable": "Kennzahlen nicht verfügbar",
+      "mrrHelpLabel": "So wird der MRR berechnet",
+      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife zählen mit einem Zwölftel ihres Preises. Testphasen, überfällige, gekündigte und kostenlose Abonnements zählen nicht. Abonnements zeigt dieselbe Zahl."
     },
     "panelTitle": "Super-Admin-Bereich",
     "soon": "Bald",
@@ -640,14 +642,16 @@
     "stats": {
       "mrr": "Monatlich wiederkehrender Umsatz",
       "arr": "Jährlich wiederkehrender Umsatz",
-      "fromMonthly": "{count, plural, one {Aus # Monatsabonnement} other {Aus # Monatsabonnements}}",
-      "fromYearly": "{count, plural, one {Aus # Jahresabonnement} other {Aus # Jahresabonnements}}",
       "active": "Aktive Abonnements",
       "inTrial": "{count} in der Testphase",
       "total": "Abonnements insgesamt",
       "freeAndPaid": "{free} kostenlos, {paid} kostenpflichtig",
       "needsAttention": "Handlungsbedarf",
-      "pastDue": "Überfällige Zahlungen"
+      "pastDue": "Überfällige Zahlungen",
+      "mrrHelpLabel": "So wird der MRR berechnet",
+      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife zählen mit einem Zwölftel ihres Preises. Testphasen, überfällige, gekündigte und kostenlose Abonnements zählen nicht. Das Dashboard zeigt dieselbe Zahl.",
+      "fromPaying": "{count, plural, one {Aus # zahlendem Abonnement} other {Aus # zahlenden Abonnements}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Tarifverteilung",
     "planDistributionDescription": "Aktive Abonnements nach Tarif",

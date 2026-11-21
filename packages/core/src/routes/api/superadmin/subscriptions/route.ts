@@ -7,6 +7,7 @@ import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 import { getBillingGatewayOrNull } from '@nextsparkjs/core/lib/billing/gateways/factory';
+import { getRecurringRevenue } from '@nextsparkjs/core/lib/services/business-metrics.service';
 
 interface SubscriptionResult {
   id: string;
@@ -42,8 +43,6 @@ interface StatsResult {
   paidSubscriptions: string;
   monthlySubscriptions: string;
   yearlySubscriptions: string;
-  totalMRR: string;
-  totalARR: string;
 }
 
 interface PlanDistribution {
@@ -132,22 +131,12 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         COUNT(*) FILTER (WHERE p.type = 'free') as "freeSubscriptions",
         COUNT(*) FILTER (WHERE p.type IN ('paid', 'enterprise')) as "paidSubscriptions",
         COUNT(*) FILTER (WHERE s."billingInterval" = 'monthly') as "monthlySubscriptions",
-        COUNT(*) FILTER (WHERE s."billingInterval" = 'yearly') as "yearlySubscriptions",
-        COALESCE(SUM(p."priceMonthly") FILTER (
-          WHERE s.status IN ('active', 'trialing')
-          AND s."billingInterval" = 'monthly'
-          AND p."priceMonthly" > 0
-        ), 0) as "totalMRR",
-        COALESCE(SUM(p."priceYearly") FILTER (
-          WHERE s.status IN ('active', 'trialing')
-          AND s."billingInterval" = 'yearly'
-          AND p."priceYearly" > 0
-        ), 0) as "totalARR"
+        COUNT(*) FILTER (WHERE s."billingInterval" = 'yearly') as "yearlySubscriptions"
       FROM "subscriptions" s
       LEFT JOIN "plans" p ON s."planId" = p.id
     `;
 
-    // Query for plan distribution
+    // Query for plan distribution: the same set as the "Active" card (a trialing subscription is counted in the trial note)
     const planDistributionQuery = `
       SELECT
         p.slug as "planSlug",
@@ -155,7 +144,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         COUNT(*) as count
       FROM "subscriptions" s
       LEFT JOIN "plans" p ON s."planId" = p.id
-      WHERE s.status IN ('active', 'trialing')
+      WHERE s.status = 'active'
       GROUP BY p.slug, p.name
       ORDER BY count DESC
     `;
@@ -206,11 +195,15 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     // Execute all queries
     // On the service connection after the role check above: team_members has no bypass policy at all, so under RLS
     // even a superadmin would see only their own memberships.
-    const [statsResult, planDistResult, subscriptionsResult, countResult] = await Promise.all([
+    // The MRR is the dashboard's: one definition in the business metrics service, run on the same connection.
+    const serviceRun = (text: string, params: unknown[] = []) =>
+      queryWithRLS(text, params, session.user.id, { service: true }) as Promise<Array<Record<string, unknown>>>;
+    const [statsResult, planDistResult, subscriptionsResult, countResult, revenue] = await Promise.all([
       queryWithRLS(statsQuery, [], session.user.id, { service: true }) as Promise<StatsResult[]>,
       queryWithRLS(planDistributionQuery, [], session.user.id, { service: true }) as Promise<PlanDistribution[]>,
       queryWithRLS(subscriptionsQuery, [...queryParams, limit, offset], session.user.id, { service: true }) as Promise<SubscriptionResult[]>,
-      queryWithRLS(countQuery, queryParams, session.user.id, { service: true }) as Promise<{ total: string }[]>
+      queryWithRLS(countQuery, queryParams, session.user.id, { service: true }) as Promise<{ total: string }[]>,
+      getRecurringRevenue(serviceRun)
     ]);
 
     const stats = statsResult[0] || {
@@ -222,9 +215,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       freeSubscriptions: '0',
       paidSubscriptions: '0',
       monthlySubscriptions: '0',
-      yearlySubscriptions: '0',
-      totalMRR: '0',
-      totalARR: '0'
+      yearlySubscriptions: '0'
     };
 
     const total = parseInt(countResult[0]?.total || '0', 10);
@@ -275,10 +266,10 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         paid: parseInt(stats.paidSubscriptions, 10),
         monthly: parseInt(stats.monthlySubscriptions, 10),
         yearly: parseInt(stats.yearlySubscriptions, 10),
-        mrr: parseInt(stats.totalMRR, 10), // In cents
-        mrrFormatted: `$${(parseInt(stats.totalMRR, 10) / 100).toFixed(2)}`,
-        arr: parseInt(stats.totalARR, 10), // In cents
-        arrFormatted: `$${(parseInt(stats.totalARR, 10) / 100).toFixed(2)}`
+        payingSubscriptions: revenue.payingSubscriptions,
+        // In cents, per currency (plans carry their own); ARR is MRR x 12
+        mrr: revenue.mrr,
+        arr: revenue.mrr.map(({ currency, cents }) => ({ currency, cents: cents * 12 }))
       },
       planDistribution: planDistResult.map(p => ({
         slug: p.planSlug,

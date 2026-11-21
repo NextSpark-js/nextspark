@@ -70,6 +70,12 @@ function TeamRolesPage() {
       .map(p => p.id);
   }
 
+  // The total and its parts come from the same list, so they add up: the registry's own counts leave the team permissions
+  // out, and the generated list drops duplicates and disabled ones. Entity permissions are what is left.
+  const core = permissions.filter(p => p.source === "core").length;
+  const features = Math.min(PERMISSIONS_METADATA.teamPermissions + PERMISSIONS_METADATA.featurePermissions, permissions.length - core);
+  const entity = permissions.length - core - features;
+
   // All permission IDs
   const allPermissions = permissions.map(p => p.id);
 
@@ -145,12 +151,12 @@ function TeamRolesPage() {
                 <Key className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{PERMISSIONS_METADATA.totalPermissions}</div>
+                <div className="text-2xl font-bold">{permissions.length}</div>
                 <p className="text-xs text-muted-foreground">
                   {t("rbac.permissionBreakdown", {
-                    core: PERMISSIONS_METADATA.corePermissions,
-                    features: PERMISSIONS_METADATA.featurePermissions,
-                    entity: PERMISSIONS_METADATA.entityPermissions,
+                    core,
+                    features,
+                    entity,
                   })}
                 </p>
               </CardContent>

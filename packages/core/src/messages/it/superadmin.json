@@ -47,7 +47,9 @@
         "title": "Registrazioni, ultimi 30 giorni",
         "description": "{count, plural, one {# nuovo utente} other {# nuovi utenti}} negli ultimi 30 giorni (UTC)"
       },
-      "unavailable": "Metriche non disponibili"
+      "unavailable": "Metriche non disponibili",
+      "mrrHelpLabel": "Come si calcola l'MRR",
+      "mrrHelp": "Ricavo mensile ricorrente degli abbonamenti attivi su un piano a pagamento, per i team ancora esistenti. I piani annuali contano un dodicesimo del prezzo. Prove, pagamenti scaduti, annullati e gratuiti non sono conteggiati. Abbonamenti mostra lo stesso numero."
     },
     "panelTitle": "Pannello Super Admin",
     "soon": "Presto",
@@ -640,14 +642,16 @@
     "stats": {
       "mrr": "Ricavi ricorrenti mensili",
       "arr": "Ricavi ricorrenti annuali",
-      "fromMonthly": "{count, plural, one {Da # abbonamento mensile} other {Da # abbonamenti mensili}}",
-      "fromYearly": "{count, plural, one {Da # abbonamento annuale} other {Da # abbonamenti annuali}}",
       "active": "Abbonamenti attivi",
       "inTrial": "{count} in prova",
       "total": "Abbonamenti totali",
       "freeAndPaid": "{free} gratuiti, {paid} a pagamento",
       "needsAttention": "Richiede attenzione",
-      "pastDue": "Pagamenti scaduti"
+      "pastDue": "Pagamenti scaduti",
+      "mrrHelpLabel": "Come si calcola l'MRR",
+      "mrrHelp": "Ricavo mensile ricorrente degli abbonamenti attivi su un piano a pagamento, per i team ancora esistenti. I piani annuali contano un dodicesimo del prezzo. Prove, pagamenti scaduti, annullati e gratuiti non sono conteggiati. La dashboard mostra lo stesso numero.",
+      "fromPaying": "{count, plural, one {Da # abbonamento a pagamento} other {Da # abbonamenti a pagamento}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Distribuzione dei piani",
     "planDistributionDescription": "Abbonamenti attivi per piano",

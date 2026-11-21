@@ -15,13 +15,14 @@ jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({
 const permissions = [
   { id: 'teams.invite', source: 'core' },
   { id: 'teams.delete', source: 'core' },
+  { id: 'teams.billing', source: 'theme' },
   { id: 'posts.publish', source: 'theme' },
-  { id: 'posts.create', source: 'entity' },
-  { id: 'posts.update', source: 'entity' },
-  { id: 'posts.delete', source: 'entity' },
+  { id: 'posts.create', source: 'theme' },
+  { id: 'posts.update', source: 'theme' },
+  { id: 'posts.delete', source: 'theme' },
 ]
 jest.mock('@nextsparkjs/core/lib/services/permission.service', () => ({ PermissionService: { getMatrix: () => ({ permissions, matrix: {} }) } }))
-jest.mock('@nextsparkjs/registries/permissions-registry', () => ({ PERMISSIONS_METADATA: { generatedAt: 'x' } }))
+jest.mock('@nextsparkjs/registries/permissions-registry', () => ({ PERMISSIONS_METADATA: { generatedAt: 'x', totalPermissions: 7, corePermissions: 2, teamPermissions: 1, featurePermissions: 1, entityPermissions: 3 } }))
 const plans = [
   { slug: 'free', type: 'free', trialDays: 0 },
   { slug: 'pro', type: 'paid', trialDays: 14, price: { monthly: 1000 } },
@@ -46,4 +47,10 @@ test('a plan with no trial days shows no trial text and no stray 0', () => {
   expect(free).not.toContain('trialDays')
   expect(screen.getByText((_, el) => el?.getAttribute('data-cy') === 'plan-card-pro').textContent).toContain('trialDays{"days":14}')
   expect(screen.getByText((_, el) => el?.getAttribute('data-cy') === 'plan-card-team').textContent).not.toContain('trialDays')
+})
+
+test('the permission breakdown adds up to the total (the team permissions are in it)', () => {
+  render(<TeamRolesPage />)
+  expect(screen.getByText('7')).toBeInTheDocument()
+  expect(screen.getByText('rbac.permissionBreakdown{"core":2,"features":2,"entity":3}')).toBeInTheDocument()
 })

@@ -40,12 +40,15 @@ import {
   AlertTriangle,
   RefreshCw,
   ExternalLink,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@nextsparkjs/core/components/ui/tooltip";
 import { useLocale, useTranslations } from "next-intl";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path";
 import { formatLocaleDate, formatLocaleDollars, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
+import { formatPrice } from "@nextsparkjs/core/lib/billing/helpers";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@nextsparkjs/core/components/ui/tooltip";
 import {
   SearchInput,
   PaginationControls,
@@ -86,6 +89,11 @@ interface Subscription {
   createdAt: string;
 }
 
+interface Money {
+  currency: string;
+  cents: number;
+}
+
 interface PlanDistribution {
   slug: string;
   name: string;
@@ -103,8 +111,11 @@ interface SubscriptionsData {
     paid: number;
     monthly: number;
     yearly: number;
-    mrr: number;
-    arr: number;
+    payingSubscriptions: number;
+    /** Cents per currency: the definition of the superadmin dashboard (business metrics service) */
+    mrr: Money[];
+    /** MRR x 12 */
+    arr: Money[];
   };
   planDistribution: PlanDistribution[];
   subscriptions: Subscription[];
@@ -244,6 +255,19 @@ function SubscriptionsPage() {
     placeholderData: keepPreviousData,
   });
 
+  // One line per currency (plans carry their own); a currency code Intl does not know is shown as a code
+  const money = ({ cents, currency }: Money) => {
+    try {
+      return formatPrice(cents, currency, locale);
+    } catch {
+      return `${formatLocaleNumber(cents / 100, locale)} ${currency.toUpperCase()}`;
+    }
+  };
+  const moneyLines = (amounts: Money[] | undefined) =>
+    (amounts?.length ? amounts : [{ currency: "usd", cents: 0 }]).map((m) => (
+      <div key={m.currency}>{money(m)}</div>
+    ));
+
   // Loading state
   if (isLoading) {
     return (
@@ -345,15 +369,27 @@ function SubscriptionsPage() {
         {/* MRR Card */}
         <Card className="border-green-200 bg-green-50/50" data-cy={sel('superadmin.subscriptions.stats.mrr')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("stats.mrr")}</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
+              {t("stats.mrr")}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" aria-label={t("stats.mrrHelpLabel")} className="text-muted-foreground" data-cy="mrr-help">
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">{t("stats.mrrHelp")}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              {formatLocaleDollars(stats?.mrr ?? 0, locale)}
+              {moneyLines(stats?.mrr)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("stats.fromMonthly", { count: stats?.monthly || 0 })}
+              {t("stats.fromPaying", { count: stats?.payingSubscriptions || 0 })}
             </p>
           </CardContent>
         </Card>
@@ -366,10 +402,10 @@ function SubscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700">
-              {formatLocaleDollars(stats?.arr ?? 0, locale)}
+              {moneyLines(stats?.arr)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("stats.fromYearly", { count: stats?.yearly || 0 })}
+              {t("stats.arrFormula")}
             </p>
           </CardContent>
         </Card>
