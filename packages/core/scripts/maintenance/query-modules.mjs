@@ -182,6 +182,7 @@ export const QUERY_MODULES = new Set([
   'components/ui/user-select',
   'components/ui/video-upload',
   'components/users/tables/SuperAdminsTable',
+  'components/users/tables/UserActions',
   'components/users/tables/UsersTable',
   'contexts/sidebar-context',
   'hooks/entity-client',
