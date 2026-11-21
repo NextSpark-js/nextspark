@@ -68,7 +68,9 @@ describe('SuperadminSidebar', () => {
   test('shows its texts in Spanish, and the toggle and the exit link are named in Spanish', () => {
     render(<SuperadminSidebar pluginItems={[]} />)
     expect(screen.getByText(es.superadmin.sidebar.items.teams.title)).toBeInTheDocument()
-    expect(screen.getByText(es.superadmin.sidebar.items.teams.description)).toBeInTheDocument()
+    // the description is the link's tooltip, not a second line of the item (#532)
+    expect(screen.queryByText(es.superadmin.sidebar.items.teams.description)).toBeNull()
+    expect(screen.getByText(es.superadmin.sidebar.items.teams.title).closest('a')).toHaveAttribute('title', es.superadmin.sidebar.items.teams.description)
     expect(screen.getByText(es.superadmin.sidebar.restricted.title)).toBeInTheDocument()
     expect(screen.getByLabelText(es.superadmin.sidebar.exit.label)).toBeInTheDocument()
     expect(screen.getByLabelText(es.superadmin.sidebar.collapse)).toBeInTheDocument()

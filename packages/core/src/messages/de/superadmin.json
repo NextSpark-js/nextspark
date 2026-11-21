@@ -300,8 +300,7 @@
     "exit": {
       "title": "Super Admin verlassen",
       "tooltip": "Zurück zum Haupt-Dashboard",
-      "label": "Super Admin verlassen und zum Haupt-Dashboard zurückkehren",
-      "description": "Zurück zum Dashboard"
+      "label": "Super Admin verlassen und zum Haupt-Dashboard zurückkehren"
     },
     "restricted": {
       "title": "Eingeschränkter Bereich",
@@ -309,8 +308,7 @@
     },
     "devtools": {
       "title": "DevTools",
-      "tooltip": "Entwicklerwerkzeuge öffnen",
-      "description": "Entwicklerwerkzeuge"
+      "tooltip": "Entwicklerwerkzeuge öffnen"
     }
   },
   "docs": {

@@ -300,8 +300,7 @@
     "exit": {
       "title": "Quitter Super Admin",
       "tooltip": "Retourner au tableau de bord principal",
-      "label": "Quitter Super Admin et retourner au tableau de bord principal",
-      "description": "Retour au tableau de bord"
+      "label": "Quitter Super Admin et retourner au tableau de bord principal"
     },
     "restricted": {
       "title": "Zone restreinte",
@@ -309,8 +308,7 @@
     },
     "devtools": {
       "title": "DevTools",
-      "tooltip": "Ouvrir les outils de développement",
-      "description": "Outils de développement"
+      "tooltip": "Ouvrir les outils de développement"
     }
   },
   "docs": {

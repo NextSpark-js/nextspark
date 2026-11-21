@@ -28,10 +28,8 @@
   },
   "exitToDashboard": "Quitter DevTools",
   "exitToDashboardDescription": "Retourner au panneau principal",
-  "returnToDashboard": "Retour au panneau",
   "goToSuperadmin": "Panneau Super Admin",
   "goToSuperadminDescription": "Aller à la zone super administrateur",
-  "superAdminArea": "Zone super administrateur",
   "restrictedArea": "Zone développeur",
   "developerAccessOnly": "Accès développeur uniquement",
   "config": {

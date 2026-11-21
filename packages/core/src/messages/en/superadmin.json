@@ -300,8 +300,7 @@
     "exit": {
       "title": "Exit Super Admin",
       "tooltip": "Return to main dashboard",
-      "label": "Exit Super Admin and return to main dashboard",
-      "description": "Return to dashboard"
+      "label": "Exit Super Admin and return to main dashboard"
     },
     "restricted": {
       "title": "Restricted Area",
@@ -309,8 +308,7 @@
     },
     "devtools": {
       "title": "DevTools",
-      "tooltip": "Open the developer tools",
-      "description": "Developer tools"
+      "tooltip": "Open the developer tools"
     }
   },
   "docs": {

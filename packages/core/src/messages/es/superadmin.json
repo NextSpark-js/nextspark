@@ -300,8 +300,7 @@
     "exit": {
       "title": "Salir de Super Admin",
       "tooltip": "Volver al panel principal",
-      "label": "Salir de Super Admin y volver al panel principal",
-      "description": "Volver al panel"
+      "label": "Salir de Super Admin y volver al panel principal"
     },
     "restricted": {
       "title": "Área restringida",
@@ -309,8 +308,7 @@
     },
     "devtools": {
       "title": "DevTools",
-      "tooltip": "Abrir las herramientas de desarrollo",
-      "description": "Herramientas de desarrollo"
+      "tooltip": "Abrir las herramientas de desarrollo"
     }
   },
   "docs": {

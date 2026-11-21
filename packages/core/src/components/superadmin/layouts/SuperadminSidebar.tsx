@@ -123,6 +123,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
   ];
 
   return (
+    // Each item shows its title; the description is the link's tooltip, so the list fits a 900px-high window (#532)
     <div className={cn(
       "flex flex-col h-screen bg-card border-r border-border transition-all duration-300",
       isCollapsed ? "w-16" : "w-64"
@@ -157,7 +158,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
       </div>
 
       {/* Navigation Items */}
-      <div className="flex-1 p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {sidebarItems.map((item) => {
           const IconComponent = item.icon;
           const isActive = pathname === item.href;
@@ -181,9 +182,6 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
                         {t("soon")}
                       </span>
                     </div>
-                    {item.description && (
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    )}
                   </div>
                 )}
               </div>
@@ -207,12 +205,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
             >
               <IconComponent className="h-5 w-5 flex-shrink-0" />
               {!isCollapsed && (
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{item.title}</div>
-                  {item.description && (
-                    <p className="text-xs text-muted-foreground">{item.description}</p>
-                  )}
-                </div>
+                <div className="flex-1 text-sm font-medium">{item.title}</div>
               )}
             </Link>
           );
@@ -246,12 +239,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
               >
                 <IconComponent className="h-5 w-5 flex-shrink-0" />
                 {!isCollapsed && (
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{item.label}</div>
-                    {item.description && (
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    )}
-                  </div>
+                  <div className="flex-1 text-sm font-medium">{item.label}</div>
                 )}
               </Link>
             );
@@ -274,10 +262,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
         >
           <ArrowLeft className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && (
-            <div className="flex-1">
-              <div className="text-sm font-medium">{t("exit.title")}</div>
-              <p className="text-xs text-muted-foreground">{t("exit.description")}</p>
-            </div>
+            <div className="flex-1 text-sm font-medium">{t("exit.title")}</div>
           )}
         </Link>
 
@@ -296,10 +281,7 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
           >
             <Code className="h-5 w-5 flex-shrink-0" />
             {!isCollapsed && (
-              <div className="flex-1">
-                <div className="text-sm font-medium">{t("devtools.title")}</div>
-                <p className="text-xs text-muted-foreground">{t("devtools.description")}</p>
-              </div>
+              <div className="flex-1 text-sm font-medium">{t("devtools.title")}</div>
             )}
           </Link>
         )}

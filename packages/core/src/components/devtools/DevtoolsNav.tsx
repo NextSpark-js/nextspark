@@ -20,6 +20,7 @@ export function DevtoolsNav({ pluginItems, isCollapsed = false }: DevtoolsNavPro
   const pathname = usePathname();
   const t = useTranslations('devtools');
 
+  // Each item shows its title; the description is the link's tooltip, so the whole list fits a 900px-high window (#532)
   const linkClass = (isActive: boolean) => cn(
     "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
     "hover:bg-accent hover:text-accent-foreground",
@@ -43,10 +44,7 @@ export function DevtoolsNav({ pluginItems, isCollapsed = false }: DevtoolsNavPro
           >
             <IconComponent className="h-5 w-5 flex-shrink-0" />
             {!isCollapsed && (
-              <div className="flex-1">
-                <div className="text-sm font-medium">{title}</div>
-                <p className="text-xs opacity-80">{description}</p>
-              </div>
+              <div className="flex-1 text-sm font-medium">{title}</div>
             )}
           </Link>
         );
@@ -76,10 +74,7 @@ export function DevtoolsNav({ pluginItems, isCollapsed = false }: DevtoolsNavPro
               >
                 <IconComponent className="h-5 w-5 flex-shrink-0" />
                 {!isCollapsed && (
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{item.label}</div>
-                    {item.description && <p className="text-xs opacity-80">{item.description}</p>}
-                  </div>
+                  <div className="flex-1 text-sm font-medium">{item.label}</div>
                 )}
               </Link>
             );
