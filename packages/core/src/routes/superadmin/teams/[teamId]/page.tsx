@@ -12,6 +12,8 @@ import {
 } from "@nextsparkjs/core/components/ui/card";
 import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
+import { Progress } from "@nextsparkjs/core/components/ui/progress";
+import { Skeleton } from "@nextsparkjs/core/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@nextsparkjs/core/components/ui/avatar";
 import {
   Breadcrumb,
@@ -34,7 +36,6 @@ import {
   Users,
   User,
   Calendar,
-  Loader2,
   AlertTriangle,
   RefreshCw,
   Crown,
@@ -52,6 +53,7 @@ import {
 import Link from "next/link";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path"
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format"
+import { formatUsagePeriod } from "@nextsparkjs/core/lib/billing/helpers"
 
 interface TeamOwner {
   id: string;
@@ -119,6 +121,9 @@ interface UsageData {
   [key: string]: {
     current: number;
     periodKey: string;
+    /** The limit of the team's plan: -1 unlimited, null when the plan does not define it */
+    limit: number | null;
+    unit: string | null;
   };
 }
 
@@ -217,11 +222,36 @@ function TeamDetailPage() {
         <div className="space-y-2">
           {breadcrumb}
           <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
-          <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
+          <p className="text-muted-foreground">{t("teamDetail.subtitle")}</p>
         </div>
 
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="space-y-6" role="status" aria-busy="true" aria-label={t("teamsPage.loading")} data-cy="team-detail-skeleton">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-16 w-16 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton className="h-12" />
+              <Skeleton className="h-12" />
+              <Skeleton className="h-12" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -264,6 +294,8 @@ function TeamDetailPage() {
 
   const team = teamData?.team;
   const members = teamData?.members || [];
+  // the Actions column exists only when some event has an invoice or a receipt to open
+  const hasBillingLinks = !!teamData?.billingHistory?.some((event) => event.invoiceUrl || event.receiptUrl);
 
   return (
     <div className="space-y-6">
@@ -586,7 +618,7 @@ function TeamDetailPage() {
                     <TableHead>{t("teamDetail.billingColumns.type")}</TableHead>
                     <TableHead>{t("teamDetail.billingColumns.status")}</TableHead>
                     <TableHead className="text-right">{t("teamDetail.billingColumns.amount")}</TableHead>
-                    <TableHead>{t("teamDetail.billingColumns.actions")}</TableHead>
+                    {hasBillingLinks && <TableHead>{t("teamDetail.billingColumns.actions")}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -620,7 +652,7 @@ function TeamDetailPage() {
                       <TableCell className="text-right font-mono">
                         {event.amountFormatted}
                       </TableCell>
-                      <TableCell>
+                      {hasBillingLinks && <TableCell>
                         <div className="flex items-center gap-2">
                           {event.invoiceUrl && (
                             <a
@@ -643,7 +675,7 @@ function TeamDetailPage() {
                             </a>
                           )}
                         </div>
-                      </TableCell>
+                      </TableCell>}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -667,19 +699,34 @@ function TeamDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Object.entries(teamData.usage).map(([limitSlug, usage]) => (
-                <div key={limitSlug} className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-sm font-medium text-muted-foreground capitalize">
-                    {limitSlug.replace(/_/g, ' ')}
+              {Object.entries(teamData.usage).map(([limitSlug, usage]) => {
+                const name = t.has(`teamDetail.limitNames.${limitSlug}`)
+                  ? t(`teamDetail.limitNames.${limitSlug}`)
+                  : limitSlug.charAt(0).toUpperCase() + limitSlug.replace(/_/g, " ").slice(1);
+                const amount = (value: number) =>
+                  usage.unit === "bytes" ? t("planMatrix.gigabytes", { value: formatLocaleNumber(value, locale) }) : formatLocaleNumber(value, locale);
+                const unlimited = usage.limit === -1;
+                const bounded = usage.limit != null && usage.limit >= 0;
+                const percent = !bounded ? 0 : usage.limit === 0 ? (usage.current > 0 ? 100 : 0) : Math.min(100, (usage.current / usage.limit!) * 100);
+                return (
+                  <div key={limitSlug} className="p-4 bg-muted/50 rounded-lg" data-cy={`usage-${limitSlug}`}>
+                    <div className="text-sm font-medium text-muted-foreground">{name}</div>
+                    <div className="text-2xl font-bold mt-1">
+                      {bounded
+                        ? `${formatLocaleNumber(usage.current, locale)} / ${amount(usage.limit!)}`
+                        : unlimited
+                          ? `${amount(usage.current)} / ${t("planMatrix.unlimited")}`
+                          : amount(usage.current)}
+                    </div>
+                    {bounded && (
+                      <Progress value={percent} aria-label={name} className={`h-2 mt-2 ${percent >= 100 ? "[&>div]:bg-destructive" : ""}`} />
+                    )}
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {t("teamDetail.usagePeriod", { period: formatUsagePeriod(usage.periodKey, locale, t("teamDetail.usageAllTime")) })}
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold mt-1">
-                    {formatLocaleNumber(usage.current, locale)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {t("teamDetail.usagePeriod", { period: usage.periodKey })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

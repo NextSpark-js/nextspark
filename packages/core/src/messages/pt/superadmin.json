@@ -527,7 +527,25 @@
     "receipt": "Recibo",
     "usage": "Uso atual",
     "usageDescription": "Uso de recursos no período de cobrança atual.",
-    "usagePeriod": "Período: {period}"
+    "usagePeriod": "Período: {period}",
+    "limitNames": {
+      "team_members": "Membros da Equipe",
+      "tasks": "Tarefas",
+      "customers": "Clientes",
+      "api_calls": "Chamadas API / mês",
+      "storage": "Armazenamento",
+      "file_uploads": "Uploads de Arquivo / mês",
+      "webhooks_count": "Webhooks",
+      "posts": "Publicações",
+      "monthly_views": "Visualizações Mensais",
+      "authors": "Autores",
+      "contacts": "Contatos",
+      "deals": "Negócios",
+      "pipelines": "Pipelines",
+      "workspaces": "Espaços de Trabalho",
+      "storage_gb": "Armazenamento"
+    },
+    "usageAllTime": "Todo o período"
   },
   "teamRoles": {
     "title": "Funções, permissões e planos",

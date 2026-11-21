@@ -5,6 +5,7 @@ import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
 import { getBillingGatewayOrNull } from '@nextsparkjs/core/lib/billing/gateways/factory';
+import { getFullBillingMatrix } from '@nextsparkjs/core/lib/billing/queries';
 
 interface TeamResult {
   id: string;
@@ -200,6 +201,7 @@ export const GET = withRateLimitTier(async (
 
     // Prepare response data
     const billingGateway = subscription ? await getBillingGatewayOrNull() : null
+    const billing = getFullBillingMatrix()
     const responseData = {
       team: {
         id: team.id,
@@ -257,13 +259,16 @@ export const GET = withRateLimitTier(async (
         receiptUrl: event.receiptUrl,
         createdAt: event.createdAt
       })),
+      // each counter with the limit of the team's plan (-1 unlimited, null when the plan does not define it) and its unit
       usage: usageResult.reduce((acc, u) => {
         acc[u.limitSlug] = {
           current: u.currentValue,
-          periodKey: u.periodKey
+          periodKey: u.periodKey,
+          limit: (subscription && billing.matrix.limits[u.limitSlug]?.[subscription.planSlug]) ?? null,
+          unit: billing.limits[u.limitSlug]?.unit ?? null
         };
         return acc;
-      }, {} as Record<string, { current: number; periodKey: string }>),
+      }, {} as Record<string, { current: number; periodKey: string; limit: number | null; unit: string | null }>),
       metadata: {
         requestedBy: session.user.id,
         requestedAt: new Date().toISOString(),

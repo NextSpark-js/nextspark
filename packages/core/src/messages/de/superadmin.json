@@ -527,7 +527,25 @@
     "receipt": "Beleg",
     "usage": "Aktuelle Nutzung",
     "usageDescription": "Ressourcennutzung im aktuellen Abrechnungszeitraum.",
-    "usagePeriod": "Zeitraum: {period}"
+    "usagePeriod": "Zeitraum: {period}",
+    "limitNames": {
+      "team_members": "Teammitglieder",
+      "tasks": "Aufgaben",
+      "customers": "Kunden",
+      "api_calls": "API-Aufrufe / Monat",
+      "storage": "Speicher",
+      "file_uploads": "Datei-Uploads / Monat",
+      "webhooks_count": "Webhooks",
+      "posts": "Beiträge",
+      "monthly_views": "Monatliche Aufrufe",
+      "authors": "Autoren",
+      "contacts": "Kontakte",
+      "deals": "Deals",
+      "pipelines": "Pipelines",
+      "workspaces": "Arbeitsbereiche",
+      "storage_gb": "Speicher"
+    },
+    "usageAllTime": "Gesamter Zeitraum"
   },
   "teamRoles": {
     "title": "Rollen, Berechtigungen und Tarife",
