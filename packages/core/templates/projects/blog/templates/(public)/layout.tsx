@@ -1,14 +1,16 @@
-'use client'
-
 /**
  * Blog Public Layout
  *
  * Clean, minimal layout for the public-facing blog.
  * Uses custom BlogNavbar and BlogFooter components.
+ *
+ * A server component: the navbar and the footer are client components of their own, and the copyright year is read on
+ * the server (cached), so the layout renders into the prerendered HTML of every public page (#493).
  */
 
 import { BlogNavbar } from '@/components/public/BlogNavbar'
 import { BlogFooter } from '@/components/public/BlogFooter'
+import { CopyrightYear } from '@/components/public/CopyrightYear'
 
 interface BlogLayoutProps {
   children: React.ReactNode
@@ -38,6 +40,7 @@ export default function BlogLayout({ children }: BlogLayoutProps) {
         blogTitle="My Blog"
         authorName="Your Name"
         showNewsletter={false}
+        year={<CopyrightYear />}
       />
     </div>
   )
