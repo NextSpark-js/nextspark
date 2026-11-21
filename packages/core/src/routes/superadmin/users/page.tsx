@@ -49,6 +49,7 @@ interface UsersData {
     total: number;
     regularUsers: number;
     superadmins: number;
+    matching: { total: number; regularUsers: number; superadmins: number };
     workTeams: number;
     byRole: Record<string, number>;
     statusDistribution: Record<string, number>;
@@ -90,10 +91,11 @@ function UsersPage() {
   const roleOptions = [
     { value: "member", label: t("usersPage.roles.member") },
     { value: "developer", label: t("usersPage.roles.developer") },
-    { value: "suspended", label: t("usersPage.roles.suspended") },
   ];
+  // Active and Suspended are the account; Unverified is the email
   const statusOptions = [
-    { value: "verified", label: t("users.table.verified") },
+    { value: "active", label: t("users.table.active") },
+    { value: "suspended", label: t("users.table.suspended") },
     { value: "unverified", label: t("users.table.unverified") },
   ];
   const [activeTab, setActiveTab] = useState<"users" | "superadmins">("users");
@@ -356,8 +358,20 @@ function UsersPage() {
               <TabsContent value="status" className="mt-2">
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span>{t("usersPage.verifiedLabel")}</span>
+                    <span>{t("usersPage.activeLabel")}</span>
                     <span className="font-medium text-green-600">
+                      {usersData?.counts.statusDistribution?.active || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span>{t("usersPage.suspendedLabel")}</span>
+                    <span className="font-medium text-red-600">
+                      {usersData?.counts.statusDistribution?.suspended || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span>{t("usersPage.verifiedLabel")}</span>
+                    <span className="font-medium">
                       {usersData?.counts.statusDistribution?.verified || 0}
                     </span>
                   </div>
@@ -439,11 +453,11 @@ function UsersPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            {t("usersPage.regularUsersTab", { count: usersData?.counts.regularUsers || 0 })}
+            {t("usersPage.regularUsersTab", { count: usersData?.counts.matching.regularUsers || 0 })}
           </TabsTrigger>
           <TabsTrigger value="superadmins" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            {t("usersPage.superadminsTab", { count: usersData?.counts.superadmins || 0 })}
+            {t("usersPage.superadminsTab", { count: usersData?.counts.matching.superadmins || 0 })}
           </TabsTrigger>
         </TabsList>
 

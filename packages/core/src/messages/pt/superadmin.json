@@ -86,7 +86,9 @@
       "noSuperadmins": "Nenhum superadmin encontrado",
       "noSuperadminsDescription": "Isso é incomum - deveria haver pelo menos um superadmin.",
       "you": "Você",
-      "id": "ID: {id}"
+      "id": "ID: {id}",
+      "active": "Ativo",
+      "suspended": "Suspenso"
     },
     "actions": {
       "openMenu": "Abrir menu",
@@ -422,7 +424,9 @@
     "clearFilters": "Limpar filtros",
     "regularUsersTab": "Usuários regulares ({count})",
     "superadminsTab": "Superadmins ({count})",
-    "superadministrators": "Superadministradores"
+    "superadministrators": "Superadministradores",
+    "activeLabel": "Ativos:",
+    "suspendedLabel": "Suspensos:"
   },
   "userDetail": {
     "title": "Detalhes do usuário",

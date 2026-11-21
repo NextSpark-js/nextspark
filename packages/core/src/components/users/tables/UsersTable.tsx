@@ -8,16 +8,15 @@ import {
   TableHeader,
   TableRow,
 } from '../../ui/table';
-import { Badge } from '../../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
 import { User, Mail, Calendar } from "lucide-react";
-import { useRoleTranslations } from '../../../lib/role-helpers';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatLocaleDate } from '../../../lib/i18n/format';
 import type { UserRole } from '../../../types/user.types';
 import { useRouter } from "next/navigation";
 import { sel } from '../../../lib/test';
 import { UserActionsMenu, useUserActions } from './UserActions';
+import { UserRoleBadge, UserStatusBadges } from './UserBadges';
 
 interface User {
   id: string;
@@ -45,7 +44,6 @@ interface UsersTableProps {
  * Includes role badges, verification status, and action menus.
  */
 export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
-  const getRoleName = useRoleTranslations();
   const t = useTranslations('superadmin.users');
   const tPage = useTranslations('superadmin.usersPage');
   const tShared = useTranslations('superadmin.shared');
@@ -67,20 +65,6 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
       return user.firstName.slice(0, 2).toUpperCase();
     }
     return user.email.slice(0, 2).toUpperCase();
-  };
-
-  // Get role badge variant
-  const getRoleBadgeVariant = (role: UserRole) => {
-    switch (role) {
-      case 'suspended':
-        return 'destructive';
-      case 'developer':
-        return 'default';
-      case 'member':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
   };
 
   if (isLoading) {
@@ -162,26 +146,14 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                 </div>
               </TableCell>
 
-              {/* Role */}
+              {/* Role: the one a suspended user comes back with */}
               <TableCell>
-                <Badge variant={getRoleBadgeVariant(user.role)}>
-                  {getRoleName(user.role)}
-                </Badge>
+                <UserRoleBadge user={user} />
               </TableCell>
 
-              {/* Status */}
+              {/* Status: Active or Suspended, and whether the email is verified */}
               <TableCell>
-                <div className="flex items-center gap-2">
-                  {user.emailVerified ? (
-                    <Badge variant="default" className="bg-green-100 text-green-800">
-                      {t('table.verified')}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                      {t('table.pending')}
-                    </Badge>
-                  )}
-                </div>
+                <UserStatusBadges user={user} />
               </TableCell>
 
               {/* Join Date */}

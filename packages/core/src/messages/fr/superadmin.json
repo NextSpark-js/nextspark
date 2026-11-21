@@ -86,7 +86,9 @@
       "noSuperadmins": "Aucun super admin trouvé",
       "noSuperadminsDescription": "C'est inhabituel - il devrait y avoir au moins un super admin.",
       "you": "Vous",
-      "id": "ID : {id}"
+      "id": "ID : {id}",
+      "active": "Actif",
+      "suspended": "Suspendu"
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -422,7 +424,9 @@
     "clearFilters": "Effacer les filtres",
     "regularUsersTab": "Utilisateurs réguliers ({count})",
     "superadminsTab": "Super admins ({count})",
-    "superadministrators": "Super administrateurs"
+    "superadministrators": "Super administrateurs",
+    "activeLabel": "Actifs :",
+    "suspendedLabel": "Suspendus :"
   },
   "userDetail": {
     "title": "Détails de l’utilisateur",

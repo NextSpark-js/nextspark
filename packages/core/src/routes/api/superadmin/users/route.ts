@@ -7,6 +7,20 @@ import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import type { User } from '@nextsparkjs/core/types/user.types';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
+import { SYSTEM_ADMIN_TEAM_ID } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { SUSPENDED_ROLE } from '@nextsparkjs/core/lib/auth/suspension';
+
+interface GlobalCounts {
+  total: number;
+  superadmins: number;
+  verified: number;
+  unverified: number;
+  suspended: number;
+  active: number;
+}
+
+// The role an admin acts on: a suspended user is the role they come back with (restoredRole)
+const EFFECTIVE_ROLE_SQL = `(CASE WHEN role = '${SUSPENDED_ROLE}' THEN COALESCE("roleBeforeSuspension", 'member') ELSE role END)`;
 
 /**
  * GET /api/superadmin/users
@@ -16,8 +30,9 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
  *
  * Query params:
  * - search: Filter by name or email
- * - role: Filter by role (member, superadmin, etc.)
- * - status: Filter by email verification status (verified, unverified)
+ * - role: Filter by role (member, developer): a suspended user counts as the role they come back with
+ * - status: Filter by status (active, suspended, unverified, verified): suspended is the account state, unverified
+ *   and verified the email's
  * - tab: Which tab to paginate (users, superadmins, all)
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 20)
@@ -70,9 +85,12 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         params.push('superadmin');
         paramIndex++;
 
-        // Additional role filter for regular users
+        // Additional role filter for regular users: a suspended user is the role they come back with. The legacy
+        // `role=suspended` still lists the suspended ones
         if (roleFilter && roleFilter !== 'superadmin') {
-          conditions.push(`role = $${paramIndex}`);
+          conditions.push(roleFilter === SUSPENDED_ROLE
+            ? `role = $${paramIndex}`
+            : `${EFFECTIVE_ROLE_SQL} = $${paramIndex}`);
           params.push(roleFilter);
           paramIndex++;
         }
@@ -91,7 +109,11 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       }
 
       // Status filter
-      if (statusFilter === 'verified') {
+      if (statusFilter === 'suspended') {
+        conditions.push(`role = '${SUSPENDED_ROLE}'`);
+      } else if (statusFilter === 'active') {
+        conditions.push(`role != '${SUSPENDED_ROLE}'`);
+      } else if (statusFilter === 'verified') {
         conditions.push(`"emailVerified" = $${paramIndex}`);
         params.push(true);
         paramIndex++;
@@ -157,13 +179,23 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       ${superadminWhere.whereClause}
     `;
 
-    // Query for status distribution (all users)
-    const statusDistributionQuery = `
+    // Totals of all users, whatever the search and filters: the summary cards do not move with them
+    const globalCountsQuery = `
       SELECT
-        CASE WHEN "emailVerified" = true THEN 'verified' ELSE 'unverified' END as status,
-        COUNT(*)::int as count
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE role = 'superadmin')::int AS superadmins,
+        COUNT(*) FILTER (WHERE "emailVerified" = true)::int AS verified,
+        COUNT(*) FILTER (WHERE "emailVerified" IS NOT TRUE)::int AS unverified,
+        COUNT(*) FILTER (WHERE role = '${SUSPENDED_ROLE}')::int AS suspended,
+        COUNT(*) FILTER (WHERE role != '${SUSPENDED_ROLE}')::int AS active
       FROM "users"
-      GROUP BY "emailVerified"
+    `;
+
+    // Users per role (a suspended user counts as the role they come back with), whatever the filters
+    const globalRolesQuery = `
+      SELECT ${EFFECTIVE_ROLE_SQL} AS role, COUNT(*)::int AS count
+      FROM "users"
+      GROUP BY 1
     `;
 
     // Query for team role distribution
@@ -175,9 +207,10 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       GROUP BY role
     `;
 
-    // Query for teams count
+    // Query for teams count: all of them, and the work teams (every team but the system admin one)
     const teamsCountQuery = `
-      SELECT COUNT(*)::int as total
+      SELECT COUNT(*)::int as total,
+             COUNT(*) FILTER (WHERE id != $1)::int as "workTeams"
       FROM "teams"
     `;
 
@@ -189,7 +222,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       regularCount,
       superadmins,
       superadminCount,
-      statusDistribution,
+      globalCounts,
+      globalRoles,
       teamRoleDistribution,
       teamsCount
     ] = await Promise.all([
@@ -197,25 +231,28 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       queryWithRLS(regularCountQuery, regularWhere.params, session.user.id, { service: true }) as Promise<{ total: number }[]>,
       queryWithRLS(superadminsQuery, tab === 'superadmins' ? [...superadminWhere.params, limit, offset] : superadminWhere.params, session.user.id, { service: true }) as Promise<User[]>,
       queryWithRLS(superadminCountQuery, superadminWhere.params, session.user.id, { service: true }) as Promise<{ total: number }[]>,
-      queryWithRLS(statusDistributionQuery, [], session.user.id, { service: true }) as Promise<{ status: string; count: number }[]>,
+      queryWithRLS(globalCountsQuery, [], session.user.id, { service: true }) as Promise<GlobalCounts[]>,
+      queryWithRLS(globalRolesQuery, [], session.user.id, { service: true }) as Promise<{ role: string; count: number }[]>,
       queryWithRLS(teamRoleDistributionQuery, [], session.user.id, { service: true }) as Promise<{ role: string; count: number }[]>,
-      queryWithRLS(teamsCountQuery, [], session.user.id, { service: true }) as Promise<{ total: number }[]>
+      queryWithRLS(teamsCountQuery, [SYSTEM_ADMIN_TEAM_ID], session.user.id, { service: true }) as Promise<{ total: number; workTeams: number }[]>
     ]);
 
     const regularTotal = regularCount[0]?.total || 0;
     const superadminTotal = superadminCount[0]?.total || 0;
 
-    // Calculate counts by role
-    const roleCounts = regularUsers.reduce((acc: Record<string, number>, user: User) => {
-      acc[user.role] = (acc[user.role] || 0) + 1;
-      return acc;
-    }, {});
+    const global: GlobalCounts = globalCounts?.[0] ?? { total: 0, superadmins: 0, verified: 0, unverified: 0, suspended: 0, active: 0 };
+
+    // Users per role, all users
+    const roleCounts: Record<string, number> = {};
+    for (const { role, count } of globalRoles ?? []) roleCounts[role] = count;
 
     // Build status distribution object
-    const statusDist: Record<string, number> = { verified: 0, unverified: 0 };
-    statusDistribution.forEach(({ status, count }) => {
-      statusDist[status] = count;
-    });
+    const statusDist = {
+      verified: global.verified,
+      unverified: global.unverified,
+      active: global.active,
+      suspended: global.suspended,
+    };
 
     // Build team role distribution object
     const teamRoleDist: Record<string, number> = { owner: 0, admin: 0, member: 0, viewer: 0 };
@@ -252,15 +289,20 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const responseData = {
       regularUsers: regularUsers.map(formatUser),
       superadmins: superadmins.map(formatUser),
+      // Every number but `matching` is of all users, whatever the search and filters
       counts: {
-        total: regularTotal + superadminTotal,
-        regularUsers: regularTotal,
-        superadmins: superadminTotal,
-        teams: teamsCount[0]?.total || 0,
-        byRole: {
-          ...roleCounts,
-          superadmin: superadminTotal
+        total: global.total,
+        regularUsers: global.total - global.superadmins,
+        superadmins: global.superadmins,
+        // what the search and filters leave, per tab
+        matching: {
+          total: regularTotal + superadminTotal,
+          regularUsers: regularTotal,
+          superadmins: superadminTotal
         },
+        teams: teamsCount?.[0]?.total || 0,
+        workTeams: teamsCount?.[0]?.workTeams || 0,
+        byRole: roleCounts,
         statusDistribution: statusDist,
         teamRoleDistribution: teamRoleDist
       },
