@@ -20,6 +20,7 @@ jest.mock('@nextsparkjs/core/lib/seo/page-metadata', () => ({
 }))
 // the old client page's own import: lets the suite reach its assertions
 jest.mock('@/lib/sanitize-post-html', () => ({ sanitizePostHtml: (html: string) => html }), { virtual: true })
+jest.mock('@/styles/article.css', () => ({}), { virtual: true })
 jest.mock('@/components/public/ReadingProgress', () => ({ ReadingProgress: () => null }), { virtual: true })
 jest.mock('@/components/public/PostDate', () => ({ PostDate: () => <time>a date</time> }), { virtual: true })
 jest.mock('@/components/public/AuthorBio', () => ({ AuthorBio: () => null }), { virtual: true })
@@ -83,6 +84,22 @@ test('the category is shown as text, not as a link to a page the template does n
   const html = renderToStaticMarkup(await renderPost(post.slug))
   expect(html).toContain('>Technology</span>')
   expect(html).not.toContain('/category/')
+})
+
+test('a markdown body gets its headings, paragraphs, code and lists, with the items inside their list (#512)', async () => {
+  const markdown = '# Title\n\nIntro with **bold** and `a<b>`.\n\n## Points\n\n- one\n- two\n\n1. first\n2. second\n\n```ts\nconst x = 1 < 2\n```\n\nThe end.'
+  getPublishedPostBySlug.mockResolvedValue({ ...post, content: markdown })
+  await renderPost(post.slug)
+  expect(sanitizeBlockHtml).toHaveBeenLastCalledWith(
+    '<h1>Title</h1><p>Intro with <strong>bold</strong> and <code>a&lt;b&gt;</code>.</p><h2>Points</h2>' +
+      '<ul><li>one</li><li>two</li></ul><ol><li>first</li><li>second</li></ol><pre><code>const x = 1 &lt; 2</code></pre><p>The end.</p>',
+  )
+})
+
+test('the post page loads the article styles itself, so no other page carries them (#512)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const source = require('fs').readFileSync(require.resolve('../../../templates/projects/blog/templates/(public)/posts/[slug]/page.tsx'), 'utf8')
+  expect(source).toMatch(/^import '@\/styles\/article\.css'$/m)
 })
 
 test('a slug with no published post is a notFound(), and the related posts are not read', async () => {

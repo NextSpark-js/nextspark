@@ -12,6 +12,8 @@
  * request data (#493). A slug with no published post never gets here: the request hook answers it with a 404.
  */
 import { Suspense } from 'react'
+// The post body's typography (.article-content): imported here, so only the post page loads it (#512)
+import '@/styles/article.css'
 
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -41,6 +43,18 @@ function calculateReadTime(content: string): number {
   return Math.max(1, Math.ceil(words / wordsPerMinute))
 }
 
+const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const renderInline = (text: string) =>
+  text
+    .replace(/`([^`]+)`/g, (_, code: string) => `<code>${escapeHtml(code)}</code>`)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+
+/**
+ * The post body as HTML. HTML (what the editor saves) is used as it is; markdown (the sample posts) is converted
+ * block by block: headings, fenced code, bulleted and numbered lists (their items inside `<ul>`/`<ol>`, #512) and
+ * paragraphs. The result is sanitized by the caller.
+ */
 function renderContent(content: string): string {
   if (!content) return ''
 
@@ -48,18 +62,46 @@ function renderContent(content: string): string {
     return content
   }
 
-  return content
-    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^- (.*$)/gm, '<li>$1</li>')
-    .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<)/, '<p>')
-    .replace(/(?!>)$/, '</p>')
+  const html: string[] = []
+  const lines = content.replace(/\r\n/g, '\n').split('\n')
+  let paragraph: string[] = []
+  let list: { tag: 'ul' | 'ol'; items: string[] } | null = null
+  const flush = () => {
+    if (paragraph.length) html.push(`<p>${renderInline(paragraph.join(' '))}</p>`)
+    if (list) html.push(`<${list.tag}>${list.items.map(item => `<li>${renderInline(item)}</li>`).join('')}</${list.tag}>`)
+    paragraph = []
+    list = null
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line.trim().startsWith('```')) {
+      flush()
+      const code: string[] = []
+      while (++i < lines.length && !lines[i].trim().startsWith('```')) code.push(lines[i])
+      html.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`)
+      continue
+    }
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line)
+    const bullet = /^\s*[-*]\s+(.*)$/.exec(line)
+    const numbered = /^\s*\d+[.)]\s+(.*)$/.exec(line)
+    if (heading) {
+      flush()
+      html.push(`<h${heading[1].length}>${renderInline(heading[2])}</h${heading[1].length}>`)
+    } else if (bullet || numbered) {
+      const tag = bullet ? 'ul' : 'ol'
+      if (paragraph.length || (list && list.tag !== tag)) flush()
+      list ??= { tag, items: [] }
+      list.items.push((bullet ?? numbered)![1])
+    } else if (!line.trim()) {
+      flush()
+    } else {
+      if (list) flush()
+      paragraph.push(line.trim())
+    }
+  }
+  flush()
+  return html.join('')
 }
 
 function postDescription(post: { excerpt: string | null; content: string }): string {
