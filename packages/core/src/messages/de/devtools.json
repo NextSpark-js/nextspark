@@ -450,13 +450,17 @@
       "payload": "Daten",
       "error": "Fehler",
       "actions": "Aktionen",
-      "noTeam": "Global"
+      "noTeam": "Global",
+      "expandRow": "Details anzeigen",
+      "collapseRow": "Details ausblenden"
     },
     "retry": {
       "button": "Wiederholen",
       "success": "Aktion zur Wiederholung geplant",
       "error": "Fehler beim Wiederholen der Aktion: {message}",
-      "fallback": "Wiederholung fehlgeschlagen"
+      "fallback": "Wiederholung fehlgeschlagen",
+      "retried": "Wiederholt, ansehen",
+      "retryOf": "Wiederholung von"
     },
     "run": {
       "button": "Jetzt ausführen",
@@ -468,7 +472,8 @@
       "pending": "Ausstehend",
       "running": "Wird ausgeführt",
       "completed": "Abgeschlossen",
-      "failed": "Fehlgeschlagen"
+      "failed": "Fehlgeschlagen",
+      "overdue": "Überfällig"
     },
     "pagination": {
       "previous": "Zurück",
@@ -476,7 +481,9 @@
       "page": "Seite {page} von {total}"
     },
     "fetchFailed": "Die geplanten Aktionen konnten nicht abgerufen werden",
-    "errorMessage": "Fehler: {message}"
+    "errorMessage": "Fehler: {message}",
+    "refresh": "Aktualisieren",
+    "updated": "Aktualisiert {when}"
   },
   "gallery": {
     "theme": {

@@ -531,13 +531,17 @@
       "payload": "Payload",
       "error": "Error",
       "actions": "Actions",
-      "noTeam": "Global"
+      "noTeam": "Global",
+      "expandRow": "Show details",
+      "collapseRow": "Hide details"
     },
     "retry": {
       "button": "Retry",
       "success": "Action scheduled for retry",
       "error": "Failed to retry action: {message}",
-      "fallback": "Failed to retry"
+      "fallback": "Failed to retry",
+      "retried": "Retried, view",
+      "retryOf": "Retry of"
     },
     "run": {
       "button": "Run Now",
@@ -549,7 +553,8 @@
       "pending": "Pending",
       "running": "Running",
       "completed": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "overdue": "Overdue"
     },
     "pagination": {
       "previous": "Previous",
@@ -557,7 +562,9 @@
       "page": "Page {page} of {total}"
     },
     "fetchFailed": "Failed to fetch scheduled actions",
-    "errorMessage": "Error: {message}"
+    "errorMessage": "Error: {message}",
+    "refresh": "Refresh",
+    "updated": "Updated {when}"
   },
   "gallery": {
     "theme": {

@@ -450,13 +450,17 @@
       "payload": "Dados",
       "error": "Erro",
       "actions": "Ações",
-      "noTeam": "Global"
+      "noTeam": "Global",
+      "expandRow": "Mostrar detalhes",
+      "collapseRow": "Ocultar detalhes"
     },
     "retry": {
       "button": "Tentar novamente",
       "success": "Ação agendada para nova tentativa",
       "error": "Falha ao tentar novamente a ação: {message}",
-      "fallback": "Falha ao tentar novamente"
+      "fallback": "Falha ao tentar novamente",
+      "retried": "Repetida, ver",
+      "retryOf": "Nova tentativa de"
     },
     "run": {
       "button": "Executar agora",
@@ -468,7 +472,8 @@
       "pending": "Pendente",
       "running": "Executando",
       "completed": "Concluído",
-      "failed": "Falhou"
+      "failed": "Falhou",
+      "overdue": "Atrasada"
     },
     "pagination": {
       "previous": "Anterior",
@@ -476,7 +481,9 @@
       "page": "Página {page} de {total}"
     },
     "fetchFailed": "Não foi possível obter as ações agendadas",
-    "errorMessage": "Erro: {message}"
+    "errorMessage": "Erro: {message}",
+    "refresh": "Atualizar",
+    "updated": "Atualizado {when}"
   },
   "gallery": {
     "theme": {

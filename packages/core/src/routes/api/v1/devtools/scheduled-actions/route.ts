@@ -23,6 +23,7 @@ import { getAllRegisteredActions } from '@nextsparkjs/core/lib/scheduled-actions
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions/scheduler'
+import { ALREADY_RETRIED_SQL, RETRY_LINK_COLUMNS } from '@nextsparkjs/core/lib/scheduled-actions/retry-links'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request; the API-key scope is declared at the entry point,
@@ -87,7 +88,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       "maxRetries",
       "recurringInterval",
       "createdAt",
-      "updatedAt"
+      "updatedAt",
+      ${RETRY_LINK_COLUMNS}
     FROM "scheduled_actions"
     ${whereClause}
     ORDER BY "createdAt" DESC
@@ -98,6 +100,15 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
   // Get all registered action types
   const registeredActions = getAllRegisteredActions()
+
+  // How many actions each status has under the action type filter (not the status one, so the filter can show them all)
+  const countsResult = await queryWithRLS<{ status: ScheduledActionStatus; count: string }>(
+    `SELECT status, COUNT(*) AS count FROM "scheduled_actions" ${actionType ? 'WHERE "actionType" = $1' : ''} GROUP BY status`,
+    actionType ? [actionType] : [],
+    null
+  )
+  const statusCounts: Record<string, number> = { pending: 0, running: 0, completed: 0, failed: 0 }
+  for (const { status: rowStatus, count } of countsResult) statusCounts[rowStatus] = parseInt(count, 10)
 
   // Count failed actions (last 24 hours)
   const failedCountQuery = `
@@ -122,6 +133,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       meta: {
         registeredActionTypes: registeredActions,
         failedCount,
+        statusCounts,
       },
     },
   })
@@ -171,7 +183,9 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         status,
         payload,
         "teamId",
-        "lockGroup"
+        "lockGroup",
+        "createdAt",
+        "recurringInterval"
       FROM "scheduled_actions"
       WHERE id = $1`,
       [actionId],
@@ -187,6 +201,19 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     // Only allow retrying failed actions
     if (failedAction.status !== 'failed') {
       return createApiError('Only failed actions can be retried', 400, undefined, 'VALIDATION_ERROR')
+    }
+
+    // A failed action is retried once: a later action of the same type and payload is its retry (see retry-links.ts),
+    // whatever state that one is in now. If it failed too, it is the one to retry.
+    if (failedAction.recurringInterval == null) {
+      const retried = await queryWithRLS<{ id: string }>(
+        ALREADY_RETRIED_SQL,
+        [failedAction.actionType, JSON.stringify(failedAction.payload), failedAction.createdAt],
+        null
+      )
+      if (retried.length > 0) {
+        return createApiError('This action was already retried', 409, undefined, 'ACTION_ALREADY_RETRIED', { retryActionId: retried[0].id })
+      }
     }
 
     // Check if there's already a pending action with the same actionType and payload

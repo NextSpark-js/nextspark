@@ -7,7 +7,7 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleDate } from '../../../lib/i18n/format'
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Badge } from '../../ui/badge'
 import {
@@ -19,14 +19,20 @@ import {
   TableRow,
 } from '../../ui/table'
 import { Button } from '../../ui/button'
-import { ChevronDownIcon, ChevronRightIcon, RotateCcwIcon, PlayIcon } from 'lucide-react'
+import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, RotateCcwIcon, PlayIcon } from 'lucide-react'
 import { sel } from '../../../lib/test'
+import { cn } from '../../../lib/utils'
 import type { ScheduledActionRow } from './types'
+import { isOverdue } from './helpers'
 import { toast } from 'sonner'
 import { withBasePath } from '../../../lib/base-path'
 
 interface ActionsTableProps {
   actions: ScheduledActionRow[]
+  /** The action to scroll to and mark for a moment (the one a "Retried" or "retry of" link points at). */
+  focusId?: string | null
+  /** Asks the page to bring an action into view: it is on this page already, or the page clears the filters to find it. */
+  onViewRelated?: (id: string) => void
 }
 
 async function retryAction(actionId: string, fallbackError: string): Promise<{ newActionId: string }> {
@@ -65,11 +71,21 @@ async function runAction(actionId: string, fallbackError: string): Promise<{ suc
   return data.data
 }
 
-export function ActionsTable({ actions }: ActionsTableProps) {
+export function ActionsTable({ actions, focusId, onViewRelated }: ActionsTableProps) {
   const t = useTranslations('devtools.scheduledActions')
   const locale = useLocale()
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const queryClient = useQueryClient()
+
+  // Scroll to the focused action once it is on the page, and mark it for a couple of seconds.
+  const [markedId, setMarkedId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!focusId || !actions.some((action) => action.id === focusId)) return
+    document.getElementById(`scheduled-action-${focusId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setMarkedId(focusId)
+    const timer = setTimeout(() => setMarkedId(null), 2500)
+    return () => clearTimeout(timer)
+  }, [focusId, actions])
 
   // Retry mutation
   const retryMutation = useMutation({
@@ -190,7 +206,8 @@ export function ActionsTable({ actions }: ActionsTableProps) {
             return (
               <Fragment key={action.id}>
                 <TableRow
-                  className="hover:bg-muted/50 transition-colors"
+                  id={`scheduled-action-${action.id}`}
+                  className={cn('hover:bg-muted/50 transition-colors', markedId === action.id && 'bg-primary/10 ring-2 ring-inset ring-primary/40')}
                   data-cy={sel('devtools.scheduledActions.row', { id: action.id })}
                 >
                   <TableCell className="py-4">
@@ -199,6 +216,8 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                       size="sm"
                       className="h-8 w-8 p-0"
                       onClick={() => toggleRow(action.id)}
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? t('table.collapseRow') : t('table.expandRow')}
                     >
                       {isExpanded ? (
                         <ChevronDownIcon className="h-4 w-4" />
@@ -209,8 +228,40 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                   </TableCell>
                   <TableCell className="font-mono text-sm py-4">
                     {action.actionType}
+                    {/* The reason a failed action failed, under its type: opening the row for it was a click per row. */}
+                    {action.status === 'failed' && action.errorMessage && (
+                      <p
+                        className="mt-1 max-w-[16rem] truncate font-sans text-xs text-destructive"
+                        title={action.errorMessage}
+                        data-cy={`scheduled-action-error-${action.id}`}
+                      >
+                        {action.errorMessage}
+                      </p>
+                    )}
+                    {action.retryOf && (
+                      <p className="mt-1 font-sans text-xs text-muted-foreground">
+                        {t('retry.retryOf')}{' '}
+                        <button
+                          type="button"
+                          className="font-mono underline underline-offset-2 hover:text-foreground"
+                          onClick={() => onViewRelated?.(action.retryOf as string)}
+                          data-cy={`scheduled-action-retry-of-${action.id}`}
+                        >
+                          {action.retryOf.slice(0, 8)}
+                        </button>
+                      </p>
+                    )}
                   </TableCell>
-                  <TableCell className="py-4">{getStatusBadge(action.status)}</TableCell>
+                  <TableCell className="py-4">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {getStatusBadge(action.status)}
+                      {isOverdue(action) && (
+                        <Badge variant="outline" className="border-amber-500/50 text-amber-600 dark:text-amber-400" data-cy={`scheduled-action-overdue-${action.id}`}>
+                          {t('status.overdue')}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm font-medium py-4">
                     {action.status === 'failed' ? (
                       <span className="text-destructive">
@@ -267,7 +318,18 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                   </TableCell>
                   <TableCell className="text-right py-4">
                     <div className="flex items-center justify-end gap-2">
-                      {action.status === 'failed' && (
+                      {action.status === 'failed' && action.retriedBy && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewRelated?.(action.retriedBy as string)}
+                          data-cy={`scheduled-action-retried-${action.id}`}
+                        >
+                          {t('retry.retried')}
+                          <ArrowRightIcon className="h-3.5 w-3.5 ml-1.5" />
+                        </Button>
+                      )}
+                      {action.status === 'failed' && !action.retriedBy && (
                         <Button
                           variant="outline"
                           size="sm"

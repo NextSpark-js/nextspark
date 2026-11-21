@@ -21,9 +21,11 @@ interface FiltersProps {
   filters: ScheduledActionsFilters
   onFiltersChange: (filters: ScheduledActionsFilters) => void
   registeredActionTypes: string[]
+  /** How many actions each status has (under the type filter), shown next to the status in the list. */
+  statusCounts?: Record<string, number>
 }
 
-export function Filters({ filters, onFiltersChange, registeredActionTypes }: FiltersProps) {
+export function Filters({ filters, onFiltersChange, registeredActionTypes, statusCounts }: FiltersProps) {
   const t = useTranslations('devtools.scheduledActions')
 
   const handleStatusChange = (value: string) => {
@@ -46,6 +48,10 @@ export function Filters({ filters, onFiltersChange, registeredActionTypes }: Fil
 
   const hasActiveFilters = filters.status || filters.actionType
 
+  // "Failed (3)": the count is what tells you whether opening the filter is worth it
+  const withCount = (label: string, count: number | undefined) => (count === undefined ? label : `${label} (${count})`)
+  const totalCount = statusCounts ? Object.values(statusCounts).reduce((sum, n) => sum + n, 0) : undefined
+
   return (
     <div className="flex flex-wrap gap-4">
       {/* Status Filter */}
@@ -64,11 +70,12 @@ export function Filters({ filters, onFiltersChange, registeredActionTypes }: Fil
             <SelectValue placeholder={t('filters.allStatuses')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
-            <SelectItem value="pending">{t('status.pending')}</SelectItem>
-            <SelectItem value="running">{t('status.running')}</SelectItem>
-            <SelectItem value="completed">{t('status.completed')}</SelectItem>
-            <SelectItem value="failed">{t('status.failed')}</SelectItem>
+            <SelectItem value="all">{withCount(t('filters.allStatuses'), totalCount)}</SelectItem>
+            {(['pending', 'running', 'completed', 'failed'] as const).map((status) => (
+              <SelectItem key={status} value={status}>
+                {withCount(t(`status.${status}`), statusCounts?.[status])}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
