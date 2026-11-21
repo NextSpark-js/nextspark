@@ -39,6 +39,14 @@ test('the id of a published post redirects to its slug, the URL of its page (the
   expect(queryWithRLS.mock.calls[0][1]).toEqual(['post-1'])
 })
 
+test('a post published without a date redirects by id too: the redirect query lets an undated published post through (#542)', async () => {
+  queryWithRLS.mockResolvedValue([{ slug: 'undated-post' }])
+  expect(await get('/posts/post-undated')).toMatchObject({ status: 308 })
+  const [sql] = queryWithRLS.mock.calls[0]
+  expect(sql).toContain('(slug = $1 OR id = $1)')
+  expect(sql).toContain('("publishedAt" IS NULL OR "publishedAt" <= NOW())')
+})
+
 test('a slug with no published post is rewritten to the not-found path', async () => {
   queryWithRLS.mockResolvedValue([])
   expect(rewriteOf(await get('/posts/no-existe'))).toBe('/_ns/not-found')

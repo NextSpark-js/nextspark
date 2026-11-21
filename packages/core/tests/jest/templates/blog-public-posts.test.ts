@@ -59,6 +59,9 @@ test('no public read of the blog template requires a date: every one lets an und
     expect(dateRules.length).toBeGreaterThan(0)
     expect(source).not.toMatch(/ORDER BY (?:[a-z]\.)?"publishedAt" DESC(?! NULLS LAST)/)
   }
+  // the request hook's single query (slug or id, for the 404 and the id-to-slug redirect of #540) is one of them
+  const proxy = readFileSync(join(blog, 'config/hooks/proxy.ts'), 'utf8')
+  expect(proxy).toMatch(/WHERE \(slug = \$1 OR id = \$1\) AND status = 'published' AND \("publishedAt" IS NULL OR "publishedAt" <= NOW\(\)\)/)
 })
 
 test('both reads are cached functions, tagged with the tag core expires when a post is written', async () => {
