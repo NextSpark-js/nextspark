@@ -22,7 +22,7 @@ jest.mock('@nextsparkjs/core/lib/seo/page-metadata', () => ({
 jest.mock('@/lib/sanitize-post-html', () => ({ sanitizePostHtml: (html: string) => html }), { virtual: true })
 jest.mock('@/styles/article.css', () => ({}), { virtual: true })
 jest.mock('@/components/public/ReadingProgress', () => ({ ReadingProgress: () => null }), { virtual: true })
-jest.mock('@/components/public/PostDate', () => ({ PostDate: () => <time>a date</time> }), { virtual: true })
+jest.mock('@/components/public/PostDate', () => ({ PostDate: ({ value }: { value: string }) => <time>date:{value}</time> }), { virtual: true })
 jest.mock('@/components/public/AuthorBio', () => ({ AuthorBio: () => null }), { virtual: true })
 jest.mock('@/components/public/RelatedPosts', () => ({ RelatedPosts: ({ posts }: { posts: { title: string }[] }) => <ul>{posts.map(p => <li key={p.title}>{p.title}</li>)}</ul> }), { virtual: true })
 
@@ -44,6 +44,7 @@ const post = {
   featuredImage: null,
   category: null,
   publishedAt: '2026-01-02T00:00:00.000Z',
+  createdAt: '2025-12-30T00:00:00.000Z',
 }
 
 beforeEach(() => {
@@ -100,6 +101,12 @@ test('the post page loads the article styles itself, so no other page carries th
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const source = require('fs').readFileSync(require.resolve('../../../templates/projects/blog/templates/(public)/posts/[slug]/page.tsx'), 'utf8')
   expect(source).toMatch(/^import '@\/styles\/article\.css'$/m)
+})
+
+test('a post published without a date shows its creation date instead of a placeholder (#542)', async () => {
+  expect(renderToStaticMarkup(await renderPost(post.slug))).toContain('date:2026-01-02T00:00:00.000Z')
+  getPublishedPostBySlug.mockResolvedValue({ ...post, publishedAt: null })
+  expect(renderToStaticMarkup(await renderPost(post.slug))).toContain('date:2025-12-30T00:00:00.000Z')
 })
 
 test('a slug with no published post is a notFound(), and the related posts are not read', async () => {

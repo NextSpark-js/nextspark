@@ -178,7 +178,7 @@ async function Post({ params }: PageProps) {
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              <PostDate value={post.publishedAt} />
+              <PostDate value={post.publishedAt ?? post.createdAt} />
             </span>
             <span className="text-border">|</span>
             <span className="flex items-center gap-1.5">

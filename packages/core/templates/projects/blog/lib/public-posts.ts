@@ -1,7 +1,8 @@
 /**
  * Published posts for the public pages, read on the server.
  *
- * Same rule as the public feed (`/api/posts/public`): status 'published' and a publishedAt that has come.
+ * Same rule as the public feed (`/api/posts/public`) and core's public reads: status 'published' and a publishedAt that has
+ * come or is empty (#542).
  * A slug is unique per author, not per site, so the newest post of that slug wins.
  *
  * Both reads are `'use cache'` (the project has Cache Components on), so a visit does not query the database and the
@@ -23,6 +24,7 @@ export interface PublicPost {
   featuredImage: string | null
   category: string | null
   publishedAt: Date | string | null // pg returns a Date
+  createdAt: Date | string
 }
 
 export interface RelatedPost {
@@ -45,7 +47,7 @@ export async function getPublishedPostBySlug(slug: string): Promise<PublicPost |
   if (typeof slug !== 'string' || slug.length === 0 || slug.length > MAX_SLUG_LENGTH) return null
 
   const rows = await queryWithRLS<PublicPost>(
-    `SELECT id, title, slug, content, excerpt, "featuredImage", category, "publishedAt"
+    `SELECT id, title, slug, content, excerpt, "featuredImage", category, "publishedAt", "createdAt"
      FROM posts
      WHERE slug = $1 AND status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())
      ORDER BY "publishedAt" DESC NULLS LAST
