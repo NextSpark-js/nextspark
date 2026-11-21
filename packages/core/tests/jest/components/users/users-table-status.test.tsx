@@ -7,6 +7,7 @@ import { render, screen, within } from '@testing-library/react'
 
 jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: 'viewer', role: 'developer' } }, isPending: false }) }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
+jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children, ...rest }: React.ComponentProps<'a'>) => <a href={href as string} {...rest}>{children}</a> }))
 jest.mock('next-intl', () => jest.requireActual('../../__mocks__/next-intl.js'))
 jest.mock('@tanstack/react-query', () => ({ useMutation: () => ({ mutate: jest.fn(), isPending: false }), useQueryClient: () => ({}) }))
 jest.mock('@/core/hooks/useToast', () => ({ useToast: () => ({ toast: jest.fn() }) }))
@@ -15,7 +16,7 @@ jest.mock('@/core/components/users/tables/UserActions', () => ({ useUserActions:
 import { UsersTable } from '@/core/components/users/tables/UsersTable'
 
 const user = (id: string, over = {}) => ({ id, email: `${id}@x`, firstName: id, lastName: '', fullName: id, role: 'member', emailVerified: true, createdAt: '2026-10-13T00:00:00Z', updatedAt: '2026-10-13T00:00:00Z', ...over })
-const cells = (id: string) => within(screen.getByText(id, { selector: '.font-medium' }).closest('tr')!).getAllByRole('cell')
+const cells = (id: string) => within(screen.getByText(id, { selector: 'a' }).closest('tr')!).getAllByRole('cell')
 
 it('a suspended developer shows Developer as the role and Suspended as the status', () => {
   render(<UsersTable users={[user('s', { role: 'suspended', roleBeforeSuspension: 'developer' })] as never} />)

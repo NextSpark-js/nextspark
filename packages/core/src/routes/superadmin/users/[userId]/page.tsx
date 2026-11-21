@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -33,14 +33,14 @@ import {
   Shield,
   Eye,
   Mail,
-  CheckCircle2,
-  XCircle,
   Database,
 } from "lucide-react";
 import Link from "next/link";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format"
 import { rateLimitedMessage } from "@nextsparkjs/core/components/users/tables/action-error"
+import { UserActionsMenu, useUserActions, type ActionUser } from "@nextsparkjs/core/components/users/tables/UserActions"
+import { UserRoleBadge, UserStatusBadges } from "@nextsparkjs/core/components/users/tables/UserBadges"
 
 interface TeamMembership {
   teamId: string;
@@ -67,9 +67,11 @@ interface UserDetail {
   fullName: string;
   email: string;
   role: string;
+  roleBeforeSuspension?: string | null;
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
+  lastSessionAt?: string | null;
 }
 
 interface UserDetailData {
@@ -113,7 +115,6 @@ function UserDetailPage() {
   const tTeams = useTranslations("teams");
   const locale = useLocale();
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
-  const userRoleLabel = (role: string) => (t.has(`usersPage.roles.${role}`) ? t(`usersPage.roles.${role}`) : role);
   const params = useParams()!;
   const userId = params.userId as string;
 
@@ -132,6 +133,15 @@ function UserDetailPage() {
     },
     retry: 2,
     staleTime: 30000,
+  });
+
+  const router = useRouter();
+  // The same menu and dialogs as the users table; a deleted user has no page to come back to
+  const actions = useUserActions({
+    onDone: (type) => {
+      if (type === "delete") router.push("/superadmin/users");
+      else refetch();
+    },
   });
 
   // Get user initials for avatar
@@ -241,7 +251,9 @@ function UserDetailPage() {
           <RefreshCw className="h-4 w-4" />
           {t("shared.refresh")}
         </Button>
+        {user && <UserActionsMenu user={user as ActionUser} actions={actions} showViewProfile={false} />}
       </div>
+      {actions.dialog}
 
       {/* User Info Card */}
       <Card>
@@ -263,44 +275,22 @@ function UserDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <CardTitle className="text-2xl">{user?.fullName}</CardTitle>
-                <Badge
-                  variant={user?.role === "superadmin" ? "destructive" : "secondary"}
-                >
-                  {user?.role === "superadmin" ? (
-                    <>
-                      <Shield className="h-3 w-3 mr-1" />
-                      {t("userDetail.superadmin")}
-                    </>
-                  ) : (
-                    <>
-                      <User className="h-3 w-3 mr-1" />
-                      <span className="capitalize">{user?.role ? userRoleLabel(user.role) : t("userDetail.userRole")}</span>
-                    </>
-                  )}
-                </Badge>
-                <Badge
-                  variant={user?.emailVerified ? "default" : "outline"}
-                  className={user?.emailVerified ? "bg-green-100 text-green-700" : ""}
-                >
-                  {user?.emailVerified ? (
-                    <>
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {t("users.table.verified")}
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-3 w-3 mr-1" />
-                      {t("users.table.unverified")}
-                    </>
-                  )}
-                </Badge>
+                {user?.role === "superadmin" ? (
+                  <Badge variant="destructive">
+                    <Shield className="h-3 w-3 mr-1" />
+                    {t("userDetail.superadmin")}
+                  </Badge>
+                ) : user ? (
+                  <UserRoleBadge user={user as ActionUser} />
+                ) : null}
+                {user && <UserStatusBadges user={user as ActionUser} />}
               </div>
               <CardDescription className="mt-1">{t("shared.id", { id: user?.id ?? "" })}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Email */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-2">
@@ -323,6 +313,21 @@ function UserDetailPage() {
                   {user?.createdAt
                     ? formatLocaleDate(user.createdAt, locale, "long")
                     : t("shared.unknown")}
+                </span>
+              </div>
+            </div>
+
+            {/* Last session: the newest one on record */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                {t("userDetail.lastSession")}
+              </h4>
+              <div className="flex items-center gap-2 text-muted-foreground" data-cy="superadmin-user-last-session">
+                <Calendar className="h-5 w-5" />
+                <span>
+                  {user?.lastSessionAt
+                    ? formatLocaleDate(user.lastSessionAt, locale, "dateTime")
+                    : t("userDetail.noSession")}
                 </span>
               </div>
             </div>

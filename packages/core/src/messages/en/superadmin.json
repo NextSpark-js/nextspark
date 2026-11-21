@@ -466,7 +466,9 @@
       "public": "Public",
       "searchable": "Searchable",
       "updated": "Updated"
-    }
+    },
+    "lastSession": "Last session",
+    "noSession": "No session on record"
   },
   "teamsPage": {
     "title": "Team Management",

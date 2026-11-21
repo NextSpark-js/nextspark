@@ -466,7 +466,9 @@
       "public": "Öffentlich",
       "searchable": "Durchsuchbar",
       "updated": "Aktualisiert"
-    }
+    },
+    "lastSession": "Letzte Sitzung",
+    "noSession": "Keine Sitzung gespeichert"
   },
   "teamsPage": {
     "title": "Teamverwaltung",

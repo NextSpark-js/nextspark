@@ -13,6 +13,7 @@ import { User, Mail, Calendar } from "lucide-react";
 import { useLocale, useTranslations } from 'next-intl';
 import { formatLocaleDate } from '../../../lib/i18n/format';
 import type { UserRole } from '../../../types/user.types';
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sel } from '../../../lib/test';
 import { UserActionsMenu, useUserActions } from './UserActions';
@@ -129,7 +130,9 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      {user.fullName || tPage('noName')}
+                      <Link href={`/superadmin/users/${user.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                        {user.fullName || tPage('noName')}
+                      </Link>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {t('table.id', { id: `${user.id.slice(0, 8)}...` })}

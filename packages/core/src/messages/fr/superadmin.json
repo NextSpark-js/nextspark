@@ -466,7 +466,9 @@
       "public": "Public",
       "searchable": "Consultable",
       "updated": "Mis à jour"
-    }
+    },
+    "lastSession": "Dernière session",
+    "noSession": "Aucune session enregistrée"
   },
   "teamsPage": {
     "title": "Gestion des équipes",
