@@ -195,14 +195,14 @@ export function ApiRequestPanel({
       {/* Header: Method + URL */}
       <div className="p-4 border-b space-y-3 bg-muted/30">
         {/* Method Badge + Endpoint Path + Send Button */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex items-center gap-3">
           <Badge
             variant="outline"
             className={cn('font-mono text-sm px-2 py-1 border', methodColors[method])}
           >
             {method}
           </Badge>
-          <code className="font-mono text-sm font-medium min-w-0 flex-1 basis-32 truncate" title={basePath}>{basePath}</code>
+          <code className="font-mono text-sm font-medium flex-1 truncate" title={basePath}>{basePath}</code>
           {route.source && (
             <Badge variant="secondary" className="text-xs shrink-0">
               {route.source}
