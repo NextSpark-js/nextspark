@@ -137,6 +137,7 @@ export const QUERY_MODULES = new Set([
   'components/dashboard/mobile/MobileMoreSheet',
   'components/dashboard/mobile/QuickCreateSheet',
   'components/dashboard/navigation/DynamicNavigation',
+  'components/devtools/api-explorer/ActAsUserPicker',
   'components/devtools/api-explorer/ApiExplorer',
   'components/devtools/api-explorer/ApiRequestPanel',
   'components/devtools/api-tester/ApiTester',
