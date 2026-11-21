@@ -78,6 +78,13 @@ test('the server render carries the title, the body and the related posts, with 
   expect(html).not.toContain('<script')
 })
 
+test('the category is shown as text, not as a link to a page the template does not have (#511)', async () => {
+  getPublishedPostBySlug.mockResolvedValue({ ...post, category: 'Technology' })
+  const html = renderToStaticMarkup(await renderPost(post.slug))
+  expect(html).toContain('>Technology</span>')
+  expect(html).not.toContain('/category/')
+})
+
 test('a slug with no published post is a notFound(), and the related posts are not read', async () => {
   await expect(renderPost('does-not-exist')).rejects.toBeInstanceOf(NotFound)
   expect(getRelatedPosts).not.toHaveBeenCalled()

@@ -113,13 +113,11 @@ async function Post({ params }: PageProps) {
         {/* Article Header */}
         <header className="mb-8 text-center">
           {/* Category */}
+          {/* Text, not a link: the template has no category page, and the posts list has no category filter (#511) */}
           {post.category && (
-            <Link
-              href={`/category/${post.category.toLowerCase()}`}
-              className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary mb-4 hover:bg-primary/20 transition-colors"
-            >
+            <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary mb-4">
               {post.category}
-            </Link>
+            </span>
           )}
 
           {/* Title */}
