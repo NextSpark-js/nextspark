@@ -306,7 +306,13 @@ export function ApiRequestPanel({
 
       {/* Tabs for params/headers/body */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <Tabs defaultValue="params" className="flex-1 flex flex-col min-h-0">
+        {/* An endpoint that opens with a body (a preset's or its required fields) opens on the Body tab, so the payload is
+            seen before it is sent. Remounted per method and path: defaultValue is read once, and each endpoint decides again. */}
+        <Tabs
+          key={`${method} ${basePath}`}
+          defaultValue={showPayloadEditor && body.trim() ? 'body' : 'params'}
+          className="flex-1 flex flex-col min-h-0"
+        >
           <div className="border-b px-4">
             <TabsList className="h-9 bg-transparent p-0 border-0">
               <TabsTrigger
