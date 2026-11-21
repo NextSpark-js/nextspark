@@ -75,6 +75,29 @@ export function isDestructiveRoleChange(role: string | undefined): boolean {
   return role === 'developer';
 }
 
+interface ActionRequest {
+  userId: string;
+  type: UserActionType;
+  role?: string;
+}
+
+/** What the PATCH answers besides `success`: the suspend counts and the role an unsuspend gave back. */
+interface ActionResponse {
+  role?: string;
+  revoked?: { sessions: number; apiKeys: number };
+}
+
+/**
+ * The request that takes an action back, for the toast's Undo: only what the API can reverse. A suspension stores the
+ * role it replaces, so unsuspending gives it back; verifying an email and deleting a user have no way back.
+ */
+export function undoRequest({ type, user }: { type: UserActionType; user: ActionUser }): ActionRequest | null {
+  if (type === 'suspend') return { userId: user.id, type: 'unsuspend' };
+  if (type === 'unsuspend') return { userId: user.id, type: 'suspend' };
+  if (type === 'change-role') return { userId: user.id, type: 'change-role', role: user.role };
+  return null;
+}
+
 export interface UserActions {
   /** The dialog every action asks its confirmation in; render it once next to the menus */
   dialog: ReactNode;
@@ -106,60 +129,90 @@ export function useUserActions({ onDone }: { onDone?: (type: UserActionType, use
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  // The error of the request the open dialog sent: it shows in the dialog it belongs to
+  const [error, setError] = useState<string | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: async ({ userId, type, role }: { userId: string; type: UserActionType; role?: string }) => {
-      const isDelete = type === 'delete';
-      const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
-        method: isDelete ? "DELETE" : "PATCH",
-        ...(isDelete ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: type, role }) }),
-      });
-      if (!response.ok) throw new Error(await actionErrorMessage(response, t, t(isDelete ? 'toast.deleteFailed' : 'confirm.failed')));
-      return response.json();
-    },
-    onSuccess: (_data, { type }) => {
-      if (type === 'delete') {
-        toast({ title: t('toast.deleted'), description: t('toast.deletedDescription') });
-      } else {
-        toast({ title: t('toast.success'), description: t('toast.actionCompleted') });
-      }
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      const done = pendingAction;
-      if (done) onDone?.(done.type, done.user);
-    },
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: "destructive" });
-    },
-  });
+  const perform = async ({ userId, type, role }: ActionRequest): Promise<ActionResponse> => {
+    const isDelete = type === 'delete';
+    const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
+      method: isDelete ? "DELETE" : "PATCH",
+      ...(isDelete ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: type, role }) }),
+    });
+    if (!response.ok) throw new Error(await actionErrorMessage(response, t, t(isDelete ? 'toast.deleteFailed' : 'confirm.failed')));
+    return response.json();
+  };
+  const mutation = useMutation({ mutationFn: perform });
+
+  const refresh = () => {
+    for (const key of ["admin-users", "superadmin-users", "superadmin-user"]) queryClient.invalidateQueries({ queryKey: [key] });
+  };
 
   const request = (type: UserActionType, user: ActionUser, role?: string) => {
     if (type === 'change-role' && role === user.role) return;
+    setError(null);
     setPendingAction({ type, user, role });
   };
 
+  const announce = (done: PendingAction, data: ActionResponse) => {
+    const { type, user, role } = done;
+    const name = user.fullName || user.email;
+    const texts = {
+      suspend: { title: t('toast.suspended', { name }), description: t('toast.suspendedDescription', { sessions: data.revoked?.sessions ?? 0, apiKeys: data.revoked?.apiKeys ?? 0 }) },
+      unsuspend: { title: t('toast.unsuspended', { name }), description: t('toast.unsuspendedDescription', { role: getRoleName((data.role ?? effectiveUserRole(user.role, user.roleBeforeSuspension)) as UserRole) }) },
+      'verify-email': { title: t('toast.verified', { name }), description: t('toast.verifiedDescription', { email: user.email }) },
+      delete: { title: t('toast.deletedNamed', { name }), description: t('toast.deletedNamedDescription') },
+      'change-role': { title: t('toast.roleChanged', { from: getRoleName(user.role), to: getRoleName(role as UserRole) }), description: name },
+    }[type];
+    const back = undoRequest(done);
+    toast({
+      ...texts,
+      ...(back && {
+        action: {
+          label: t('toast.undo'),
+          onClick: () => {
+            perform(back).then(
+              () => { toast({ title: t('toast.undone'), description: name }); refresh(); },
+              (e: Error) => toast({ title: t('toast.error'), description: e.message, variant: "destructive" }),
+            );
+          },
+        },
+      }),
+    });
+  };
+
+  // The dialog stays open, with its buttons disabled, until the API answers: a failure shows in it, a success closes it
   const confirm = () => {
     if (!pendingAction) return;
-    const { type, user, role } = pendingAction;
-    mutation.mutate({ userId: user.id, type, role });
-    setPendingAction(null);
+    const done = pendingAction;
+    setError(null);
+    mutation.mutate({ userId: done.user.id, type: done.type, role: done.role }, {
+      onSuccess: (data) => {
+        setPendingAction(null);
+        announce(done, data);
+        refresh();
+        onDone?.(done.type, done.user);
+      },
+      onError: (e: Error) => setError(e.message),
+    });
   };
 
   const dialogText = () => {
-    if (!pendingAction) return { title: "", description: "" };
+    if (!pendingAction) return { title: "", description: "", action: "" };
     const { type, user, role } = pendingAction;
     const name = user.fullName || user.email;
     switch (type) {
       case "suspend":
-        return { title: t('confirm.suspendTitle'), description: t('confirm.suspendDescription', { name }) };
+        return { title: t('confirm.suspendTitle'), description: t('confirm.suspendDescription', { name }), action: t('confirm.suspendAction') };
       case "unsuspend":
         return {
           title: t('confirm.unsuspendTitle'),
           description: t('confirm.unsuspendDescription', { name, role: getRoleName(effectiveUserRole(user.role, user.roleBeforeSuspension) as UserRole) }),
+          action: t('confirm.unsuspendAction'),
         };
       case "verify-email":
-        return { title: t('confirm.verifyEmailTitle'), description: t('confirm.verifyEmailDescription', { name }) };
+        return { title: t('confirm.verifyEmailTitle'), description: t('confirm.verifyEmailDescription', { name }), action: t('confirm.verifyEmailAction') };
       case "delete":
-        return { title: t('confirm.deleteTitle'), description: t('confirm.deleteDescription', { name }) };
+        return { title: t('confirm.deleteTitle'), description: t('confirm.deleteDescription', { name }), action: t('confirm.deleteAction') };
       case "change-role":
         return {
           title: t('confirm.changeRoleTitle'),
@@ -168,6 +221,7 @@ export function useUserActions({ onDone }: { onDone?: (type: UserActionType, use
             from: getRoleName(user.role),
             to: getRoleName(role as UserRole),
           }),
+          action: t('confirm.changeRoleAction', { role: getRoleName(role as UserRole) }),
         };
     }
   };
@@ -175,26 +229,29 @@ export function useUserActions({ onDone }: { onDone?: (type: UserActionType, use
   const destructive = pendingAction?.type === "delete" || (pendingAction?.type === "change-role" && isDestructiveRoleChange(pendingAction.role));
   const text = dialogText();
 
+  const saving = mutation.isPending;
   const dialog = (
-    <Dialog open={!!pendingAction} onOpenChange={() => setPendingAction(null)}>
+    <Dialog open={!!pendingAction} onOpenChange={(open) => { if (!open && !saving) setPendingAction(null); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{text.title}</DialogTitle>
           <DialogDescription>{text.description}</DialogDescription>
         </DialogHeader>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
-          <Button variant="outline" onClick={() => setPendingAction(null)}>
+          <Button variant="outline" disabled={saving} onClick={() => setPendingAction(null)}>
             {t('confirm.cancel')}
           </Button>
-          <Button onClick={confirm} variant={destructive ? "destructive" : "default"}>
-            {pendingAction?.type === "delete" ? t('confirm.delete') : t('confirm.confirm')}
+          <Button onClick={confirm} disabled={saving} variant={destructive ? "destructive" : "default"}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {text.action}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 
-  return { dialog, isMutating: mutation.isPending, canAct, canGrantDeveloper, restrictedKey, request };
+  return { dialog, isMutating: saving, canAct, canGrantDeveloper, restrictedKey, request };
 }
 
 /** The row/header menu of a user: change role, verify email, suspend/unsuspend and delete, as the viewer may. */

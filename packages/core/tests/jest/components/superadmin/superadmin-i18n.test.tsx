@@ -36,7 +36,7 @@ jest.mock('@nextsparkjs/registries/plugin-registry.client', () => ({ getPluginNa
 const mockToast = jest.fn()
 const mockMutations: Array<{ onSuccess?: (data: unknown) => void }> = []
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: (options: { onSuccess?: (data: unknown) => void }) => { mockMutations.push(options); return { isPending: false, mutate: jest.fn() } },
+  useMutation: () => ({ isPending: false, mutate: (_vars: unknown, callbacks: { onSuccess?: (data: unknown) => void }) => { mockMutations.push(callbacks) } }),
   useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }))
 jest.mock('@nextsparkjs/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: 'viewer', role: 'developer' } } }) }))
@@ -49,6 +49,7 @@ import { SuperadminDocsSidebar } from '@/core/components/docs/superadmin-docs-si
 import { TeamsTable } from '@/core/components/superadmin/tables/TeamsTable'
 import { RolesPermissionsMatrix } from '@/core/components/superadmin/tables/RolesPermissionsMatrix'
 import { UsersTable } from '@/core/components/users/tables/UsersTable'
+import { useUserActions } from '@/core/components/users/tables/UserActions'
 import { SuperAdminsTable } from '@/core/components/users/tables/SuperAdminsTable'
 import { PaginationControls } from '@/core/components/superadmin/filters/PaginationControls'
 import { SearchInput } from '@/core/components/superadmin/filters/SearchInput'
@@ -129,13 +130,21 @@ describe('RolesPermissionsMatrix', () => {
 })
 
 describe('the users tables', () => {
-  test('the toasts of UsersTable are the catalog\'s, not the API message (always English)', () => {
+  test('the toasts of the user actions are the catalog\'s, not the API message (always English)', () => {
     mockMutations.length = 0
     mockToast.mockClear()
-    render(<UsersTable users={[]} />)
-    for (const mutation of mockMutations) mutation.onSuccess?.({ message: 'English from the API' })
-    const descriptions = mockToast.mock.calls.map(([toast]) => toast.description)
-    expect(descriptions).toEqual([es.superadmin.users.toast.actionCompleted, es.superadmin.users.toast.deletedDescription])
+    const target = { id: 'user-1', fullName: 'Luz Perez', email: 'luz@acme.test', role: 'member', emailVerified: true }
+    function Harness() {
+      const actions = useUserActions()
+      return <><button onClick={() => actions.request('delete', target as never)}>go</button>{actions.dialog}</>
+    }
+    render(<Harness />)
+    fireEvent.click(screen.getByText('go'))
+    fireEvent.click(screen.getByRole('button', { name: es.superadmin.users.confirm.deleteAction }))
+    for (const callbacks of mockMutations) callbacks.onSuccess?.({ message: 'English from the API' })
+    expect(mockToast.mock.calls.map(([toast]) => [toast.title, toast.description])).toEqual([
+      [es.superadmin.users.toast.deletedNamed.replace('{name}', 'Luz Perez'), es.superadmin.users.toast.deletedNamedDescription],
+    ])
   })
 
   const user = { id: 'user-0123456789', fullName: 'Luz Perez', email: 'luz@acme.test', role: 'member', emailVerified: false, createdAt: '2024-03-05T12:00:00Z' }

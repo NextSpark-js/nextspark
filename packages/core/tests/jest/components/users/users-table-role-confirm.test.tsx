@@ -3,14 +3,15 @@
  * role (which outranks superadmin) is confirmed with a destructive button (#513).
  */
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 
 const mockMutate = jest.fn()
+const mockToast = jest.fn()
 jest.mock('@/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: 'viewer', role: 'developer' } }, isPending: false }) }))
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('next-intl', () => jest.requireActual('../../__mocks__/next-intl.js'))
-jest.mock('@tanstack/react-query', () => ({ useMutation: () => ({ mutate: mockMutate, isPending: false }), useQueryClient: () => ({}) }))
-jest.mock('@/core/hooks/useToast', () => ({ useToast: () => ({ toast: jest.fn() }) }))
+jest.mock('@tanstack/react-query', () => ({ useMutation: () => ({ mutate: mockMutate, isPending: false }), useQueryClient: () => ({ invalidateQueries: jest.fn() }) }))
+jest.mock('@/core/hooks/useToast', () => ({ useToast: () => ({ toast: mockToast }) }))
 jest.mock('@/core/lib/role-helpers', () => ({ useRoleTranslations: () => (r: string) => `<${r}>` }))
 jest.mock('@/core/components/ui/dropdown-menu', () => {
   const Pass = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>
@@ -31,14 +32,14 @@ import { UsersTable } from '@/core/components/users/tables/UsersTable'
 
 const member = { id: 'm', email: 'm@x', firstName: 'Blake', lastName: 'Burton', fullName: 'Blake Burton', role: 'member', emailVerified: true, createdAt: '2026-10-13T00:00:00Z', updatedAt: '2026-10-13T00:00:00Z' }
 
-beforeEach(() => mockMutate.mockClear())
+beforeEach(() => { mockMutate.mockClear(); mockToast.mockClear() })
 
 it('picking a role opens a confirmation and changes nothing until it is confirmed', () => {
   render(<UsersTable users={[member] as never} />)
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'Developer' }))
   expect(mockMutate).not.toHaveBeenCalled()
   expect(screen.getByRole('dialog')).toHaveTextContent('Change Blake Burton from <member> to <developer>?')
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+  fireEvent.click(screen.getByRole('button', { name: /^Change to/ }))
   expect(mockMutate).toHaveBeenCalledTimes(1)
   expect(mockMutate.mock.calls[0][0]).toEqual({ userId: 'm', type: 'change-role', role: 'developer' })
 })
@@ -54,17 +55,31 @@ it('granting developer warns and uses the destructive button; going back to memb
   const { rerender } = render(<UsersTable users={[member] as never} />)
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'Developer' }))
   expect(screen.getByRole('dialog')).toHaveTextContent('outranks superadmins')
-  expect(screen.getByRole('button', { name: 'Confirm' }).className).toContain('bg-destructive')
+  expect(screen.getByRole('button', { name: /^Change to/ }).className).toContain('bg-destructive')
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
   rerender(<UsersTable users={[{ ...member, role: 'developer' }] as never} />)
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'Member' }))
   expect(screen.getByRole('dialog')).not.toHaveTextContent('outranks')
-  expect(screen.getByRole('button', { name: 'Confirm' }).className).not.toContain('bg-destructive')
+  expect(screen.getByRole('button', { name: /^Change to/ }).className).not.toContain('bg-destructive')
 })
 
 it('picking the role the user already has opens nothing', () => {
   render(<UsersTable users={[member] as never} />)
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'Member' }))
   expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it('the toast says the role from and to, and its Undo puts the previous role back', () => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as never
+  render(<UsersTable users={[member] as never} />)
+  fireEvent.click(screen.getByRole('menuitemradio', { name: 'Developer' }))
+  fireEvent.click(screen.getByRole('button', { name: /^Change to/ }))
+  act(() => (mockMutate.mock.calls[0][1] as { onSuccess: (d: unknown) => void }).onSuccess({}))
+  const toast = mockToast.mock.calls[0][0]
+  expect(toast).toMatchObject({ title: 'Role: <member> → <developer>', description: 'Blake Burton' })
+  toast.action.onClick()
+  const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+  expect(url).toContain('/api/superadmin/users/m')
+  expect(JSON.parse(init.body)).toEqual({ action: 'change-role', role: 'member' })
 })

@@ -130,20 +130,31 @@
       "unsuspendDescription": "¿Seguro que quieres reactivar a {name}? Recuperará el acceso a la aplicación como {role}.",
       "verifyEmailTitle": "Verificar correo electrónico",
       "verifyEmailDescription": "¿Seguro que quieres verificar manualmente el correo electrónico de {name}?",
-      "delete": "Eliminar",
       "changeRoleTitle": "Cambiar rol",
       "changeRoleDescription": "¿Cambiar a {name} de {from} a {to}?",
-      "changeRoleDeveloperDescription": "¿Cambiar a {name} de {from} a {to}? Un desarrollador está por encima de los superadmins y puede actuar sobre cualquier cuenta, incluidos otros desarrolladores."
+      "changeRoleDeveloperDescription": "¿Cambiar a {name} de {from} a {to}? Un desarrollador está por encima de los superadmins y puede actuar sobre cualquier cuenta, incluidos otros desarrolladores.",
+      "suspendAction": "Suspender usuario",
+      "unsuspendAction": "Reactivar usuario",
+      "verifyEmailAction": "Verificar correo",
+      "deleteAction": "Eliminar usuario",
+      "changeRoleAction": "Cambiar a {role}"
     },
     "toast": {
-      "success": "Correcto",
       "error": "Error",
-      "actionCompleted": "Acción completada correctamente",
       "deleteFailed": "No se pudo eliminar",
       "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo en {minutes, plural, one {# minuto} other {# minutos}}.",
       "lastSuperadmin": "No se puede degradar, suspender ni eliminar al último superadmin. Primero haz superadmin a otro usuario.",
-      "deleted": "Usuario eliminado",
-      "deletedDescription": "El usuario se eliminó correctamente"
+      "suspended": "Usuario suspendido: {name}",
+      "suspendedDescription": "{sessions, plural, one {# sesión cerrada} other {# sesiones cerradas}} y {apiKeys, plural, one {# clave de API desactivada} other {# claves de API desactivadas}}.",
+      "unsuspended": "Usuario reactivado: {name}",
+      "unsuspendedDescription": "Vuelve como {role}.",
+      "verified": "Correo verificado: {name}",
+      "verifiedDescription": "{email} figura ahora como verificado.",
+      "deletedNamed": "Usuario eliminado: {name}",
+      "deletedNamedDescription": "Se eliminaron sus datos, equipos y membresías.",
+      "roleChanged": "Rol: {from} → {to}",
+      "undo": "Deshacer",
+      "undone": "Cambio deshecho"
     }
   },
   "style": {

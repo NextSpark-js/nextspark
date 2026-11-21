@@ -130,20 +130,31 @@
       "unsuspendDescription": "Tem certeza de que deseja reativar {name}? A pessoa voltará a acessar o aplicativo com o papel {role}.",
       "verifyEmailTitle": "Verificar e-mail",
       "verifyEmailDescription": "Tem certeza de que deseja verificar manualmente o e-mail de {name}?",
-      "delete": "Excluir",
       "changeRoleTitle": "Alterar função",
       "changeRoleDescription": "Alterar {name} de {from} para {to}?",
-      "changeRoleDeveloperDescription": "Alterar {name} de {from} para {to}? Um desenvolvedor está acima dos superadmins e pode atuar em qualquer conta, inclusive de outros desenvolvedores."
+      "changeRoleDeveloperDescription": "Alterar {name} de {from} para {to}? Um desenvolvedor está acima dos superadmins e pode atuar em qualquer conta, inclusive de outros desenvolvedores.",
+      "suspendAction": "Suspender usuário",
+      "unsuspendAction": "Reativar usuário",
+      "verifyEmailAction": "Verificar e-mail",
+      "deleteAction": "Excluir usuário",
+      "changeRoleAction": "Alterar para {role}"
     },
     "toast": {
-      "success": "Sucesso",
       "error": "Erro",
-      "actionCompleted": "Ação concluída com sucesso",
       "deleteFailed": "Falha ao excluir",
       "rateLimited": "Muitas solicitações. Tente novamente em {minutes, plural, one {# minuto} other {# minutos}}.",
       "lastSuperadmin": "O último superadmin não pode ser rebaixado, suspenso nem excluído. Torne outro usuário superadmin primeiro.",
-      "deleted": "Usuário excluído",
-      "deletedDescription": "O usuário foi excluído com sucesso"
+      "suspended": "Usuário suspenso: {name}",
+      "suspendedDescription": "{sessions, plural, one {# sessão encerrada} other {# sessões encerradas}} e {apiKeys, plural, one {# chave de API desativada} other {# chaves de API desativadas}}.",
+      "unsuspended": "Usuário reativado: {name}",
+      "unsuspendedDescription": "Volta como {role}.",
+      "verified": "E-mail verificado: {name}",
+      "verifiedDescription": "{email} agora consta como verificado.",
+      "deletedNamed": "Usuário excluído: {name}",
+      "deletedNamedDescription": "Seus dados, equipes e associações foram removidos.",
+      "roleChanged": "Função: {from} → {to}",
+      "undo": "Desfazer",
+      "undone": "Alteração desfeita"
     }
   },
   "style": {

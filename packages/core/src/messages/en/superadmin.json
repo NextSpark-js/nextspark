@@ -130,20 +130,31 @@
       "unsuspendDescription": "Are you sure you want to unsuspend {name}? They will regain access to the application as {role}.",
       "verifyEmailTitle": "Verify Email",
       "verifyEmailDescription": "Are you sure you want to manually verify the email for {name}?",
-      "delete": "Delete",
       "changeRoleTitle": "Change role",
       "changeRoleDescription": "Change {name} from {from} to {to}?",
-      "changeRoleDeveloperDescription": "Change {name} from {from} to {to}? A developer outranks superadmins and can act on any account, including other developers."
+      "changeRoleDeveloperDescription": "Change {name} from {from} to {to}? A developer outranks superadmins and can act on any account, including other developers.",
+      "suspendAction": "Suspend user",
+      "unsuspendAction": "Unsuspend user",
+      "verifyEmailAction": "Verify email",
+      "deleteAction": "Delete user",
+      "changeRoleAction": "Change to {role}"
     },
     "toast": {
-      "success": "Success",
       "error": "Error",
-      "actionCompleted": "Action completed successfully",
       "deleteFailed": "Delete failed",
       "rateLimited": "Too many requests. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
       "lastSuperadmin": "The last superadmin cannot be demoted, suspended or deleted. Make another user a superadmin first.",
-      "deleted": "User Deleted",
-      "deletedDescription": "User has been deleted successfully"
+      "suspended": "{name} suspended",
+      "suspendedDescription": "{sessions, plural, one {# session} other {# sessions}} closed and {apiKeys, plural, one {# API key} other {# API keys}} deactivated.",
+      "unsuspended": "{name} unsuspended",
+      "unsuspendedDescription": "Back as {role}.",
+      "verified": "{name} verified",
+      "verifiedDescription": "{email} is now marked as verified.",
+      "deletedNamed": "{name} deleted",
+      "deletedNamedDescription": "Their data, teams and memberships were removed.",
+      "roleChanged": "Role: {from} → {to}",
+      "undo": "Undo",
+      "undone": "Change undone"
     }
   },
   "style": {

@@ -130,20 +130,31 @@
       "unsuspendDescription": "Vuoi davvero riattivare {name}? Riavrà accesso all’applicazione con il ruolo {role}.",
       "verifyEmailTitle": "Verifica e-mail",
       "verifyEmailDescription": "Vuoi davvero verificare manualmente l’e-mail di {name}?",
-      "delete": "Elimina",
       "changeRoleTitle": "Cambia ruolo",
       "changeRoleDescription": "Cambiare {name} da {from} a {to}?",
-      "changeRoleDeveloperDescription": "Cambiare {name} da {from} a {to}? Uno sviluppatore è sopra i superadmin e può agire su qualsiasi account, compresi altri sviluppatori."
+      "changeRoleDeveloperDescription": "Cambiare {name} da {from} a {to}? Uno sviluppatore è sopra i superadmin e può agire su qualsiasi account, compresi altri sviluppatori.",
+      "suspendAction": "Sospendi utente",
+      "unsuspendAction": "Riattiva utente",
+      "verifyEmailAction": "Verifica e-mail",
+      "deleteAction": "Elimina utente",
+      "changeRoleAction": "Passa a {role}"
     },
     "toast": {
-      "success": "Operazione riuscita",
       "error": "Errore",
-      "actionCompleted": "Azione completata con successo",
       "deleteFailed": "Eliminazione non riuscita",
       "rateLimited": "Troppe richieste. Riprova tra {minutes, plural, one {# minuto} other {# minuti}}.",
       "lastSuperadmin": "L’ultimo superadmin non può essere declassato, sospeso o eliminato. Rendi prima superadmin un altro utente.",
-      "deleted": "Utente eliminato",
-      "deletedDescription": "L’utente è stato eliminato con successo"
+      "suspended": "Utente sospeso: {name}",
+      "suspendedDescription": "{sessions, plural, one {# sessione chiusa} other {# sessioni chiuse}} e {apiKeys, plural, one {# chiave API disattivata} other {# chiavi API disattivate}}.",
+      "unsuspended": "Utente riattivato: {name}",
+      "unsuspendedDescription": "Torna come {role}.",
+      "verified": "E-mail verificata: {name}",
+      "verifiedDescription": "{email} risulta ora verificata.",
+      "deletedNamed": "Utente eliminato: {name}",
+      "deletedNamedDescription": "Dati, team e appartenenze sono stati rimossi.",
+      "roleChanged": "Ruolo: {from} → {to}",
+      "undo": "Annulla modifica",
+      "undone": "Modifica annullata"
     }
   },
   "style": {
