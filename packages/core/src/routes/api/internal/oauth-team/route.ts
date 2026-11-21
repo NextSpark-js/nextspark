@@ -37,9 +37,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   if (typeof authorization !== 'string' || !isAuthorizationKey(authorization)) {
     return createApiError('authorization is required', 400, undefined, 'VALIDATION_ERROR')
   }
-  if (!(await selectTeam(session.session.id, authorization, session.user.id, teamId))) {
-    return createApiError('You are not a member of that team', 403, undefined, 'NOT_A_MEMBER')
-  }
+  const choice = await selectTeam(session.session.id, authorization, session.user.id, teamId)
+  if (choice === 'not-a-member') return createApiError('You are not a member of that team', 403, undefined, 'NOT_A_MEMBER')
+  // the first choice stands (lib/mcp/oauth/team-selection): the connection is started again from the application
+  if (choice === 'already-chosen') return createApiError('Another team was already chosen for this connection', 409, undefined, 'TEAM_ALREADY_CHOSEN')
   return NextResponse.json({ success: true })
 }, 'write')
 

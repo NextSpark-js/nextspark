@@ -157,8 +157,8 @@ CREATE TABLE IF NOT EXISTS public."oauthClientAssertion" (
 );
 
 -- The team a user in several teams picked for an authorization in progress (lib/mcp/oauth/team-selection): one row
--- per browser session and authorization request (its PKCE challenge), read back as the consent's reference. Ours,
--- not Better Auth's.
+-- per browser session and authorization request (its PKCE challenge), written once and read back as the consent's
+-- reference. Ours, not Better Auth's.
 CREATE TABLE IF NOT EXISTS public."oauthTeamSelection" (
   "sessionId"      TEXT NOT NULL REFERENCES public."session"(id) ON DELETE CASCADE,
   "authorization"  TEXT NOT NULL,
