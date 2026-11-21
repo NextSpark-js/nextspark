@@ -159,9 +159,28 @@ export function maskApiKey(key: string): string {
 
 const shellQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
 
+/** Headers whose value is a credential, by lower-case name: they are masked in a copied cURL whoever typed them. */
+const SENSITIVE_HEADERS = ['authorization', 'proxy-authorization', 'cookie', 'x-api-key']
+
+/** `Bearer abc123456789` -> `Bearer abc1••••6789`; a cookie masks each value and keeps the names. */
+function maskHeaderValue(name: string, value: string): string {
+  const lower = name.toLowerCase()
+  if (lower === 'cookie') return value.split(';').map((pair) => {
+    const [key, ...rest] = pair.split('=')
+    return rest.length ? `${key}=${maskApiKey(rest.join('=').trim())}` : pair
+  }).join(';')
+  if (lower === 'authorization' || lower === 'proxy-authorization') {
+    const scheme = /^(\S+)\s+(.+)$/.exec(value)
+    return scheme ? `${scheme[1]} ${maskApiKey(scheme[2])}` : maskApiKey(value)
+  }
+  return maskApiKey(value)
+}
+
 /**
- * The request as a cURL command. The API key is masked, and a session request carries a Cookie placeholder: a cURL
- * has no browser session, so the user pastes theirs (or their real key), which is the point of copying it masked.
+ * The request as a cURL command. Every credential header is masked by name, whatever its case and whether the Explorer
+ * added it or the user typed it (Authorization, Proxy-Authorization, Cookie, x-api-key), and a header appears once.
+ * A session request carries a Cookie placeholder unless a cookie was typed: a cURL has no browser session, so the user
+ * pastes theirs (or their real key), which is the point of copying it masked.
  */
 export function buildCurl(input: {
   method: string
@@ -171,11 +190,22 @@ export function buildCurl(input: {
   authType: AuthType
   apiKey?: string
 }): string {
+  // one entry per header name, case-insensitive; a later one replaces an earlier one, name and value, and keeps its place
+  const entries = new Map<string, [string, string]>()
+  const put = (name: string, value: string) => {
+    const key = name.toLowerCase()
+    entries.set(key, [name, value])
+  }
+  put('Content-Type', 'application/json')
+  for (const [name, value] of Object.entries(input.headers)) put(name, value)
+  if (input.authType === 'apiKey' && input.apiKey) put('x-api-key', input.apiKey)
+  if (input.authType === 'session' && !entries.has('cookie')) put('Cookie', '<your-session-cookie>')
+
   const lines = [`curl -X ${input.method} ${shellQuote(input.url)}`]
-  const headers: Record<string, string> = { ...input.headers, 'Content-Type': 'application/json' }
-  if (input.authType === 'apiKey' && input.apiKey) headers['x-api-key'] = maskApiKey(input.apiKey)
-  if (input.authType === 'session') headers['Cookie'] = '<your-session-cookie>'
-  for (const [name, value] of Object.entries(headers)) lines.push(`  -H ${shellQuote(`${name}: ${value}`)}`)
+  for (const [key, [name, value]] of entries) {
+    const shown = SENSITIVE_HEADERS.includes(key) && !(key === 'cookie' && value === '<your-session-cookie>') ? maskHeaderValue(name, value) : value
+    lines.push(`  -H ${shellQuote(`${name}: ${shown}`)}`)
+  }
   if (BODY_METHODS.includes(input.method) && input.body?.trim()) lines.push(`  -d ${shellQuote(input.body)}`)
   return lines.join(' \\\n')
 }

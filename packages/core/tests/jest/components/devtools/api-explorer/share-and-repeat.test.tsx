@@ -54,6 +54,43 @@ describe('maskApiKey', () => {
   })
 })
 
+describe('buildCurl masks credentials by header name', () => {
+  const curl = (headers: Record<string, string>, over: Record<string, unknown> = {}) =>
+    buildCurl({ method: 'GET', url: 'http://x.test/a', headers, authType: 'session', ...over } as never)
+
+  test.each([
+    ['Authorization', 'Bearer abcdefgh12345678', 'Bearer abcd••••5678', 'abcdefgh12345678'],
+    ['authorization', 'Basic dXNlcjpwYXNzd29yZA==', 'Basic dXNl••••ZA==', 'dXNlcjpwYXNzd29yZA'],
+    ['PROXY-AUTHORIZATION', 'Bearer proxytoken123456', 'Bearer prox••••3456', 'proxytoken123456'],
+    ['x-api-key', 'sk_live_abcdef123456', 'sk_l••••3456', 'abcdef123456'],
+    ['X-Api-Key', 'sk_live_abcdef123456', 'sk_l••••3456', 'abcdef123456'],
+  ])('a typed %s header is masked', (name, value, shown, secret) => {
+    const out = curl({ [name]: value })
+    expect(out).toContain(`-H '${name}: ${shown}'`)
+    expect(out).not.toContain(secret)
+  })
+
+  test('a typed cookie keeps its names and hides its values, and replaces the placeholder', () => {
+    const out = curl({ Cookie: 'sid=abcdef1234567890; theme=dark' })
+    expect(out).toContain("-H 'Cookie: sid=abcd••••7890; theme=••••'")
+    expect(out).not.toContain('abcdef1234567890')
+    expect(out).not.toContain('<your-session-cookie>')
+  })
+
+  test('a header appears once, whatever its case, and the key of the API key auth wins', () => {
+    const out = curl({ 'X-API-KEY': 'typed-key-1234567890', 'content-type': 'text/plain' }, { authType: 'apiKey', apiKey: 'sk_live_abcdef123456' })
+    expect(out.match(/x-api-key/gi)).toHaveLength(1)
+    expect(out.match(/content-type/gi)).toHaveLength(1)
+    expect(out).toContain('sk_l••••3456')
+    expect(out).not.toContain('typed-key')
+    expect(out).toContain("-H 'content-type: text/plain'")
+  })
+
+  test('a header that is not a credential is left as typed', () => {
+    expect(curl({ 'x-team-id': 't1' })).toContain("-H 'x-team-id: t1'")
+  })
+})
+
 describe('buildCurl', () => {
   test('masks the API key and never prints it', () => {
     const curl = buildCurl({ method: 'GET', url: 'http://x.test/api/v1/a?b=1', headers: {}, authType: 'apiKey', apiKey: 'sk_live_abcdef123456' })
