@@ -83,9 +83,10 @@ test('a scheduled post is hidden from the public reads until its date, and its a
   `)
   const author = { key: await apiKey(owner, 'ua', ['posts:read', 'posts:write']), team: 'team-a' }
 
-  const [publicList, publicAskingAll, publicFuture, publicPast, authorList, authorFuture] = runSteps(appUrl, ownerUrl, [
+  const [publicList, publicAskingAll, publicByIds, publicFuture, publicPast, authorList, authorFuture] = runSteps(appUrl, ownerUrl, [
     { path: '/api/v1/posts' },
     { path: '/api/v1/posts?status=published,draft' },
+    { path: '/api/v1/posts?ids=future' },
     { path: '/api/v1/posts/future' },
     { path: '/api/v1/posts/past' },
     { path: '/api/v1/posts', ...author },
@@ -95,6 +96,8 @@ test('a scheduled post is hidden from the public reads until its date, and its a
   assert.equal(publicList.status, 200, JSON.stringify(publicList))
   assert.deepEqual(ids(publicList), ['past', 'undated'], 'the public list leaves out the scheduled post and the draft')
   assert.deepEqual(ids(publicAskingAll), ['past', 'undated'], 'whatever status the caller asks for')
+  assert.equal(publicByIds.status, 200, JSON.stringify(publicByIds))
+  assert.deepEqual(ids(publicByIds), [], 'nor when the caller names it by id')
   assert.equal(publicFuture.status, 404, JSON.stringify(publicFuture))
   assert.equal(publicPast.status, 200, JSON.stringify(publicPast))
 
