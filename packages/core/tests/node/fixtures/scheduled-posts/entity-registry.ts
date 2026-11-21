@@ -9,6 +9,7 @@ const posts = {
     { name: 'title', type: 'text', required: true, display: { label: 'Title' }, api: { searchable: true, sortable: true, readOnly: false } },
     { name: 'status', type: 'select', required: true, options: [{ value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }], display: { label: 'Status' }, api: { sortable: true, readOnly: false } },
     { name: 'publishedAt', type: 'datetime', required: false, display: { label: 'Published at' }, api: { sortable: true, readOnly: false } },
+    { name: 'hashtags', type: 'json', required: false, display: { label: 'Hashtags' }, api: { readOnly: false } },
   ],
 }
 

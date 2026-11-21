@@ -2985,6 +2985,12 @@ async function handleDistinctJsonbField(
     queryParams.push(userId)
   }
 
+  // Anonymous public access: the values of published rows only, whose publishedAt (if the entity has one) has come,
+  // the same rule as the anonymous list (#171, #542)
+  if (entityConfig.access?.public === true && userId === null && entityConfig.fields.some((f: EntityField) => f.name === 'status')) {
+    query += ` AND "status" = 'published'${publishedAtClause(entityConfig)}`
+  }
+
   query += `) as elem ORDER BY elem.value ASC LIMIT $${paramIndex++}`
   queryParams.push(limit)
 

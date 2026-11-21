@@ -2,6 +2,7 @@
  * A scheduled item (status `published`, `publishedAt` still to come) of a public entity is not public until its date
  * (#542): the anonymous list and single read of core's real entity routes (fixtures/scheduled-posts/driver.mts) leave
  * it out, while its author, through the same routes with an API key and the team header, still lists and reads it.
+ * The distinct values of a JSONB field follow the same rule.
  * A published row with no date counts as published. Runs against a throwaway cluster with core's migrations, on the
  * nextspark_app cutover.
  *
@@ -66,7 +67,7 @@ test('a scheduled post is hidden from the public reads until its date, and its a
     -- the posts table with the policies of the blog template's migration
     CREATE TABLE posts (
       id TEXT PRIMARY KEY, "userId" TEXT REFERENCES users(id), "teamId" TEXT NOT NULL REFERENCES teams(id),
-      title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', "publishedAt" TIMESTAMPTZ,
+      title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', "publishedAt" TIMESTAMPTZ, hashtags JSONB,
       "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(), "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now());
     CREATE INDEX posts_status_published_at_idx ON posts (status, "publishedAt" DESC);
     ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
@@ -75,15 +76,15 @@ test('a scheduled post is hidden from the public reads until its date, and its a
     CREATE POLICY posts_public_select ON posts FOR SELECT TO anon USING (status = 'published' AND "publishedAt" <= NOW());
     GRANT SELECT, INSERT, UPDATE, DELETE ON posts TO nextspark_app;
 
-    INSERT INTO posts (id, "userId", "teamId", title, status, "publishedAt") VALUES
-      ('past', 'ua', 'team-a', 'Out already', 'published', now() - interval '1 day'),
-      ('undated', 'ua', 'team-a', 'Published, no date', 'published', NULL),
-      ('future', 'ua', 'team-a', 'Scheduled', 'published', now() + interval '7 days'),
-      ('draft', 'ua', 'team-a', 'Draft', 'draft', NULL);
+    INSERT INTO posts (id, "userId", "teamId", title, status, "publishedAt", hashtags) VALUES
+      ('past', 'ua', 'team-a', 'Out already', 'published', now() - interval '1 day', '["shared", "past-tag"]'),
+      ('undated', 'ua', 'team-a', 'Published, no date', 'published', NULL, '["undated-tag"]'),
+      ('future', 'ua', 'team-a', 'Scheduled', 'published', now() + interval '7 days', '["shared", "future-tag"]'),
+      ('draft', 'ua', 'team-a', 'Draft', 'draft', NULL, '["draft-tag"]');
   `)
   const author = { key: await apiKey(owner, 'ua', ['posts:read', 'posts:write']), team: 'team-a' }
 
-  const [publicList, publicAskingAll, publicByIds, publicFuture, publicPast, authorList, authorFuture] = runSteps(appUrl, ownerUrl, [
+  const [publicList, publicAskingAll, publicByIds, publicFuture, publicPast, authorList, authorFuture, publicTags, authorTags] = runSteps(appUrl, ownerUrl, [
     { path: '/api/v1/posts' },
     { path: '/api/v1/posts?status=published,draft' },
     { path: '/api/v1/posts?ids=future' },
@@ -91,7 +92,10 @@ test('a scheduled post is hidden from the public reads until its date, and its a
     { path: '/api/v1/posts/past' },
     { path: '/api/v1/posts', ...author },
     { path: '/api/v1/posts/future', ...author },
+    { path: '/api/v1/posts?fields=hashtags&distinct=true' },
+    { path: '/api/v1/posts?fields=hashtags&distinct=true', ...author },
   ])
+  const tags = (result: Result) => ((result.body.data ?? []) as { value: string }[]).map(row => row.value).sort()
 
   assert.equal(publicList.status, 200, JSON.stringify(publicList))
   assert.deepEqual(ids(publicList), ['past', 'undated'], 'the public list leaves out the scheduled post and the draft')
@@ -104,6 +108,12 @@ test('a scheduled post is hidden from the public reads until its date, and its a
   assert.equal(authorList.status, 200, JSON.stringify(authorList))
   assert.deepEqual(ids(authorList), ['draft', 'future', 'past', 'undated'], 'the author lists the scheduled post')
   assert.equal(authorFuture.status, 200, JSON.stringify(authorFuture))
+
+  // the distinct values of a field follow the same rule: the public ones come from published rows whose date has come
+  assert.equal(publicTags.status, 200, JSON.stringify(publicTags))
+  assert.deepEqual(tags(publicTags), ['past-tag', 'shared', 'undated-tag'], JSON.stringify(publicTags))
+  assert.equal(authorTags.status, 200, JSON.stringify(authorTags))
+  assert.deepEqual(tags(authorTags), ['draft-tag', 'future-tag', 'past-tag', 'shared', 'undated-tag'], JSON.stringify(authorTags))
 
   // the date comes: the same post is public on the next read
   await owner.query(`UPDATE posts SET "publishedAt" = now() - interval '1 minute' WHERE id = 'future'`)
