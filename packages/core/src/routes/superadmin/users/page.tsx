@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -28,11 +28,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { UsersTable } from "@nextsparkjs/core/components/users/tables/UsersTable";
+import { UsersTable, type UserSortKey } from "@nextsparkjs/core/components/users/tables/UsersTable";
 import { SuperAdminsTable } from "@nextsparkjs/core/components/users/tables/SuperAdminsTable";
 import { rateLimitedMessage } from "@nextsparkjs/core/components/users/tables/action-error";
 import { useSession } from "@nextsparkjs/core/lib/auth-client";
 import type { User } from "@nextsparkjs/core/types/user.types";
+import type { SortState } from "@nextsparkjs/core/components/users/tables/SortableHead";
 import {
   SearchInput,
   PaginationControls,
@@ -104,6 +105,7 @@ function UsersPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+  const [sort, setSort] = useState<SortState<UserSortKey>>({ key: "createdAt", order: "desc" });
   const { data: session } = useSession();
 
   // Build query params
@@ -113,10 +115,12 @@ function UsersPage() {
     if (roleFilter && roleFilter !== "__all__") params.set("role", roleFilter);
     if (statusFilter && statusFilter !== "__all__") params.set("status", statusFilter);
     params.set("tab", activeTab);
+    params.set("sort", sort.key);
+    params.set("order", sort.order);
     params.set("page", String(page));
     params.set("limit", String(limit));
     return params.toString();
-  }, [search, roleFilter, statusFilter, activeTab, page, limit]);
+  }, [search, roleFilter, statusFilter, activeTab, page, limit, sort]);
 
   // Fetch users data from API
   const {
@@ -125,7 +129,7 @@ function UsersPage() {
     error,
     refetch,
   } = useQuery<UsersData>({
-    queryKey: ["superadmin-users", search, roleFilter, statusFilter, activeTab, page, limit],
+    queryKey: ["superadmin-users", search, roleFilter, statusFilter, activeTab, page, limit, sort],
     queryFn: async () => {
       const queryString = getQueryParams();
       const response = await fetch(withBasePath(`/api/superadmin/users?${queryString}`));
@@ -136,6 +140,7 @@ function UsersPage() {
     },
     retry: 2,
     staleTime: 30000,
+    placeholderData: keepPreviousData,
   });
 
   // Transform users data to add fullName property
@@ -177,6 +182,12 @@ function UsersPage() {
 
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value === "__all__" ? "" : value);
+    setPage(1);
+  };
+
+  // Handle sort change - reset page
+  const handleSortChange = (next: SortState<UserSortKey>) => {
+    setSort(next);
     setPage(1);
   };
 
@@ -484,6 +495,8 @@ function UsersPage() {
                 users={usersData?.regularUsers || []}
                 isLoading={isLoading}
                 onRefresh={() => refetch()}
+                sort={sort}
+                onSortChange={handleSortChange}
               />
               {usersData?.pagination && (
                 <PaginationControls

@@ -17,6 +17,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sel } from '../../../lib/test';
 import { UserActionsMenu, useUserActions } from './UserActions';
+import { SortableHead, type SortState } from './SortableHead';
+import { CopyIdButton } from './CopyIdButton';
 import { UserRoleBadge, UserStatusBadges, UserTeamLinks } from './UserBadges';
 
 interface User {
@@ -35,10 +37,16 @@ interface User {
   teams?: { id: string; name: string }[];
 }
 
+/** The columns the users list sorts by (the server sorts) */
+export type UserSortKey = 'name' | 'email' | 'createdAt';
+
 interface UsersTableProps {
   users: User[];
   isLoading?: boolean;
   onRefresh?: () => void;
+  /** With both, the user, email and joined headers sort the list */
+  sort?: SortState<UserSortKey>;
+  onSortChange?: (sort: SortState<UserSortKey>) => void;
 }
 
 /**
@@ -47,7 +55,7 @@ interface UsersTableProps {
  * Displays regular users (non-superadmin) in a comprehensive table format.
  * Includes role badges, verification status, and action menus.
  */
-export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
+export function UsersTable({ users, isLoading, onRefresh, sort, onSortChange }: UsersTableProps) {
   const t = useTranslations('superadmin.users');
   const tPage = useTranslations('superadmin.usersPage');
   const tShared = useTranslations('superadmin.shared');
@@ -59,6 +67,12 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   const handleRowClick = (userId: string) => {
     router.push(`/superadmin/users/${userId}`);
   };
+
+  // A header that sorts when the page passes the sort state, a plain one otherwise
+  const sortHead = (key: UserSortKey, label: string, firstOrder: 'asc' | 'desc' = 'asc') =>
+    sort && onSortChange
+      ? <SortableHead label={label} sortKey={key} sort={sort} onSort={onSortChange} firstOrder={firstOrder} />
+      : <TableHead>{label}</TableHead>;
 
   // Generate user initials for avatar
   const getUserInitials = (user: User) => {
@@ -106,12 +120,12 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('table.user')}</TableHead>
-            <TableHead>{t('table.email')}</TableHead>
+            {sortHead('name', t('table.user'))}
+            {sortHead('email', t('table.email'))}
             <TableHead>{t('table.role')}</TableHead>
             <TableHead>{t('table.status')}</TableHead>
             <TableHead>{t('table.teams')}</TableHead>
-            <TableHead>{t('table.joined')}</TableHead>
+            {sortHead('createdAt', t('table.joined'), 'desc')}
             <TableHead className="text-right">{t('table.actions')}</TableHead>
           </TableRow>
         </TableHeader>
@@ -120,7 +134,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
             <TableRow
               key={user.id}
               data-cy={sel('superadmin.users.table.row', { id: user.id })}
-              className="cursor-pointer hover:bg-muted/50"
+              className="group cursor-pointer hover:bg-muted/50"
               onClick={() => handleRowClick(user.id)}
             >
               {/* User Info */}
@@ -138,8 +152,9 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
                         {user.fullName || tPage('noName')}
                       </Link>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="flex items-center text-sm text-muted-foreground">
                       {t('table.id', { id: `${user.id.slice(0, 8)}...` })}
+                      <CopyIdButton id={user.id} />
                     </div>
                   </div>
                 </div>

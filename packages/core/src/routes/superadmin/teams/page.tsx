@@ -21,7 +21,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { TeamsTable } from "@nextsparkjs/core/components/superadmin/tables/TeamsTable";
+import { TeamsTable, type TeamSortKey } from "@nextsparkjs/core/components/superadmin/tables/TeamsTable";
+import type { SortState } from "@nextsparkjs/core/components/users/tables/SortableHead";
 import {
   SearchInput,
   PaginationControls,
@@ -43,6 +44,13 @@ function TeamsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+  const [sort, setSort] = useState<SortState<TeamSortKey>>({ key: "createdAt", order: "desc" });
+
+  // Handle sort change - reset page
+  const handleSortChange = (next: SortState<TeamSortKey>) => {
+    setSort(next);
+    setPage(1);
+  };
 
   // Handle tab change - reset page
   const handleTabChange = (tab: string) => {
@@ -74,6 +82,8 @@ function TeamsPage() {
   } = useAdminTeams({
     search: searchQuery || undefined,
     type: activeTab,
+    sort: sort.key,
+    order: sort.order,
     page,
     limit,
   });
@@ -238,7 +248,7 @@ function TeamsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <TeamsTable teams={filteredTeams} isLoading={isLoading} />
+              <TeamsTable teams={filteredTeams} isLoading={isLoading} sort={sort} onSortChange={handleSortChange} />
               {pagination && (
                 <PaginationControls
                   page={pagination.page}
@@ -266,7 +276,7 @@ function TeamsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <TeamsTable teams={filteredTeams} isLoading={isLoading} />
+              <TeamsTable teams={filteredTeams} isLoading={isLoading} sort={sort} onSortChange={handleSortChange} />
               {pagination && (
                 <PaginationControls
                   page={pagination.page}

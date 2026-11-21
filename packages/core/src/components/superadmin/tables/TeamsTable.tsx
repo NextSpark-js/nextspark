@@ -24,6 +24,8 @@ import {
 import { Button } from '../../ui/button';
 import { Avatar, AvatarFallback } from '../../ui/avatar';
 import { Badge } from '../../ui/badge';
+import { SortableHead, type SortState } from '../../users/tables/SortableHead';
+import { CopyIdButton } from '../../users/tables/CopyIdButton';
 import {
   MoreHorizontal,
   Users,
@@ -49,9 +51,15 @@ interface Team {
   updatedAt: string;
 }
 
+/** The columns the teams list sorts by (the server sorts) */
+export type TeamSortKey = 'name' | 'members' | 'createdAt';
+
 interface TeamsTableProps {
   teams: Team[];
   isLoading?: boolean;
+  /** With both, the team, members and created headers sort the list */
+  sort?: SortState<TeamSortKey>;
+  onSortChange?: (sort: SortState<TeamSortKey>) => void;
 }
 
 /**
@@ -60,7 +68,7 @@ interface TeamsTableProps {
  * Displays all teams in a comprehensive table format for superadmins.
  * Includes team type badges, owner info, member counts, and actions.
  */
-export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
+export function TeamsTable({ teams, isLoading, sort, onSortChange }: TeamsTableProps) {
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
   const t = useTranslations('superadmin.teamsTable');
   const locale = useLocale();
@@ -70,6 +78,12 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
   const handleRowClick = (teamId: string) => {
     router.push(`/superadmin/teams/${teamId}`);
   };
+
+  // A header that sorts when the page passes the sort state, a plain one otherwise
+  const sortHead = (key: TeamSortKey, label: string, firstOrder: 'asc' | 'desc' = 'asc') =>
+    sort && onSortChange
+      ? <SortableHead label={label} sortKey={key} sort={sort} onSort={onSortChange} firstOrder={firstOrder} />
+      : <TableHead>{label}</TableHead>;
 
   // Generate team initials for avatar
   const getTeamInitials = (name: string) => {
@@ -115,11 +129,11 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columns.team')}</TableHead>
+            {sortHead('name', t('columns.team'))}
             <TableHead>{t('columns.owner')}</TableHead>
-            <TableHead>{t('columns.members')}</TableHead>
+            {sortHead('members', t('columns.members'), 'desc')}
             <TableHead>{t('columns.plan')}</TableHead>
-            <TableHead>{t('columns.created')}</TableHead>
+            {sortHead('createdAt', t('columns.created'), 'desc')}
             <TableHead className="text-right">{t('columns.actions')}</TableHead>
           </TableRow>
         </TableHeader>
@@ -128,7 +142,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
               <TableRow
                 key={team.id}
                 data-cy={sel('superadmin.teams.table.row', { id: team.id })}
-                className="cursor-pointer hover:bg-muted/50"
+                className="group cursor-pointer hover:bg-muted/50"
                 style={{ cursor: 'pointer' }}
                 onClick={() => handleRowClick(team.id)}
               >
@@ -146,8 +160,9 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                           {team.name}
                         </Link>
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="flex items-center text-sm text-muted-foreground">
                         {t('id', { id: `${team.id.slice(0, 12)}...` })}
+                        <CopyIdButton id={team.id} />
                       </div>
                     </div>
                   </div>

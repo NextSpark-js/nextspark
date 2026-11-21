@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiError, searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response';
 import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern';
 import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
+import { parseSort } from '@nextsparkjs/core/lib/api/list-sort';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import type { User } from '@nextsparkjs/core/types/user.types';
@@ -19,6 +20,13 @@ interface GlobalCounts {
   active: number;
 }
 
+// The columns the list sorts by (`sort=name|email|createdAt`, `order=asc|desc`): a user with no name sorts by email
+const SORT_COLUMNS = {
+  name: `LOWER(COALESCE(NULLIF(TRIM(CONCAT("firstName", ' ', "lastName")), ''), email))`,
+  email: 'LOWER(email)',
+  createdAt: '"createdAt"'
+};
+
 // The role an admin acts on: a suspended user is the role they come back with (restoredRole)
 const EFFECTIVE_ROLE_SQL = `(CASE WHEN role = '${SUSPENDED_ROLE}' THEN COALESCE("roleBeforeSuspension", 'member') ELSE role END)`;
 
@@ -33,6 +41,7 @@ const EFFECTIVE_ROLE_SQL = `(CASE WHEN role = '${SUSPENDED_ROLE}' THEN COALESCE(
  * - role: Filter by role (member, developer): a suspended user counts as the role they come back with
  * - status: Filter by status (active, suspended, unverified, verified): suspended is the account state, unverified
  *   and verified the email's
+ * - sort: name, email or createdAt (default createdAt); order: asc or desc (default desc)
  * - tab: Which tab to paginate (users, superadmins, all)
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 20)
@@ -65,6 +74,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const statusFilter = searchParams.get('status') || '';
     const tab = searchParams.get('tab') || 'users'; // users, superadmins, all
     const { page, limit, offset } = parsePaginationParams(request, 20);
+    const sort = parseSort(request, SORT_COLUMNS, { key: 'createdAt', order: 'desc' });
 
     const tooLong = searchTermTooLongError(search);
     if (tooLong) return tooLong;
@@ -149,7 +159,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
          ) x) AS teams
       FROM "users"
       ${regularWhere.whereClause}
-      ORDER BY "createdAt" DESC
+      ORDER BY ${sort.orderBy}
       ${tab === 'users' ? `LIMIT $${regularWhere.params.length + 1} OFFSET $${regularWhere.params.length + 2}` : ''}
     `;
 
@@ -179,7 +189,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
          ) x) AS teams
       FROM "users"
       ${superadminWhere.whereClause}
-      ORDER BY "createdAt" DESC
+      ORDER BY ${sort.orderBy}
       ${tab === 'superadmins' ? `LIMIT $${superadminWhere.params.length + 1} OFFSET $${superadminWhere.params.length + 2}` : ''}
     `;
 
@@ -326,6 +336,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         totalPages,
         hasMore: page < totalPages
       },
+      sort: { key: sort.key, order: sort.order },
       filters: {
         search,
         role: roleFilter,

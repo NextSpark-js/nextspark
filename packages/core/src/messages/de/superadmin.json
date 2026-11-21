@@ -273,7 +273,9 @@
       "lastUpdated": "Zuletzt aktualisiert: {date}",
       "requestedBy": "Angefordert von: {name}",
       "source": "Quelle: {source}"
-    }
+    },
+    "copyId": "ID kopieren",
+    "copied": "Kopiert"
   },
   "layout": {
     "mobileTitle": "Super Admin",

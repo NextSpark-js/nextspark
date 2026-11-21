@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiError, searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response';
 import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern';
 import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
+import { parseSort } from '@nextsparkjs/core/lib/api/list-sort';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { SYSTEM_ADMIN_TEAM_ID } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
+
+// The columns the list sorts by (`sort=name|members|createdAt`, `order=asc|desc`)
+const SORT_COLUMNS = {
+  name: 'LOWER(t.name)',
+  members: 'COUNT(tm.id)',
+  createdAt: 't."createdAt"'
+};
 
 interface TeamWithStats {
   id: string;
@@ -30,6 +38,7 @@ interface TeamWithStats {
  *
  * Query params:
  * - search: Filter by team name or owner email
+ * - sort: name, members or createdAt (default createdAt); order: asc or desc (default desc)
  * - type: "user" (exclude system admin team) or "system" (only system admin team)
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 20)
@@ -59,6 +68,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const search = searchParams.get('search') || '';
     const type = searchParams.get('type') as 'user' | 'system' | null;
     const { page, limit, offset } = parsePaginationParams(request, 20);
+    const sort = parseSort(request, SORT_COLUMNS, { key: 'createdAt', order: 'desc' }, 't.id');
 
     const tooLong = searchTermTooLongError(search);
     if (tooLong) return tooLong;
@@ -117,7 +127,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       ${whereClause}
       GROUP BY t.id, t.name, t."ownerId", u."firstName", u."lastName", u.email, t."createdAt", t."updatedAt",
                sub."planName", sub."planSlug", sub."subscriptionStatus"
-      ORDER BY t."createdAt" DESC
+      ORDER BY ${sort.orderBy}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
