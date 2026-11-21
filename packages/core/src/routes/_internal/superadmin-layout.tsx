@@ -8,6 +8,7 @@ import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-che
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
+import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Loader2 } from 'lucide-react'
 import { Metadata } from "next";
@@ -42,41 +43,43 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
   const pluginNavItems = getAllPluginNavItems('superadmin')
 
   return (
-    <DashboardProviders>
-      {/* The theme saved to the account, before the area paints (#495) */}
-      <AccountTheme />
-      <SuperAdminGuard serverChecked={serverChecked}>
-          <div className="flex h-screen bg-background" data-cy="superadmin-container">
-            {/* Sidebar - Hidden on mobile, visible on desktop */}
-            <div className="hidden lg:block">
-              <SuperadminSidebar pluginItems={pluginNavItems} />
-            </div>
-
-            {/* Main content area */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Mobile header for Superadmin - Only visible on mobile */}
-              <div className="lg:hidden bg-card border-b border-border p-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-8 h-8 bg-red-100 rounded-lg">
-                    <div className="h-5 w-5 bg-red-600 rounded-sm"></div>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-red-600">{t('mobileTitle')}</p>
-                    <p className="text-xs text-muted-foreground">{t('mobileSubtitle')}</p>
-                  </div>
-                </div>
+    <ThemeArea>
+      <DashboardProviders>
+        {/* The theme saved to the account, before the area paints (#495) */}
+        <AccountTheme />
+        <SuperAdminGuard serverChecked={serverChecked}>
+            <div className="flex h-screen bg-background" data-cy="superadmin-container">
+              {/* Sidebar - Hidden on mobile, visible on desktop */}
+              <div className="hidden lg:block">
+                <SuperadminSidebar pluginItems={pluginNavItems} />
               </div>
 
-              {/* Content area with scrolling */}
-              <main className="flex-1 overflow-y-auto">
-                <div className="container mx-auto p-6 max-w-7xl">
-                  {children}
+              {/* Main content area */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Mobile header for Superadmin - Only visible on mobile */}
+                <div className="lg:hidden bg-card border-b border-border p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-8 h-8 bg-red-100 rounded-lg">
+                      <div className="h-5 w-5 bg-red-600 rounded-sm"></div>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-red-600">{t('mobileTitle')}</p>
+                      <p className="text-xs text-muted-foreground">{t('mobileSubtitle')}</p>
+                    </div>
+                  </div>
                 </div>
-              </main>
+
+                {/* Content area with scrolling */}
+                <main className="flex-1 overflow-y-auto">
+                  <div className="container mx-auto p-6 max-w-7xl">
+                    {children}
+                  </div>
+                </main>
+              </div>
             </div>
-          </div>
-      </SuperAdminGuard>
-    </DashboardProviders>
+        </SuperAdminGuard>
+      </DashboardProviders>
+    </ThemeArea>
   )
 }
 
@@ -144,12 +147,14 @@ export function guardSuperadminLayout<P extends SuperadminLayoutProps>(ProjectLa
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       }>
-        <DashboardProviders>
-          <AccountTheme />
-          <SuperAdminGuard serverChecked={serverChecked}>
-            <ProjectLayout {...props} />
-          </SuperAdminGuard>
-        </DashboardProviders>
+        <ThemeArea>
+          <DashboardProviders>
+            <AccountTheme />
+            <SuperAdminGuard serverChecked={serverChecked}>
+              <ProjectLayout {...props} />
+            </SuperAdminGuard>
+          </DashboardProviders>
+        </ThemeArea>
       </Suspense>
     )
   }

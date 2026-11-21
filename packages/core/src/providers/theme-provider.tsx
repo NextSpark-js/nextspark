@@ -11,6 +11,10 @@
  * client component whose chunk is still downloading) makes React discard that boundary's server HTML and render it
  * again, losing what the visitor typed (#371). Here the preference is read at the first render in the browser, so the
  * mount effect finds nothing to change.
+ *
+ * Outside the areas with a session the page has one theme, `publicTheme` (#510): the blocking script and the first render in
+ * the browser tell the areas apart by the location (`areaPaths`), so the server reads no pathname, and the areas wrap
+ * their pages in `ThemeArea`, which this provider follows on client navigations.
  */
 
 /*! Portions adapted from next-themes 0.4.6 (https://github.com/pacocoursey/next-themes), under this license:
@@ -97,6 +101,17 @@ export interface ThemeProviderProps extends React.PropsWithChildren {
    * Takes precedence over the plain `forcedTheme` prop.
    */
   forcedThemeRoutes?: ForcedThemeRoutes
+  /**
+   * The one theme of every page outside `areaPaths` (#510): the public pages look the same for every visitor, whatever
+   * their stored choice, their system or their account says. A forced theme still wins over it.
+   */
+  publicTheme?: string | undefined
+  /**
+   * Path prefixes (base path included) of the areas with a session, where the visitor's choice applies. The blocking
+   * script matches them against the browser's location, so the server render reads no pathname; a client navigation
+   * is followed by the areas' `ThemeArea`.
+   */
+  areaPaths?: string[] | undefined
 }
 
 const COLOR_SCHEMES = ["light", "dark"]
@@ -105,9 +120,31 @@ const DEFAULT_THEMES = ["light", "dark"]
 const isServer = typeof window === "undefined"
 
 const ThemeContext = React.createContext<UseThemeProps | undefined>(undefined)
+/** The value inside an area with a session (no public theme), and how ThemeArea tells the provider it is mounted */
+const AreaThemeContext = React.createContext<[UseThemeProps, (inArea: boolean) => void] | undefined>(undefined)
+const InAreaContext = React.createContext(false)
 const defaultContext: UseThemeProps = { setTheme: () => {}, themes: [] }
 
-export const useTheme = (): UseThemeProps => React.useContext(ThemeContext) ?? defaultContext
+export const useTheme = (): UseThemeProps => {
+  const value = React.useContext(ThemeContext)
+  const area = React.useContext(AreaThemeContext)
+  return (React.useContext(InAreaContext) ? area?.[0] : value) ?? value ?? defaultContext
+}
+
+/**
+ * Wraps an area with a session (dashboard, devtools, superadmin): inside it `useTheme()` answers without the public
+ * theme, and while it is mounted the provider applies the visitor's theme (#510).
+ */
+export function ThemeArea({ children }: React.PropsWithChildren) {
+  const setInArea = React.useContext(AreaThemeContext)?.[1]
+  React.useLayoutEffect(() => {
+    setInArea?.(true)
+    return () => setInArea?.(false)
+  }, [setInArea])
+  return <InAreaContext.Provider value>{children}</InAreaContext.Provider>
+}
+
+const inAreaPath = (areaPaths: string[] | undefined, path: string) => !!areaPaths?.some((p) => path === p || path.startsWith(p + "/"))
 
 const getSystemTheme = (media?: MediaQueryList | MediaQueryListEvent): "dark" | "light" =>
   (media ?? window.matchMedia(MEDIA)).matches ? "dark" : "light"
@@ -145,9 +182,14 @@ const script = (
   value: Record<string, string> | undefined,
   enableSystem: boolean,
   enableColorScheme: boolean,
+  publicTheme?: string,
+  areaPaths?: string[],
 ) => {
   const el = document.documentElement
   const systemThemes = ["light", "dark"]
+  const path = location.pathname
+  // Outside the areas with a session the page has one theme (#510)
+  if (!forcedTheme && publicTheme && !(areaPaths || []).some((p) => path === p || path.startsWith(p + "/"))) forcedTheme = publicTheme
   function updateDOM(theme: string) {
     const attributes = Array.isArray(attribute) ? attribute : [attribute]
     attributes.forEach((attr) => {
@@ -177,10 +219,10 @@ const script = (
 }
 
 type ThemeScriptProps = Required<Pick<ThemeProviderProps, "attribute" | "storageKey" | "defaultTheme" | "themes" | "enableSystem" | "enableColorScheme">> &
-  Pick<ThemeProviderProps, "forcedTheme" | "value" | "nonce" | "scriptProps">
+  Pick<ThemeProviderProps, "forcedTheme" | "value" | "nonce" | "scriptProps" | "publicTheme" | "areaPaths">
 
-const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, attribute, enableSystem, enableColorScheme, defaultTheme, value, themes, nonce, scriptProps }: ThemeScriptProps) {
-  const args = JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme]).slice(1, -1)
+const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, attribute, enableSystem, enableColorScheme, defaultTheme, value, themes, nonce, scriptProps, publicTheme, areaPaths }: ThemeScriptProps) {
+  const args = JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme, publicTheme, areaPaths]).slice(1, -1)
   return (
     <script
       {...scriptProps}
@@ -193,7 +235,7 @@ const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, a
 })
 
 function ColorModeProvider({
-  forcedTheme,
+  forcedTheme: forcedThemeProp,
   disableTransitionOnChange = false,
   enableSystem = true,
   enableColorScheme = true,
@@ -205,8 +247,15 @@ function ColorModeProvider({
   children,
   nonce,
   scriptProps,
+  publicTheme,
+  areaPaths,
 }: Omit<ThemeProviderProps, "forcedThemeRoutes">) {
   const [theme, setThemeState] = React.useState(() => getStoredTheme(storageKey, defaultTheme))
+  // Whether the page is in an area with a session: the location at the first render in the browser, as the blocking
+  // script decided, then ThemeArea on client navigations. It changes only what is applied, never what is rendered,
+  // so the server (which reads no pathname) and the hydration render agree.
+  const [inArea, setInArea] = React.useState(() => !isServer && inAreaPath(areaPaths, location.pathname))
+  const forcedTheme = forcedThemeProp ?? (inArea ? undefined : publicTheme)
   // Read at the first render in the browser, not first in the mount effect: the effect below then sets the same
   // value, React bails out, and the context does not change after hydration (#371). The server has no preference.
   const [systemTheme, setSystemTheme] = React.useState<"dark" | "light" | undefined>(() => (isServer ? undefined : getSystemTheme()))
@@ -279,30 +328,37 @@ function ColorModeProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- applyTheme changes only with the nonce
   }, [forcedTheme, theme])
 
-  const providerValue = React.useMemo<UseThemeProps>(() => ({
+  // Two values that do not depend on `inArea`: outside the areas the public theme is forced, inside only a forced one
+  const areaValue = React.useMemo<UseThemeProps>(() => ({
     theme,
     setTheme,
-    forcedTheme,
+    forcedTheme: forcedThemeProp,
     resolvedTheme: theme === "system" ? systemTheme : theme,
     themes: enableSystem ? [...themes, "system"] : themes,
     systemTheme: enableSystem ? systemTheme : undefined,
-  }), [theme, setTheme, forcedTheme, systemTheme, enableSystem, themes])
+  }), [theme, setTheme, forcedThemeProp, systemTheme, enableSystem, themes])
+  const providerValue = React.useMemo<UseThemeProps>(() => ({ ...areaValue, forcedTheme: forcedThemeProp ?? publicTheme }), [areaValue, forcedThemeProp, publicTheme])
+  const area = React.useMemo<[UseThemeProps, (inArea: boolean) => void]>(() => [areaValue, setInArea], [areaValue])
 
   return (
     <ThemeContext.Provider value={providerValue}>
-      <ThemeScript
-        forcedTheme={forcedTheme}
-        storageKey={storageKey}
-        attribute={attribute}
-        enableSystem={enableSystem}
-        enableColorScheme={enableColorScheme}
-        defaultTheme={defaultTheme}
-        value={value}
-        themes={themes}
-        nonce={nonce}
-        scriptProps={scriptProps}
-      />
-      {children}
+      <AreaThemeContext.Provider value={area}>
+        <ThemeScript
+          forcedTheme={forcedThemeProp}
+          publicTheme={publicTheme}
+          areaPaths={areaPaths}
+          storageKey={storageKey}
+          attribute={attribute}
+          enableSystem={enableSystem}
+          enableColorScheme={enableColorScheme}
+          defaultTheme={defaultTheme}
+          value={value}
+          themes={themes}
+          nonce={nonce}
+          scriptProps={scriptProps}
+        />
+        {children}
+      </AreaThemeContext.Provider>
     </ThemeContext.Provider>
   )
 }

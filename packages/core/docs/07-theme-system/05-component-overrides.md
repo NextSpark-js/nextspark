@@ -410,7 +410,6 @@ import { BrandLogo } from '@/components/custom/BrandLogo'
 'use client'
 
 import { BrandLogo } from './BrandLogo'
-import { ThemeToggle } from '@nextsparkjs/core/components/app/misc/ThemeToggle'
 import { Button } from '@/core/components/ui/button'
 import Link from 'next/link'
 
@@ -432,8 +431,8 @@ export function CustomHeader() {
           </Link>
         </nav>
         
+        {/* No theme toggle: public pages render in one theme (#510) */}
         <div className="flex items-center gap-4">
-          <ThemeToggle />
           <Button asChild>
             <Link href="/login">Sign In</Link>
           </Button>

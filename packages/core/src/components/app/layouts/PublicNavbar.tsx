@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useAuth } from '../../../hooks/useAuth'
 import { useSessionHint } from '../../../hooks/useSessionHint'
 import { Button } from '../../ui/button'
-import { ThemeToggle } from '../misc/ThemeToggle'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { sel } from '@nextsparkjs/core/selectors/public'
@@ -154,13 +153,11 @@ export function PublicNavbar() {
           
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-2">
-            <ThemeToggle />
             <AuthActions layout="desktop" />
           </div>
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-2 md:hidden">
-            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"

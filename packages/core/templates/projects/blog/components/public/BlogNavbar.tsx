@@ -9,8 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X, Moon, Sun, Search } from 'lucide-react'
-import { useTheme } from '@nextsparkjs/core/providers/theme-provider'
+import { Menu, X, Search } from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 
@@ -25,13 +24,6 @@ export function BlogNavbar({
 }: BlogNavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const { theme, setTheme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10)
@@ -40,10 +32,6 @@ export function BlogNavbar({
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
-
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-  }
 
   return (
     <header
@@ -106,23 +94,6 @@ export function BlogNavbar({
             >
               <Search className="h-4 w-4" />
             </Button>
-
-            {/* Theme Toggle */}
-            {mounted && (
-              <Button
-                variant="ghost"
-                size="icon"
-                data-cy="blog-navbar-theme-toggle"
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-              >
-                {resolvedTheme === 'dark' ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-              </Button>
-            )}
 
             {/* Dashboard Link */}
             <Link href="/dashboard" data-cy="blog-navbar-dashboard-link">

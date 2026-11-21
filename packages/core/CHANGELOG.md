@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading from 0.1.0-beta.205
 
+- **Public pages now render in one theme for every visitor (#510).** It is `defaultMode` from `theme.config.ts` when it is `light` or `dark`, and `light` when it is `'system'` (the default). The visitor's stored choice, their system scheme and their account's theme apply only in `/dashboard`, `/devtools` and `/superadmin`. If your project's public pages should be dark, set `defaultMode: 'dark'`; `forcedThemeRoutes` still forces a theme per route prefix. A theme toggle of your own on a public page no longer changes anything there: remove it (a project created from the blog template has one in `components/public/BlogNavbar.tsx`; the template no longer does). Nothing else to change: the root layout gets it from core.
 - **A project with an exact `next` (`"next": "16.4.5"`: every project created with `create-nextspark-app` 0.1.0-beta.204, or one edited by hand) keeps missing later 16.4.x patches. Run `pnpm add next@~<your version>` (for example `pnpm add next@~16.4.5`) by hand.** `update-core` is the one installed in your project, so an update to this release runs the previous one and does not do it; from the updates that run with the `update-core` of this release onwards, it puts the tilde on an exact `next` itself and prints `next 16.4.5 -> ~16.4.5` (#490).
+
+### Changed
+
+- **Public pages render in one fixed theme by default, and the theme toggle and the account's theme apply only in the areas with a session (#510).** The theme is `defaultMode` when it is `light` or `dark` and `light` when it is `'system'`; a route in `forcedThemeRoutes`, or `allowUserToggle: false`, still wins. `themeProviderProps()` gives the root theme provider `publicTheme` and `areaPaths` (`/dashboard`, `/devtools`, `/superadmin` with the base path): the inline theme script decides from the browser's location, so the server render reads no pathname and public routes keep their rendering mode, and the dashboard, devtools and superadmin layouts wrap their pages in the new `ThemeArea`, which the provider follows on client navigations and inside which `useTheme()` answers without the public theme. The public navbar of core and the blog template's navbar no longer show a theme toggle.
 
 ### Fixed
 

@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { DeveloperGuard } from "@nextsparkjs/core/components/app/guards/DeveloperGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
+import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
 import { DevtoolsSidebar } from "@nextsparkjs/core/components/devtools/DevtoolsSidebar";
 import { DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools/DevtoolsMobileHeader";
 import { Metadata } from "next";
@@ -40,36 +41,38 @@ type GuardedProps = DevLayoutProps & { serverChecked?: boolean }
 function DevLayoutBody({ children, serverChecked }: GuardedProps) {
   const pluginNavItems = getAllPluginNavItems('devtools')
   return (
-    <DashboardProviders>
-      {/* The theme saved to the account, before the area paints (#495) */}
-      <AccountTheme />
-      <DeveloperGuard serverChecked={serverChecked}>
-        <div className="flex h-screen bg-background">
-        {/* Sidebar - Hidden on mobile, visible on desktop */}
-        <div className="hidden lg:block">
-          <DevtoolsSidebar pluginItems={pluginNavItems} />
-        </div>
+    <ThemeArea>
+      <DashboardProviders>
+        {/* The theme saved to the account, before the area paints (#495) */}
+        <AccountTheme />
+        <DeveloperGuard serverChecked={serverChecked}>
+          <div className="flex h-screen bg-background">
+          {/* Sidebar - Hidden on mobile, visible on desktop */}
+          <div className="hidden lg:block">
+            <DevtoolsSidebar pluginItems={pluginNavItems} />
+          </div>
 
-        {/* Main content area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile header for DevTools - Only visible on mobile */}
-          <DevtoolsMobileHeader />
+          {/* Main content area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Mobile header for DevTools - Only visible on mobile */}
+            <DevtoolsMobileHeader />
 
-          {/* Content area with scrolling */}
-          {/* `relative` so a full-bleed child route (the API Explorer) can fill this area
-              without measuring the sidebar itself. */}
-          <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="container mx-auto p-6 max-w-7xl">
-              {children}
-            </div>
-          </main>
-        </div>
+            {/* Content area with scrolling */}
+            {/* `relative` so a full-bleed child route (the API Explorer) can fill this area
+                without measuring the sidebar itself. */}
+            <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="container mx-auto p-6 max-w-7xl">
+                {children}
+              </div>
+            </main>
+          </div>
 
-        {/* Mobile sidebar overlay (future enhancement) */}
-        {/* Could add a mobile drawer/overlay sidebar here if needed */}
-        </div>
-      </DeveloperGuard>
-    </DashboardProviders>
+          {/* Mobile sidebar overlay (future enhancement) */}
+          {/* Could add a mobile drawer/overlay sidebar here if needed */}
+          </div>
+        </DeveloperGuard>
+      </DashboardProviders>
+    </ThemeArea>
   );
 }
 
@@ -114,12 +117,14 @@ export function withDevtoolsMessages<P extends DevLayoutProps>(ResolvedDevLayout
 export function guardDevtoolsLayout<P extends DevLayoutProps>(ProjectLayout: ComponentType<P>, serverChecked = false) {
   return function GuardedDevLayout(props: P) {
     return (
-      <DashboardProviders>
-        <AccountTheme />
-        <DeveloperGuard serverChecked={serverChecked}>
-          <ProjectLayout {...props} />
-        </DeveloperGuard>
-      </DashboardProviders>
+      <ThemeArea>
+        <DashboardProviders>
+          <AccountTheme />
+          <DeveloperGuard serverChecked={serverChecked}>
+            <ProjectLayout {...props} />
+          </DeveloperGuard>
+        </DashboardProviders>
+      </ThemeArea>
     )
   }
 }

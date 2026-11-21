@@ -75,4 +75,20 @@ describe.each([
     expect(props).toEqual(expect.objectContaining({ defaultTheme: 'light', enableSystem: true }))
     expect(props.forcedTheme).toBeUndefined()
   })
+
+  it.each([
+    ['system', 'light'],
+    ['light', 'light'],
+    ['dark', 'dark'],
+  ])('with the toggle allowed and defaultMode %s, the pages outside the areas with a session are %s (#510)', async (defaultMode, publicTheme) => {
+    mockSettings = { defaultMode, allowUserToggle: true, forcedThemeRoutes: undefined }
+    expect(await themePropsOf(layout)).toEqual(expect.objectContaining({ publicTheme, areaPaths: ['/dashboard', '/devtools', '/superadmin'] }))
+  })
+
+  it('with allowUserToggle: false the forced default mode is all there is, no public theme (#510)', async () => {
+    mockSettings = { defaultMode: 'dark', allowUserToggle: false, forcedThemeRoutes: undefined }
+    const props = await themePropsOf(layout)
+    expect(props.publicTheme).toBeUndefined()
+    expect(props.areaPaths).toBeUndefined()
+  })
 })

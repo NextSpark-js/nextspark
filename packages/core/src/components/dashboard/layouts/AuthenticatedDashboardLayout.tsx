@@ -5,6 +5,7 @@ import { loadLoginPage } from '../../../lib/auth/load-login-page'
 import { useAuth } from '../../../hooks/useAuth'
 import { DashboardProviders } from '../../../providers/DashboardProviders'
 import { AccountTheme } from '../../../providers/account-theme'
+import { ThemeArea } from '../../../providers/theme-provider'
 import { DashboardTranslationPreloader } from '../../../lib/i18n/DashboardTranslationPreloader'
 import { TranslationDebugger } from '../../../utils/dev/TranslationDebugger'
 import { useEnsureUserMetadata } from '../../../hooks/useEnsureUserMetadata'
@@ -51,10 +52,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 /** Client half of app/dashboard/layout.tsx; the server layout owns i18n data. */
 export function AuthenticatedDashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardProviders>
-      {/* The theme saved to the account, before the area paints (#495) */}
-      <AccountTheme />
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </DashboardProviders>
+    <ThemeArea>
+      <DashboardProviders>
+        {/* The theme saved to the account, before the area paints (#495) */}
+        <AccountTheme />
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </DashboardProviders>
+    </ThemeArea>
   )
 }

@@ -143,6 +143,8 @@ export default async function RootLayout({ children }) {
 
 **Location:** `core/components/app/misc/ThemeToggle.tsx`
 
+It belongs in the areas with a session (the dashboard top bar and mobile bar use it). On a public page the theme is fixed (#510), so it renders nothing there, as on any forced route.
+
 ```tsx
 import { ThemeToggle } from '@nextsparkjs/core/components/app/misc/ThemeToggle'
 
@@ -296,7 +298,7 @@ async function handleThemeChange(newTheme: string) {
 }
 ```
 
-**Across devices:** the root layout renders the configured `defaultMode` and never reads the account. The server copies the saved preference into a readable cookie, `nextspark.account_theme` (`light`, `dark` or `system`; `SameSite=Lax`, scoped to the base path, `Secure` exactly when the session cookie is), and the areas with a session apply it before their first paint (#495):
+**Across devices** (in the areas with a session; public pages have one theme, see [Default Theme Mode](#default-theme-mode)): the root layout renders the configured `defaultMode` and never reads the account. The server copies the saved preference into a readable cookie, `nextspark.account_theme` (`light`, `dark` or `system`; `SameSite=Lax`, scoped to the base path, `Secure` exactly when the session cookie is), and the areas with a session apply it before their first paint (#495):
 
 - It is written whenever Better Auth issues a session, so by every sign-in method (email and password, email code, magic link, OAuth callback), from one read of the account's `uiPreferences`. An account with no saved theme expires it, so the previous account's theme does not stay behind. It is written again when the user saves a theme (`PATCH /api/user/profile` with `meta.uiPreferences.theme`), and sign-out expires it.
 - Only the dashboard, superadmin and devtools read it, through `DashboardProviders` (`providers/account-theme.tsx`). Public and auth pages, the root layout and its inline theme script do not change: their HTML and JavaScript are the same with or without the cookie.
@@ -330,10 +332,19 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
 
 It reads configuration only: no session, no request data, no request back to the app. That keeps the root layout from making every page dynamic, and it costs nothing per render.
 
-**Where the rendered theme comes from:**
+**Where the rendered theme comes from** (all applied by the theme script before first paint):
+
+On public pages (every route outside `/dashboard`, `/devtools` and `/superadmin`, auth pages included), #510:
 1. A route in `forcedThemeRoutes`, or `defaultMode` when `allowUserToggle` is `false` (forced)
-2. The visitor's stored choice (`localStorage`, applied by the theme script before first paint)
-3. Theme config `defaultMode`, falling back to `'system'`
+2. The public theme: `defaultMode` when it is `light` or `dark`, `light` when it is `'system'`. The visitor's stored choice, their system scheme and their account's theme are not read: a project's public pages look the same for every visitor, and they have no theme toggle.
+
+In the areas with a session (dashboard, devtools, superadmin):
+1. A route in `forcedThemeRoutes`, or `defaultMode` when `allowUserToggle` is `false` (forced)
+2. The visitor's stored choice (`localStorage`, from ThemeToggle)
+3. The signed-in account's saved theme (the `nextspark.account_theme` cookie, #495)
+4. Theme config `defaultMode`, falling back to `'system'` (the device's scheme)
+
+Neither the server render nor the root layout reads the pathname for this. `themeProviderProps()` gives the root provider `publicTheme` and `areaPaths` (the three area prefixes with the base path); the inline theme script compares them with the browser's location, and so does the provider's first render in the browser, which changes only what is applied to `<html>`, never what is rendered, so public pages stay static or partially prerendered. On a client navigation the area layouts tell the provider through `ThemeArea`, which wraps each area; inside it `useTheme()` answers without the public theme, so ThemeToggle shows there and stays hidden on public pages.
 
 A signed-in user's saved preference is not read while rendering: the areas with a session apply it from a cookie, see [User Profile](#user-profile).
 

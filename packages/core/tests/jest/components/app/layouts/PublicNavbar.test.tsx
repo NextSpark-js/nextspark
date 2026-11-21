@@ -10,7 +10,8 @@ const mockUseAuth = jest.fn()
 jest.mock('@/core/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth(),
 }))
-jest.mock('@/core/components/app/misc/ThemeToggle', () => ({ ThemeToggle: () => null }))
+// Public pages have no theme toggle (#510): the marker shows if one comes back
+jest.mock('@/core/components/app/misc/ThemeToggle', () => ({ ThemeToggle: () => <i data-testid="theme-toggle" /> }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 
 import { PublicNavbar } from '@/core/components/app/layouts/PublicNavbar'
@@ -34,6 +35,12 @@ describe('PublicNavbar', () => {
     expect(screen.getByText('auth.signIn')).toBeTruthy()
     expect(screen.getByText('auth.createAccount')).toBeTruthy()
     expect(mockUseAuth).not.toHaveBeenCalled()
+  })
+
+  test('shows no theme toggle: public pages render in one theme (#510)', async () => {
+    await renderNavbar()
+
+    expect(screen.queryAllByTestId('theme-toggle')).toHaveLength(0)
   })
 
   test('with a session hint, asks for the session and links a signed-in user to the dashboard', async () => {
