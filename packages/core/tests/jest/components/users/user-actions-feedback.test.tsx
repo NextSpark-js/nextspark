@@ -108,6 +108,9 @@ describe('undoRequest', () => {
     expect(undoRequest({ type: 'suspend', user: u })).toEqual({ userId: 'u1', type: 'unsuspend' })
     expect(undoRequest({ type: 'unsuspend', user: u })).toEqual({ userId: 'u1', type: 'suspend' })
     expect(undoRequest({ type: 'change-role', user: u })).toEqual({ userId: 'u1', type: 'change-role', role: 'developer' })
+    expect(undoRequest({ type: 'change-role', user: { ...u as object, role: 'member' } as never })).toEqual({ userId: 'u1', type: 'change-role', role: 'member' })
+    // the API never assigns superadmin (400): there is no Undo to offer for a superadmin's role change
+    expect(undoRequest({ type: 'change-role', user: { ...u as object, role: 'superadmin' } as never })).toBeNull()
     expect(undoRequest({ type: 'verify-email', user: u })).toBeNull()
     expect(undoRequest({ type: 'delete', user: u })).toBeNull()
   })

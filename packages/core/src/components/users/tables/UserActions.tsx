@@ -39,7 +39,7 @@ import { useRoleTranslations } from '../../../lib/role-helpers';
 import { useCommonText } from '../../../lib/i18n/common-text';
 import { useSession, type ClientSession } from '../../../lib/auth-client';
 import type { SessionUser } from '../../../lib/auth';
-import { canActOnUser, canGrantUserRole, effectiveUserRole } from '../../../lib/auth/assignable-roles';
+import { ASSIGNABLE_USER_ROLES, canActOnUser, canGrantUserRole, effectiveUserRole } from '../../../lib/auth/assignable-roles';
 import { actionErrorMessage } from './action-error';
 import { useTranslations } from 'next-intl';
 import type { UserRole } from '../../../types/user.types';
@@ -94,7 +94,11 @@ interface ActionResponse {
 export function undoRequest({ type, user }: { type: UserActionType; user: ActionUser }): ActionRequest | null {
   if (type === 'suspend') return { userId: user.id, type: 'unsuspend' };
   if (type === 'unsuspend') return { userId: user.id, type: 'suspend' };
-  if (type === 'change-role') return { userId: user.id, type: 'change-role', role: user.role };
+  // Only member and developer can be given back through the API: a superadmin's role is never assigned there (400), so
+  // changing a superadmin's role has no Undo
+  if (type === 'change-role') {
+    return (ASSIGNABLE_USER_ROLES as readonly string[]).includes(user.role) ? { userId: user.id, type: 'change-role', role: user.role } : null;
+  }
   return null;
 }
 
