@@ -173,7 +173,7 @@ export function ApiRequestPanel({
           >
             {method}
           </Badge>
-          <code className="font-mono text-sm font-medium flex-1 truncate">{basePath}</code>
+          <code className="font-mono text-sm font-medium flex-1 truncate" title={basePath}>{basePath}</code>
           {route.source && (
             <Badge variant="secondary" className="text-xs shrink-0">
               {route.source}

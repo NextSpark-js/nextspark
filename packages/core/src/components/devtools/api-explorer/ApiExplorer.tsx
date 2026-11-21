@@ -21,7 +21,7 @@ import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
 import { loadState, saveState, draftKey } from './explorer-storage'
-import { defaultMethod, pickDefaultTeamId, type RequestContext } from './explorer-helpers'
+import { BODY_METHODS, createEmptyRows, defaultMethod, initialBody, pickDefaultTeamId, type RequestContext } from './explorer-helpers'
 import { useUserTeams } from '../../../hooks/teams'
 import {
   createPresetPlaceholderValues,
@@ -48,6 +48,8 @@ interface EndpointDraft {
 interface ApiExplorerProps {
   routes: Record<RouteCategory, ApiRouteEntry[]>
   initialEndpoint?: { method: string; path: string } | null
+  /** Required-field JSON for creating each entity, by collection path (built on the server from the entity configs). */
+  bodySkeletons?: Record<string, Record<string, unknown>>
 }
 
 /** Find a route by path in the routes registry */
@@ -62,17 +64,7 @@ function findRouteByPath(
   return null
 }
 
-/** Create empty key-value rows for query params and headers */
-function createEmptyRows(count = 2): KeyValuePair[] {
-  return Array.from({ length: count }, () => ({
-    id: crypto.randomUUID(),
-    key: '',
-    value: '',
-    enabled: true,
-  }))
-}
-
-export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
+export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplorerProps) {
   const t = useTranslations('devtools.api')
   // Sidebar state (collapse persisted)
   const [isCollapsed, setIsCollapsed] = useState(() => loadState<boolean>('sidebarCollapsed') ?? false)
@@ -168,9 +160,14 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     setPathParams(draft?.pathParams ?? extractPathParams(path))
     setQueryParams(draft?.queryParams ?? createEmptyRows())
     setHeaders(draft?.headers ?? createEmptyRows())
-    setBody(draft?.body ?? '')
+    // An endpoint opened with nothing typed starts from its first preset or its required fields, not blank.
+    setBody(
+      draft?.body?.trim()
+        ? draft.body
+        : initialBody(endpointMethod, ApiPresetsService.getByEndpoint(path)?.presets, bodySkeletons?.[path])
+    )
     setTabsModifiedByPreset(new Set())
-  }, [])
+  }, [bodySkeletons])
 
   // Persist session/auth config so it survives reloads.
   useEffect(() => {
@@ -274,11 +271,22 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       url: fullUrl,
       method,
       headers: customHeaders,
-      body: ['POST', 'PATCH', 'PUT'].includes(method) ? body : undefined,
+      body: BODY_METHODS.includes(method) ? body : undefined,
       authType,
       apiKey: authType === 'apiKey' ? apiKey : undefined,
     })
   }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, actAsLabel, userTeams, execute])
+
+  // Switching to a method that sends a body on an empty editor fills it the same way opening the endpoint does.
+  const handleMethodChange = useCallback(
+    (next: HttpMethod) => {
+      setMethod(next)
+      if (selectedEndpoint && !body.trim()) {
+        setBody(initialBody(next, endpointPresets?.presets, bodySkeletons?.[selectedEndpoint.path]))
+      }
+    },
+    [selectedEndpoint, body, endpointPresets, bodySkeletons]
+  )
 
   // Handle applying a preset
   const handleApplyPreset = useCallback((rawPreset: ApiPreset) => {
@@ -529,7 +537,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 showTeamError={teamErrorShown}
                 body={body}
                 status={status}
-                onMethodChange={setMethod}
+                onMethodChange={handleMethodChange}
                 onPathParamsChange={setPathParams}
                 onQueryParamsChange={setQueryParams}
                 onHeadersChange={setHeaders}

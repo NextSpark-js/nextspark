@@ -1,5 +1,7 @@
 import { ApiRoutesService } from "@nextsparkjs/core/lib/services/api-routes.service"
 import { ApiExplorer } from "@nextsparkjs/core/components/devtools/api-explorer"
+import { bodySkeleton } from "@nextsparkjs/core/components/devtools/api-explorer/explorer-helpers"
+import { ENTITY_REGISTRY } from "@nextsparkjs/registries/entity-registry"
 
 interface Props {
   params: Promise<{ endpoint?: string[] }>
@@ -29,5 +31,15 @@ export default async function DevToolsApiPage({ params }: Props) {
     initialEndpoint = { method, path }
   }
 
-  return <ApiExplorer routes={routesByCategory} initialEndpoint={initialEndpoint} />
+  // What a create request needs at least, for each entity that has required fields: the Body tab of its POST
+  // opens with it instead of empty (a preset, when the endpoint has one, wins over it).
+  const bodySkeletons: Record<string, Record<string, unknown>> = {}
+  for (const route of routesByCategory.entity) {
+    if (route.path.endsWith('/[id]') || !route.methods.includes('POST')) continue
+    const fields = ENTITY_REGISTRY[route.source ?? '']?.config?.fields
+    const skeleton = fields ? bodySkeleton(fields) : null
+    if (skeleton) bodySkeletons[route.path] = skeleton
+  }
+
+  return <ApiExplorer routes={routesByCategory} initialEndpoint={initialEndpoint} bodySkeletons={bodySkeletons} />
 }
