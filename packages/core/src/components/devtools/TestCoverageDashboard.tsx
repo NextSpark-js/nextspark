@@ -55,11 +55,14 @@ interface StatCardProps {
   percentage?: number;
   dataCy: string;
   subtext?: string;
+  /** Where the tile leads: the page that lists what it counts. */
+  href: string;
 }
 
-function StatCard({ icon, label, value, percentage, dataCy, subtext }: StatCardProps) {
+function StatCard({ icon, label, value, percentage, dataCy, subtext, href }: StatCardProps) {
   return (
-    <Card data-cy={dataCy}>
+    <Link href={href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500">
+    <Card data-cy={dataCy} className="h-full transition-shadow hover:shadow-md">
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/30">
@@ -81,6 +84,7 @@ function StatCard({ icon, label, value, percentage, dataCy, subtext }: StatCardP
         )}
       </CardContent>
     </Card>
+    </Link>
   );
 }
 
@@ -176,6 +180,7 @@ export function TestCoverageDashboard() {
           value={`${summary.features.withTests}/${summary.features.total}`}
           percentage={featureCoverage}
           dataCy={sel('devtools.tests.dashboardStatFeatures')}
+          href="/devtools/features"
           subtext={`${summary.features.withTests} ${t("withTests")}`}
         />
         <StatCard
@@ -184,6 +189,7 @@ export function TestCoverageDashboard() {
           value={`${summary.flows.withTests}/${summary.flows.total}`}
           percentage={flowCoverage}
           dataCy={sel('devtools.tests.dashboardStatFlows')}
+          href="/devtools/flows"
           subtext={`${summary.flows.withTests} ${t("withTests")}`}
         />
         <StatCard
@@ -191,12 +197,14 @@ export function TestCoverageDashboard() {
           label={t("testFiles")}
           value={String(summary.testFiles)}
           dataCy={sel('devtools.tests.dashboardStatFiles')}
+          href="/devtools/tags"
         />
         <StatCard
           icon={<Tags className="h-5 w-5 text-violet-600 dark:text-violet-400" />}
           label={t("tags")}
           value={String(summary.totalTags)}
           dataCy={sel('devtools.tests.dashboardStatTags')}
+          href="/devtools/tags"
         />
       </div>
 
@@ -286,9 +294,11 @@ export function TestCoverageDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {Object.entries(summary.byCategory).map(([category, count]) => (
-                <div
+                <Link
                   key={category}
-                  className="text-center p-3 rounded-lg bg-muted/50"
+                  href={`/devtools/tags#${category}`}
+                  className="text-center p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  data-cy={sel('devtools.tests.dashboardCategory', { category })}
                 >
                   <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                     {count}
@@ -296,7 +306,7 @@ export function TestCoverageDashboard() {
                   <p className="text-sm text-muted-foreground capitalize">
                     {tCategories.has(category) ? tCategories(category) : category}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           </CardContent>

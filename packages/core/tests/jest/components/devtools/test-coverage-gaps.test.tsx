@@ -38,7 +38,7 @@ describe('TestCoverageDashboard gaps (#498)', () => {
     })
     render(<TestCoverageDashboard />)
 
-    const links = await screen.findAllByRole('link')
+    const links = (await screen.findAllByRole('link')).filter((a) => a.getAttribute('href')?.includes('#'))
     expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
       ['Name signup', '/devtools/flows#signup'],
       ['Name billing', '/devtools/features#billing'],

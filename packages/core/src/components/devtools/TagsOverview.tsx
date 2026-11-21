@@ -13,6 +13,7 @@ import { sel } from '../../lib/test';
 import { cn } from '../../lib/utils';
 import { grepCommand, useCopy } from './use-copy';
 import { isSelectorTag, testDocPath } from './tag-utils';
+import { useScrollToHash } from './use-scroll-to-hash';
 
 type RegistryCategory = keyof typeof TAGS_REGISTRY;
 // "selectors" is not a registry category: it is the `@SEL_*` tags split out of "other"
@@ -88,6 +89,7 @@ const CATEGORY_SELECTED: Record<TagCategory, string> = {
  */
 export function TagsOverview() {
   const t = useTranslations("devtools.tags");
+  useScrollToHash();
   const [searchQuery, setSearchQuery] = useState("");
   const { copy, copied } = useCopy();
   const [expandedCategories, setExpandedCategories] = useState<Set<TagCategory>>(
@@ -238,7 +240,7 @@ export function TagsOverview() {
           const tagCount = Object.keys(tags).length;
 
           return (
-            <Card key={category} data-cy={sel("devtools.tags.category", { category })}>
+            <Card key={category} id={category} className="scroll-mt-4" data-cy={sel("devtools.tags.category", { category })}>
               <CardHeader className="pb-2">
                 <button
                   onClick={() => toggleCategory(category)}

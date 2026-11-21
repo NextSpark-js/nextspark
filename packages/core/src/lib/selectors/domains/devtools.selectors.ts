@@ -71,6 +71,7 @@ export const DEVTOOLS_SELECTORS = {
     dashboardStatTags: 'devtools-tests-dashboard-stat-tags',
     dashboardGaps: 'devtools-tests-dashboard-gaps',
     dashboardGapItem: 'devtools-tests-dashboard-gap-{slug}',
+    dashboardCategory: 'devtools-tests-dashboard-category-{category}',
   },
   features: {
     page: 'devtools-features-page',
