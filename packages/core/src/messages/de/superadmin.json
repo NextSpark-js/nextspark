@@ -61,7 +61,6 @@
     "superadmins": "Superadmins",
     "totalUsers": "Benutzer gesamt",
     "allRegisteredUsers": "Alle registrierten Benutzer",
-    "membersCollaboratorsAdmins": "Mitglieder, Mitarbeiter, Administratoren",
     "systemAdministrators": "Systemadministratoren",
     "roleDistribution": "Rollenverteilung",
     "roles": "Rollen",
@@ -112,7 +111,7 @@
       "adminActions": "Administratoraktionen"
     },
     "descriptions": {
-      "regularUsersDescription": "Alle Benutzer außer Superadministratoren. Beinhaltet Mitglieder, Mitarbeiter und Administratoren.",
+      "regularUsersDescription": "Alle Benutzer außer Superadministratoren: Mitglieder, Entwickler und gesperrte Konten.",
       "superadminsDescription": "Benutzer mit vollständigem Systemzugriff und Administratorrechten. Mit äußerster Vorsicht behandeln."
     },
     "security": {

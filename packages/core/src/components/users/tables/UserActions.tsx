@@ -134,10 +134,10 @@ export function useUserActions({ onDone }: { onDone?: (type: UserActionType, use
 
   const perform = async ({ userId, type, role }: ActionRequest): Promise<ActionResponse> => {
     const isDelete = type === 'delete';
-    const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
-      method: isDelete ? "DELETE" : "PATCH",
-      ...(isDelete ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: type, role }) }),
-    });
+    const init: RequestInit = isDelete
+      ? { method: 'DELETE' }
+      : { method: 'PATCH', headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: type, role }) };
+    const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), init);
     if (!response.ok) throw new Error(await actionErrorMessage(response, t, t(isDelete ? 'toast.deleteFailed' : 'confirm.failed')));
     return response.json();
   };
