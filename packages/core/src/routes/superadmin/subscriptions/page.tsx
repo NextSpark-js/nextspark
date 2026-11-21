@@ -47,7 +47,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path";
 import { formatLocaleDate, formatLocaleDollars, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
 import { formatPrice } from "@nextsparkjs/core/lib/billing/helpers";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@nextsparkjs/core/components/ui/tooltip";
 import {
   SearchInput,
   PaginationControls,
