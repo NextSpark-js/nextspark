@@ -157,6 +157,14 @@ describe('readPublishedEntries', () => {
     expect(params).toEqual([10])
   })
 
+  it('leaves out a scheduled row of an entity with a publishing date, and asks nothing more of one without (#542)', async () => {
+    const run = jest.fn().mockResolvedValue({ rows: [] })
+    await readPublishedEntries(entity({ fields: [{ name: 'publishedAt', type: 'datetime' }] }), run)
+    expect(run.mock.calls[0][0]).toContain(`WHERE status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW()) GROUP BY slug`)
+    await readPublishedEntries(entity({ fields: [{ name: 'title', type: 'text' }] }), run)
+    expect(run.mock.calls[1][0]).not.toContain('publishedAt')
+  })
+
   it('drops slugs the public route answers not found for', async () => {
     const rows = ['ok', 'v1.0', 'logo.png', 'robots.txt', '-leading', 'with space', 'nested/slug', 'x'.repeat(201)].map(row)
     const run = jest.fn().mockResolvedValue({ rows })

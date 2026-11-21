@@ -9,6 +9,7 @@
  * a per-entity route's module graph holds no other entity.
  */
 
+import { publishedAtClause } from '@nextsparkjs/core/lib/entities/published-at'
 import { query } from '@nextsparkjs/core/lib/db'
 import { getEntityBasePath } from '@nextsparkjs/core/lib/entities/schema-generator'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
@@ -159,7 +160,7 @@ export async function fetchPublishedItem(
     const selectClause = buildPublicSelectClause(entity)
 
     const result = await query<PublishedItem>(
-      `SELECT ${selectClause} FROM "${tableName}" WHERE slug = $1 AND status = 'published'`,
+      `SELECT ${selectClause} FROM "${tableName}" WHERE slug = $1 AND status = 'published'${publishedAtClause(entity)}`,
       [slug]
     )
     return result.rows[0] || null

@@ -11,6 +11,7 @@
  * Team context is required for all entity operations via x-team-id header.
  */
 
+import { publishedAtClause } from '../../entities/published-at'
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse, canBypassTeamContext, type DualAuthResult } from '../auth/dual-auth'
 import type { EntityField, EntityConfig, TaxonomyTypeConfig } from '../../entities/types'
@@ -1210,6 +1211,8 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     const forcePublishedOnly = isPublicEntity
       && userId === null
       && entityConfig.fields.some((f: EntityField) => f.name === 'status')
+    // ...and, for an entity that schedules its items, only those whose publishedAt has come (#542)
+    const publishedAtRule = forcePublishedOnly ? publishedAtClause(entityConfig, 't.') : ''
 
     // Get table name (uses tableName if specified, otherwise slug)
     const tableName = getTableName(entityConfig)
@@ -1252,7 +1255,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
 
       // Anonymous public access: force published-only regardless of caller's filters (#171)
       if (forcePublishedOnly) {
-        query += ` AND t."status" = 'published'`
+        query += ` AND t."status" = 'published'${publishedAtRule}`
       }
 
       // Add user filter if authenticated and not shared (CASE 1 only)
@@ -1316,7 +1319,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
 
       // Anonymous public access: force published-only regardless of caller's filters (#171)
       if (forcePublishedOnly) {
-        query += ` AND t."status" = 'published'`
+        query += ` AND t."status" = 'published'${publishedAtRule}`
       }
 
       query += ` ORDER BY "${fieldName}" ASC LIMIT $${paramIndex++}`
@@ -1360,7 +1363,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
 
       // Anonymous public access: force published-only regardless of caller's filters (#171)
       if (forcePublishedOnly) {
-        whereConditions.push(`t."status" = 'published'`)
+        whereConditions.push(`t."status" = 'published'${publishedAtRule}`)
       }
 
       // Add search filter (name, title, slug and content, and the validated `searchField`).
@@ -2059,6 +2062,7 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
     const forcePublishedOnly = entityConfig.access?.public === true
       && userId === null
       && entityConfig.fields.some((f: EntityField) => f.name === 'status')
+    const publishedAtRule = forcePublishedOnly ? publishedAtClause(entityConfig, 't.') : ''
 
     const scope = await visibleRecordScope(entityConfig, id, { userId, teamId, isBypass })
     if (!scope) {
@@ -2076,7 +2080,7 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
     // Anonymous public access: force published-only, ignoring nothing the
     // caller sent since there's no filter param on a by-id read to trust (#171)
     if (forcePublishedOnly) {
-      query += ` AND t."status" = 'published'`
+      query += ` AND t."status" = 'published'${publishedAtRule}`
     }
 
     const items = await noRowOnMalformedId(queryWithRLS(query, scope.params, userId))
