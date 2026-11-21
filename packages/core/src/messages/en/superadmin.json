@@ -426,7 +426,8 @@
     "superadminsTab": "Superadmins ({count})",
     "superadministrators": "Superadministrators",
     "activeLabel": "Active:",
-    "suspendedLabel": "Suspended:"
+    "suspendedLabel": "Suspended:",
+    "matchCount": "{matching} of {total} match"
   },
   "userDetail": {
     "title": "User Details",

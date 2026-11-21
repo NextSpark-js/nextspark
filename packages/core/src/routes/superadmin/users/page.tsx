@@ -306,11 +306,16 @@ function UsersPage() {
             <div className="text-2xl font-bold">
               {usersData?.counts.total || 0}
             </div>
-            <p className="text-xs text-muted-foreground">{t("users.allRegisteredUsers")}</p>
+            <p className="text-xs text-muted-foreground" data-cy="users-total-note">
+              {hasActiveFilters && usersData
+                ? t("usersPage.matchCount", { matching: usersData.counts.matching.total, total: usersData.counts.total })
+                : t("users.allRegisteredUsers")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Link href="/superadmin/teams" className="block" data-cy="users-work-teams-link">
+        <Card className="h-full transition-colors hover:bg-muted/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t("usersPage.workTeams")}</CardTitle>
             <Users2 className="h-4 w-4 text-primary" />
@@ -324,6 +329,7 @@ function UsersPage() {
             </p>
           </CardContent>
         </Card>
+        </Link>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -334,7 +340,11 @@ function UsersPage() {
             <div className="text-2xl font-bold text-red-600">
               {usersData?.counts.superadmins || 0}
             </div>
-            <p className="text-xs text-muted-foreground">{t("users.systemAdministrators")}</p>
+            <p className="text-xs text-muted-foreground">
+              {hasActiveFilters && usersData
+                ? t("usersPage.matchCount", { matching: usersData.counts.matching.superadmins, total: usersData.counts.superadmins })
+                : t("users.systemAdministrators")}
+            </p>
           </CardContent>
         </Card>
 
