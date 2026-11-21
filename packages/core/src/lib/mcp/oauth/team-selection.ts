@@ -49,17 +49,15 @@ export async function selectTeam(sessionId: string, authorization: string, userI
   if (!(await selectableTeams(userId)).some(team => team.id === teamId)) return 'not-a-member'
   // the choices of authorizations that ended or were abandoned (a signed authorization query lives ten minutes)
   await query(`DELETE FROM "oauthTeamSelection" WHERE "createdAt" < now() - make_interval(mins => $1)`, [SELECTION_TTL_MINUTES])
-  const stored = await queryOne<{ teamId: string }>(
-    `WITH chosen AS (
-       INSERT INTO "oauthTeamSelection" ("sessionId", "authorization", "teamId", "createdAt") VALUES ($1, $2, $3, now())
-       ON CONFLICT ("sessionId", "authorization") DO NOTHING
-       RETURNING "teamId"
-     )
-     SELECT "teamId" FROM chosen
-     UNION ALL
-     SELECT "teamId" FROM "oauthTeamSelection" WHERE "sessionId" = $1 AND "authorization" = $2
-     LIMIT 1`,
+  await query(
+    `INSERT INTO "oauthTeamSelection" ("sessionId", "authorization", "teamId", "createdAt") VALUES ($1, $2, $3, now())
+     ON CONFLICT ("sessionId", "authorization") DO NOTHING`,
     [sessionId, authorization, teamId]
+  )
+  // Read in a statement of its own: the row that won is committed by now, whichever request wrote it
+  const stored = await queryOne<{ teamId: string }>(
+    'SELECT "teamId" FROM "oauthTeamSelection" WHERE "sessionId" = $1 AND "authorization" = $2',
+    [sessionId, authorization]
   )
   return stored?.teamId === teamId ? 'chosen' : 'already-chosen'
 }
