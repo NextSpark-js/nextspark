@@ -5,6 +5,7 @@ import { TestTube2, Tag, AlertTriangle, CheckCircle2, Languages } from "lucide-r
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
+import { useCopy } from '../use-copy';
 import type { BDDFeature, BDDLanguage } from "./types";
 
 interface BDDHeaderProps {
@@ -22,6 +23,7 @@ interface BDDHeaderProps {
  */
 export function BDDHeader({ feature, testCount, language, onLanguageChange, hasMultipleLanguages }: BDDHeaderProps) {
   const t = useTranslations('devtools.tests.bdd');
+  const { copy } = useCopy();
   const getPriorityIcon = (priority?: string) => {
     switch (priority) {
       case 'high':
@@ -98,7 +100,7 @@ export function BDDHeader({ feature, testCount, language, onLanguageChange, hasM
                       key={tag}
                       variant="outline"
                       className="text-xs font-mono bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
-                      onClick={() => navigator.clipboard.writeText(displayTag)}
+                      onClick={() => copy(displayTag)}
                       title={t("clickToCopy")}
                     >
                       {displayTag}

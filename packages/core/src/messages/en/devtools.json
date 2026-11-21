@@ -53,9 +53,7 @@
       "colorTokens": "Color Tokens",
       "colorTokensDescription": "Theme color variables",
       "themes": "Themes",
-      "themesDescription": "Light & dark modes",
-      "documentation": "Documentation",
-      "documentationDescription": "Component coverage"
+      "themesDescription": "Light & dark modes"
     },
     "tabs": {
       "components": "Components",
@@ -113,7 +111,9 @@
       "title": "Resources & Links",
       "description": "Additional resources and documentation",
       "docs": "{name} documentation"
-    }
+    },
+    "exportCss": "CSS variables (.css)",
+    "exportJson": "JSON (.json)"
   },
   "config": {
     "title": "Configuration Viewer",
@@ -464,9 +464,7 @@
     "showing": "Showing {count} tags",
     "noResults": "No tags found",
     "noResultsHint": "Try adjusting your search query",
-    "copyHint": "Click to copy grep command",
     "expandHint": "Click to view test files",
-    "copied": "Copied!",
     "categories": {
       "layers": "Layers",
       "priorities": "Priorities",
@@ -477,7 +475,9 @@
       "operations": "Operations",
       "other": "Other"
     },
-    "viewDetails": "View details"
+    "viewDetails": "View details",
+    "copyTag": "Copy tag",
+    "copyTestCommand": "Copy test command"
   },
   "scheduledActions": {
     "title": "Scheduled Actions",
@@ -1018,5 +1018,11 @@
     "signIn": "Sign In",
     "goBack": "Go Back",
     "dashboard": "Dashboard"
+  },
+  "copy": {
+    "copied": "Copied",
+    "failed": "Could not copy to the clipboard",
+    "tag": "Copy tag",
+    "testCommand": "Copy test command"
   }
 }

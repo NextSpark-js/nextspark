@@ -25,6 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '../../ui/collapsible';
+import { useCopy } from '../use-copy';
 import { GherkinHighlighter } from "./GherkinHighlighter";
 import type { BDDTestCase, BDDLanguage, TestStatus } from "./types";
 
@@ -50,15 +51,14 @@ interface BDDTestCardProps {
  */
 export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTestCardProps) {
   const t = useTranslations('devtools.tests.bdd');
-  const [copied, setCopied] = useState(false);
+  const { copy, copied: copiedId } = useCopy();
+  const copied = copiedId !== null;
 
   // Get scenario for current language, fallback to other language or legacy field
   const currentScenario = test.scenarios?.[language] || test.scenarios?.en || test.scenarios?.es || test.scenario;
 
   const copyScenario = async () => {
-    await navigator.clipboard.writeText(currentScenario);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    await copy(currentScenario);
   };
 
   const getPriorityColor = (priority?: string) => {
@@ -123,9 +123,7 @@ export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTest
 
   const copyGrepCommand = async (tag: string) => {
     const command = `pnpm cy:tags "${tag}"`;
-    await navigator.clipboard.writeText(command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    await copy(command);
   };
 
   return (

@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Copy, Check, Search, TestTube2, CheckCircle2, XCircle, ArrowRight, LayoutGrid, Image as ImageIcon } from "lucide-react";
+import { Search, TestTube2, CheckCircle2, XCircle, ArrowRight, LayoutGrid, Image as ImageIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocalizedText } from '../../hooks/useLocalizedText';
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
+import { TagCopyActions } from './TagCopyActions';
 import type { BlockConfig, BlockCategory } from '../../types/blocks';
 import { BlockThumbnail } from './BlockThumbnail'
 
@@ -52,7 +53,6 @@ export function BlocksViewer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
-  const [copiedTag, setCopiedTag] = useState<string | null>(null);
 
   // Merge blocks with coverage data
   const blocksWithCoverage: BlockWithCoverage[] = useMemo(() => {
@@ -104,13 +104,6 @@ export function BlocksViewer() {
     const withTests = blocksWithCoverage.filter((b) => b.hasTests).length;
     return { total, withTests, withoutTests: total - withTests };
   }, [blocksWithCoverage]);
-
-  const copyGrepCommand = (slug: string) => {
-    const command = `npx cypress run --env grepTags="@b-${slug}"`;
-    navigator.clipboard.writeText(command);
-    setCopiedTag(slug);
-    setTimeout(() => setCopiedTag(null), 2000);
-  };
 
   return (
     <div className="space-y-6" data-cy={sel("devtools.blocks.viewer")}>
@@ -274,22 +267,11 @@ export function BlocksViewer() {
               </div>
 
               {/* Tag with Copy */}
-              <div className="flex items-center justify-between bg-muted rounded-md px-2 py-1 mt-auto">
-                <code className="text-xs font-mono">@b-{block.slug}</code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => copyGrepCommand(block.slug)}
-                  data-cy={sel("devtools.blocks.copyTag", { slug: block.slug })}
-                >
-                  {copiedTag === block.slug ? (
-                    <Check className="h-3 w-3 text-green-600" />
-                  ) : (
-                    <Copy className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
+              <TagCopyActions
+                tag={`@b-${block.slug}`}
+                tagCy={sel("devtools.blocks.copyTag", { slug: block.slug })}
+                commandCy={sel("devtools.blocks.copyCommand", { slug: block.slug })}
+              />
 
               {/* View Details Link */}
               <Link

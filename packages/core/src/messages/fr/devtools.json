@@ -383,9 +383,7 @@
     "showing": "Affichage de {count} étiquettes",
     "noResults": "Aucune étiquette trouvée",
     "noResultsHint": "Essayez d'ajuster votre recherche",
-    "copyHint": "Cliquez pour copier la commande grep",
     "expandHint": "Cliquez pour voir les fichiers de test",
-    "copied": "Copié !",
     "categories": {
       "layers": "Couches",
       "priorities": "Priorités",
@@ -396,7 +394,9 @@
       "operations": "Opérations",
       "other": "Autres"
     },
-    "viewDetails": "Voir les détails"
+    "viewDetails": "Voir les détails",
+    "copyTag": "Copier le tag",
+    "copyTestCommand": "Copier la commande de test"
   },
   "scheduledActions": {
     "title": "Actions programmées",
@@ -948,9 +948,7 @@
       "colorTokens": "Tokens de couleur",
       "colorTokensDescription": "Variables de couleur du thème",
       "themes": "Thèmes",
-      "themesDescription": "Modes clair et sombre",
-      "documentation": "Documentation",
-      "documentationDescription": "Couverture des composants"
+      "themesDescription": "Modes clair et sombre"
     },
     "tabs": {
       "components": "Composants",
@@ -1008,7 +1006,9 @@
       "title": "Ressources et liens",
       "description": "Ressources et documentation supplémentaires",
       "docs": "Documentation de {name}"
-    }
+    },
+    "exportCss": "Variables CSS (.css)",
+    "exportJson": "JSON (.json)"
   },
   "guard": {
     "title": "Accès réservé aux développeurs",
@@ -1018,5 +1018,11 @@
     "signIn": "Se connecter",
     "goBack": "Retour",
     "dashboard": "Tableau de bord"
+  },
+  "copy": {
+    "copied": "Copié",
+    "failed": "Impossible de copier dans le presse-papiers",
+    "tag": "Copier le tag",
+    "testCommand": "Copier la commande de test"
   }
 }

@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Copy, Check, Search, TestTube2, CheckCircle2, XCircle } from "lucide-react";
+import { Search, TestTube2, CheckCircle2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FEATURE_REGISTRY, COVERAGE_SUMMARY, type FeatureEntry } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
+import { TagCopyActions } from './TagCopyActions';
 import { useScrollToHash } from "./use-scroll-to-hash";
 
 type CategoryFilter = "all" | FeatureEntry["category"];
@@ -40,7 +41,6 @@ export function FeaturesViewer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
-  const [copiedTag, setCopiedTag] = useState<string | null>(null);
 
   const features = useMemo(() => Object.values(FEATURE_REGISTRY), []);
 
@@ -76,13 +76,6 @@ export function FeaturesViewer() {
     const cats = new Set(features.map((f) => f.category));
     return Array.from(cats).sort();
   }, [features]);
-
-  const copyGrepCommand = (tag: string) => {
-    const command = `npx cypress run --env grepTags="@${tag}"`;
-    navigator.clipboard.writeText(command);
-    setCopiedTag(tag);
-    setTimeout(() => setCopiedTag(null), 2000);
-  };
 
   return (
     <div className="space-y-6" data-cy={sel("devtools.features.viewer")}>
@@ -238,21 +231,11 @@ export function FeaturesViewer() {
               </div>
 
               {/* Tag with Copy */}
-              <div className="flex items-center justify-between bg-muted rounded-md px-3 py-2">
-                <code className="text-sm font-mono">@{feature.tag}</code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyGrepCommand(feature.tag)}
-                  data-cy={sel("devtools.features.copyTag", { slug: feature.key })}
-                >
-                  {copiedTag === feature.tag ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+              <TagCopyActions
+                tag={`@${feature.tag}`}
+                tagCy={sel("devtools.features.copyTag", { slug: feature.key })}
+                commandCy={sel("devtools.features.copyCommand", { slug: feature.key })}
+              />
             </CardContent>
           </Card>
         ))}

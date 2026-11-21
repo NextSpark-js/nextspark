@@ -9,6 +9,8 @@ import { Palette, Package, Layers, BookOpen, Download, FormInput } from "lucide-
 import { ComponentGallery } from "@nextsparkjs/core/components/superadmin/misc/ComponentGallery";
 import { ThemePreview } from "@nextsparkjs/core/components/superadmin/misc/ThemePreview";
 import { FieldTypesGallery } from "@nextsparkjs/core/components/superadmin/misc/FieldTypesGallery";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@nextsparkjs/core/components/ui/dropdown-menu";
+import { COLOR_TOKENS, buildTokensExport, readToken, type TokensFormat } from "@nextsparkjs/core/components/superadmin/misc/theme-tokens";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -22,6 +24,18 @@ export default function DevStylePage() {
   const t = useTranslations("devtools.style");
   const [activeTab, setActiveTab] = useState("components");
 
+  // Downloads the color tokens as they resolve now (the current light or dark mode).
+  const exportTokens = (format: TokensFormat) => {
+    const mode = document.documentElement.classList.contains("dark") ? "dark" : "light";
+    const body = buildTokensExport(COLOR_TOKENS, readToken, format);
+    const url = URL.createObjectURL(new Blob([body], { type: format === "css" ? "text/css" : "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `theme-tokens-${mode}.${format}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6" data-cy="devtools-style-page">
       {/* Header */}
@@ -33,14 +47,26 @@ export default function DevStylePage() {
           <h1 className="text-3xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          {t("exportTokens")}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="flex items-center gap-2" data-cy="devtools-style-export-tokens">
+              <Download className="h-4 w-4" />
+              {t("exportTokens")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => exportTokens("css")} data-cy="devtools-style-export-css">
+              {t("exportCss")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => exportTokens("json")} data-cy="devtools-style-export-json">
+              {t("exportJson")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t("stats.components")}</CardTitle>
@@ -60,7 +86,7 @@ export default function DevStylePage() {
             <Palette className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">16</div>
+            <div className="text-2xl font-bold">{COLOR_TOKENS.length}</div>
             <p className="text-xs text-muted-foreground">
               {t("stats.colorTokensDescription")}
             </p>
@@ -80,18 +106,6 @@ export default function DevStylePage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("stats.documentation")}</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">100%</div>
-            <p className="text-xs text-muted-foreground">
-              {t("stats.documentationDescription")}
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Main Content Tabs */}

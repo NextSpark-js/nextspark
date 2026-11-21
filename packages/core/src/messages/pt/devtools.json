@@ -383,9 +383,7 @@
     "showing": "Mostrando {count} tags",
     "noResults": "Nenhuma tag encontrada",
     "noResultsHint": "Tente ajustar sua busca",
-    "copyHint": "Clique para copiar comando grep",
     "expandHint": "Clique para ver arquivos de teste",
-    "copied": "Copiado!",
     "categories": {
       "layers": "Camadas",
       "priorities": "Prioridades",
@@ -396,7 +394,9 @@
       "operations": "Operações",
       "other": "Outros"
     },
-    "viewDetails": "Ver detalhes"
+    "viewDetails": "Ver detalhes",
+    "copyTag": "Copiar tag",
+    "copyTestCommand": "Copiar comando de teste"
   },
   "scheduledActions": {
     "title": "Ações Agendadas",
@@ -948,9 +948,7 @@
       "colorTokens": "Tokens de cor",
       "colorTokensDescription": "Variáveis de cor do tema",
       "themes": "Temas",
-      "themesDescription": "Modos claro e escuro",
-      "documentation": "Documentação",
-      "documentationDescription": "Cobertura de componentes"
+      "themesDescription": "Modos claro e escuro"
     },
     "tabs": {
       "components": "Componentes",
@@ -1008,7 +1006,9 @@
       "title": "Recursos e links",
       "description": "Recursos e documentação adicionais",
       "docs": "Documentação do {name}"
-    }
+    },
+    "exportCss": "Variáveis CSS (.css)",
+    "exportJson": "JSON (.json)"
   },
   "guard": {
     "title": "Acesso somente para desenvolvedores",
@@ -1018,5 +1018,11 @@
     "signIn": "Entrar",
     "goBack": "Voltar",
     "dashboard": "Painel"
+  },
+  "copy": {
+    "copied": "Copiado",
+    "failed": "Não foi possível copiar para a área de transferência",
+    "tag": "Copiar tag",
+    "testCommand": "Copiar comando de teste"
   }
 }

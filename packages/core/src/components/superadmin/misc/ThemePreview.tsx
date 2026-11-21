@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 
-import { Copy, Palette, Monitor, Sun, Moon } from "lucide-react";
+import { Check, Copy, Palette, Monitor, Sun, Moon } from "lucide-react";
 import { useTheme } from "../../../providers/theme-provider";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCopy } from "../../devtools/use-copy";
+import { readToken } from "./theme-tokens";
 
 /**
  * Theme Preview Component
@@ -314,25 +316,41 @@ interface ColorSwatchProps {
 
 function ColorSwatch({ name, description, cssVar, copyValue }: ColorSwatchProps) {
   const t = useTranslations("devtools.gallery.theme");
+  const { copy, copied } = useCopy();
+  const [value, setValue] = useState("");
+
+  // The resolved value, re-read when the theme class on <html> changes.
+  useEffect(() => {
+    const read = () => setValue(readToken(cssVar));
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
+    return () => observer.disconnect();
+  }, [cssVar]);
+
   return (
     <div className="flex items-center gap-3 p-3 border rounded-lg">
       <div 
         className="w-10 h-10 rounded-md border"
         style={{ backgroundColor: `var(${cssVar})` }}
       />
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <div className="font-medium">{name}</div>
         <div className="text-xs text-muted-foreground">{description}</div>
         <code className="text-xs text-muted-foreground">{cssVar}</code>
+        {value && (
+          <code className="block text-xs text-muted-foreground break-all" data-cy="devtools-style-token-value">{value}</code>
+        )}
       </div>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigator.clipboard.writeText(copyValue)}
+        onClick={() => copy(copyValue)}
         className="h-8 w-8 p-0"
         aria-label={t("copy", { name })}
+        title={t("copy", { name })}
       >
-        <Copy className="h-3 w-3" />
+        {copied === copyValue ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
       </Button>
     </div>
   );

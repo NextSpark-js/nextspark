@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Copy, Check, Search, TestTube2, CheckCircle2, XCircle, Zap, AlertTriangle } from "lucide-react";
+import { Search, TestTube2, CheckCircle2, XCircle, Zap, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FLOW_REGISTRY, COVERAGE_SUMMARY, type FlowEntry } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
+import { TagCopyActions } from './TagCopyActions';
 import { useScrollToHash } from "./use-scroll-to-hash";
 
 type CategoryFilter = "all" | FlowEntry["category"];
@@ -41,7 +42,6 @@ export function FlowsViewer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
-  const [copiedTag, setCopiedTag] = useState<string | null>(null);
 
   const flows = useMemo(() => Object.values(FLOW_REGISTRY), []);
 
@@ -81,13 +81,6 @@ export function FlowsViewer() {
   const criticalCount = useMemo(() => {
     return flows.filter((f) => f.criticalPath).length;
   }, [flows]);
-
-  const copyGrepCommand = (tag: string) => {
-    const command = `npx cypress run --env grepTags="@${tag}"`;
-    navigator.clipboard.writeText(command);
-    setCopiedTag(tag);
-    setTimeout(() => setCopiedTag(null), 2000);
-  };
 
   return (
     <div className="space-y-6" data-cy={sel("devtools.flows.viewer")}>
@@ -263,21 +256,11 @@ export function FlowsViewer() {
               </div>
 
               {/* Tag with Copy */}
-              <div className="flex items-center justify-between bg-muted rounded-md px-3 py-2">
-                <code className="text-sm font-mono">@{flow.tag}</code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyGrepCommand(flow.tag)}
-                  data-cy={sel("devtools.flows.copyTag", { slug: flow.key })}
-                >
-                  {copiedTag === flow.tag ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+              <TagCopyActions
+                tag={`@${flow.tag}`}
+                tagCy={sel("devtools.flows.copyTag", { slug: flow.key })}
+                commandCy={sel("devtools.flows.copyCommand", { slug: flow.key })}
+              />
             </CardContent>
           </Card>
         ))}

@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Copy, Check, Search, Tag, ExternalLink, ChevronDown, ChevronRight, FileCode2 } from "lucide-react";
+import { Copy, Check, Search, Tag, ExternalLink, ChevronDown, ChevronRight, FileCode2, Terminal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { TAGS_REGISTRY, COVERAGE_SUMMARY } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
 import { cn } from '../../lib/utils';
+import { grepCommand, useCopy } from './use-copy';
 
 type TagCategory = keyof typeof TAGS_REGISTRY;
 
@@ -55,7 +56,7 @@ const CATEGORY_COLORS: Record<TagCategory, string> = {
 export function TagsOverview() {
   const t = useTranslations("devtools.tags");
   const [searchQuery, setSearchQuery] = useState("");
-  const [copiedTag, setCopiedTag] = useState<string | null>(null);
+  const { copy, copied } = useCopy();
   const [expandedCategories, setExpandedCategories] = useState<Set<TagCategory>>(
     new Set(CATEGORY_DISPLAY_ORDER)
   );
@@ -116,13 +117,6 @@ export function TagsOverview() {
     }
     return count;
   }, [filteredTagsByCategory]);
-
-  const copyGrepCommand = (tag: string) => {
-    const command = `npx cypress run --env grepTags="${tag}"`;
-    navigator.clipboard.writeText(command);
-    setCopiedTag(tag);
-    setTimeout(() => setCopiedTag(null), 2000);
-  };
 
   const toggleCategory = (category: TagCategory) => {
     setExpandedCategories((prev) => {
@@ -234,7 +228,7 @@ export function TagsOverview() {
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(tags).map(([key, data]) => {
                       const link = getLinkForTag(category, key);
-                      const isCopied = copiedTag === data.tag;
+                      const isCopied = copied === data.tag;
                       const isExpanded = expandedTag === `${category}-${key}`;
                       const tagKey = `${category}-${key}`;
 
@@ -264,12 +258,14 @@ export function TagsOverview() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                copyGrepCommand(data.tag);
+                                copy(data.tag);
                               }}
-                              title={t("copyHint")}
+                              title={t("copyTag")}
+                              aria-label={t("copyTag")}
+                              data-cy={sel("devtools.tags.copyTag", { tag: data.tag })}
                             >
                               {isCopied ? (
                                 <Check className="h-3 w-3 text-green-600" />
@@ -308,6 +304,20 @@ export function TagsOverview() {
                           <span className="text-sm font-medium">
                             {t("testFiles")} ({data.files.length})
                           </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="ml-auto h-7 gap-1 text-xs"
+                            onClick={() => copy(grepCommand(data.tag))}
+                            data-cy={sel("devtools.tags.copyCommand", { tag: data.tag })}
+                          >
+                            {copied === grepCommand(data.tag) ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Terminal className="h-3 w-3" />
+                            )}
+                            {t("copyTestCommand")}
+                          </Button>
                         </div>
                         <ul className="space-y-1.5">
                           {data.files.map((file, idx) => {
@@ -351,16 +361,6 @@ export function TagsOverview() {
             <p className="text-sm text-muted-foreground">{t("noResultsHint")}</p>
           </CardContent>
         </Card>
-      )}
-
-      {/* Copied toast */}
-      {copiedTag && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-center gap-2">
-            <Check className="h-4 w-4" />
-            {t("copied")}
-          </div>
-        </div>
       )}
     </div>
   );

@@ -14,6 +14,7 @@ import {
 import { codeToHtml } from "shiki";
 import { useTranslations } from "next-intl";
 import { sel } from '../../lib/test';
+import { useCopy } from './use-copy';
 import { withBasePath } from '../../lib/base-path'
 
 interface EntityInfo {
@@ -126,7 +127,7 @@ export function ConfigViewer() {
   const [isLoadingTheme, setIsLoadingTheme] = useState(true);
   const [isLoadingEntities, setIsLoadingEntities] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const { copy: copyToClipboard, copied: copiedSection } = useCopy();
 
   // Load theme config
   useEffect(() => {
@@ -173,12 +174,6 @@ export function ConfigViewer() {
 
     loadEntities();
   }, []);
-
-  const copyToClipboard = (text: string, section: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedSection(section);
-    setTimeout(() => setCopiedSection(null), 2000);
-  };
 
   if (error) {
     return (

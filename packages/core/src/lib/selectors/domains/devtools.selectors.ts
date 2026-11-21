@@ -83,6 +83,7 @@ export const DEVTOOLS_SELECTORS = {
     coverageUncovered: 'devtools-features-coverage-uncovered',
     card: 'devtools-features-card-{slug}',
     copyTag: 'devtools-features-copy-{slug}',
+    copyCommand: 'devtools-features-copy-command-{slug}',
   },
   flows: {
     page: 'devtools-flows-page',
@@ -95,6 +96,7 @@ export const DEVTOOLS_SELECTORS = {
     coverageUncovered: 'devtools-flows-coverage-uncovered',
     card: 'devtools-flows-card-{slug}',
     copyTag: 'devtools-flows-copy-{slug}',
+    copyCommand: 'devtools-flows-copy-command-{slug}',
   },
   blocks: {
     page: 'devtools-blocks-page',
@@ -107,6 +109,7 @@ export const DEVTOOLS_SELECTORS = {
     coverageUncovered: 'devtools-blocks-coverage-uncovered',
     card: 'devtools-blocks-card-{slug}',
     copyTag: 'devtools-blocks-copy-{slug}',
+    copyCommand: 'devtools-blocks-copy-command-{slug}',
     viewDetails: 'devtools-blocks-view-{slug}',
     detail: {
       page: 'devtools-block-detail-{slug}',
@@ -131,6 +134,8 @@ export const DEVTOOLS_SELECTORS = {
     tag: 'devtools-tags-tag-{tag}',
     tagLink: 'devtools-tags-link-{tag}',
     filesPanel: 'devtools-tags-files-panel-{tag}',
+    copyTag: 'devtools-tags-copy-{tag}',
+    copyCommand: 'devtools-tags-copy-command-{tag}',
   },
   scheduledActions: {
     page: 'devtools-scheduled-actions-page',
