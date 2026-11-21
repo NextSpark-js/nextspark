@@ -10,6 +10,7 @@
 
 export const RESERVED_SLUGS = [
   '_next',
+  '.well-known',
   '403',
   'accept-invite',
   'api',
@@ -19,6 +20,7 @@ export const RESERVED_SLUGS = [
   'docs',
   'forgot-password',
   'login',
+  'oauth',
   'public',
   'reset-password',
   'signup',

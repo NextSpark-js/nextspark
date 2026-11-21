@@ -30,6 +30,11 @@
   },
   {
     "kind": "page",
+    "target": "(auth)/oauth/consent/page.tsx",
+    "specifier": "@nextsparkjs/core/routes/(auth)/oauth/consent/page"
+  },
+  {
+    "kind": "page",
     "target": "(auth)/reset-password/page.tsx",
     "specifier": "@nextsparkjs/core/routes/(auth)/reset-password/page"
   },
@@ -71,6 +76,21 @@
     "kind": "page",
     "target": "(public)/page.tsx",
     "specifier": "@nextsparkjs/core/routes/(public)/page"
+  },
+  {
+    "kind": "route",
+    "target": ".well-known/oauth-authorization-server/[[...path]]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/.well-known/oauth-authorization-server/[[...path]]/route"
+  },
+  {
+    "kind": "route",
+    "target": ".well-known/oauth-protected-resource/[[...path]]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/.well-known/oauth-protected-resource/[[...path]]/route"
+  },
+  {
+    "kind": "route",
+    "target": ".well-known/openid-configuration/[[...path]]/route.ts",
+    "specifier": "@nextsparkjs/core/routes/.well-known/openid-configuration/[[...path]]/route"
   },
   {
     "kind": "page",

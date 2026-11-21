@@ -26,11 +26,16 @@ export interface ToolExecutionContext {
   userId: string
   userRole: string
   teamId: string
-  /** Raw Authorization header, forwarded verbatim to in-process handlers. */
+  /** Raw Authorization header, forwarded verbatim to in-process handlers. Empty when `principal` is set. */
   authHeader: string
-  /** api_key.id of the caller — required for audit logging. */
+  /** api_key.id of the caller — required for audit logging. Null for an OAuth access token. */
   apiKeyId: string | null
   scopes: string[]
+  /**
+   * The caller as the MCP endpoint verified it from an OAuth access token (#541). The executor attaches it to the
+   * requests it builds instead of forwarding a credential.
+   */
+  principal?: import('../api/auth/dual-auth').DualAuthResult
 }
 
 export interface McpToolAnnotations {
@@ -151,6 +156,8 @@ export interface McpEntityOverride {
 
 export interface AuditEntry {
   apiKeyId: string | null
+  /** The OAuth client and token of a call made with an access token (#541); `apiKeyId` is null for it. */
+  oauth?: { clientId: string; tokenId?: string }
   userId: string
   tool: string
   entitySlug?: string

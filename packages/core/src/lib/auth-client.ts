@@ -1,6 +1,7 @@
 import { createAuthClient } from "better-auth/react";
 import { inferAdditionalFields } from "better-auth/client/plugins";
 import { emailOTPClient, magicLinkClient } from "better-auth/client/plugins";
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import type { auth } from "./auth";
 import { withBasePath } from "./base-path";
 
@@ -23,6 +24,9 @@ export const authClient = createAuthClient({
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
     magicLinkClient(),
+    // Carries the signed query of an MCP sign-in (#541) from the login and consent pages to the server. Does
+    // nothing on a page whose URL has none.
+    oauthProviderClient(),
   ]
 });
 

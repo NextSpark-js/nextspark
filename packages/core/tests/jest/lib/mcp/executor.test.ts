@@ -121,3 +121,21 @@ describe('executeEntityOperation', () => {
     expect(request.url.searchParams.get('page')).toBe('1');
   });
 });
+
+describe('executeEntityOperation with a verified OAuth principal (#541)', () => {
+  it('forwards no credential and hands the principal to the handler through the request', async () => {
+    const { inProcessPrincipal } = await import('@/core/lib/api/auth/in-process-principal');
+    const principal = {
+      success: true,
+      type: 'api-key' as const,
+      oauth: { clientId: 'client-1' },
+      user: { id: 'user-1', email: 'u@example.test', role: 'member' },
+      scopes: ['customers:read'],
+    };
+    await executeEntityOperation({ slug: 'customers', operation: 'list' }, { ...CTX, authHeader: '', apiKeyId: null, principal });
+    const request = mockList.mock.calls[0][0];
+    expect(request.headers.get('authorization')).toBeFalsy();
+    expect(request.headers.get('x-team-id')).toBe('team-1');
+    expect(inProcessPrincipal(request)).toBe(principal);
+  });
+});

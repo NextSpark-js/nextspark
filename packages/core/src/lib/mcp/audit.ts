@@ -23,10 +23,10 @@ import type { AuditEntry } from './types'
 const MAX_SUMMARY_LENGTH = 4000
 
 export async function auditToolCall(entry: AuditEntry): Promise<void> {
-  if (!entry.apiKeyId) {
-    // The MCP endpoint only accepts api-key auth, so this should not happen;
-    // never drop the trace silently if it does.
-    console.warn('[mcp:audit] tool call without apiKeyId — skipping DB audit', {
+  if (!entry.apiKeyId && !entry.oauth) {
+    // The MCP endpoint accepts an API key or an OAuth access token, so this should not
+    // happen; never drop the trace silently if it does.
+    console.warn('[mcp:audit] tool call without apiKeyId or OAuth client — skipping DB audit', {
       tool: entry.tool,
       userId: entry.userId,
     })
@@ -40,6 +40,8 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
     recordId: entry.recordId ?? null,
     teamId: entry.teamId,
     args: truncate(entry.requestSummary),
+    // An OAuth call has no api_key row: the client and the token's id identify the credential
+    ...(entry.oauth ? { credential: 'oauth', oauthClientId: entry.oauth.clientId, oauthTokenId: entry.oauth.tokenId ?? null } : {}),
   }
 
   try {
@@ -48,7 +50,7 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
        ("apiKeyId", "userId", endpoint, method, "statusCode", "ipAddress", "userAgent", "requestBody", "responseTime")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
-        entry.apiKeyId,
+        entry.apiKeyId ?? null,
         entry.userId,
         `mcp:${entry.tool}`,
         (entry.operation ?? 'workflow').toUpperCase(),

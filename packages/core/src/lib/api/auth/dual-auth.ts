@@ -25,6 +25,7 @@ import {
   scopesSatisfy,
 } from './scope-policy'
 
+import { inProcessPrincipal } from './in-process-principal'
 export type { AuthenticateOptions, DualAuthFailure, DualAuthFailureCode } from './scope-policy'
 
 // ==========================================
@@ -77,6 +78,11 @@ export interface DualAuthResult {
   scopes?: string[]
   /** `api_key.id` of the key that authenticated the request (type 'api-key' only). Used for audit logging (#105). */
   keyId?: string
+  /**
+   * Set when the scoped credential is an OAuth access token instead of an API key (#541). `type` stays `'api-key'`:
+   * every check written for an API key (declared scope, `access.api`, external-caller rules) applies to it as it is.
+   */
+  oauth?: { clientId: string; tokenId?: string }
   /** The session's id (type 'session' only): the active team cookie counts only for it. */
   sessionId?: string
   /** The 429 to return when a valid API key is over its per-key limit (`success` is false, `error` says 429). */
@@ -105,6 +111,14 @@ export async function authenticateRequest(
   request: NextRequest,
   options: AuthenticateOptions = {}
 ): Promise<DualAuthResult> {
+  // A principal the server attached itself (an MCP tool call made with an OAuth access token, #541): the same scope
+  // enforcement as an API key, and no other credential on the request is read.
+  const injected = inProcessPrincipal(request)
+  if (injected) {
+    const failure = resolveApiKeyScopeFailure(injected.scopes, options, describeRoute(request))
+    return failure ? { ...injected, success: false, error: failure } : injected
+  }
+
   // First try API Key authentication
   const apiKeyResult = await tryApiKeyAuth(request)
   if (apiKeyResult.success) {

@@ -92,3 +92,18 @@ describe('auditToolCall', () => {
     expect(errorSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('auditToolCall for an OAuth access token (#541)', () => {
+  it('records the call with no api key and the OAuth client and token id in the body', async () => {
+    await auditToolCall(entry({ apiKeyId: null, oauth: { clientId: 'https://client.example/metadata.json', tokenId: 'jti-1' } }));
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(1);
+    const [, params] = mockMutateWithRLS.mock.calls[0];
+    expect(params[0]).toBeNull();
+    expect(JSON.parse(params[7])).toMatchObject({ credential: 'oauth', oauthClientId: 'https://client.example/metadata.json', oauthTokenId: 'jti-1' });
+  });
+
+  it('still skips a call that has neither an api key nor an OAuth client', async () => {
+    await auditToolCall(entry({ apiKeyId: null }));
+    expect(mockMutateWithRLS).not.toHaveBeenCalled();
+  });
+});

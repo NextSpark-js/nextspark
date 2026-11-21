@@ -34,6 +34,7 @@ import {
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../lib/teams/active-team-cookie'
 import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '../lib/auth/session-hint'
 import { isDocsPublic, legacyDocsAccessMessage } from '../lib/docs/access'
+import { isMcpOAuthEnabled } from '../lib/mcp/oauth/config'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { FEATURES } from '@nextsparkjs/registries/features'
 import { NOT_FOUND_REWRITE, ROOT_FILES } from '@nextsparkjs/registries/root-files'
@@ -684,6 +685,12 @@ async function handle(request: NextRequest, { authenticatedPaths, hookTimeoutMs,
       newUrl.pathname = '/docs'
     }
     return finishCoreResponse(NextResponse.redirect(newUrl, 301))
+  }
+
+  // The consent screen of MCP browser sign-in (#541) is a page only while MCP_OAUTH_ENABLED is on: a real 404
+  // otherwise (a notFound() in the page arrives after the layout has begun streaming a 200).
+  if (isUnder(pathname, '/oauth') && !isMcpOAuthEnabled()) {
+    return rewriteToNotFound(request, requestHeaders, themeResponse)
   }
 
   // Documentation access control: docs.publicAccess, or the older

@@ -27,6 +27,8 @@ import {
   resolveTeamContext,
 } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { validateApiKey } from '@nextsparkjs/core/lib/api/auth'
+import { isMcpEnabled, isMcpOAuthEnabled } from '@nextsparkjs/core/lib/mcp/oauth/config'
+import { handleOAuthMcpRequest, presentsApiKey, presentsOAuthBearer } from '@nextsparkjs/core/lib/mcp/oauth/resource-server'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
@@ -73,12 +75,6 @@ const engine = createMcpEngine(entityConfigs, {
 const API_KEY_HELP =
   'This endpoint requires an API key: generate one in Settings → API Keys and configure it in your MCP client as the header "Authorization: Bearer sk_...".'
 
-function isMcpEnabled(): boolean {
-  const flag = process.env.MCP_ENABLED
-  if (process.env.NODE_ENV === 'production') return flag === 'true'
-  return flag !== 'false'
-}
-
 function isOriginAllowed(request: NextRequest): boolean {
   const origin = request.headers.get('origin')
   if (!origin) return true // non-browser MCP clients don't send Origin
@@ -105,6 +101,19 @@ async function handleMcpPost(request: NextRequest): Promise<NextResponse> {
   }
   if (!isOriginAllowed(request)) {
     return jsonRpcError(403, -32000, 'Origin not allowed')
+  }
+
+  // MCP browser sign-in (#541), only while MCP_OAUTH_ENABLED is on: a request that presents an API key keeps the
+  // path below; any other request is an OAuth one (a bearer access token, or none yet and the 401 that tells the
+  // client where to sign in). One that presents both is refused instead of picking one.
+  if (isMcpOAuthEnabled()) {
+    const apiKey = presentsApiKey(request)
+    if (apiKey && presentsOAuthBearer(request)) {
+      return jsonRpcError(400, -32600, 'Present one credential: an API key or an OAuth access token, not both.')
+    }
+    if (!apiKey) {
+      return handleOAuthMcpRequest(request, (body, ctx) => engine.handleJsonRpc(body, ctx))
+    }
   }
 
   // Transport-level auth only: per-tool scopes (`<entity>:read/write/delete`)

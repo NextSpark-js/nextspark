@@ -48,6 +48,18 @@ type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
  * sign-in with INVALID_CALLBACK_URL. Setting the marker replaces one already in
  * the query rather than adding a second.
  */
+/**
+ * A sign-in made from the login page of an MCP authorization (#541) is answered with `{ redirect: true, url }`: the
+ * URL that continues it (consent, or back to the client). Goes there instead of the dashboard.
+ */
+function continueOAuthSignIn(data: unknown): boolean {
+  const next = data as { redirect?: unknown; url?: unknown } | null
+  if (!next || next.redirect !== true || typeof next.url !== 'string') return false
+  if (typeof window === 'undefined' || !new URLSearchParams(window.location.search).has('sig')) return false
+  window.location.assign(next.url)
+  return true
+}
+
 function signInCallbackURL(method: SocialLoginMethod | 'email', redirectTo?: string): string {
   const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
   url.searchParams.set('auth_method', method)
@@ -118,6 +130,9 @@ export function useAuthActions() {
     if (error) {
       throw toAuthError(error, 'Failed to sign in')
     }
+
+    // An MCP sign-in (#541): the server answers with the URL that continues the authorization
+    if (continueOAuthSignIn(data)) return data
 
     if (data) {
       // Save auth method only when login is truly successful
@@ -202,6 +217,8 @@ export function useAuthActions() {
     if (error) {
       throw toAuthError(error, 'Invalid or expired code')
     }
+
+    if (continueOAuthSignIn(data)) return data
 
     if (data) {
       // OTP is an email-based method for the "last used" badge purposes

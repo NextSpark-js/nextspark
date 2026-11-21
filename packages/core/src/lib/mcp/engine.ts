@@ -182,6 +182,7 @@ export function createMcpEngine(
           }
           await audit({
             apiKeyId: ctx.apiKeyId,
+            oauth: ctx.principal?.oauth,
             userId: ctx.userId,
             tool: tool.name,
             entitySlug: tool.meta?.entitySlug,
