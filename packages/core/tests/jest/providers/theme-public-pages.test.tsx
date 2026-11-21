@@ -1,8 +1,9 @@
 /**
- * #510: the pages outside the areas with a session render in one theme (`publicTheme`), whatever the visitor stored,
- * their system or their account says; inside the areas (`areaPaths`, wrapped in ThemeArea) the visitor's theme
- * applies. The server reads no pathname: the blocking script decides from the browser's location, and so does the
- * provider's first render in the browser, which changes only what is applied, never what is rendered.
+ * #510: the pages outside the areas with a session (dashboard, devtools, superadmin) render in one theme, the default
+ * when it is dark and light otherwise, whatever the visitor stored, their system or their account says; inside the
+ * areas (wrapped in ThemeArea) the visitor's theme applies. The server reads no pathname and sends nothing more: the
+ * blocking script decides from the browser's location, and so does the provider's first render in the browser, which
+ * changes only what is applied, never what is rendered.
  */
 import React from 'react'
 import { act, render } from '@testing-library/react'
@@ -36,14 +37,17 @@ beforeEach(() => {
     dispatchEvent: jest.fn(),
   })) as unknown as typeof window.matchMedia
 })
+const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
 afterEach(() => {
   window.matchMedia = originalMatchMedia
   window.history.pushState({}, '', '/')
+  // process.env stores undefined as the string "undefined"
+  if (ORIGINAL_BASE_PATH === undefined) delete process.env.__NEXT_ROUTER_BASEPATH
+  else process.env.__NEXT_ROUTER_BASEPATH = ORIGINAL_BASE_PATH
 })
 
-const AREAS = ['/dashboard', '/devtools', '/superadmin']
 /** What the root layouts pass with the toggle allowed and defaultMode 'system' */
-const root = { attribute: 'class' as const, defaultTheme: 'system', enableSystem: true, disableTransitionOnChange: true, publicTheme: 'light', areaPaths: AREAS }
+const root = { attribute: 'class' as const, defaultTheme: 'system', enableSystem: true, disableTransitionOnChange: true }
 
 /** Runs the blocking script the provider renders with `props` at `path`; the class it put on <html> */
 function scriptClass(path: string, props: React.ComponentProps<typeof ThemeProvider> = root): string {
@@ -70,15 +74,16 @@ describe('the blocking script', () => {
     expect(scriptClass(path)).toBe(expected)
   })
 
-  it('applies a dark public theme over a stored light choice', () => {
+  it('applies a dark default as the public theme over a stored light choice', () => {
     localStorage.setItem('theme', 'light')
-    expect(scriptClass('/', { ...root, defaultTheme: 'dark', publicTheme: 'dark' })).toBe('dark')
+    expect(scriptClass('/', { ...root, defaultTheme: 'dark' })).toBe('dark')
   })
 
-  it('matches the areas with the base path', () => {
-    const base = { ...root, areaPaths: AREAS.map(p => `/app${p}`) }
-    expect(scriptClass('/app/dashboard/tasks', base)).toBe('dark')
-    expect(scriptClass('/app', base)).toBe('light')
+  it('matches the areas under the base path', () => {
+    process.env.__NEXT_ROUTER_BASEPATH = '/app'
+    expect(scriptClass('/app/dashboard/tasks')).toBe('dark')
+    expect(scriptClass('/app')).toBe('light')
+    expect(scriptClass('/dashboard')).toBe('light')
   })
 
   it('lets a forced theme win, on public pages and in the areas', () => {
@@ -87,9 +92,10 @@ describe('the blocking script', () => {
     expect(scriptClass('/dashboard', { ...root, forcedTheme: 'dark' })).toBe('dark')
   })
 
-  it('without a public theme, follows the stored choice everywhere, as before', () => {
-    const { publicTheme: _p, areaPaths: _a, ...legacy } = root
-    expect(scriptClass('/', legacy)).toBe('dark')
+  it('sends nothing more than before: the areas and the public theme are not props or arguments of their own', () => {
+    window.history.pushState({}, '', '/')
+    const html = renderToString(<ThemeProvider {...root}><span /></ThemeProvider>)
+    expect(html).toMatch(/\("class","theme","system",null,\["light","dark"\],null,true,true,""\)<\/script>/)
   })
 })
 
@@ -139,6 +145,44 @@ describe('the provider', () => {
     // The same answers in the server render and the hydration render: nothing rendered depends on the location
     expect(new Set(inside.map(v => v.forcedTheme))).toEqual(new Set([undefined]))
     expect(outside.at(-1)?.forcedTheme).toBe('light')
+  })
+
+  it.each([
+    ['/dashboard-tour', 'light'],
+    ['/dashboards', 'light'],
+    ['/dashboard', 'dark'],
+  ])('matches %s as an area only at a segment boundary after hydration too (%s)', async (path, expected) => {
+    const seen: UseThemeProps[] = []
+    function Probe() {
+      seen.push(useTheme())
+      return null
+    }
+    await hydrateAt(path, <ThemeProvider {...root}><Probe /></ThemeProvider>, seen)
+    expect(document.documentElement.className).toBe(expected)
+  })
+
+  it('matches the areas under the base path after hydration too', async () => {
+    process.env.__NEXT_ROUTER_BASEPATH = '/app'
+    const seen: UseThemeProps[] = []
+    function Probe() {
+      seen.push(useTheme())
+      return null
+    }
+    await hydrateAt('/app/dashboard', <ThemeProvider {...root}><Probe /></ThemeProvider>, seen)
+    expect(document.documentElement.className).toBe('dark')
+    await hydrateAt('/dashboard', <ThemeProvider {...root}><Probe /></ThemeProvider>, seen)
+    expect(document.documentElement.className).toBe('light')
+  })
+
+  it('lets forcedThemeRoutes force a public route to another theme than the public one', async () => {
+    const seen: UseThemeProps[] = []
+    function Probe() {
+      seen.push(useTheme())
+      return null
+    }
+    await hydrateAt('/pricing', <ThemeProvider {...root} forcedThemeRoutes={{ '/pricing': 'dark' }}><Probe /></ThemeProvider>, seen)
+    expect(document.documentElement.className).toBe('dark')
+    expect(seen.at(-1)?.forcedTheme).toBe('dark')
   })
 
   it('keeps the visitor theme on an area page whose ThemeArea has not hydrated yet (it streams in later)', async () => {

@@ -344,7 +344,7 @@ In the areas with a session (dashboard, devtools, superadmin):
 3. The signed-in account's saved theme (the `nextspark.account_theme` cookie, #495)
 4. Theme config `defaultMode`, falling back to `'system'` (the device's scheme)
 
-Neither the server render nor the root layout reads the pathname for this. `themeProviderProps()` gives the root provider `publicTheme` and `areaPaths` (the three area prefixes with the base path); the inline theme script compares them with the browser's location, and so does the provider's first render in the browser, which changes only what is applied to `<html>`, never what is rendered, so public pages stay static or partially prerendered. On a client navigation the area layouts tell the provider through `ThemeArea`, which wraps each area; inside it `useTheme()` answers without the public theme, so ThemeToggle shows there and stays hidden on public pages.
+Neither the server render nor the root layout reads the pathname for this. The root provider derives the public theme from `defaultTheme` and knows the three area prefixes itself (with the base path), so the server sends nothing more; the inline theme script compares the browser's location with them, and so does the provider's first render in the browser, which changes only what is applied to `<html>`, never what is rendered, so public pages stay static or partially prerendered. On a client navigation the area layouts tell the provider through `ThemeArea`, which wraps each area; inside it `useTheme()` answers without the public theme, so ThemeToggle shows there and stays hidden on public pages.
 
 A signed-in user's saved preference is not read while rendering: the areas with a session apply it from a cookie, see [User Profile](#user-profile).
 

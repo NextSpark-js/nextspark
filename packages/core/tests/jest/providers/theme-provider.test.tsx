@@ -76,9 +76,11 @@ describe('ThemeProvider context across hydration (#371)', () => {
   let mediaListeners: Array<(media: MediaQueryList) => void> = []
 
   /** A browser whose prefers-color-scheme is dark, unless a test says otherwise */
+  // The visitor's theme applies in the areas with a session; public pages have one theme (#510)
   beforeEach(() => {
     prefersDark = true
     mediaListeners = []
+    window.history.pushState({}, '', '/dashboard')
     localStorage.clear()
     document.documentElement.className = ''
     window.matchMedia = jest.fn((query: string) => ({
@@ -96,6 +98,7 @@ describe('ThemeProvider context across hydration (#371)', () => {
   })
   afterEach(() => {
     window.matchMedia = originalMatchMedia
+    window.history.pushState({}, '', '/')
   })
 
   /** Hydrates server markup and returns every context value the consumer rendered with, effects flushed */
