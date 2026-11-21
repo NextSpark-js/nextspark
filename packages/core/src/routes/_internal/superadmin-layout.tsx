@@ -8,6 +8,7 @@ import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-che
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
+import { AreaToastPosition } from "@nextsparkjs/core/providers/area-toast-position";
 import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Loader2 } from 'lucide-react'
@@ -47,6 +48,7 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
       <DashboardProviders>
         {/* The theme saved to the account, before the area paints (#495) */}
         <AccountTheme />
+        <AreaToastPosition />
         <SuperAdminGuard serverChecked={serverChecked}>
             <div className="flex h-screen bg-background" data-cy="superadmin-container">
               {/* Sidebar - Hidden on mobile, visible on desktop */}
@@ -150,6 +152,7 @@ export function guardSuperadminLayout<P extends SuperadminLayoutProps>(ProjectLa
         <ThemeArea>
           <DashboardProviders>
             <AccountTheme />
+            <AreaToastPosition />
             <SuperAdminGuard serverChecked={serverChecked}>
               <ProjectLayout {...props} />
             </SuperAdminGuard>

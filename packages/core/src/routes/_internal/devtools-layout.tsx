@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { DeveloperGuard } from "@nextsparkjs/core/components/app/guards/DeveloperGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
+import { AreaToastPosition } from "@nextsparkjs/core/providers/area-toast-position";
 import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
 import { DevtoolsSidebar } from "@nextsparkjs/core/components/devtools/DevtoolsSidebar";
 import { DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools/DevtoolsMobileHeader";
@@ -45,6 +46,7 @@ function DevLayoutBody({ children, serverChecked }: GuardedProps) {
       <DashboardProviders>
         {/* The theme saved to the account, before the area paints (#495) */}
         <AccountTheme />
+        <AreaToastPosition />
         <DeveloperGuard serverChecked={serverChecked}>
           <div className="flex h-screen bg-background">
           {/* Sidebar - Hidden on mobile, visible on desktop */}
@@ -120,6 +122,7 @@ export function guardDevtoolsLayout<P extends DevLayoutProps>(ProjectLayout: Com
       <ThemeArea>
         <DashboardProviders>
           <AccountTheme />
+          <AreaToastPosition />
           <DeveloperGuard serverChecked={serverChecked}>
             <ProjectLayout {...props} />
           </DeveloperGuard>
