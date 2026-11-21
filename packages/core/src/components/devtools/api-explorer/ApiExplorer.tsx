@@ -21,7 +21,8 @@ import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
 import { loadState, saveState, draftKey } from './explorer-storage'
-import { defaultMethod } from './explorer-helpers'
+import { defaultMethod, pickDefaultTeamId } from './explorer-helpers'
+import { useUserTeams } from '../../../hooks/teams'
 import {
   createPresetPlaceholderValues,
   readPresetRunToken,
@@ -98,6 +99,8 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     return null
   })
   const [body, setBody] = useState('')
+  // Raised by a send with no team, not by loading the screen (see handleSend and the effect below).
+  const [teamErrorShown, setTeamErrorShown] = useState(false)
   // Optional act-as-user override for the request (persisted; the server strictly gates it)
   const [actAsUserId, setActAsUserId] = useState(() => loadState<string>('actAsUserId') ?? '')
 
@@ -170,6 +173,20 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     saveState('actAsUserId', actAsUserId)
   }, [authType, apiKey, bypassMode, selectedTeamId, actAsUserId])
 
+  // A team is preselected: the last one used (restored above), else the dashboard's active team, else
+  // the user's only team. Read-only for a team already set, and not applied in cross-team mode, where
+  // "no team" is a choice.
+  const { teams: userTeams, isLoading: teamsLoading } = useUserTeams()
+  useEffect(() => {
+    if (bypassMode || selectedTeamId || teamsLoading) return
+    const active = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
+    const picked = pickDefaultTeamId(userTeams, selectedTeamId, active)
+    if (picked) setSelectedTeamId(picked)
+  }, [bypassMode, selectedTeamId, teamsLoading, userTeams])
+  useEffect(() => {
+    if (selectedTeamId || bypassMode) setTeamErrorShown(false)
+  }, [selectedTeamId, bypassMode])
+
   // Persist whether the sidebar is collapsed.
   useEffect(() => {
     saveState('sidebarCollapsed', isCollapsed)
@@ -203,6 +220,9 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
 
     const url = buildUrl(selectedEndpoint.path, pathParams, queryParams)
     const fullUrl = (typeof window !== 'undefined' ? window.location.origin : '') + withBasePath(url)
+
+    // Team context is only complained about here, once a request goes out without one.
+    setTeamErrorShown(!bypassMode && !selectedTeamId)
 
     const customHeaders: Record<string, string> = {}
 
@@ -488,6 +508,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 bypassMode={bypassMode}
                 selectedTeamId={selectedTeamId}
                 actAsUserId={actAsUserId}
+                showTeamError={teamErrorShown}
                 body={body}
                 status={status}
                 onMethodChange={setMethod}

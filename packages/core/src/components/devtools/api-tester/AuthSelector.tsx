@@ -23,6 +23,8 @@ interface AuthSelectorProps {
   selectedTeamId: string | null
   /** Optional. The act-as input renders only when onActAsUserChange is provided. */
   actAsUserId?: string
+  /** Raised after a send with no team (see TeamSelector). */
+  showTeamError?: boolean
   onAuthTypeChange: (type: AuthType) => void
   onApiKeyChange: (key: string) => void
   onBypassModeChange: (enabled: boolean) => void
@@ -36,6 +38,7 @@ export function AuthSelector({
   bypassMode,
   selectedTeamId,
   actAsUserId,
+  showTeamError,
   onAuthTypeChange,
   onApiKeyChange,
   onBypassModeChange,
@@ -105,6 +108,7 @@ export function AuthSelector({
         selectedTeamId={selectedTeamId}
         onTeamChange={onTeamChange}
         bypassMode={bypassMode}
+        showError={showTeamError}
       />
 
       {/* Act as user — optional request override (the server strictly gates it).

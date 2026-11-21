@@ -29,6 +29,8 @@ interface TeamSelectorProps {
   onTeamChange: (teamId: string | null) => void
   bypassMode: boolean
   disabled?: boolean
+  /** Shows the "team required" message. The Explorer raises it when a request is sent without a team, not before. */
+  showError?: boolean
 }
 
 /**
@@ -43,6 +45,7 @@ export function TeamSelector({
   onTeamChange,
   bypassMode,
   disabled = false,
+  showError = false,
 }: TeamSelectorProps) {
   const t = useTranslations('devtools.apiTester.team')
   const [open, setOpen] = useState(false)
@@ -110,8 +113,8 @@ export function TeamSelector({
             ))}
           </SelectContent>
         </Select>
-        {!selectedTeamId && (
-          <p className="text-xs text-destructive" data-cy={sel('devtools.apiExplorer.team.error')}>
+        {!selectedTeamId && showError && (
+          <p className="text-xs text-destructive" role="alert" data-cy={sel('devtools.apiExplorer.team.error')}>
             {t('required')}
           </p>
         )}

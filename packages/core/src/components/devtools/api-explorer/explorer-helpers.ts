@@ -20,3 +20,18 @@ export function defaultMethod(methods: readonly string[]): HttpMethod {
 export function countFilledRows(rows: readonly KeyValuePair[]): number {
   return rows.filter((row) => row.key.trim() !== '').length
 }
+
+/**
+ * The team a request opens with when none has been chosen: the team the dashboard last had active when the
+ * user belongs to it, else the only team they have. With several teams and no active one there is no honest
+ * default, so it stays unset and the choice is theirs. A team that is already set is never replaced.
+ */
+export function pickDefaultTeamId(
+  teams: readonly { id: string }[],
+  current: string | null,
+  activeTeamId: string | null
+): string | null {
+  if (current) return current
+  if (activeTeamId && teams.some((team) => team.id === activeTeamId)) return activeTeamId
+  return teams.length === 1 ? teams[0].id : null
+}
