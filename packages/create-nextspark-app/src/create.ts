@@ -307,11 +307,11 @@ export const ESSENTIAL_DEPENDENCIES = [
   'react',
   'react-dom',
   'next-intl@4.11.0',
-  'better-auth@~1.7.7',
+  'better-auth@~1.7.27',
   // better-auth pins this exact version and @better-auth/core requires it as a
   // peer, and a proxy.ts copied before 0.1.0-beta.196 imports it directly, so the
   // project declares it.
-  '@better-fetch/fetch@1.3.2',
+  '@better-fetch/fetch@1.3.3',
   'jiti',
   // Imported directly by shipped app routes (devtools docs/tests + media upload).
   // Must be direct project deps, not phantom-hoisted from @nextsparkjs/core,

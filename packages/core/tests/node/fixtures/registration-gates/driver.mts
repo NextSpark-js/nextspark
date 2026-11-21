@@ -5,7 +5,7 @@
  * a `send-code` step replaces the email provider with one that sends, answers { success: false } or throws.
  * Started by registration-gates.test.ts and social-providers.test.ts under tsx with this folder's tsconfig.
  */
-import { createPrivateKey, createPublicKey, sign } from 'node:crypto'
+import { generateKeyPairSync, sign } from 'node:crypto'
 import { createServer } from 'node:net'
 import { NextRequest } from 'next/server'
 
@@ -23,7 +23,8 @@ type Step =
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
   // A provider enabled only through the auth.providers map: no readiness check, no button, no mapping of its own
   | { op: 'discord'; email: string; emailVerified?: boolean; id?: string }
-  // A native app's Sign in with Apple: /sign-in/social with an id token signed by APPLE_PRIVATE_KEY (Apple's keys are stubbed with its public half)
+  // A native app's Sign in with Apple: /sign-in/social with an RS256 id token, the algorithm Apple signs with and the only one
+  // Better Auth 1.7.27 accepts for it (Apple's keys are stubbed with the public half of a key made for this run)
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
   // POST /email-otp/send-verification-otp with an email provider that sends, fails or throws
   | { op: 'send-code'; email: string; type?: 'sign-in' | 'email-verification' | 'forget-password'; provider: 'ok' | 'fail' | 'throw' }
@@ -63,6 +64,8 @@ let appleClientSecret: string | undefined
 const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
 const jsonResponse = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } })
 let discord: Extract<Step, { op: 'discord' }> | null = null
+// Signs the id token of a native Sign in with Apple
+const appleIdTokenKey = generateKeyPairSync('rsa', { modulusLength: 2048 })
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
@@ -90,8 +93,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     return jsonResponse({ access_token: 'stub-apple-access', id_token: idToken, token_type: 'Bearer', expires_in: 600 })
   }
   if (url === 'https://appleid.apple.com/auth/keys') {
-    const jwk = createPublicKey(createPrivateKey(process.env.APPLE_PRIVATE_KEY!)).export({ format: 'jwk' })
-    return jsonResponse({ keys: [{ ...jwk, kid: 'stub-apple-kid', alg: 'ES256', use: 'sig' }] })
+    return jsonResponse({ keys: [{ ...appleIdTokenKey.publicKey.export({ format: 'jwk' }), kid: 'stub-apple-kid', alg: 'RS256', use: 'sig' }] })
   }
   if (url.startsWith('https://oauth2.googleapis.com/token')) {
     const idToken = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: `google-${googleEmail}`, email: googleEmail, email_verified: googleEmailVerified, name: googleName, iss: 'https://accounts.google.com', aud: process.env.GOOGLE_CLIENT_ID, exp: Math.floor(Date.now() / 1000) + 600, iat: Math.floor(Date.now() / 1000) })}.`
@@ -234,8 +236,8 @@ async function run(step: Step) {
     }
     case 'apple-id-token': {
       const now = Math.floor(Date.now() / 1000)
-      const input = `${part({ alg: 'ES256', kid: 'stub-apple-kid', typ: 'JWT' })}.${part({ iss: 'https://appleid.apple.com', aud: process.env.APPLE_CLIENT_ID, sub: `apple-native-${step.email}`, email: step.email, email_verified: step.emailVerified, iat: now, exp: now + 600 })}`
-      const signature = sign('sha256', Buffer.from(input), { key: createPrivateKey(process.env.APPLE_PRIVATE_KEY!), dsaEncoding: 'ieee-p1363' }).toString('base64url')
+      const input = `${part({ alg: 'RS256', kid: 'stub-apple-kid', typ: 'JWT' })}.${part({ iss: 'https://appleid.apple.com', aud: process.env.APPLE_CLIENT_ID, sub: `apple-native-${step.email}`, email: step.email, email_verified: step.emailVerified, iat: now, exp: now + 600 })}`
+      const signature = sign('sha256', Buffer.from(input), appleIdTokenKey.privateKey).toString('base64url')
       const res = await authRoute.POST(json('/api/auth/sign-in/social', { provider: 'apple', idToken: { token: `${input}.${signature}` } }))
       const text = await res.clone().text()
       return { ...(await outcome(res)), body: text.slice(0, 300), setsSession: res.headers.getSetCookie().some(c => c.includes('session_token')) }
