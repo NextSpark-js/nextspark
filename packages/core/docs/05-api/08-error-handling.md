@@ -151,7 +151,8 @@ The API v1 uses **standardized error responses** across all endpoints. Every err
 | `ACTION_NOT_ALLOWED` | 403 | A billing route refused the action for the team's plan or role (`reason` and `meta` say why) |
 | `INVALID_NAME`, `INVALID_NAME_TYPE` | 400 | `PATCH /api/v1/api-keys/:id` with a name that is empty, over 100 characters, or not text |
 | `SLUG_EXISTS` | 400 | `POST /api/v1/post-categories` with a slug the team already uses (`PUT` answers `409` `CONFLICT`) |
-| `ACTION_ALREADY_PENDING` | 409 | Retrying a scheduled action whose payload already has a pending one (`existingActionId`) |
+| `ACTION_ALREADY_PENDING` | 409 | Retrying a scheduled action when a pending one of the same type, payload and team already exists (`existingActionId`); another team's pending action does not count |
+| `ACTION_ALREADY_RETRIED` | 409 | Retrying a failed scheduled action that was already retried: `scheduled_actions."retryOf"` is unique (migration 048), so a second retry, from a second click or tab, is refused atomically. If the retry failed too, retry that one |
 | `CONFLICT` | 409 | A category slug already used (`PUT /api/v1/post-categories/:id`), or `DELETE /api/user/delete-account` when the account cannot be removed |
 | `HTTP_<status>` | any | The code of an error raised without a specific one, for example `HTTP_501` |
 | `MISSING_REQUIRED_FIELD` | 422 | Required field not provided |

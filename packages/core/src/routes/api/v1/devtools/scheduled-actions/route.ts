@@ -22,7 +22,7 @@ import { getAllRegisteredActions } from '@nextsparkjs/core/lib/scheduled-actions
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions/scheduler'
-import { listScheduledActions } from '@nextsparkjs/core/lib/scheduled-actions/devtools-list'
+import { findPendingTwin, listScheduledActions } from '@nextsparkjs/core/lib/scheduled-actions/devtools-list'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request; the API-key scope is declared at the entry point,
@@ -147,6 +147,16 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     // Only allow retrying failed actions
     if (failedAction.status !== 'failed') {
       return createApiError('Only failed actions can be retried', 400, undefined, 'VALIDATION_ERROR')
+    }
+
+    // A pending action of the same type, payload and team is the same job queued again (a re-enqueued webhook, the next
+    // run of a recurring job): retrying would run it twice in parallel. The team is part of the key, so another team's
+    // pending action with the same payload does not block this one. JSONB containment both ways is an equality that
+    // ignores key order.
+    const existingPending = await findPendingTwin(failedAction)
+
+    if (existingPending.length > 0) {
+      return createApiError('A pending action with the same payload already exists', 409, undefined, 'ACTION_ALREADY_PENDING', { existingActionId: existingPending[0].id })
     }
 
     // Create a new action with the same payload. "retryOf" is unique: a failed action is retried once, and a second retry

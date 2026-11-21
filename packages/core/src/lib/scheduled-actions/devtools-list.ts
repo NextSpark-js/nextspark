@@ -65,3 +65,24 @@ export async function listScheduledActions({ status, actionType, limit, offset }
 
   return { actions, total: parseInt(count[0]?.count || '0', 10) }
 }
+
+/**
+ * A pending action of the same type, payload and team as `action`: the same job queued again (a re-enqueued webhook, the
+ * next run of a recurring job). Retrying a failed action next to one would run the job twice in parallel. The team is part
+ * of the key, so another team's pending action with the same payload is not a twin. JSONB containment both ways is an
+ * equality that ignores key order.
+ */
+export async function findPendingTwin(action: { actionType: string; payload: unknown; teamId: string | null }): Promise<{ id: string }[]> {
+  return queryWithRLS<{ id: string }>(
+    `SELECT id
+     FROM "scheduled_actions"
+     WHERE "actionType" = $1
+       AND "teamId" IS NOT DISTINCT FROM $3
+       AND payload @> $2::jsonb
+       AND $2::jsonb @> payload
+       AND status = 'pending'
+     LIMIT 1`,
+    [action.actionType, JSON.stringify(action.payload), action.teamId],
+    null
+  )
+}
