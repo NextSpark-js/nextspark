@@ -24,6 +24,8 @@ jest.mock('@nextsparkjs/core/components/app/guards/SuperAdminGuard', () => ({ Su
 jest.mock('@nextsparkjs/core/components/app/guards/DeveloperGuard', () => ({ DeveloperGuard: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/providers/group-providers', () => ({ GroupProviders: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('@nextsparkjs/core/providers/DashboardProviders', () => ({ DashboardProviders: ({ children }: { children: React.ReactNode }) => children }))
+// a client component with hooks; the areas mount it (#495)
+jest.mock('@nextsparkjs/core/providers/account-theme', () => ({ AccountTheme: () => null }))
 jest.mock('@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar', () => ({ SuperadminSidebar: () => null }))
 jest.mock('@nextsparkjs/core/components/devtools/DevtoolsSidebar', () => ({ DevtoolsSidebar: () => null }))
 jest.mock('@nextsparkjs/core/components/devtools/DevtoolsMobileHeader', () => ({ DevtoolsMobileHeader: () => null }))

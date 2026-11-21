@@ -44,11 +44,6 @@ jest.mock('@/core/components/ui/sonner', () => ({
   Toaster: () => require('react').createElement('div', { 'data-testid': 'toaster' }),
 }))
 
-// The account theme of the areas with a session (#495; providers/account-theme)
-jest.mock('@/core/providers/account-theme', () => ({
-  AccountTheme: () => require('react').createElement('i', { 'data-testid': 'account-theme' }),
-}))
-
 jest.mock('@nextsparkjs/registries/billing-registry', () => ({
   BILLING_REGISTRY: { plans: [{ slug: 'free', features: [], limits: {} }], limits: {} },
 }))
@@ -120,7 +115,6 @@ describe('DashboardProviders', () => {
     await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('team-a'))
     expect(seenQueryClient).toBeInstanceOf(QueryClient)
     expect(screen.queryAllByTestId('toaster')).toHaveLength(1)
-    expect(screen.queryAllByTestId('account-theme')).toHaveLength(1)
   })
 
   it('moving to another area under the same root layout posts the team switch only once', async () => {
