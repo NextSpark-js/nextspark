@@ -184,7 +184,13 @@
       "adminBypassTooltip": "Habilitar para acessar dados de qualquer equipe. Requer membresia no NextSpark Team.",
       "actAsUser": "Atuar como usuário",
       "actAsUserHelp": "Somente para desenvolvedores. Resolve endpoints de sessão (p. ex. /me/*) como o usuário informado, sem trocar a sua sessão. Exige o papel developer, um ambiente que não seja de produção e ALLOW_ACT_AS_USER=true. Deixe vazio para usar a sua própria sessão.",
-      "actAsUserPlaceholder": "ID do usuário (vazio = sua própria sessão)"
+      "actAsUserPlaceholder": "Sua própria sessão (busque um usuário para atuar como ele)",
+      "actAsUserClear": "Deixar de atuar como este usuário",
+      "actAsUserSearch": "Buscar por e-mail ou nome...",
+      "actAsUserSearching": "Buscando usuários...",
+      "actAsUserNone": "Nenhum usuário encontrado",
+      "actAsUserUnavailable": "Não foi possível carregar os usuários. Digite um id para usá-lo como está.",
+      "actAsUserUseId": "Usar \"{id}\" como id de usuário"
     },
     "editor": {
       "keyPlaceholder": "Chave",
@@ -213,7 +219,8 @@
       "apiKey": "chave de API",
       "session": "sessão",
       "crossTeam": "cross-team",
-      "actingAs": "como {user}"
+      "actingAs": "como {user}",
+      "actingAsChip": "Atuando como {user}"
     },
     "source": "Origem: {source}",
     "sourceWithCategory": "Origem: {source} | Categoria: {category}",
@@ -231,6 +238,15 @@
       "tryOther": "Tente outro termo de busca",
       "crossTeamHint": "Acesse os dados de todas as equipes sem filtro",
       "members": "{count, plural, one {# membro} other {# membros}}"
+    },
+    "context": {
+      "session": "Sessão",
+      "apiKey": "Chave de API",
+      "team": "Equipe: {team}",
+      "noTeam": "Sem equipe",
+      "crossTeam": "Cross-team",
+      "crossTeamIn": "Cross-team, filtrado em {team}",
+      "actingAs": "Como {user}"
     }
   },
   "features": {

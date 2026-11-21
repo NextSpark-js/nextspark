@@ -184,7 +184,13 @@
       "adminBypassTooltip": "Aktivieren Sie den Zugriff auf Daten aller Teams. Erfordert NextSpark-Team-Mitgliedschaft.",
       "actAsUser": "Als Benutzer handeln",
       "actAsUserHelp": "Nur für Entwickler. Löst sitzungsbezogene Endpunkte (z. B. /me/*) als der angegebene Benutzer auf, ohne Ihre Sitzung zu wechseln. Erfordert die Rolle „developer“, eine Nicht-Produktionsumgebung und ALLOW_ACT_AS_USER=true. Leer lassen, um Ihre eigene Sitzung zu verwenden.",
-      "actAsUserPlaceholder": "Benutzer-ID (leer = Ihre eigene Sitzung)"
+      "actAsUserPlaceholder": "Ihre eigene Sitzung (Benutzer suchen, als der gehandelt wird)",
+      "actAsUserClear": "Nicht mehr als dieser Benutzer handeln",
+      "actAsUserSearch": "Nach E-Mail oder Name suchen...",
+      "actAsUserSearching": "Benutzer werden gesucht...",
+      "actAsUserNone": "Keine Benutzer gefunden",
+      "actAsUserUnavailable": "Die Benutzer konnten nicht geladen werden. Geben Sie eine ID ein, um sie unverändert zu verwenden.",
+      "actAsUserUseId": "\"{id}\" als Benutzer-ID verwenden"
     },
     "editor": {
       "keyPlaceholder": "Schlüssel",
@@ -213,7 +219,8 @@
       "apiKey": "API-Schlüssel",
       "session": "Sitzung",
       "crossTeam": "teamübergreifend",
-      "actingAs": "als {user}"
+      "actingAs": "als {user}",
+      "actingAsChip": "Handelt als {user}"
     },
     "source": "Quelle: {source}",
     "sourceWithCategory": "Quelle: {source} | Kategorie: {category}",
@@ -231,6 +238,15 @@
       "tryOther": "Versuchen Sie einen anderen Suchbegriff",
       "crossTeamHint": "Zugriff auf die Daten aller Teams ohne Filter",
       "members": "{count, plural, one {# Mitglied} other {# Mitglieder}}"
+    },
+    "context": {
+      "session": "Sitzung",
+      "apiKey": "API-Schlüssel",
+      "team": "Team: {team}",
+      "noTeam": "Kein Team",
+      "crossTeam": "Team-übergreifend",
+      "crossTeamIn": "Team-übergreifend, gefiltert auf {team}",
+      "actingAs": "Als {user}"
     }
   },
   "features": {

@@ -21,7 +21,7 @@ import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
 import { loadState, saveState, draftKey } from './explorer-storage'
-import { defaultMethod, pickDefaultTeamId } from './explorer-helpers'
+import { defaultMethod, pickDefaultTeamId, type RequestContext } from './explorer-helpers'
 import { useUserTeams } from '../../../hooks/teams'
 import {
   createPresetPlaceholderValues,
@@ -103,6 +103,14 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   const [teamErrorShown, setTeamErrorShown] = useState(false)
   // Optional act-as-user override for the request (persisted; the server strictly gates it)
   const [actAsUserId, setActAsUserId] = useState(() => loadState<string>('actAsUserId') ?? '')
+  // What to show for that id (the user's email), kept with it so the chip and the response can name the user.
+  const [actAsLabel, setActAsLabel] = useState(() => loadState<string>('actAsLabel') ?? '')
+  const handleActAsChange = useCallback((id: string, label: string) => {
+    setActAsUserId(id)
+    setActAsLabel(label)
+  }, [])
+  // How the last request was made, captured at send time (see handleSend).
+  const [requestContext, setRequestContext] = useState<RequestContext | null>(null)
 
   // How the request/response split is divided, as a percentage of the row. Persisted, because a
   // layout someone chose for the work they are doing should survive a reload of that same work.
@@ -171,7 +179,8 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     saveState('bypassMode', bypassMode)
     saveState('selectedTeamId', selectedTeamId)
     saveState('actAsUserId', actAsUserId)
-  }, [authType, apiKey, bypassMode, selectedTeamId, actAsUserId])
+    saveState('actAsLabel', actAsLabel)
+  }, [authType, apiKey, bypassMode, selectedTeamId, actAsUserId, actAsLabel])
 
   // A team is preselected: the last one used (restored above), else the dashboard's active team, else
   // the user's only team. Read-only for a team already set, and not applied in cross-team mode, where
@@ -253,6 +262,14 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       }
     }
 
+    const teamName = selectedTeamId ? userTeams.find((team) => team.id === selectedTeamId)?.name ?? selectedTeamId : null
+    setRequestContext({
+      auth: authType,
+      team: teamName,
+      crossTeam: bypassMode,
+      actingAs: actAsUserId.trim() ? actAsLabel || actAsUserId.trim() : null,
+    })
+
     await execute({
       url: fullUrl,
       method,
@@ -261,7 +278,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       authType,
       apiKey: authType === 'apiKey' ? apiKey : undefined,
     })
-  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, execute])
+  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, actAsLabel, userTeams, execute])
 
   // Handle applying a preset
   const handleApplyPreset = useCallback((rawPreset: ApiPreset) => {
@@ -508,6 +525,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 bypassMode={bypassMode}
                 selectedTeamId={selectedTeamId}
                 actAsUserId={actAsUserId}
+                actAsLabel={actAsLabel}
                 showTeamError={teamErrorShown}
                 body={body}
                 status={status}
@@ -519,7 +537,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 onApiKeyChange={setApiKey}
                 onBypassModeChange={setBypassMode}
                 onTeamChange={setSelectedTeamId}
-                onActAsUserChange={setActAsUserId}
+                onActAsUserChange={handleActAsChange}
                 onBodyChange={setBody}
                 onSend={handleSend}
                 onCancel={cancel}
@@ -550,6 +568,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 status={status}
                 response={response}
                 error={error}
+                context={requestContext}
               />
             </div>
           </>

@@ -8,11 +8,14 @@ import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { JsonViewerWithControls } from './JsonViewer'
 import type { ApiResponse, RequestStatus } from '../api-tester/types'
+import type { RequestContext } from './explorer-helpers'
 
 interface ApiResponsePanelProps {
   status: RequestStatus
   response: ApiResponse | null
   error: string | null
+  /** How the request that produced this response was made. */
+  context?: RequestContext | null
 }
 
 function getStatusColor(status: number): string {
@@ -22,7 +25,22 @@ function getStatusColor(status: number): string {
   return 'bg-red-500/20 text-red-600 dark:text-red-400'
 }
 
-export function ApiResponsePanel({ status, response, error }: ApiResponsePanelProps) {
+/** The auth, team and identity of the request, in one line under the status. */
+function ContextLine({ context }: { context: RequestContext }) {
+  const t = useTranslations('devtools.apiTester.context')
+  const parts = [
+    context.auth === 'apiKey' ? t('apiKey') : t('session'),
+    context.crossTeam ? (context.team ? t('crossTeamIn', { team: context.team }) : t('crossTeam')) : context.team ? t('team', { team: context.team }) : t('noTeam'),
+    context.actingAs ? t('actingAs', { user: context.actingAs }) : null,
+  ].filter(Boolean)
+  return (
+    <p className="px-3 py-1.5 border-b text-xs text-muted-foreground truncate" title={parts.join(' · ')} data-cy="devtools-api-response-context">
+      {parts.join(' · ')}
+    </p>
+  )
+}
+
+export function ApiResponsePanel({ status, response, error, context }: ApiResponsePanelProps) {
   const t = useTranslations('devtools.apiTester')
 
   // Idle state
@@ -96,6 +114,8 @@ export function ApiResponsePanel({ status, response, error }: ApiResponsePanelPr
           )}
         </div>
       </div>
+
+      {context && <ContextLine context={context} />}
 
       {/* Tabs: Body / Headers */}
       <Tabs defaultValue="body" className="flex-1 flex flex-col min-h-0">

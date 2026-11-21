@@ -1,4 +1,4 @@
-import type { HttpMethod, KeyValuePair } from '../api-tester/types'
+import type { AuthType, HttpMethod, KeyValuePair } from '../api-tester/types'
 
 /**
  * Where an endpoint lives in the sidebar: the group is its first path segment and `shortPath` the rest.
@@ -34,4 +34,37 @@ export function pickDefaultTeamId(
   if (current) return current
   if (activeTeamId && teams.some((team) => team.id === activeTeamId)) return activeTeamId
   return teams.length === 1 ? teams[0].id : null
+}
+
+/** A row of `GET /api/superadmin/users`, the fields the act-as picker reads. */
+export interface SuperadminUserRow {
+  id: string
+  email: string
+  fullName?: string
+  firstName?: string
+  lastName?: string
+  role?: string
+}
+
+/** A user a request can be made as. `label` is what the chip and the trigger show: the email, which is unique. */
+export interface ActAsUser {
+  id: string
+  label: string
+  name: string
+  role: string
+}
+
+export function toActAsUser(row: SuperadminUserRow): ActAsUser {
+  const name = [row.firstName, row.lastName].filter(Boolean).join(' ').trim()
+  return { id: row.id, label: row.email, name: name === row.email ? '' : name, role: row.role ?? '' }
+}
+
+/** How a request was made, captured when it was sent so the response says what was used, not what is set now. */
+export interface RequestContext {
+  auth: AuthType
+  /** The team's name (or its id when the name is not known); null when no team was sent. */
+  team: string | null
+  crossTeam: boolean
+  /** The email (or id) of the user the request was made as; null for the caller's own identity. */
+  actingAs: string | null
 }

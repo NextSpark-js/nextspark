@@ -184,7 +184,13 @@
       "adminBypassTooltip": "Activer pour accéder aux données de n'importe quelle équipe. Nécessite l'appartenance à l'équipe NextSpark.",
       "actAsUser": "Agir en tant qu’utilisateur",
       "actAsUserHelp": "Réservé aux développeurs. Résout les endpoints liés à la session (p. ex. /me/*) en tant qu’utilisateur indiqué, sans changer votre session. Nécessite le rôle developer, un environnement hors production et ALLOW_ACT_AS_USER=true. Laissez vide pour utiliser votre propre session.",
-      "actAsUserPlaceholder": "ID utilisateur (vide = votre propre session)"
+      "actAsUserPlaceholder": "Votre propre session (cherchez un utilisateur pour agir comme lui)",
+      "actAsUserClear": "Ne plus agir en tant que cet utilisateur",
+      "actAsUserSearch": "Rechercher par e-mail ou nom...",
+      "actAsUserSearching": "Recherche des utilisateurs...",
+      "actAsUserNone": "Aucun utilisateur trouvé",
+      "actAsUserUnavailable": "Impossible de charger les utilisateurs. Saisissez un identifiant pour l’utiliser tel quel.",
+      "actAsUserUseId": "Utiliser \"{id}\" comme identifiant d’utilisateur"
     },
     "editor": {
       "keyPlaceholder": "Clé",
@@ -213,7 +219,8 @@
       "apiKey": "clé d'API",
       "session": "session",
       "crossTeam": "inter-équipes",
-      "actingAs": "en tant que {user}"
+      "actingAs": "en tant que {user}",
+      "actingAsChip": "Agit en tant que {user}"
     },
     "source": "Source : {source}",
     "sourceWithCategory": "Source : {source} | Catégorie : {category}",
@@ -231,6 +238,15 @@
       "tryOther": "Essayez un autre terme de recherche",
       "crossTeamHint": "Accédez aux données de toutes les équipes sans filtre",
       "members": "{count, plural, one {# membre} other {# membres}}"
+    },
+    "context": {
+      "session": "Session",
+      "apiKey": "Clé API",
+      "team": "Équipe : {team}",
+      "noTeam": "Aucune équipe",
+      "crossTeam": "Inter-équipes",
+      "crossTeamIn": "Inter-équipes, filtré sur {team}",
+      "actingAs": "En tant que {user}"
     }
   },
   "features": {

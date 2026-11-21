@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, Send, X } from 'lucide-react'
+import { ChevronRight, Send, UserRound, X } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { Badge } from '../../ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs'
@@ -45,6 +45,7 @@ interface ApiRequestPanelProps {
   bypassMode: boolean
   selectedTeamId: string | null
   actAsUserId: string
+  actAsLabel: string
   showTeamError?: boolean
   body: string
   status: RequestStatus
@@ -56,7 +57,7 @@ interface ApiRequestPanelProps {
   onApiKeyChange: (key: string) => void
   onBypassModeChange: (enabled: boolean) => void
   onTeamChange: (teamId: string | null) => void
-  onActAsUserChange: (userId: string) => void
+  onActAsUserChange: (userId: string, label: string) => void
   onBodyChange: (body: string) => void
   onSend: () => void
   onCancel: () => void
@@ -81,6 +82,7 @@ export function ApiRequestPanel({
   bypassMode,
   selectedTeamId,
   actAsUserId,
+  actAsLabel,
   showTeamError,
   body,
   status,
@@ -134,9 +136,9 @@ export function ApiRequestPanel({
     const parts = [authType === 'apiKey' ? t('summary.apiKey') : t('summary.session')]
     if (bypassMode) parts.push(t('summary.crossTeam'))
     if (selectedTeamId) parts.push(selectedTeamId)
-    if (actAsUserId.trim()) parts.push(t('summary.actingAs', { user: actAsUserId.trim() }))
+    if (actAsUserId.trim()) parts.push(t('summary.actingAs', { user: actAsLabel || actAsUserId.trim() }))
     return parts.join(' · ')
-  }, [authType, bypassMode, selectedTeamId, actAsUserId, t])
+  }, [authType, bypassMode, selectedTeamId, actAsUserId, actAsLabel, t])
 
   // Handlers that clear preset indicators when user modifies manually
   const handlePathParamsChange = (params: PathParam[]) => {
@@ -181,6 +183,22 @@ export function ApiRequestPanel({
           {/* Docs Button */}
           {endpointDoc && (
             <ApiDocsModal docPath={endpointDoc.path} title={endpointDoc.title} />
+          )}
+
+          {/* Acting as: the override lives in the session block, which is often folded, so it is
+              also here, next to the button that sends it, where it can be dropped in one click. */}
+          {actAsUserId.trim() && (
+            <button
+              type="button"
+              onClick={() => onActAsUserChange('', '')}
+              className="flex max-w-[16rem] shrink-0 items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1 text-xs text-amber-700 hover:bg-amber-500/25 dark:text-amber-400"
+              title={t('auth.actAsUserClear')}
+              data-cy="devtools-api-acting-as-chip"
+            >
+              <UserRound className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t('summary.actingAsChip', { user: actAsLabel || actAsUserId.trim() })}</span>
+              <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            </button>
           )}
 
           {/* Send Button */}
@@ -237,6 +255,7 @@ export function ApiRequestPanel({
           bypassMode={bypassMode}
           selectedTeamId={selectedTeamId}
           actAsUserId={actAsUserId}
+          actAsLabel={actAsLabel}
           showTeamError={showTeamError}
           onAuthTypeChange={onAuthTypeChange}
           onApiKeyChange={onApiKeyChange}
