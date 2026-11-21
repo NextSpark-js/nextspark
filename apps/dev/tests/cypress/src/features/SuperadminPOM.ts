@@ -75,17 +75,8 @@ export class SuperadminPOM extends BasePOM {
           title: cySelector('superadmin.dashboard.header.title'),
           badge: cySelector('superadmin.dashboard.header.badge'),
         },
-        quickActions: {
-          container: cySelector('superadmin.dashboard.quickActions.container'),
-          users: cySelector('superadmin.dashboard.quickActions.users'),
-          analytics: cySelector('superadmin.dashboard.quickActions.analytics'),
-          config: cySelector('superadmin.dashboard.quickActions.config'),
-        },
-        systemStatus: {
-          container: cySelector('superadmin.dashboard.systemStatus.container'),
-          online: cySelector('superadmin.dashboard.systemStatus.online'),
-          version: cySelector('superadmin.dashboard.systemStatus.version'),
-          security: cySelector('superadmin.dashboard.systemStatus.security'),
+        metrics: {
+          container: cySelector('superadmin.dashboard.metrics.container'),
         },
       },
 
@@ -232,7 +223,6 @@ export class SuperadminPOM extends BasePOM {
       subscriptions: {
         container: cySelector('superadmin.subscriptions.container'),
         header: {
-          backButton: cySelector('superadmin.subscriptions.header.backButton'),
           title: cySelector('superadmin.subscriptions.header.title'),
           refreshButton: cySelector('superadmin.subscriptions.header.refreshButton'),
         },
@@ -274,7 +264,6 @@ export class SuperadminPOM extends BasePOM {
       teamRoles: {
         container: cySelector('superadmin.teamRoles.container'),
         header: {
-          backButton: cySelector('superadmin.teamRoles.header.backButton'),
           title: cySelector('superadmin.teamRoles.header.title'),
         },
         tabs: {

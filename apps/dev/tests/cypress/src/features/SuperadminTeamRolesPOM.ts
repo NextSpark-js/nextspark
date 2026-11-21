@@ -47,7 +47,6 @@ export class SuperadminTeamRolesPOM extends BasePOM {
     return {
       // Page structure
       pageTitle: 'h1',
-      backButton: cySelector('superadmin.teamRoles.backButton'),
 
       // Stats cards (use contains since no specific data-cy)
       statsCard: '.grid-cols-1 .border',
