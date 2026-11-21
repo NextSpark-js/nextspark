@@ -18,8 +18,8 @@ export function RecentRequests({ items, onOpen, onClear }: RecentRequestsProps) 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" data-cy="devtools-api-recent">
-          <History className="h-4 w-4 mr-2" />
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" data-cy="devtools-api-recent">
+          <History className="h-3.5 w-3.5 mr-1.5" />
           {t('title')}
         </Button>
       </PopoverTrigger>

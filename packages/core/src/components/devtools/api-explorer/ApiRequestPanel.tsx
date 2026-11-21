@@ -192,21 +192,19 @@ export function ApiRequestPanel({
       {/* Header: Method + URL */}
       <div className="p-4 border-b space-y-3 bg-muted/30">
         {/* Method Badge + Endpoint Path + Send Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Badge
             variant="outline"
             className={cn('font-mono text-sm px-2 py-1 border', methodColors[method])}
           >
             {method}
           </Badge>
-          <code className="font-mono text-sm font-medium flex-1 truncate" title={basePath}>{basePath}</code>
+          <code className="font-mono text-sm font-medium min-w-0 flex-1 basis-32 truncate" title={basePath}>{basePath}</code>
           {route.source && (
             <Badge variant="secondary" className="text-xs shrink-0">
               {route.source}
             </Badge>
           )}
-
-          <RecentRequests items={recentRequests} onOpen={onOpenRecent} onClear={onClearRecent} />
 
           {/* Docs Button */}
           {endpointDoc && (
@@ -219,7 +217,7 @@ export function ApiRequestPanel({
             <button
               type="button"
               onClick={() => onActAsUserChange('', '')}
-              className="flex max-w-[16rem] shrink-0 items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1 text-xs text-amber-700 hover:bg-amber-500/25 dark:text-amber-400"
+              className="flex max-w-[12rem] shrink-0 items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1 text-xs text-amber-700 hover:bg-amber-500/25 dark:text-amber-400"
               title={t('auth.actAsUserClear')}
               data-cy="devtools-api-acting-as-chip"
             >
@@ -259,10 +257,13 @@ export function ApiRequestPanel({
         <div className="bg-background rounded-md border p-2">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t('urlPreview')}</p>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={copyCurl} data-cy="devtools-api-copy-curl">
-              {curlCopied ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
-              {curlCopied ? t('curlCopied') : t('copyCurl')}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={copyCurl} data-cy="devtools-api-copy-curl">
+                {curlCopied ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                {curlCopied ? t('curlCopied') : t('copyCurl')}
+              </Button>
+              <RecentRequests items={recentRequests} onOpen={onOpenRecent} onClear={onClearRecent} />
+            </div>
           </div>
           <code className="font-mono text-xs break-all text-foreground">{previewUrl}</code>
         </div>
