@@ -2,7 +2,7 @@ import { ApiRoutesService } from "@nextsparkjs/core/lib/services/api-routes.serv
 import { ApiExplorer } from "@nextsparkjs/core/components/devtools/api-explorer"
 import { bodySkeleton } from "@nextsparkjs/core/components/devtools/api-explorer/explorer-helpers"
 import { ENTITY_REGISTRY } from "@nextsparkjs/registries/entity-registry"
-import { isActAsEnabled } from "@nextsparkjs/core/lib/api/auth/dual-auth"
+import { isActAsEnabled } from "@nextsparkjs/core/lib/api/auth/act-as-flag"
 
 interface Props {
   params: Promise<{ endpoint?: string[] }>

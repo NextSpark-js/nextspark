@@ -5,6 +5,7 @@
  * Used by the unified /api/v1/ endpoints.
  */
 
+import { isActAsEnabled } from './act-as-flag'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../../teams/active-team-cookie'
 import { getUserDefaultTeamId } from '../../teams/dashboard-team'
 import { repairMissingPersonalTeam } from '../../auth/personal-team-repair'
@@ -163,25 +164,6 @@ export async function authenticateRequest(
     user: null,
     error: authenticationFailed(),
   }
-}
-
-/**
- * True when running in a production runtime. On Vercel this keys on VERCEL_ENV
- * (which separates production from preview); elsewhere it falls back to
- * NODE_ENV. Act-as is hard-blocked whenever this is true.
- */
-function isProductionRuntime(): boolean {
-  if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV === 'production'
-  return process.env.NODE_ENV === 'production'
-}
-
-/**
- * Whether act-as can work in this runtime at all: not a production runtime (gate 1a of applyActAsOverride) and the
- * explicit opt-in flag set (gate 1b). The API Explorer reads it to say so instead of offering an override the server
- * would ignore. It does not say a given request is accepted: the caller must be a developer and the target must exist.
- */
-export function isActAsEnabled(): boolean {
-  return !isProductionRuntime() && process.env.ALLOW_ACT_AS_USER === 'true'
 }
 
 /**
