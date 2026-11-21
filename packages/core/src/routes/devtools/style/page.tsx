@@ -33,7 +33,7 @@ export default function DevStylePage() {
     link.href = url;
     link.download = `theme-tokens-${mode}.${format}`;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (
