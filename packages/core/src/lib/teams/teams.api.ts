@@ -123,10 +123,6 @@ export class TeamsAPI {
     if (params.type) {
       searchParams.set('type', params.type)
     }
-    if (params.sort) {
-      searchParams.set('sort', params.sort)
-      if (params.order) searchParams.set('order', params.order)
-    }
     if (params.page) {
       searchParams.set('page', String(params.page))
     }

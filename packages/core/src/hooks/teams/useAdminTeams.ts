@@ -1,6 +1,6 @@
 'use client'
 
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { TeamsAPI } from '../../lib/teams/teams.api'
 import { teamsKeys } from '../../lib/teams/teams.keys'
 import type { AdminTeamsParams } from '../../lib/teams/types'
@@ -61,7 +61,6 @@ export function useAdminTeams(options: UseAdminTeamsOptions = {}) {
     queryFn: () => TeamsAPI.getAdminTeams(params),
     enabled,
     staleTime: 30 * 1000, // 30 seconds
-    placeholderData: keepPreviousData, // a new page, search or sort keeps the table on screen until its answer comes
     retry: 2,
   })
 

@@ -186,6 +186,7 @@ export const QUERY_MODULES = new Set([
   'components/users/tables/UsersTable',
   'contexts/sidebar-context',
   'hooks/entity-client',
+  'hooks/superadmin/useSuperadminTeams',
   'hooks/teams/useAdminTeams',
   'hooks/teams/useTeamSearch',
   'hooks/teams/useUserTeams',

@@ -28,7 +28,7 @@ import {
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/lib/selectors";
-import { useAdminTeams } from "@nextsparkjs/core/hooks/teams";
+import { useSuperadminTeams } from "@nextsparkjs/core/hooks/superadmin/useSuperadminTeams";
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
 
 /**
@@ -79,7 +79,7 @@ function TeamsPage() {
     isLoading,
     error,
     refetch,
-  } = useAdminTeams({
+  } = useSuperadminTeams({
     search: searchQuery || undefined,
     type: activeTab,
     sort: sort.key,
