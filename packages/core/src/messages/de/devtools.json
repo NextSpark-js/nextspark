@@ -247,6 +247,14 @@
       "crossTeam": "Team-übergreifend",
       "crossTeamIn": "Team-übergreifend, gefiltert auf {team}",
       "actingAs": "Als {user}"
+    },
+    "copyCurl": "cURL kopieren",
+    "curlCopied": "Kopiert",
+    "recent": {
+      "title": "Zuletzt",
+      "clear": "Leeren",
+      "empty": "Gesendete Anfragen erscheinen hier",
+      "failed": "fehlgeschlagen"
     }
   },
   "features": {

@@ -21,7 +21,20 @@ import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
 import { loadState, saveState, draftKey } from './explorer-storage'
-import { BODY_METHODS, createEmptyRows, defaultMethod, initialBody, pickDefaultTeamId, type RequestContext } from './explorer-helpers'
+import {
+  BODY_METHODS,
+  buildCurl,
+  buildRequestHeaders,
+  createEmptyRows,
+  defaultMethod,
+  initialBody,
+  pickDefaultTeamId,
+  pushRecent,
+  queryToSearch,
+  searchToRows,
+  type RecentRequest,
+  type RequestContext,
+} from './explorer-helpers'
 import { useUserTeams } from '../../../hooks/teams'
 import {
   createPresetPlaceholderValues,
@@ -103,6 +116,9 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
   }, [])
   // How the last request was made, captured at send time (see handleSend).
   const [requestContext, setRequestContext] = useState<RequestContext | null>(null)
+  // The last requests sent from this browser (20), and the one in flight, which joins the list when it answers.
+  const [recent, setRecent] = useState<RecentRequest[]>(() => loadState<RecentRequest[]>('recent') ?? [])
+  const sentRef = useRef<RecentRequest | null>(null)
 
   // How the request/response split is divided, as a percentage of the row. Persisted, because a
   // layout someone chose for the work they are doing should survive a reload of that same work.
@@ -155,10 +171,12 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
     useApiExplorerNavigation({ basePath: '/devtools/api' })
 
   // Load an endpoint's persisted request draft (or sensible defaults) into state.
-  const applyEndpointState = useCallback((endpointMethod: HttpMethod, path: string) => {
+  // `fromUrl`: the endpoint came from the address bar, so the query string it carries wins over the saved draft.
+  const applyEndpointState = useCallback((endpointMethod: HttpMethod, path: string, fromUrl = false) => {
     const draft = loadState<EndpointDraft>(draftKey(endpointMethod, path))
+    const urlRows = fromUrl && typeof window !== 'undefined' ? searchToRows(window.location.search) : []
     setPathParams(draft?.pathParams ?? extractPathParams(path))
-    setQueryParams(draft?.queryParams ?? createEmptyRows())
+    setQueryParams(urlRows.length ? [...urlRows, ...createEmptyRows()] : draft?.queryParams ?? createEmptyRows())
     setHeaders(draft?.headers ?? createEmptyRows())
     // An endpoint opened with nothing typed starts from its first preset or its required fields, not blank.
     setBody(
@@ -230,33 +248,17 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
     // Team context is only complained about here, once a request goes out without one.
     setTeamErrorShown(!bypassMode && !selectedTeamId)
 
-    const customHeaders: Record<string, string> = {}
-
-    // Inject bypass header if enabled
-    if (bypassMode) {
-      customHeaders['x-admin-bypass'] = 'confirm-cross-team-access'
-      // In bypass mode, team is optional (for filtering specific team)
-      if (selectedTeamId) {
-        customHeaders['x-team-id'] = selectedTeamId
-      }
-    } else {
-      // Normal mode: use selected team from dropdown
-      if (selectedTeamId) {
-        customHeaders['x-team-id'] = selectedTeamId
-      }
-    }
-
-    // Optional act-as-user override (the Core auth layer gates it strictly —
-    // developer role + non-prod + flag). No-op otherwise.
-    if (actAsUserId.trim()) {
-      customHeaders['x-act-as-user'] = actAsUserId.trim()
-    }
-
-    // User-defined headers can override the auto-injected ones
-    for (const h of headers) {
-      if (h.enabled && h.key) {
-        customHeaders[h.key] = h.value
-      }
+    // Bypass (cross-team: the team is then an optional filter), team, and the act-as override (the Core
+    // auth layer gates it strictly: developer role + non-prod + flag), then the user's own headers on top.
+    const customHeaders = buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId, headers })
+    sentRef.current = {
+      method,
+      path: selectedEndpoint.path,
+      pathParams: Object.fromEntries(pathParams.map((p) => [p.name, p.value])),
+      query: queryParams.filter((row) => row.enabled && row.key && row.value).map((row) => ({ key: row.key, value: row.value })),
+      body: BODY_METHODS.includes(method) ? body : '',
+      status: null,
+      at: Date.now(),
     }
 
     const teamName = selectedTeamId ? userTeams.find((team) => team.id === selectedTeamId)?.name ?? selectedTeamId : null
@@ -287,6 +289,63 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
     },
     [selectedEndpoint, body, endpointPresets, bodySkeletons]
   )
+
+  // A request joins "Recent" when it gets an answer (with its status), or fails with none; a cancel does not.
+  useEffect(() => {
+    const sent = sentRef.current
+    if (!sent || status === 'idle' || status === 'loading') return
+    sentRef.current = null
+    if (status === 'cancelled') return
+    setRecent((prev) => {
+      const next = pushRecent(prev, { ...sent, status: status === 'success' ? response?.status ?? null : null })
+      saveState('recent', next)
+      return next
+    })
+  }, [status, response])
+
+  const handleClearRecent = useCallback(() => {
+    setRecent([])
+    saveState('recent', [])
+  }, [])
+
+  // Reopen a recent request: its endpoint, then its params and body over the endpoint's own draft.
+  const handleOpenRecent = useCallback(
+    (item: RecentRequest) => {
+      const route = findRouteByPath(routes, item.path)
+      if (!route) return
+      handleSelectEndpoint(item.path, item.method as HttpMethod, route)
+      setPathParams(extractPathParams(item.path).map((p) => ({ ...p, value: item.pathParams[p.name] ?? '' })))
+      setQueryParams([
+        ...item.query.map((q) => ({ id: crypto.randomUUID(), key: q.key, value: q.value, enabled: true })),
+        ...createEmptyRows(),
+      ])
+      if (item.body) setBody(item.body)
+    },
+    [routes, handleSelectEndpoint]
+  )
+
+  // The request as a cURL command, built from the same inputs a send uses (the API key masked).
+  const handleCopyCurl = useCallback(() => {
+    const url = selectedEndpoint ? buildUrl(selectedEndpoint.path, pathParams, queryParams) : ''
+    return buildCurl({
+      method,
+      url: (typeof window !== 'undefined' ? window.location.origin : '') + withBasePath(url),
+      headers: buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId, headers }),
+      body,
+      authType,
+      apiKey,
+    })
+  }, [selectedEndpoint, pathParams, queryParams, method, bypassMode, selectedTeamId, actAsUserId, headers, body, authType, apiKey])
+
+  // The query params live in the address bar too, so a link to this screen reopens the same request. Replaced,
+  // not pushed: typing a character is not a page to go back to. The path part is the navigation hook's.
+  useEffect(() => {
+    if (!selectedEndpoint || typeof window === 'undefined') return
+    const next = window.location.pathname + queryToSearch(queryParams) + window.location.hash
+    if (next !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(window.history.state, '', next)
+    }
+  }, [selectedEndpoint, queryParams])
 
   // Handle applying a preset
   const handleApplyPreset = useCallback((rawPreset: ApiPreset) => {
@@ -378,7 +437,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
         // URL changed, update local state (restoring this endpoint's draft)
         setSelectedEndpoint({ path: urlPath, method: urlMethod, route })
         setMethod(urlMethod)
-        applyEndpointState(urlMethod, urlPath)
+        applyEndpointState(urlMethod, urlPath, true)
       }
     }
   }, [urlPath, urlMethod, routes, selectedEndpoint, applyEndpointState])
@@ -405,7 +464,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
         hasInitialized.current = true
         setSelectedEndpoint({ path: urlPath, method: urlMethod, route })
         setMethod(urlMethod)
-        applyEndpointState(urlMethod, urlPath)
+        applyEndpointState(urlMethod, urlPath, true)
         return
       }
     }
@@ -418,7 +477,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
         const endpointMethod = initialEndpoint.method as HttpMethod
         setSelectedEndpoint({ path: initialEndpoint.path, method: endpointMethod, route })
         setMethod(endpointMethod)
-        applyEndpointState(endpointMethod, initialEndpoint.path)
+        applyEndpointState(endpointMethod, initialEndpoint.path, true)
         // Navigate to update URL if not already there
         if (!urlPath) {
           navigateToEndpoint(endpointMethod, initialEndpoint.path)
@@ -549,6 +608,10 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
                 onBodyChange={setBody}
                 onSend={handleSend}
                 onCancel={cancel}
+                onCopyCurl={handleCopyCurl}
+                recentRequests={recent}
+                onOpenRecent={handleOpenRecent}
+                onClearRecent={handleClearRecent}
                 endpointPresets={endpointPresets}
                 endpointDoc={endpointDoc}
                 onApplyPreset={handleApplyPreset}

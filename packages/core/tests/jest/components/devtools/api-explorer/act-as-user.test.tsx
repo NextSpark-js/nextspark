@@ -78,6 +78,10 @@ const panelProps = (over: Record<string, unknown> = {}) => ({
   onBodyChange: jest.fn(),
   onSend: jest.fn(),
   onCancel: jest.fn(),
+  onCopyCurl: () => '',
+  recentRequests: [],
+  onOpenRecent: jest.fn(),
+  onClearRecent: jest.fn(),
   ...over,
 })
 

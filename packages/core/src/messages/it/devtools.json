@@ -247,6 +247,14 @@
       "crossTeam": "Cross-team",
       "crossTeamIn": "Cross-team, filtrato su {team}",
       "actingAs": "Come {user}"
+    },
+    "copyCurl": "Copia cURL",
+    "curlCopied": "Copiato",
+    "recent": {
+      "title": "Recenti",
+      "clear": "Cancella",
+      "empty": "Le richieste inviate compaiono qui",
+      "failed": "fallita"
     }
   },
   "features": {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, Send, UserRound, X } from 'lucide-react'
+import { Check, ChevronRight, Copy, Send, UserRound, X } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { Badge } from '../../ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs'
@@ -15,7 +15,8 @@ import { PathParamsEditor } from '../api-tester/PathParamsEditor'
 import { KeyValueEditor } from '../api-tester/KeyValueEditor'
 import { AuthSelector } from '../api-tester/AuthSelector'
 import { PayloadEditor } from '../api-tester/PayloadEditor'
-import { countFilledRows } from './explorer-helpers'
+import { countFilledRows, type RecentRequest } from './explorer-helpers'
+import { RecentRequests } from './RecentRequests'
 import { buildUrl, validatePathParams, validateJsonBody } from '../api-tester/utils/url-builder'
 import type { HttpMethod, AuthType, KeyValuePair, PathParam, RequestStatus } from '../api-tester/types'
 import type { ApiRouteEntry } from '../../../lib/services/api-routes.service'
@@ -61,6 +62,11 @@ interface ApiRequestPanelProps {
   onBodyChange: (body: string) => void
   onSend: () => void
   onCancel: () => void
+  /** The request as a cURL command (API key masked). */
+  onCopyCurl: () => string
+  recentRequests: readonly RecentRequest[]
+  onOpenRecent: (item: RecentRequest) => void
+  onClearRecent: () => void
   // Presets & Docs
   endpointPresets?: ApiEndpointPresets | null
   endpointDoc?: { path: string; title: string } | null
@@ -98,6 +104,10 @@ export function ApiRequestPanel({
   onBodyChange,
   onSend,
   onCancel,
+  onCopyCurl,
+  recentRequests,
+  onOpenRecent,
+  onClearRecent,
   endpointPresets,
   endpointDoc,
   onApplyPreset,
@@ -120,6 +130,22 @@ export function ApiRequestPanel({
   }, [pathParams, method, body])
 
   const showPayloadEditor = ['POST', 'PATCH', 'PUT'].includes(method)
+
+  // "Copied" shows for two seconds after the cURL is on the clipboard.
+  const [curlCopied, setCurlCopied] = useState(false)
+  useEffect(() => {
+    if (!curlCopied) return
+    const timer = setTimeout(() => setCurlCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [curlCopied])
+  const copyCurl = async () => {
+    try {
+      await navigator.clipboard.writeText(onCopyCurl())
+      setCurlCopied(true)
+    } catch {
+      // clipboard access can be refused (insecure origin, permissions): nothing to confirm then
+    }
+  }
 
   // Folded state of the session block, remembered: someone who works with it closed should not
   // reopen it on every visit. Read after mount so the server render matches the client's.
@@ -180,6 +206,8 @@ export function ApiRequestPanel({
             </Badge>
           )}
 
+          <RecentRequests items={recentRequests} onOpen={onOpenRecent} onClear={onClearRecent} />
+
           {/* Docs Button */}
           {endpointDoc && (
             <ApiDocsModal docPath={endpointDoc.path} title={endpointDoc.title} />
@@ -229,9 +257,13 @@ export function ApiRequestPanel({
 
         {/* URL Preview */}
         <div className="bg-background rounded-md border p-2">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">
-            {t('urlPreview')}
-          </p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t('urlPreview')}</p>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={copyCurl} data-cy="devtools-api-copy-curl">
+              {curlCopied ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+              {curlCopied ? t('curlCopied') : t('copyCurl')}
+            </Button>
+          </div>
           <code className="font-mono text-xs break-all text-foreground">{previewUrl}</code>
         </div>
 

@@ -131,3 +131,96 @@ export function groupKeyForPath(routes: Record<string, readonly { path: string }
 export function createEmptyRows(count = 1): KeyValuePair[] {
   return Array.from({ length: count }, () => ({ id: crypto.randomUUID(), key: '', value: '', enabled: true }))
 }
+
+/**
+ * The headers the Explorer adds itself: the cross-team bypass, the team, and the act-as override; the headers the user
+ * typed come last and win. The one place that decides them, so a request and its "Copy as cURL" cannot disagree.
+ */
+export function buildRequestHeaders(input: {
+  bypassMode: boolean
+  selectedTeamId: string | null
+  actAsUserId: string
+  headers: readonly KeyValuePair[]
+}): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (input.bypassMode) headers['x-admin-bypass'] = 'confirm-cross-team-access'
+  if (input.selectedTeamId) headers['x-team-id'] = input.selectedTeamId
+  if (input.actAsUserId.trim()) headers['x-act-as-user'] = input.actAsUserId.trim()
+  for (const row of input.headers) {
+    if (row.enabled && row.key) headers[row.key] = row.value
+  }
+  return headers
+}
+
+/** `sk_live_abcdef123456` -> `sk_l••••3456`: enough to tell which key it was, not enough to use it. */
+export function maskApiKey(key: string): string {
+  return key.length > 8 ? `${key.slice(0, 4)}••••${key.slice(-4)}` : '••••'
+}
+
+const shellQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
+
+/**
+ * The request as a cURL command. The API key is masked, and a session request carries a Cookie placeholder: a cURL
+ * has no browser session, so the user pastes theirs (or their real key), which is the point of copying it masked.
+ */
+export function buildCurl(input: {
+  method: string
+  url: string
+  headers: Record<string, string>
+  body?: string
+  authType: AuthType
+  apiKey?: string
+}): string {
+  const lines = [`curl -X ${input.method} ${shellQuote(input.url)}`]
+  const headers: Record<string, string> = { ...input.headers, 'Content-Type': 'application/json' }
+  if (input.authType === 'apiKey' && input.apiKey) headers['x-api-key'] = maskApiKey(input.apiKey)
+  if (input.authType === 'session') headers['Cookie'] = '<your-session-cookie>'
+  for (const [name, value] of Object.entries(headers)) lines.push(`  -H ${shellQuote(`${name}: ${value}`)}`)
+  if (BODY_METHODS.includes(input.method) && input.body?.trim()) lines.push(`  -d ${shellQuote(input.body)}`)
+  return lines.join(' \\\n')
+}
+
+/** The enabled, filled query rows as a `?a=1&b=2` string ('' when there are none), the form the URL carries. */
+export function queryToSearch(rows: readonly KeyValuePair[]): string {
+  const params = new URLSearchParams()
+  for (const row of rows) {
+    if (row.enabled && row.key && row.value) params.append(row.key, row.value)
+  }
+  const search = params.toString()
+  return search ? `?${search}` : ''
+}
+
+/** The rows a `?a=1&b=2` string stands for; empty when it has none, so the caller can fall back to its own. */
+export function searchToRows(search: string): KeyValuePair[] {
+  return Array.from(new URLSearchParams(search).entries()).map(([key, value]) => ({
+    id: crypto.randomUUID(),
+    key,
+    value,
+    enabled: true,
+  }))
+}
+
+/** A request sent from the Explorer, kept in the "Recent" list. */
+export interface RecentRequest {
+  method: string
+  path: string
+  pathParams: Record<string, string>
+  query: { key: string; value: string }[]
+  body: string
+  /** The HTTP status, or null when the request failed before getting one. */
+  status: number | null
+  at: number
+}
+
+export const RECENT_LIMIT = 20
+
+const sameRequest = (a: RecentRequest, b: RecentRequest) =>
+  a.method === b.method &&
+  a.path === b.path &&
+  JSON.stringify(a.pathParams) === JSON.stringify(b.pathParams) &&
+  JSON.stringify(a.query) === JSON.stringify(b.query)
+
+/** The list with `entry` at the top: a request repeated moves up (with its new status) instead of being listed twice. */
+export function pushRecent(list: readonly RecentRequest[], entry: RecentRequest, limit = RECENT_LIMIT): RecentRequest[] {
+  return [entry, ...list.filter((item) => !sameRequest(item, entry))].slice(0, limit)
+}
