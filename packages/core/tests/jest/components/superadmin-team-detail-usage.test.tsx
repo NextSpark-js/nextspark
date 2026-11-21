@@ -20,8 +20,8 @@ jest.mock('next-intl', () => ({
   useLocale: () => 'en',
   useTranslations: () => Object.assign(
     (key: string, values?: Record<string, unknown>) => {
-      if (key === 'billing.limits.storage') return 'Storage'
-      if (key === 'billing.limits.tasks') return 'Tasks'
+      if (key === 'billing.limits.storage') return 'Disk space'
+      if (key === 'billing.limits.tasks') return 'Work items'
       if (key === 'planMatrix.gigabytes') return `${values?.value} GB`
       if (key === 'planMatrix.unlimited') return 'Unlimited'
       if (key === 'teamDetail.usageAllTime') return 'All time'
@@ -53,12 +53,13 @@ it('shows each counter with its translated name, the plan limit, a bar and a rea
     },
   })
   const storage = document.querySelector('[data-cy="usage-storage_gb"]')!
-  expect(storage).toHaveTextContent('Storage')
+  expect(storage).toHaveTextContent('Disk space') // the registry's name, not the slug in words
   expect(storage).toHaveTextContent('25 / 50 GB')
   expect(storage).toHaveTextContent('Period: All time')
   expect(storage.querySelector('[role="progressbar"] > div')).toHaveStyle({ transform: 'translateX(-50%)' }) // half full
 
   const tasks = document.querySelector('[data-cy="usage-tasks"]')!
+  expect(tasks).toHaveTextContent('Work items')
   expect(tasks).toHaveTextContent('7 / Unlimited')
   expect(tasks).toHaveTextContent('Period: November 2026')
   expect(tasks.querySelector('[role="progressbar"]')).toBeNull()
