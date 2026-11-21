@@ -190,7 +190,8 @@
       "actAsUserSearching": "Buscando usuários...",
       "actAsUserNone": "Nenhum usuário encontrado",
       "actAsUserUnavailable": "Não foi possível carregar os usuários. Digite um id para usá-lo como está.",
-      "actAsUserUseId": "Usar \"{id}\" como id de usuário"
+      "actAsUserUseId": "Usar \"{id}\" como id de usuário",
+      "actAsUserDisabled": "Desativado neste servidor: defina ALLOW_ACT_AS_USER=true em um ambiente que não seja produção. As requisições usam sua própria sessão."
     },
     "editor": {
       "keyPlaceholder": "Chave",

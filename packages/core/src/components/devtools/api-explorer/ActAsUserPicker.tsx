@@ -17,6 +17,8 @@ interface ActAsUserPickerProps {
   /** What to show for `userId` (the email); falls back to the id when only an id was typed. */
   label: string
   onChange: (userId: string, label: string) => void
+  /** Act-as is off on the server: the trigger cannot be opened. */
+  disabled?: boolean
 }
 
 async function searchUsers(search: string): Promise<ActAsUser[]> {
@@ -32,7 +34,7 @@ async function searchUsers(search: string): Promise<ActAsUser[]> {
  * Picks the user a request is made as. The list comes from the superadmin users endpoint, which keeps its own
  * role check, so a caller without access just gets an empty list and can still paste an id.
  */
-export function ActAsUserPicker({ userId, label, onChange }: ActAsUserPickerProps) {
+export function ActAsUserPicker({ userId, label, onChange, disabled = false }: ActAsUserPickerProps) {
   const t = useTranslations('devtools.apiTester.auth')
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -40,7 +42,7 @@ export function ActAsUserPicker({ userId, label, onChange }: ActAsUserPickerProp
   const { data: users = [], isFetching, isError } = useQuery({
     queryKey: ['devtools-act-as-users', debounced],
     queryFn: () => searchUsers(debounced),
-    enabled: open,
+    enabled: open && !disabled,
     staleTime: 30_000,
   })
 
@@ -58,6 +60,7 @@ export function ActAsUserPicker({ userId, label, onChange }: ActAsUserPickerProp
             variant="outline"
             role="combobox"
             aria-expanded={open}
+            disabled={disabled}
             className="flex-1 min-w-0 justify-between font-normal"
             data-cy="devtools-api-auth-act-as-user"
           >

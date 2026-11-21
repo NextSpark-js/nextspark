@@ -63,6 +63,8 @@ interface ApiExplorerProps {
   initialEndpoint?: { method: string; path: string } | null
   /** Required-field JSON for creating each entity, by collection path (built on the server from the entity configs). */
   bodySkeletons?: Record<string, Record<string, unknown>>
+  /** Whether the server honours `x-act-as-user` here (not production, ALLOW_ACT_AS_USER set). Off: the picker is disabled and no act-as is sent or shown. */
+  actAsEnabled?: boolean
 }
 
 /** Find a route by path in the routes registry */
@@ -77,7 +79,7 @@ function findRouteByPath(
   return null
 }
 
-export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplorerProps) {
+export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabled = true }: ApiExplorerProps) {
   const t = useTranslations('devtools.api')
   // Sidebar state (collapse persisted)
   const [isCollapsed, setIsCollapsed] = useState(() => loadState<boolean>('sidebarCollapsed') ?? false)
@@ -110,6 +112,10 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
   const [actAsUserId, setActAsUserId] = useState(() => loadState<string>('actAsUserId') ?? '')
   // What to show for that id (the user's email), kept with it so the chip and the response can name the user.
   const [actAsLabel, setActAsLabel] = useState(() => loadState<string>('actAsLabel') ?? '')
+  // What the rest of the screen uses: with act-as off, a remembered user counts for nothing (the server ignores the
+  // header), so it is neither sent nor shown as the identity of a request.
+  const activeActAsId = actAsEnabled ? actAsUserId : ''
+  const activeActAsLabel = actAsEnabled ? actAsLabel : ''
   const handleActAsChange = useCallback((id: string, label: string) => {
     setActAsUserId(id)
     setActAsLabel(label)
@@ -250,7 +256,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
 
     // Bypass (cross-team: the team is then an optional filter), team, and the act-as override (the Core
     // auth layer gates it strictly: developer role + non-prod + flag), then the user's own headers on top.
-    const customHeaders = buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId, headers })
+    const customHeaders = buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId: activeActAsId, headers })
     sentRef.current = {
       method,
       path: selectedEndpoint.path,
@@ -266,7 +272,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
       auth: authType,
       team: teamName,
       crossTeam: bypassMode,
-      actingAs: actAsUserId.trim() ? actAsLabel || actAsUserId.trim() : null,
+      actingAs: activeActAsId.trim() ? activeActAsLabel || activeActAsId.trim() : null,
     })
 
     await execute({
@@ -277,7 +283,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
       authType,
       apiKey: authType === 'apiKey' ? apiKey : undefined,
     })
-  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, actAsLabel, userTeams, execute])
+  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, activeActAsId, activeActAsLabel, userTeams, execute])
 
   // Switching to a method that sends a body on an empty editor fills it the same way opening the endpoint does.
   const handleMethodChange = useCallback(
@@ -330,12 +336,12 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
     return buildCurl({
       method,
       url: (typeof window !== 'undefined' ? window.location.origin : '') + withBasePath(url),
-      headers: buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId, headers }),
+      headers: buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId: activeActAsId, headers }),
       body,
       authType,
       apiKey,
     })
-  }, [selectedEndpoint, pathParams, queryParams, method, bypassMode, selectedTeamId, actAsUserId, headers, body, authType, apiKey])
+  }, [selectedEndpoint, pathParams, queryParams, method, bypassMode, selectedTeamId, activeActAsId, headers, body, authType, apiKey])
 
   // The query params live in the address bar too, so a link to this screen reopens the same request. Replaced,
   // not pushed: typing a character is not a page to go back to. The path part is the navigation hook's.
@@ -591,8 +597,9 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons }: ApiExplo
                 apiKey={apiKey}
                 bypassMode={bypassMode}
                 selectedTeamId={selectedTeamId}
-                actAsUserId={actAsUserId}
-                actAsLabel={actAsLabel}
+                actAsUserId={activeActAsId}
+                actAsLabel={activeActAsLabel}
+                actAsEnabled={actAsEnabled}
                 showTeamError={teamErrorShown}
                 body={body}
                 status={status}

@@ -47,6 +47,8 @@ interface ApiRequestPanelProps {
   selectedTeamId: string | null
   actAsUserId: string
   actAsLabel: string
+  /** Off: the server ignores act-as here, so the picker is disabled (with the reason) and nothing mentions it. */
+  actAsEnabled?: boolean
   showTeamError?: boolean
   body: string
   status: RequestStatus
@@ -89,6 +91,7 @@ export function ApiRequestPanel({
   selectedTeamId,
   actAsUserId,
   actAsLabel,
+  actAsEnabled = true,
   showTeamError,
   body,
   status,
@@ -211,22 +214,6 @@ export function ApiRequestPanel({
             <ApiDocsModal docPath={endpointDoc.path} title={endpointDoc.title} />
           )}
 
-          {/* Acting as: the override lives in the session block, which is often folded, so it is
-              also here, next to the button that sends it, where it can be dropped in one click. */}
-          {actAsUserId.trim() && (
-            <button
-              type="button"
-              onClick={() => onActAsUserChange('', '')}
-              className="flex max-w-[12rem] shrink-0 items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1 text-xs text-amber-700 hover:bg-amber-500/25 dark:text-amber-400"
-              title={t('auth.actAsUserClear')}
-              data-cy="devtools-api-acting-as-chip"
-            >
-              <UserRound className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{t('summary.actingAsChip', { user: actAsLabel || actAsUserId.trim() })}</span>
-              <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            </button>
-          )}
-
           {/* Send Button */}
           <div className="flex gap-2 shrink-0">
             <Button
@@ -247,11 +234,28 @@ export function ApiRequestPanel({
         </div>
 
         {/* Method Selector */}
-        <MethodSelector
-          methods={route.methods}
-          selected={method}
-          onSelect={onMethodChange}
-        />
+        <div className="flex items-center gap-3">
+          <MethodSelector
+            methods={route.methods}
+            selected={method}
+            onSelect={onMethodChange}
+          />
+          {/* Acting as: the override lives in the session block, which is often folded, so it is also here, on the
+              row of the method, where it can be dropped in one click. */}
+          {actAsUserId.trim() && (
+            <button
+              type="button"
+              onClick={() => onActAsUserChange('', '')}
+              className="ml-auto flex min-w-0 max-w-[14rem] items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1 text-xs text-amber-700 hover:bg-amber-500/25 dark:text-amber-400"
+              title={t('auth.actAsUserClear')}
+              data-cy="devtools-api-acting-as-chip"
+            >
+              <UserRound className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t('summary.actingAsChip', { user: actAsLabel || actAsUserId.trim() })}</span>
+              <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            </button>
+          )}
+        </div>
 
         {/* URL Preview */}
         <div className="bg-background rounded-md border p-2">
@@ -289,6 +293,7 @@ export function ApiRequestPanel({
           selectedTeamId={selectedTeamId}
           actAsUserId={actAsUserId}
           actAsLabel={actAsLabel}
+          actAsDisabled={!actAsEnabled}
           showTeamError={showTeamError}
           onAuthTypeChange={onAuthTypeChange}
           onApiKeyChange={onApiKeyChange}

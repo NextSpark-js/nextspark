@@ -2,6 +2,7 @@ import { ApiRoutesService } from "@nextsparkjs/core/lib/services/api-routes.serv
 import { ApiExplorer } from "@nextsparkjs/core/components/devtools/api-explorer"
 import { bodySkeleton } from "@nextsparkjs/core/components/devtools/api-explorer/explorer-helpers"
 import { ENTITY_REGISTRY } from "@nextsparkjs/registries/entity-registry"
+import { isActAsEnabled } from "@nextsparkjs/core/lib/api/auth/dual-auth"
 
 interface Props {
   params: Promise<{ endpoint?: string[] }>
@@ -41,5 +42,5 @@ export default async function DevToolsApiPage({ params }: Props) {
     if (skeleton) bodySkeletons[route.path] = skeleton
   }
 
-  return <ApiExplorer routes={routesByCategory} initialEndpoint={initialEndpoint} bodySkeletons={bodySkeletons} />
+  return <ApiExplorer routes={routesByCategory} initialEndpoint={initialEndpoint} bodySkeletons={bodySkeletons} actAsEnabled={isActAsEnabled()} />
 }

@@ -271,7 +271,8 @@
       "actAsUserSearching": "Searching users...",
       "actAsUserNone": "No users found",
       "actAsUserUnavailable": "Users could not be loaded. Type an id to use it as is.",
-      "actAsUserUseId": "Use \"{id}\" as the user id"
+      "actAsUserUseId": "Use \"{id}\" as the user id",
+      "actAsUserDisabled": "Off on this server: set ALLOW_ACT_AS_USER=true in a non-production environment. Requests use your own session."
     },
     "editor": {
       "keyPlaceholder": "Key",

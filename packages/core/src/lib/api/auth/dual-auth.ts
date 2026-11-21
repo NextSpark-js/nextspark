@@ -176,6 +176,15 @@ function isProductionRuntime(): boolean {
 }
 
 /**
+ * Whether act-as can work in this runtime at all: not a production runtime (gate 1a of applyActAsOverride) and the
+ * explicit opt-in flag set (gate 1b). The API Explorer reads it to say so instead of offering an override the server
+ * would ignore. It does not say a given request is accepted: the caller must be a developer and the target must exist.
+ */
+export function isActAsEnabled(): boolean {
+  return !isProductionRuntime() && process.env.ALLOW_ACT_AS_USER === 'true'
+}
+
+/**
  * Development-only override: resolve the request AS a different user when the
  * real (already-authenticated) caller is a developer and sends x-act-as-user.
  *
@@ -197,11 +206,10 @@ async function applyActAsOverride(
   // VERCEL_ENV (which separates production from preview — NODE_ENV is
   // 'production' on previews too), so a preview deploy can still opt in while
   // production is always blocked. Off Vercel it falls back to NODE_ENV.
-  if (isProductionRuntime()) return authResult
   // GATE 1b: explicit opt-in flag. Enable only in non-production environments,
   // never in production. Even if it leaked to prod, GATE 1a still blocks
-  // (defense in depth).
-  if (process.env.ALLOW_ACT_AS_USER !== 'true') return authResult
+  // (defense in depth). Both gates are isActAsEnabled().
+  if (!isActAsEnabled()) return authResult
 
   // GATE 2: header must be present (cheap check first)
   const targetUserId = request.headers.get(ACT_AS_USER_HEADER)

@@ -190,7 +190,8 @@
       "actAsUserSearching": "Benutzer werden gesucht...",
       "actAsUserNone": "Keine Benutzer gefunden",
       "actAsUserUnavailable": "Die Benutzer konnten nicht geladen werden. Geben Sie eine ID ein, um sie unverändert zu verwenden.",
-      "actAsUserUseId": "\"{id}\" als Benutzer-ID verwenden"
+      "actAsUserUseId": "\"{id}\" als Benutzer-ID verwenden",
+      "actAsUserDisabled": "Auf diesem Server aus: ALLOW_ACT_AS_USER=true in einer Nicht-Produktionsumgebung setzen. Anfragen nutzen Ihre eigene Sitzung."
     },
     "editor": {
       "keyPlaceholder": "Schlüssel",

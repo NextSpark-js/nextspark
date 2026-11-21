@@ -26,6 +26,8 @@ interface AuthSelectorProps {
   actAsUserId?: string
   /** What to show for `actAsUserId` (the user's email). */
   actAsLabel?: string
+  /** The server ignores act-as here: the picker is disabled and says why. */
+  actAsDisabled?: boolean
   /** Raised after a send with no team (see TeamSelector). */
   showTeamError?: boolean
   onAuthTypeChange: (type: AuthType) => void
@@ -42,6 +44,7 @@ export function AuthSelector({
   selectedTeamId,
   actAsUserId,
   actAsLabel,
+  actAsDisabled = false,
   showTeamError,
   onAuthTypeChange,
   onApiKeyChange,
@@ -134,7 +137,8 @@ export function AuthSelector({
               </Tooltip>
             </TooltipProvider>
           </div>
-          <ActAsUserPicker userId={actAsUserId ?? ''} label={actAsLabel ?? ''} onChange={onActAsUserChange} />
+          <ActAsUserPicker userId={actAsUserId ?? ''} label={actAsLabel ?? ''} onChange={onActAsUserChange} disabled={actAsDisabled} />
+          {actAsDisabled && <p className="text-xs text-muted-foreground" data-cy="devtools-api-act-as-disabled">{t('actAsUserDisabled')}</p>}
         </div>
       )}
     </div>

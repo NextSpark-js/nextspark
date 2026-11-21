@@ -190,7 +190,8 @@
       "actAsUserSearching": "Buscando usuarios...",
       "actAsUserNone": "No se encontraron usuarios",
       "actAsUserUnavailable": "No se pudieron cargar los usuarios. Escribe un id para usarlo tal cual.",
-      "actAsUserUseId": "Usar \"{id}\" como id de usuario"
+      "actAsUserUseId": "Usar \"{id}\" como id de usuario",
+      "actAsUserDisabled": "Desactivado en este servidor: define ALLOW_ACT_AS_USER=true en un entorno que no sea producción. Las peticiones usan tu propia sesión."
     },
     "editor": {
       "keyPlaceholder": "Clave",
