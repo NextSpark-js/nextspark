@@ -218,14 +218,16 @@ export function BlocksViewer() {
             className="hover:shadow-md transition-shadow flex flex-col"
             data-cy={sel("devtools.blocks.card", { slug: block.slug })}
           >
-            {/* Thumbnail */}
-            <div className="h-32 bg-muted flex items-center justify-center rounded-t-lg overflow-hidden">
-              <BlockThumbnail
-                src={block.thumbnail?.src}
-                alt={text(block.name)}
-                emptyLabel={t("noPreview")}
-              />
-            </div>
+            {/* Thumbnail: a block without one gets a compact card; its live preview is in the detail */}
+            {block.thumbnail?.src && (
+              <div className="h-32 bg-muted flex items-center justify-center rounded-t-lg overflow-hidden">
+                <BlockThumbnail
+                  src={block.thumbnail.src}
+                  alt={text(block.name)}
+                  emptyLabel={t("noPreview")}
+                />
+              </div>
+            )}
 
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
