@@ -141,6 +141,16 @@ describe('the provider', () => {
     expect(outside.at(-1)?.forcedTheme).toBe('light')
   })
 
+  it('keeps the visitor theme on an area page whose ThemeArea has not hydrated yet (it streams in later)', async () => {
+    const seen: UseThemeProps[] = []
+    function Probe() {
+      seen.push(useTheme())
+      return null
+    }
+    await hydrateAt('/dashboard/tasks', <ThemeProvider {...root}><Probe /></ThemeProvider>, seen)
+    expect(document.documentElement.className).toBe('dark')
+  })
+
   it('follows a client navigation into an area and out of it', async () => {
     let inArea = (show: boolean) => {}
     function Page() {

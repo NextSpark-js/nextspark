@@ -1,18 +1,17 @@
 /**
- * The hooks a signed-in dashboard runs on mount ask for the profile under the
+ * The hook a signed-in dashboard runs on mount asks for the profile under the
  * app's base path (#198).
  *
- * Both run right after any sign-in, including the Google and OTP flows that
+ * It runs right after any sign-in, including the Google and OTP flows that
  * land on `/base/dashboard`: useEnsureUserMetadata creates the default
- * preference blocks for an account that has none, and useAccountPreferencesSync
- * applies the theme saved to the account. Asking for `/api/user/profile` under
- * a base path gets a 404, so the metadata is never created and the theme never
- * restored, with the session perfectly valid.
+ * preference blocks for an account that has none. Asking for `/api/user/profile`
+ * under a base path gets a 404, so the metadata is never created, with the
+ * session perfectly valid. (The account's theme is no longer looked up after
+ * hydration: the areas read it from the account theme cookie, #495, #510.)
  */
 import { render, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEnsureUserMetadata } from '@/core/hooks/useEnsureUserMetadata'
-import { useAccountPreferencesSync } from '@/core/hooks/useAccountPreferencesSync'
 
 jest.mock('@/core/lib/auth-client', () => ({
   authClient: { useSession: () => ({ data: { user: { id: 'user-1' } } }) },
@@ -20,11 +19,6 @@ jest.mock('@/core/lib/auth-client', () => ({
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
-}))
-
-const setTheme = jest.fn()
-jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({
-  useTheme: () => ({ setTheme, forcedTheme: undefined }),
 }))
 
 const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
@@ -37,7 +31,6 @@ function urlsFetched(): string[] {
 beforeEach(() => {
   process.env.__NEXT_ROUTER_BASEPATH = '/base'
   fetchMock.mockReset()
-  setTheme.mockReset()
   localStorage.clear()
   sessionStorage.clear()
   global.fetch = fetchMock as unknown as typeof fetch
@@ -92,26 +85,6 @@ describe('useEnsureUserMetadata under a base path', () => {
     expect(JSON.parse(String(init.body))).toEqual({
       userId: 'user-1',
       metadata: expect.objectContaining({ uiPreferences: expect.any(Object) }),
-    })
-  })
-})
-
-describe('useAccountPreferencesSync under a base path', () => {
-  test('reads the account theme under the base path and applies it', async () => {
-    serveUnderBasePath({ id: 'user-1', meta: { uiPreferences: { theme: 'dark' } } })
-
-    let applyPreferences: ((result: unknown) => void) | undefined
-    renderHookInQueryClient(() => {
-      applyPreferences = useAccountPreferencesSync() as unknown as (result: unknown) => void
-    })
-
-    applyPreferences!({ data: { user: { id: 'user-1' } } })
-
-    await waitFor(() => {
-      expect(urlsFetched()).toContain('/base/api/user/profile?includeMeta=true')
-    })
-    await waitFor(() => {
-      expect(setTheme).toHaveBeenCalledWith('dark')
     })
   })
 })

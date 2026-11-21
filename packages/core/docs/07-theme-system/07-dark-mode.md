@@ -304,7 +304,7 @@ async function handleThemeChange(newTheme: string) {
 - Only the dashboard, superadmin and devtools read it, through `DashboardProviders` (`providers/account-theme.tsx`). Public and auth pages, the root layout and its inline theme script do not change: their HTML and JavaScript are the same with or without the cookie.
 - In a browser with no stored theme and on a route whose theme is not forced, the area makes the cookie's theme the stored choice: a small inline script at the top of the area applies it while a full page load is parsed, and a layout effect applies it on a client navigation into the area (the sign-in form goes from `/login` to the dashboard), before the area paints.
 
-Precedence in the areas: a forced theme, then the stored choice (`localStorage`), then the account theme cookie, then `defaultMode`. On a public page with no stored theme, `<SessionCookieRefresher />` still reads the saved preference once after hydration and applies it with `setTheme()`, which stores it locally from then on, as before.
+Precedence in the areas: a forced theme, then the stored choice (`localStorage`), then the account theme cookie, then `defaultMode`. Public pages do not use it: they have one theme (#510), and nothing looks the saved preference up after hydration any more. A session issued before the cookie existed gets it the next time Better Auth renews the session (`auth.session.updateAge`, a day by default); until then the area uses the stored choice or `defaultMode`.
 
 ## Default Theme Mode
 

@@ -51,8 +51,8 @@ export const accountThemePlugin = (readTheme: (userId: string) => Promise<unknow
           try {
             theme = toAccountTheme(await readTheme(userId))
           } catch (error) {
-            // The sign-in goes on without the cookie (it may hold another account's theme); the page then looks the
-            // theme up after hydration, as before the cookie (useAccountPreferencesSync)
+            // The sign-in goes on without the cookie (it may hold another account's theme): the areas use the stored
+            // choice or the default until the next issued session writes it
             console.error('[Auth] Could not read the account theme:', error)
           }
           setThemeCookie(ctx, theme)

@@ -2,8 +2,8 @@
  * @jest-environment jsdom
  *
  * SessionCookieRefresher — asks for the session only while the browser is
- * signed in, and brings the locale cookie, the theme and the hint in line with
- * each answer.
+ * signed in, and brings the locale cookie and the hint in line with each
+ * answer.
  */
 
 const mockRefreshSessionCookie = jest.fn()
@@ -69,7 +69,7 @@ describe('SessionCookieRefresher', () => {
     expect(mockRefreshSessionCookie).not.toHaveBeenCalled()
   })
 
-  test('a browser last seen signed in asks, and the account language and theme follow', async () => {
+  test('a browser last seen signed in asks, and the account language follows; the theme is not looked up (#495, #510)', async () => {
     document.cookie = 'nextspark.signed_in=1; Path=/'
     mockRefreshSessionCookie.mockResolvedValue({ data: { user: { id: 'user-1', language: 'es' } }, error: null })
 
@@ -78,11 +78,12 @@ describe('SessionCookieRefresher', () => {
     expect(mockRefreshSessionCookie).toHaveBeenCalledTimes(1)
     expect(document.cookie).toContain('locale=es')
     expect(mockRouterRefresh).toHaveBeenCalledTimes(1)
-    expect(fetchMock).toHaveBeenCalledWith('/api/user/profile?includeMeta=true')
-    expect(mockSetTheme).toHaveBeenCalledWith('dark')
+    // Public pages have one theme; the areas apply the account's from the cookie the server writes
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockSetTheme).not.toHaveBeenCalled()
   })
 
-  test('a page already rendered in the account language is not refreshed, and a stored theme is kept', async () => {
+  test('a page already rendered in the account language is not refreshed', async () => {
     document.cookie = 'nextspark.signed_in=1; Path=/'
     document.cookie = 'locale=es; Path=/'
     document.documentElement.lang = 'es'
@@ -112,16 +113,6 @@ describe('SessionCookieRefresher', () => {
     await mountRefresher()
 
     expect(document.cookie).toContain('nextspark.signed_in=1')
-  })
-
-  test('the account theme is looked up once per tab for each user', async () => {
-    document.cookie = 'nextspark.signed_in=1; Path=/'
-    sessionStorage.setItem('nextspark.account_theme_checked', 'user-1')
-    mockRefreshSessionCookie.mockResolvedValue({ data: { user: { id: 'user-1', language: 'en' } }, error: null })
-
-    await mountRefresher()
-
-    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   test('signing in on the page starts the requests without a reload, and signing out stops them', async () => {
@@ -159,24 +150,6 @@ describe('SessionCookieRefresher', () => {
     await settle()
 
     expect(mockRefreshSessionCookie).toHaveBeenCalledTimes(1)
-  })
-
-  test('a profile request that fails leaves the account theme to look up with the next session read', async () => {
-    document.cookie = 'nextspark.signed_in=1; Path=/'
-    mockRefreshSessionCookie.mockResolvedValue({ data: { user: { id: 'user-1', language: 'en' } }, error: null })
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({}) })
-
-    await mountRefresher({ minIntervalMs: 0 })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(mockSetTheme).not.toHaveBeenCalled()
-
-    await act(async () => {
-      window.dispatchEvent(new Event('focus'))
-    })
-    await settle()
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(mockSetTheme).toHaveBeenCalledWith('dark')
   })
 
   test('a session read still on the wire when the user signs out does not sign the browser back in', async () => {
@@ -231,65 +204,6 @@ describe('SessionCookieRefresher', () => {
 
     expect(mockRefreshSessionCookie).toHaveBeenCalledTimes(2)
     expect(mockRouterRefresh).toHaveBeenCalledTimes(1)
-  })
-
-  test('a profile answer that arrives after a sign-out applies no theme, and the next user gets their own', async () => {
-    document.cookie = 'nextspark.signed_in=1; Path=/'
-    mockRefreshSessionCookie.mockResolvedValueOnce({ data: { user: { id: 'user-1', language: 'en' } }, error: null })
-    let answerProfile: (value: unknown) => void = () => {}
-    fetchMock.mockImplementationOnce(() => new Promise(resolve => { answerProfile = resolve }))
-    await mountRefresher()
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-
-    await act(async () => {
-      setSessionHint(false)
-    })
-    await act(async () => {
-      answerProfile({ ok: true, json: async () => ({ meta: { uiPreferences: { theme: 'dark' } } }) })
-    })
-    await settle()
-    expect(mockSetTheme).not.toHaveBeenCalled()
-
-    mockRefreshSessionCookie.mockResolvedValueOnce({ data: { user: { id: 'user-2', language: 'en' } }, error: null })
-    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ meta: { uiPreferences: { theme: 'light' } } }) })
-    await act(async () => {
-      setSessionHint(true)
-    })
-    await settle()
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(mockSetTheme).toHaveBeenCalledTimes(1)
-    expect(mockSetTheme).toHaveBeenCalledWith('light')
-  })
-
-  test("a profile answer from the previous user does not undo the next user's lookup", async () => {
-    document.cookie = 'nextspark.signed_in=1; Path=/'
-    mockRefreshSessionCookie.mockResolvedValue({ data: { user: { id: 'user-a', language: 'en' } }, error: null })
-    let answerA: (value: unknown) => void = () => {}
-    fetchMock.mockImplementationOnce(() => new Promise(resolve => { answerA = resolve }))
-    await mountRefresher({ minIntervalMs: 0 })
-
-    await act(async () => {
-      setSessionHint(false)
-    })
-    mockRefreshSessionCookie.mockResolvedValue({ data: { user: { id: 'user-b', language: 'en' } }, error: null })
-    await act(async () => {
-      setSessionHint(true)
-    })
-    await settle()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-
-    await act(async () => {
-      answerA({ ok: true, json: async () => ({ meta: { uiPreferences: { theme: 'dark' } } }) })
-    })
-    await settle()
-    await act(async () => {
-      window.dispatchEvent(new Event('focus'))
-    })
-    await settle()
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(sessionStorage.getItem('nextspark.account_theme_checked')).toBe('user-b')
   })
 
   test('a locale cookie the page cannot replace does not refresh the page on each session read', async () => {

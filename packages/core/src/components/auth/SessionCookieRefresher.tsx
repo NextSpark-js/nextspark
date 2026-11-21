@@ -23,7 +23,7 @@ const signedOutOnServer = () => false
  * It only asks while the browser is signed in (see `lib/auth/session-hint`),
  * following the hint as a sign-in or sign-out on the page changes it, so an
  * anonymous visitor makes no request; and each answer brings the locale cookie
- * and the theme in line with the account (`useAccountPreferencesSync`).
+ * in line with the account (`useAccountPreferencesSync`).
  *
  * @example
  * ```tsx

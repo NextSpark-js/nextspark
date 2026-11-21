@@ -9,6 +9,9 @@ const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{childre
 
 jest.mock('@/core/providers/account-theme', () => ({ AccountTheme: () => <i data-testid="account-theme" /> }))
 jest.mock('@nextsparkjs/core/providers/account-theme', () => ({ AccountTheme: () => <i data-testid="account-theme" /> }))
+// #510: each area is wrapped in ThemeArea, where the visitor's theme applies
+jest.mock('@/core/providers/theme-provider', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
+jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
 jest.mock('@/core/providers/DashboardProviders', () => ({ DashboardProviders: Passthrough }))
 jest.mock('@nextsparkjs/core/providers/DashboardProviders', () => ({ DashboardProviders: Passthrough }))
 jest.mock('@nextsparkjs/core/components/app/guards/SuperAdminGuard', () => ({ SuperAdminGuard: Passthrough }))
@@ -32,9 +35,9 @@ const ProjectLayout = ({ children }: { children?: React.ReactNode }) => <main>{c
 const GuardedDevtools = guardDevtoolsLayout(ProjectLayout)
 const GuardedSuperadmin = guardSuperadminLayout(ProjectLayout)
 
-const count = (html: string) => html.split('data-testid="account-theme"').length - 1
+const count = (html: string, id = 'account-theme') => html.split(`data-testid="${id}"`).length - 1
 
-describe('the areas with a session mount the account theme once', () => {
+describe('the areas with a session mount the account theme once, inside one ThemeArea', () => {
   it.each([
     ['the dashboard', <AuthenticatedDashboardLayout key="d">page</AuthenticatedDashboardLayout>],
     ['devtools', <DevLayout key="dt">page</DevLayout>],
@@ -42,6 +45,9 @@ describe('the areas with a session mount the account theme once', () => {
     ['superadmin', <SuperadminLayout key="s">page</SuperadminLayout>],
     ['superadmin around a project layout', <GuardedSuperadmin key="gs">page</GuardedSuperadmin>],
   ])('%s', (_area, element) => {
-    expect(count(renderToString(element))).toBe(1)
+    const html = renderToString(element)
+    expect(count(html)).toBe(1)
+    expect(count(html, 'theme-area')).toBe(1)
+    expect(html.indexOf('data-testid="theme-area"')).toBeLessThan(html.indexOf('data-testid="account-theme"'))
   })
 })

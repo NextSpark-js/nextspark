@@ -122,26 +122,22 @@ const isServer = typeof window === "undefined"
 const ThemeContext = React.createContext<UseThemeProps | undefined>(undefined)
 /** The value inside an area with a session (no public theme), and how ThemeArea tells the provider it is mounted */
 const AreaThemeContext = React.createContext<[UseThemeProps, (inArea: boolean) => void] | undefined>(undefined)
-const InAreaContext = React.createContext(false)
 const defaultContext: UseThemeProps = { setTheme: () => {}, themes: [] }
 
-export const useTheme = (): UseThemeProps => {
-  const value = React.useContext(ThemeContext)
-  const area = React.useContext(AreaThemeContext)
-  return (React.useContext(InAreaContext) ? area?.[0] : value) ?? value ?? defaultContext
-}
+export const useTheme = (): UseThemeProps => React.useContext(ThemeContext) ?? defaultContext
 
 /**
  * Wraps an area with a session (dashboard, devtools, superadmin): inside it `useTheme()` answers without the public
  * theme, and while it is mounted the provider applies the visitor's theme (#510).
  */
 export function ThemeArea({ children }: React.PropsWithChildren) {
-  const setInArea = React.useContext(AreaThemeContext)?.[1]
+  const area = React.useContext(AreaThemeContext)
   React.useLayoutEffect(() => {
-    setInArea?.(true)
-    return () => setInArea?.(false)
-  }, [setInArea])
-  return <InAreaContext.Provider value>{children}</InAreaContext.Provider>
+    area?.[1](true)
+    return () => area?.[1](false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the setter is stable; the value changes with the theme
+  }, [])
+  return area ? <ThemeContext.Provider value={area[0]}>{children}</ThemeContext.Provider> : children
 }
 
 const inAreaPath = (areaPaths: string[] | undefined, path: string) => !!areaPaths?.some((p) => path === p || path.startsWith(p + "/"))
