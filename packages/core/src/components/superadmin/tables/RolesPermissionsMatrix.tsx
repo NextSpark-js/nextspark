@@ -1,9 +1,11 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, X } from "lucide-react";
+import { Check, Search, X } from "lucide-react";
 import { Badge } from '../../ui/badge';
+import { Input } from '../../ui/input';
+import { Switch } from '../../ui/switch';
 import {
   Table,
   TableBody,
@@ -33,6 +35,33 @@ interface RolesPermissionsMatrixProps {
 }
 
 /**
+ * The permissions the matrix shows for a search text and the "differences only" switch (#535): the text matches the id,
+ * the label and the description, ignoring case; a difference is a permission that some of the roles have and others do not.
+ */
+export function filterMatrixPermissions(
+  allPermissions: string[],
+  permissionsData: PermissionData[] | undefined,
+  roles: readonly string[],
+  rolePermissions: Record<string, string[]>,
+  query: string,
+  differencesOnly: boolean,
+): string[] {
+  const info = new Map((permissionsData ?? []).map(p => [p.id, p]));
+  const text = query.trim().toLowerCase();
+  return allPermissions.filter(id => {
+    if (text) {
+      const p = info.get(id);
+      if (![id, p?.label, p?.description].some(v => v?.toLowerCase().includes(text))) return false;
+    }
+    if (differencesOnly) {
+      const having = roles.filter(r => rolePermissions[r]?.includes(id)).length;
+      if (having === 0 || having === roles.length) return false;
+    }
+    return true;
+  });
+}
+
+/**
  * Roles Permissions Matrix Component
  *
  * Displays a consolidated matrix showing which permissions each team role has.
@@ -48,6 +77,8 @@ export function RolesPermissionsMatrix({
 }: RolesPermissionsMatrixProps) {
   const t = useTranslations('superadmin.rolesMatrix');
   const tTeams = useTranslations('teams');
+  const [query, setQuery] = useState("");
+  const [differencesOnly, setDifferencesOnly] = useState(false);
   // Sort roles by hierarchy (highest to lowest)
   const sortedRoles = [...roles].sort(
     (a, b) => (hierarchy[b] ?? 0) - (hierarchy[a] ?? 0)
@@ -71,12 +102,14 @@ export function RolesPermissionsMatrix({
   const permissionCategoryMap = new Map<string, string>();
   const permissionLabelMap = new Map<string, string>();
   const permissionDangerousMap = new Map<string, boolean>();
+  const permissionDescriptionMap = new Map<string, string>();
 
   if (permissionsData) {
     permissionsData.forEach(p => {
       permissionCategoryMap.set(p.id, p.category);
       permissionLabelMap.set(p.id, p.label);
       permissionDangerousMap.set(p.id, p.dangerous ?? false);
+      if (p.description) permissionDescriptionMap.set(p.id, p.description);
     });
   }
 
@@ -92,7 +125,8 @@ export function RolesPermissionsMatrix({
   };
 
   // Group permissions by category
-  const permissionsByCategory = allPermissions.reduce(
+  const visiblePermissions = filterMatrixPermissions(allPermissions, permissionsData, roles, permissions, query, differencesOnly);
+  const permissionsByCategory = visiblePermissions.reduce(
     (acc, permission) => {
       const category = getPermissionCategory(permission);
       if (!acc[category]) acc[category] = [];
@@ -136,6 +170,28 @@ export function RolesPermissionsMatrix({
   };
 
   return (
+    <div className="space-y-3">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('searchPlaceholder')}
+          aria-label={t('searchPlaceholder')}
+          className="pl-10"
+          data-cy="permissions-search"
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <Switch checked={differencesOnly} onCheckedChange={setDifferencesOnly} data-cy="permissions-differences-only" />
+        {t('differencesOnly')}
+      </label>
+      <span className="text-sm text-muted-foreground sm:ml-auto" aria-live="polite">
+        {t('showing', { shown: visiblePermissions.length, total: allPermissions.length })}
+      </span>
+    </div>
     <div className="rounded-md border">
       <Table>
         <TableHeader>
@@ -157,6 +213,13 @@ export function RolesPermissionsMatrix({
           </TableRow>
         </TableHeader>
         <TableBody>
+          {sortedCategories.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={sortedRoles.length + 1} className="text-center text-muted-foreground py-8">
+                {t('noMatches')}
+              </TableCell>
+            </TableRow>
+          )}
           {sortedCategories.map((category) => (
             <Fragment key={category}>
               {/* Category header row */}
@@ -187,6 +250,11 @@ export function RolesPermissionsMatrix({
                         {t('dangerous')}
                       </Badge>
                     )}
+                    {permissionDescriptionMap.get(permission) && (
+                      <div className="font-sans text-xs text-muted-foreground/80 mt-0.5">
+                        {permissionDescriptionMap.get(permission)}
+                      </div>
+                    )}
                   </TableCell>
                   {sortedRoles.map((role) => (
                     <TableCell
@@ -206,6 +274,7 @@ export function RolesPermissionsMatrix({
           ))}
         </TableBody>
       </Table>
+    </div>
     </div>
   );
 }

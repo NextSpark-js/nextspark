@@ -379,7 +379,7 @@ function TeamRolesPage() {
                           : plan.price
                           ? t("plans.perMonth", { price: formatLocaleDollars(plan.price.monthly, locale, { whole: true }) })
                           : t("plans.contactSales")}
-                        {plan.trialDays && plan.trialDays > 0 && (
+                        {plan.trialDays != null && plan.trialDays > 0 && (
                           <span className="ml-1 text-green-600">
                             {t("plans.trialDays", { days: plan.trialDays })}
                           </span>

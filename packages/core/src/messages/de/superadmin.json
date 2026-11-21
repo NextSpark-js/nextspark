@@ -382,7 +382,11 @@
   },
   "rolesMatrix": {
     "permission": "Berechtigung",
-    "dangerous": "gefährlich"
+    "dangerous": "gefährlich",
+    "searchPlaceholder": "Berechtigungen nach Schlüssel oder Beschreibung suchen...",
+    "differencesOnly": "Nur Unterschiede",
+    "showing": "{shown} von {total} angezeigt",
+    "noMatches": "Keine Berechtigung passt."
   },
   "planMatrix": {
     "featureOrLimit": "Funktion / Limit",
