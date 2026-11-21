@@ -26,8 +26,6 @@ export function PublicEntityCard({ entityConfig, entitySlug, data, className }: 
   const text = useTranslations('public.entities')
   const locale = useLocale()
   const entityId = data.id as string
-  // The item's URL is its slug when it has one (the URL its public page answers); an id is the fallback (#540)
-  const itemPath = typeof data.slug === 'string' && data.slug ? data.slug : entityId
 
   // Use entityConfig if available, otherwise use fallback logic
   let title: string
@@ -104,7 +102,7 @@ export function PublicEntityCard({ entityConfig, entitySlug, data, className }: 
 
   return (
     <Card className={`group hover:shadow-lg transition-all duration-200 ${className}`}>
-      <Link href={`/${entitySlug}/${encodeURIComponent(itemPath)}`} className="block">
+      <Link href={`/${entitySlug}/${entityId}`} className="block">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
