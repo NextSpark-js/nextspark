@@ -23,7 +23,7 @@
       },
       "unavailable": "Kennzahlen nicht verfügbar",
       "mrrHelpLabel": "So wird der MRR berechnet",
-      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife zählen mit einem Zwölftel ihres Preises. Testphasen, überfällige, gekündigte und kostenlose Abonnements zählen nicht. Abonnements zeigt dieselbe Zahl."
+      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife werden mit einem Zwölftel ihres Preises berücksichtigt. Testphasen, überfällige, gekündigte und kostenlose Abonnements werden nicht berücksichtigt. Abonnements zeigt dieselbe Zahl."
     },
     "panelTitle": "Super-Admin-Bereich"
   },
@@ -637,7 +637,7 @@
       "needsAttention": "Handlungsbedarf",
       "pastDue": "Überfällige Zahlungen",
       "mrrHelpLabel": "So wird der MRR berechnet",
-      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife zählen mit einem Zwölftel ihres Preises. Testphasen, überfällige, gekündigte und kostenlose Abonnements zählen nicht. Das Dashboard zeigt dieselbe Zahl.",
+      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife werden mit einem Zwölftel ihres Preises berücksichtigt. Testphasen, überfällige, gekündigte und kostenlose Abonnements werden nicht berücksichtigt. Das Dashboard zeigt dieselbe Zahl.",
       "fromPaying": "{count, plural, one {Aus # zahlendem Abonnement} other {Aus # zahlenden Abonnements}}",
       "arrFormula": "MRR x 12"
     },

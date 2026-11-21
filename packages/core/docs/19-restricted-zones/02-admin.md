@@ -48,7 +48,7 @@ const canAccess = useCanAccessAdmin();
 
 ## Business Metrics
 
-The top of `/superadmin` shows five numbers, computed live from Postgres on every request (no job, no cache table, no migration). The queries live in `lib/services/business-metrics.service.ts` and run on the service connection; the page is rendered only for `superadmin` and `developer` sessions (the area's server-side role check), and the service checks nothing itself, so call it only from pages under `/superadmin`.
+The top of `/superadmin` shows five numbers, computed live from Postgres on every request (no job, no cache table, no migration). The queries live in `lib/services/business-metrics.service.ts` and run on the service connection; the page is rendered only for `superadmin` and `developer` sessions (the area's server-side role check), and the service checks nothing itself, so call it only from pages under `/superadmin` or from a route that checks the role first, as `GET /api/superadmin/subscriptions` does: its MRR and ARR (MRR x 12) are the same query, so the dashboard and Subscriptions always agree.
 
 | Metric | Definition |
 |--------|------------|
