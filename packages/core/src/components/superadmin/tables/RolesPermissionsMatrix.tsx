@@ -32,6 +32,11 @@ interface RolesPermissionsMatrixProps {
   allPermissions: string[];
   /** Full permission data with categories for grouping */
   permissionsData?: PermissionData[];
+  /** The search text and the "differences only" switch, when the page keeps them (in the URL); alone, the matrix keeps its own. */
+  query?: string;
+  onQueryChange?: (query: string) => void;
+  differencesOnly?: boolean;
+  onDifferencesOnlyChange?: (on: boolean) => void;
 }
 
 /**
@@ -74,11 +79,19 @@ export function RolesPermissionsMatrix({
   permissions,
   allPermissions,
   permissionsData,
+  query: queryProp,
+  onQueryChange,
+  differencesOnly: differencesOnlyProp,
+  onDifferencesOnlyChange,
 }: RolesPermissionsMatrixProps) {
   const t = useTranslations('superadmin.rolesMatrix');
   const tTeams = useTranslations('teams');
-  const [query, setQuery] = useState("");
-  const [differencesOnly, setDifferencesOnly] = useState(false);
+  const [ownQuery, setOwnQuery] = useState("");
+  const [ownDifferencesOnly, setOwnDifferencesOnly] = useState(false);
+  const query = queryProp ?? ownQuery;
+  const setQuery = onQueryChange ?? setOwnQuery;
+  const differencesOnly = differencesOnlyProp ?? ownDifferencesOnly;
+  const setDifferencesOnly = onDifferencesOnlyChange ?? setOwnDifferencesOnly;
   // Sort roles by hierarchy (highest to lowest)
   const sortedRoles = [...roles].sort(
     (a, b) => (hierarchy[b] ?? 0) - (hierarchy[a] ?? 0)

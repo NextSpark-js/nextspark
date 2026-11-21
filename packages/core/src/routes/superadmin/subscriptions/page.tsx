@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useState } from "react";
 import { sel } from "@nextsparkjs/core/lib/selectors";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import {
   Card,
   CardContent,
@@ -171,6 +171,16 @@ const statusConfig = {
   },
 };
 
+/** What the screen keeps in the URL (#519); a value outside these falls back to the default. */
+const URL_STATE = {
+  search: { default: "" },
+  status: { default: "all", allowed: ["all", "active", "trialing", "past_due", "canceled"] },
+  plan: { default: "all", allowed: ["all", "free", "pro", "enterprise"] },
+  interval: { default: "all", allowed: ["all", "monthly", "yearly"] },
+  page: { default: "1", allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+  limit: { default: "20", allowed: ["10", "20", "50", "100"] },
+} as const;
+
 /**
  * Subscriptions Management Page
  *
@@ -182,12 +192,14 @@ function SubscriptionsPage() {
   const tErrors = useTranslations("superadmin.errors");
   const tShared = useTranslations("superadmin.shared");
   const locale = useLocale();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [planFilter, setPlanFilter] = useState<string>("all");
-  const [intervalFilter, setIntervalFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const statusFilter = url.status;
+  const planFilter = url.plan;
+  const intervalFilter = url.interval;
+  const searchQuery = url.search;
+  const page = Number(url.page);
+  const limit = Number(url.limit);
+  const setPage = (next: number) => setUrl({ page: String(next) });
 
   // Build query params
   const getQueryParams = () => {
@@ -201,41 +213,16 @@ function SubscriptionsPage() {
     return params.toString();
   };
 
-  // Handle filter changes
-  const handleStatusChange = (status: string) => {
-    setStatusFilter(status);
-    setPage(1);
-  };
-
-  const handlePlanChange = (plan: string) => {
-    setPlanFilter(plan);
-    setPage(1);
-  };
-
-  const handleIntervalChange = (interval: string) => {
-    setIntervalFilter(interval);
-    setPage(1);
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    setPage(1);
-  };
-
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1);
-  };
+  // Every change that narrows the list goes back to page 1
+  const handleStatusChange = (status: string) => setUrl({ status, page: "1" });
+  const handlePlanChange = (plan: string) => setUrl({ plan, page: "1" });
+  const handleIntervalChange = (interval: string) => setUrl({ interval, page: "1" });
+  const handleSearchChange = (value: string) => setUrl({ search: value, page: "1" });
+  const handleLimitChange = (newLimit: number) => setUrl({ limit: String(newLimit), page: "1" });
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || planFilter !== "all" || intervalFilter !== "all";
 
-  const clearAllFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-    setPlanFilter("all");
-    setIntervalFilter("all");
-    setPage(1);
-  };
+  const clearAllFilters = () => setUrl({ search: "", status: "all", plan: "all", interval: "all", page: "1" });
 
   // Fetch subscriptions data
   const { data, isLoading, isFetching, error, refetch } = useQuery<SubscriptionsData>({

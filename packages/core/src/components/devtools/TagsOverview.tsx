@@ -15,6 +15,7 @@ import { grepCommand, useCopy } from './use-copy';
 import { docPaths, isSelectorTag, testDocPath } from './tag-utils';
 import { withBasePath } from '../../lib/base-path';
 import { useScrollToHash } from './use-scroll-to-hash';
+import { useAreaUrlState } from '../../hooks/useAreaUrlState';
 
 type RegistryCategory = keyof typeof TAGS_REGISTRY;
 // "selectors" is not a registry category: it is the `@SEL_*` tags split out of "other"
@@ -88,15 +89,24 @@ const CATEGORY_SELECTED: Record<TagCategory, string> = {
  * - Copy grep command on click
  * - Link feature/block tags to their respective pages
  */
+/** What the overview keeps in the URL (#519): the search and the open tag (`category-key`). */
+const URL_STATE = {
+  q: { default: "" },
+  tag: { default: "" },
+} as const;
+
 export function TagsOverview() {
   const t = useTranslations("devtools.tags");
   useScrollToHash();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const searchQuery = url.q;
+  const setSearchQuery = (q: string) => setUrl({ q });
+  const expandedTag = url.tag || null;
   const { copy, copied } = useCopy();
+  // the category of a tag opened from the URL is open too
   const [expandedCategories, setExpandedCategories] = useState<Set<TagCategory>>(
-    new Set(CATEGORY_DISPLAY_ORDER.filter((c) => !COLLAPSED_BY_DEFAULT.includes(c)))
+    () => new Set(CATEGORY_DISPLAY_ORDER.filter((c) => !COLLAPSED_BY_DEFAULT.includes(c) || expandedTag?.startsWith(`${c}-`)))
   );
-  const [expandedTag, setExpandedTag] = useState<string | null>(null);
 
   // The documentation files that exist, asked for the first time a tag is opened: a test file links to its page
   // only when it has one (until the tree arrives, or if it fails, files show as plain text).
@@ -190,7 +200,7 @@ export function TagsOverview() {
   };
 
   const toggleTagExpand = (tagKey: string) => {
-    setExpandedTag((prev) => (prev === tagKey ? null : tagKey));
+    setUrl({ tag: expandedTag === tagKey ? "" : tagKey });
   };
 
   // Extract filename from path for display

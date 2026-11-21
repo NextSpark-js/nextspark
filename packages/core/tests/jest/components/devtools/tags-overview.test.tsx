@@ -7,6 +7,8 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
+// the screens keep their state in the URL (#519)
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn(), push: jest.fn() }), usePathname: () => '/area', useSearchParams: () => new URLSearchParams() }))
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('next/link', () => ({

@@ -16,6 +16,8 @@ const data = {
   metadata: { requestedBy: 'sa', requestedAt: '2026-11-10T12:00:00Z', source: 'superadmin-api' },
 }
 
+// the screens keep their state in the URL (#519)
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn(), push: jest.fn() }), usePathname: () => '/area', useSearchParams: () => new URLSearchParams() }))
 jest.mock('next-intl', () => jest.requireActual('../__mocks__/next-intl.js'))
 jest.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data, isLoading: false, error: null, refetch: jest.fn() }) }))
 jest.mock('@nextsparkjs/core/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: 'sa' } } }) }))

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -15,9 +15,8 @@ import { sel } from '../../lib/test';
 import { TagCopyActions } from './TagCopyActions';
 import type { BlockConfig, BlockCategory } from '../../types/blocks';
 import { BlockThumbnail } from './BlockThumbnail'
+import { useViewerFilters, type CoverageFilter } from './use-viewer-filters'
 
-type CategoryFilter = "all" | BlockCategory;
-type CoverageFilter = "all" | "covered" | "uncovered";
 
 const CATEGORY_COLORS: Record<string, string> = {
   hero: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300",
@@ -50,9 +49,6 @@ interface BlockWithCoverage extends BlockConfig {
 export function BlocksViewer() {
   const t = useTranslations("devtools.blocks");
   const text = useLocalizedText();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
 
   // Merge blocks with coverage data
   const blocksWithCoverage: BlockWithCoverage[] = useMemo(() => {
@@ -66,6 +62,13 @@ export function BlocksViewer() {
       };
     });
   }, []);
+
+  const categories = useMemo(() => {
+    const cats = new Set(blocksWithCoverage.map((b) => b.category));
+    return Array.from(cats).sort();
+  }, [blocksWithCoverage]);
+
+  const { searchQuery, categoryFilter, coverageFilter, setSearchQuery, setCategoryFilter, setCoverageFilter } = useViewerFilters(categories);
 
   const filteredBlocks = useMemo(() => {
     return blocksWithCoverage.filter((block) => {
@@ -93,11 +96,6 @@ export function BlocksViewer() {
       return true;
     });
   }, [blocksWithCoverage, searchQuery, categoryFilter, coverageFilter, text]);
-
-  const categories = useMemo(() => {
-    const cats = new Set(blocksWithCoverage.map((b) => b.category));
-    return Array.from(cats).sort();
-  }, [blocksWithCoverage]);
 
   const stats = useMemo(() => {
     const total = blocksWithCoverage.length;
@@ -164,7 +162,7 @@ export function BlocksViewer() {
               key={cat}
               variant={categoryFilter === cat ? "default" : "outline"}
               size="sm"
-              onClick={() => setCategoryFilter(cat as CategoryFilter)}
+              onClick={() => setCategoryFilter(cat)}
               data-cy={sel("devtools.blocks.filterCategory", { category: cat })}
             >
               {cat}

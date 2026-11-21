@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -28,8 +28,19 @@ import {
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/lib/selectors";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { useSuperadminTeams } from "@nextsparkjs/core/hooks/superadmin/useSuperadminTeams";
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
+
+/** What the screen keeps in the URL (#519); a value outside these falls back to the default. */
+const URL_STATE = {
+  tab: { default: "user", allowed: ["user", "system"] },
+  search: { default: "" },
+  sort: { default: "createdAt", allowed: ["name", "members", "createdAt"] },
+  order: { default: "desc", allowed: ["asc", "desc"] },
+  page: { default: "1", allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+  limit: { default: "20", allowed: ["10", "20", "50", "100"] },
+} as const;
 
 /**
  * Teams Management Page
@@ -40,35 +51,19 @@ import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n
 function TeamsPage() {
   const t = useTranslations("superadmin");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<"user" | "system">("user");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [sort, setSort] = useState<SortState<TeamSortKey>>({ key: "createdAt", order: "desc" });
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const activeTab = url.tab as "user" | "system";
+  const searchQuery = url.search;
+  const page = Number(url.page);
+  const limit = Number(url.limit);
+  const sort = useMemo<SortState<TeamSortKey>>(() => ({ key: url.sort as TeamSortKey, order: url.order as "asc" | "desc" }), [url.sort, url.order]);
+  const setPage = (next: number) => setUrl({ page: String(next) });
 
-  // Handle sort change - reset page
-  const handleSortChange = (next: SortState<TeamSortKey>) => {
-    setSort(next);
-    setPage(1);
-  };
-
-  // Handle tab change - reset page
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab as "user" | "system");
-    setPage(1);
-  };
-
-  // Handle search change - reset page
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    setPage(1);
-  };
-
-  // Handle limit change - reset page
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1);
-  };
+  // Every change that narrows or reorders the list goes back to page 1
+  const handleSortChange = (next: SortState<TeamSortKey>) => setUrl({ sort: next.key, order: next.order, page: "1" });
+  const handleTabChange = (tab: string) => setUrl({ tab, page: "1" });
+  const handleSearchChange = (value: string) => setUrl({ search: value, page: "1" });
+  const handleLimitChange = (newLimit: number) => setUrl({ limit: String(newLimit), page: "1" });
 
   // Fetch teams data using the shared hook
   const {
@@ -208,10 +203,7 @@ function TeamsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setSearchQuery("");
-              setPage(1);
-            }}
+            onClick={() => handleSearchChange("")}
             data-cy={sel('superadmin.teams.filters.clearButton')}
           >
             {t("teamsPage.clear")}

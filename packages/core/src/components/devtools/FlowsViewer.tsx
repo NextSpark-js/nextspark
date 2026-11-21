@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -10,10 +10,9 @@ import { useTranslations } from "next-intl";
 import { FLOW_REGISTRY, COVERAGE_SUMMARY, type FlowEntry } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
 import { TagCopyActions } from './TagCopyActions';
+import { useViewerFilters } from './use-viewer-filters';
 import { useScrollToHash } from "./use-scroll-to-hash";
 
-type CategoryFilter = "all" | FlowEntry["category"];
-type CoverageFilter = "all" | "covered" | "uncovered";
 
 const CATEGORY_COLORS: Record<FlowEntry["category"], string> = {
   acquisition: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
@@ -39,11 +38,15 @@ const CATEGORY_COLORS: Record<FlowEntry["category"], string> = {
 export function FlowsViewer() {
   const t = useTranslations("devtools.flows");
   useScrollToHash();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
 
   const flows = useMemo(() => Object.values(FLOW_REGISTRY), []);
+
+  const categories = useMemo(() => {
+    const cats = new Set(flows.map((f) => f.category));
+    return Array.from(cats).sort();
+  }, [flows]);
+
+  const { searchQuery, categoryFilter, coverageFilter, setSearchQuery, setCategoryFilter, setCoverageFilter } = useViewerFilters(categories);
 
   const filteredFlows = useMemo(() => {
     return flows.filter((flow) => {
@@ -72,11 +75,6 @@ export function FlowsViewer() {
       return true;
     });
   }, [flows, searchQuery, categoryFilter, coverageFilter]);
-
-  const categories = useMemo(() => {
-    const cats = new Set(flows.map((f) => f.category));
-    return Array.from(cats).sort();
-  }, [flows]);
 
   const criticalCount = useMemo(() => {
     return flows.filter((f) => f.criticalPath).length;
@@ -161,7 +159,7 @@ export function FlowsViewer() {
               key={cat}
               variant={categoryFilter === cat ? "default" : "outline"}
               size="sm"
-              onClick={() => setCategoryFilter(cat as CategoryFilter)}
+              onClick={() => setCategoryFilter(cat)}
               data-cy={sel("devtools.flows.filterCategory", { category: cat })}
             >
               {t(`categories.${cat}`)}

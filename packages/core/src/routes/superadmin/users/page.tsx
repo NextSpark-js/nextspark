@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -40,6 +40,7 @@ import {
   FilterDropdown,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/lib/selectors";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 import { formatLocaleDate } from "@nextsparkjs/core/lib/i18n/format"
 
@@ -76,6 +77,18 @@ interface UsersData {
   };
 }
 
+/** What the screen keeps in the URL (#519); a value outside these falls back to the default. */
+const URL_STATE = {
+  tab: { default: "users", allowed: ["users", "superadmins"] },
+  search: { default: "" },
+  role: { default: "", allowed: ["member", "developer"] },
+  status: { default: "", allowed: ["active", "suspended", "unverified"] },
+  sort: { default: "createdAt", allowed: ["name", "email", "createdAt"] },
+  order: { default: "desc", allowed: ["asc", "desc"] },
+  page: { default: "1", allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+  limit: { default: "20", allowed: ["10", "20", "50", "100"] },
+} as const;
+
 /**
  * Users Management Page
  *
@@ -99,13 +112,15 @@ function UsersPage() {
     { value: "suspended", label: t("users.table.suspended") },
     { value: "unverified", label: t("users.table.unverified") },
   ];
-  const [activeTab, setActiveTab] = useState<"users" | "superadmins">("users");
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [sort, setSort] = useState<SortState<UserSortKey>>({ key: "createdAt", order: "desc" });
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const activeTab = url.tab as "users" | "superadmins";
+  const search = url.search;
+  const roleFilter = url.role;
+  const statusFilter = url.status;
+  const page = Number(url.page);
+  const limit = Number(url.limit);
+  const sort = useMemo<SortState<UserSortKey>>(() => ({ key: url.sort as UserSortKey, order: url.order as "asc" | "desc" }), [url.sort, url.order]);
+  const setPage = (next: number) => setUrl({ page: String(next) });
   const { data: session } = useSession();
 
   // Build query params
@@ -162,48 +177,14 @@ function UsersPage() {
       }
     : undefined;
 
-  // Handle tab change - reset page
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab as "users" | "superadmins");
-    setPage(1);
-  };
-
-  // Handle search change - reset page
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
-
-  // Handle filter change - reset page
-  const handleRoleFilterChange = (value: string) => {
-    setRoleFilter(value === "__all__" ? "" : value);
-    setPage(1);
-  };
-
-  const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value === "__all__" ? "" : value);
-    setPage(1);
-  };
-
-  // Handle sort change - reset page
-  const handleSortChange = (next: SortState<UserSortKey>) => {
-    setSort(next);
-    setPage(1);
-  };
-
-  // Handle limit change - reset page
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1);
-  };
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSearch("");
-    setRoleFilter("");
-    setStatusFilter("");
-    setPage(1);
-  };
+  // Every change that narrows or reorders the list goes back to page 1
+  const handleTabChange = (tab: string) => setUrl({ tab, page: "1" });
+  const handleSearchChange = (value: string) => setUrl({ search: value, page: "1" });
+  const handleRoleFilterChange = (value: string) => setUrl({ role: value === "__all__" ? "" : value, page: "1" });
+  const handleStatusFilterChange = (value: string) => setUrl({ status: value === "__all__" ? "" : value, page: "1" });
+  const handleSortChange = (next: SortState<UserSortKey>) => setUrl({ sort: next.key, order: next.order, page: "1" });
+  const handleLimitChange = (newLimit: number) => setUrl({ limit: String(newLimit), page: "1" });
+  const clearFilters = () => setUrl({ search: "", role: "", status: "", page: "1" });
 
   const hasActiveFilters = search || roleFilter || statusFilter;
 

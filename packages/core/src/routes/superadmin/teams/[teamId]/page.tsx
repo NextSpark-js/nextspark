@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { useListBackHref } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -174,6 +175,8 @@ function TeamDetailPage() {
     t.has(`teamDetail.billingStatuses.${status}`) ? t(`teamDetail.billingStatuses.${status}`) : status.charAt(0).toUpperCase() + status.slice(1);
   const params = useParams()!;
   const teamId = params.teamId as string;
+  // the list with the search, filters and page it had (#519)
+  const listHref = useListBackHref("/superadmin/teams");
 
   // Fetch team data from API
   const { data: teamData, isLoading, error, refetch } = useQuery<TeamDetailData>({
@@ -207,7 +210,7 @@ function TeamDetailPage() {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="/superadmin/teams">{t("teamsPage.title")}</Link>
+            <Link href={listHref}>{t("teamsPage.title")}</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />

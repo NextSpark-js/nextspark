@@ -12,6 +12,8 @@ const data = {
   metadata: { requestedAt: '2026-11-10T12:00:00Z' },
 }
 
+// the screens keep their state in the URL (#519)
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn(), push: jest.fn() }), usePathname: () => '/area', useSearchParams: () => new URLSearchParams() }))
 jest.mock('next-intl', () => ({ useLocale: () => 'de', useTranslations: () => (key: string) => key }))
 jest.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data, isLoading: false, isFetching: false, error: null, refetch: jest.fn() }), keepPreviousData: {} }))
 jest.mock('@nextsparkjs/core/components/superadmin/filters', () => ({ SearchInput: () => null, PaginationControls: () => null }))

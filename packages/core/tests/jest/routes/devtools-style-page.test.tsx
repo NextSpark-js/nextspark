@@ -7,6 +7,8 @@
 import { describe, test, expect, jest } from '@jest/globals'
 import { render, screen } from '@testing-library/react'
 
+// the screens keep their state in the URL (#519)
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn(), push: jest.fn() }), usePathname: () => '/area', useSearchParams: () => new URLSearchParams() }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('@nextsparkjs/core/components/superadmin/misc/ComponentGallery', () => ({ ComponentGallery: () => null }))
 jest.mock('@nextsparkjs/core/components/superadmin/misc/ThemePreview', () => ({ ThemePreview: () => null }))

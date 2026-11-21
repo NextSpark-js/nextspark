@@ -14,7 +14,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@nextsparkjs/core/components/ui/button'
@@ -24,7 +24,15 @@ import { Filters } from '@nextsparkjs/core/components/devtools/scheduled-actions
 import { ActionsTable } from '@nextsparkjs/core/components/devtools/scheduled-actions/actions-table'
 import type { ScheduledActionsFilters, ScheduledActionsResponse } from '@nextsparkjs/core/components/devtools/scheduled-actions/types'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { useAreaUrlState } from '@nextsparkjs/core/hooks/useAreaUrlState'
 import { formatLocaleRelative } from '@nextsparkjs/core/lib/i18n/format'
+
+/** What the screen keeps in the URL (#519): the filters and the page. */
+const URL_STATE = {
+  status: { default: '', allowed: ['pending', 'running', 'completed', 'failed'] },
+  type: { default: '' },
+  page: { default: '1', allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+} as const
 
 async function fetchScheduledActions(
   filters: ScheduledActionsFilters,
@@ -57,8 +65,13 @@ async function fetchScheduledActions(
 export default function ScheduledActionsPage() {
   const t = useTranslations('devtools.scheduledActions')
   const locale = useLocale()
-  const [filters, setFilters] = useState<ScheduledActionsFilters>({})
-  const [page, setPage] = useState(1)
+  const [url, setUrl] = useAreaUrlState(URL_STATE)
+  const filters = useMemo<ScheduledActionsFilters>(
+    () => ({ status: (url.status || undefined) as ScheduledActionsFilters['status'], actionType: url.type || undefined }),
+    [url.status, url.type],
+  )
+  const page = Number(url.page)
+  const setPage = (update: (prev: number) => number) => setUrl({ page: String(update(page)) })
   const limit = 20
 
   const { data, isLoading, error, refetch, isFetching, dataUpdatedAt } = useQuery({
@@ -79,8 +92,7 @@ export default function ScheduledActionsPage() {
   const handleViewRelated = (id: string) => {
     setFocusId(id)
     if (!data?.data.actions.some((action) => action.id === id)) {
-      setFilters({})
-      setPage(1)
+      setUrl({ status: '', type: '', page: '1' })
     }
   }
   // The focus is a moment, not a state: cleared so a refresh later does not scroll back to it.
@@ -91,8 +103,8 @@ export default function ScheduledActionsPage() {
   }, [focusId])
 
   const handleFiltersChange = (newFilters: ScheduledActionsFilters) => {
-    setFilters(newFilters)
-    setPage(1) // Reset to first page when filters change
+    // Back to the first page when the filters change
+    setUrl({ status: newFilters.status ?? '', type: newFilters.actionType ?? '', page: '1' })
   }
 
   const handlePreviousPage = () => {

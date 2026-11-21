@@ -6,7 +6,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 
 let mockData: unknown
-jest.mock('next/navigation', () => ({ useParams: () => ({ teamId: 't1' }), useRouter: () => ({ push: jest.fn() }) }))
+jest.mock('next/navigation', () => ({ useParams: () => ({ teamId: 't1' }), useRouter: () => ({ push: jest.fn(), replace: jest.fn() }), usePathname: () => '/area', useSearchParams: () => new URLSearchParams() }))
 jest.mock('next-intl', () => ({ useLocale: () => 'en', useTranslations: () => Object.assign((key: string) => key, { has: () => false }) }))
 jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: mockData, isLoading: false, isFetching: false, error: null, refetch: jest.fn() }),

@@ -28,6 +28,14 @@ import { getFullBillingMatrix } from "@nextsparkjs/core/lib/billing/queries";
 import { RolesPermissionsMatrix } from "@nextsparkjs/core/components/superadmin/tables/RolesPermissionsMatrix";
 import { PlanFeaturesMatrix } from "@nextsparkjs/core/components/superadmin/tables/PlanFeaturesMatrix";
 import { formatLocaleDollars } from "@nextsparkjs/core/lib/i18n/format";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
+
+/** What the screen keeps in the URL (#519): the tab and the roles matrix search. */
+const URL_STATE = {
+  tab: { default: "rbac", allowed: ["rbac", "plans"] },
+  search: { default: "" },
+  diff: { default: "", allowed: ["1"] },
+} as const;
 
 /**
  * Team Roles & Permissions Page
@@ -42,6 +50,7 @@ function TeamRolesPage() {
   const t = useTranslations("superadmin.teamRoles");
   const tTeams = useTranslations("teams");
   const locale = useLocale();
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
   const planTypeLabel = (type: string) => (t.has(`planTypes.${type}`) ? t(`planTypes.${type}`) : type);
   const teamRolesConfig = APP_CONFIG_MERGED.teams.roles;
@@ -109,7 +118,7 @@ function TeamRolesPage() {
       </div>
 
       {/* Tabs for switching between matrices */}
-      <Tabs defaultValue="rbac" className="space-y-6">
+      <Tabs value={url.tab} onValueChange={(tab) => setUrl({ tab })} className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="rbac" className="flex items-center gap-2" data-cy="tab-rbac">
             <Shield className="h-4 w-4" />
@@ -225,6 +234,10 @@ function TeamRolesPage() {
                 permissions={rolePermissions}
                 allPermissions={allPermissions}
                 permissionsData={permissions}
+                query={url.search}
+                onQueryChange={(search) => setUrl({ search })}
+                differencesOnly={url.diff === "1"}
+                onDifferencesOnlyChange={(on) => setUrl({ diff: on ? "1" : "" })}
               />
             </CardContent>
           </Card>

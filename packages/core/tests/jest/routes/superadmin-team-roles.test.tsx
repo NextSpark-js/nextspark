@@ -5,6 +5,8 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 
+// the screens keep their state in the URL (#519)
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn(), push: jest.fn() }), usePathname: () => '/area', useSearchParams: () => new URLSearchParams() }))
 jest.mock('next-intl', () => ({
   useLocale: () => 'en',
   useTranslations: () => Object.assign((key: string, values?: Record<string, unknown>) => (values ? `${key}${JSON.stringify(values)}` : key), { has: () => false }),

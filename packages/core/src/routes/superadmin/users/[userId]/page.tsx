@@ -1,5 +1,6 @@
 "use client";
 
+import { useListBackHref } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -117,6 +118,8 @@ function UserDetailPage() {
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
   const params = useParams()!;
   const userId = params.userId as string;
+  // the list with the search, filters and page it had (#519)
+  const listHref = useListBackHref("/superadmin/users");
 
   // Fetch user data from API
   const { data: userData, isLoading, error, refetch } = useQuery<UserDetailData>({
@@ -139,7 +142,7 @@ function UserDetailPage() {
   // The same menu and dialogs as the users table; a deleted user has no page to come back to
   const actions = useUserActions({
     onDone: (type) => {
-      if (type === "delete") router.push("/superadmin/users");
+      if (type === "delete") router.push(listHref);
       else refetch();
     },
   });
@@ -161,7 +164,7 @@ function UserDetailPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin/users" className="flex items-center gap-2">
+            <Link href={listHref} className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
               {t("userDetail.backToUsers")}
             </Link>
@@ -185,7 +188,7 @@ function UserDetailPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin/users" className="flex items-center gap-2">
+            <Link href={listHref} className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
               {t("userDetail.backToUsers")}
             </Link>
@@ -231,7 +234,7 @@ function UserDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin/users" className="flex items-center gap-2">
+          <Link href={listHref} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             {t("userDetail.backToUsers")}
           </Link>

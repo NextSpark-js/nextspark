@@ -11,8 +11,11 @@ import { ThemePreview } from "@nextsparkjs/core/components/superadmin/misc/Theme
 import { FieldTypesGallery } from "@nextsparkjs/core/components/superadmin/misc/FieldTypesGallery";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@nextsparkjs/core/components/ui/dropdown-menu";
 import { COLOR_TOKENS, buildTokensExport, readToken, type TokensFormat } from "@nextsparkjs/core/components/superadmin/misc/theme-tokens";
-import { useState } from "react";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { useTranslations } from "next-intl";
+
+/** The tab is kept in the URL (#519). */
+const URL_STATE = { tab: { default: "components", allowed: ["components", "field-types", "theme", "guidelines"] } } as const;
 
 /**
  * Style Gallery Page - Developer Area
@@ -22,7 +25,8 @@ import { useTranslations } from "next-intl";
  */
 export default function DevStylePage() {
   const t = useTranslations("devtools.style");
-  const [activeTab, setActiveTab] = useState("components");
+  const [{ tab: activeTab }, setUrl] = useAreaUrlState(URL_STATE);
+  const setActiveTab = (tab: string) => setUrl({ tab });
 
   // Downloads the color tokens as they resolve now (the current light or dark mode).
   const exportTokens = (format: TokensFormat) => {
