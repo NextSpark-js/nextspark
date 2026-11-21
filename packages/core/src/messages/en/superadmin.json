@@ -130,7 +130,10 @@
       "unsuspendDescription": "Are you sure you want to unsuspend {name}? They will regain access to the application as {role}.",
       "verifyEmailTitle": "Verify Email",
       "verifyEmailDescription": "Are you sure you want to manually verify the email for {name}?",
-      "delete": "Delete"
+      "delete": "Delete",
+      "changeRoleTitle": "Change role",
+      "changeRoleDescription": "Change {name} from {from} to {to}?",
+      "changeRoleDeveloperDescription": "Change {name} from {from} to {to}? A developer outranks superadmins and can act on any account, including other developers."
     },
     "toast": {
       "success": "Success",

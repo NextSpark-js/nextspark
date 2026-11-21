@@ -130,7 +130,10 @@
       "unsuspendDescription": "¿Seguro que quieres reactivar a {name}? Recuperará el acceso a la aplicación como {role}.",
       "verifyEmailTitle": "Verificar correo electrónico",
       "verifyEmailDescription": "¿Seguro que quieres verificar manualmente el correo electrónico de {name}?",
-      "delete": "Eliminar"
+      "delete": "Eliminar",
+      "changeRoleTitle": "Cambiar rol",
+      "changeRoleDescription": "¿Cambiar a {name} de {from} a {to}?",
+      "changeRoleDeveloperDescription": "¿Cambiar a {name} de {from} a {to}? Un desarrollador está por encima de los superadmins y puede actuar sobre cualquier cuenta, incluidos otros desarrolladores."
     },
     "toast": {
       "success": "Correcto",

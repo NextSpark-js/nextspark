@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -10,57 +8,16 @@ import {
   TableHeader,
   TableRow,
 } from '../../ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-} from '../../ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../ui/dialog';
-import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
-import { useToast } from '../../../hooks/useToast';
-import {
-  MoreHorizontal,
-  User,
-  Mail,
-  Calendar,
-  Eye,
-  Edit,
-  Ban,
-  Trash2,
-  CheckCircle,
-  UserCheck,
-  Loader2,
-} from "lucide-react";
+import { User, Mail, Calendar } from "lucide-react";
 import { useRoleTranslations } from '../../../lib/role-helpers';
-import { useCommonText } from '../../../lib/i18n/common-text';
-import { useSession, type ClientSession } from '../../../lib/auth-client';
-import type { SessionUser } from '../../../lib/auth';
-import { canActOnUser, canGrantUserRole, effectiveUserRole } from '../../../lib/auth/assignable-roles';
-import { actionErrorMessage } from './action-error';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatLocaleDate } from '../../../lib/i18n/format';
 import type { UserRole } from '../../../types/user.types';
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sel } from '../../../lib/test';
-import { withBasePath } from '../../../lib/base-path'
+import { UserActionsMenu, useUserActions } from './UserActions';
 
 interface User {
   id: string;
@@ -81,13 +38,6 @@ interface UsersTableProps {
   onRefresh?: () => void;
 }
 
-type ActionType = 'suspend' | 'unsuspend' | 'delete' | 'verify-email';
-
-interface PendingAction {
-  type: ActionType;
-  user: User;
-}
-
 /**
  * Users Table Component
  *
@@ -95,153 +45,18 @@ interface PendingAction {
  * Includes role badges, verification status, and action menus.
  */
 export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
-  const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
   const getRoleName = useRoleTranslations();
   const t = useTranslations('superadmin.users');
   const tPage = useTranslations('superadmin.usersPage');
   const tShared = useTranslations('superadmin.shared');
   const locale = useLocale();
-  const { data: session } = useSession();
-  const viewer = (session as ClientSession | null)?.user as SessionUser | undefined;
-  const viewerRole = viewer?.role;
-  const viewerId = viewer?.id;
-  // The API answers 403 to anyone else: only a developer grants the developer role and acts on a developer, and
-  // nobody acts on their own account
-  const canGrantDeveloper = canGrantUserRole(viewerRole, 'developer');
-  const restrictedKey = (user: User) => t(user.id === viewerId ? 'actions.ownAccount' : 'actions.restrictedTarget');
-  // A suspended user is acted on as the role they come back with (the API checks that one too)
-  const effectiveRole = (user: User) => effectiveUserRole(user.role, user.roleBeforeSuspension);
-  const canAct = (user: User) => user.id !== viewerId && canActOnUser(viewerRole, effectiveRole(user));
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const router = useRouter();
+  const actions = useUserActions({ onDone: () => onRefresh?.() });
 
   // Navigate to user detail
   const handleRowClick = (userId: string) => {
     router.push(`/superadmin/users/${userId}`);
   };
-
-  // State for confirmation dialogs
-  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
-
-  // Mutation for user actions (suspend, unsuspend, verify-email)
-  const actionMutation = useMutation({
-    mutationFn: async ({ userId, action, role }: { userId: string; action: string; role?: string }) => {
-      const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, role }),
-      });
-      if (!response.ok) throw new Error(await actionErrorMessage(response, t, t('confirm.failed')));
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: t('toast.success'),
-        description: t('toast.actionCompleted'),
-      });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      onRefresh?.();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: t('toast.error'),
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation for deleting users
-  const deleteMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error(await actionErrorMessage(response, t, t('toast.deleteFailed')));
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: t('toast.deleted'),
-        description: t('toast.deletedDescription'),
-      });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      onRefresh?.();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: t('toast.error'),
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle role change
-  const handleRoleChange = (user: User, newRole: string) => {
-    if (newRole === user.role) return;
-    actionMutation.mutate({ userId: user.id, action: "change-role", role: newRole });
-  };
-
-  // Handle action confirmation
-  const handleActionConfirm = () => {
-    if (!pendingAction) return;
-
-    const { type, user } = pendingAction;
-
-    switch (type) {
-      case "suspend":
-        actionMutation.mutate({ userId: user.id, action: "suspend" });
-        break;
-      case "unsuspend":
-        actionMutation.mutate({ userId: user.id, action: "unsuspend" });
-        break;
-      case "verify-email":
-        actionMutation.mutate({ userId: user.id, action: "verify-email" });
-        break;
-      case "delete":
-        deleteMutation.mutate(user.id);
-        break;
-    }
-
-    setPendingAction(null);
-  };
-
-  // Get action dialog content
-  const getActionDialogContent = () => {
-    if (!pendingAction) return { title: "", description: "" };
-
-    const { type, user } = pendingAction;
-    const name = user.fullName || user.email;
-
-    switch (type) {
-      case "suspend":
-        return {
-          title: t('confirm.suspendTitle'),
-          description: t('confirm.suspendDescription', { name }),
-        };
-      case "unsuspend":
-        return {
-          title: t('confirm.unsuspendTitle'),
-          description: t('confirm.unsuspendDescription', { name, role: getRoleName(effectiveRole(user) as UserRole) }),
-        };
-      case "verify-email":
-        return {
-          title: t('confirm.verifyEmailTitle'),
-          description: t('confirm.verifyEmailDescription', { name }),
-        };
-      case "delete":
-        return {
-          title: t('confirm.deleteTitle'),
-          description: t('confirm.deleteDescription', { name }),
-        };
-      default:
-        return { title: "", description: "" };
-    }
-  };
-
-  const isMutating = actionMutation.isPending || deleteMutation.isPending;
 
   // Generate user initials for avatar
   const getUserInitials = (user: User) => {
@@ -379,138 +194,14 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
 
               {/* Actions */}
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      disabled={isMutating}
-                    >
-                      <span className="sr-only">{openMenuText}</span>
-                      {isMutating ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <MoreHorizontal className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                      <Link href={`/superadmin/users/${user.id}`} className="cursor-pointer">
-                        <Eye className="mr-2 h-4 w-4" />
-                        {t('actions.viewProfile')}
-                      </Link>
-                    </DropdownMenuItem>
-
-                    {canAct(user) ? (
-                      <>
-                      {/* Role Change Submenu: a suspended user comes back only through unsuspend (the API answers 400).
-                          Without the developer role there is no other role to give (superadmin is never assigned through
-                          the API): the row says so instead of a submenu with only the current role */}
-                      {user.role !== "suspended" && !canGrantDeveloper && (
-                        <DropdownMenuItem disabled title={t('actions.roleChangeDeveloperOnly')} data-cy={`superadmin-user-role-restricted-${user.id}`}>
-                          {t('actions.roleChangeDeveloperOnly')}
-                        </DropdownMenuItem>
-                      )}
-                      {user.role !== "suspended" && canGrantDeveloper && (
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Edit className="mr-2 h-4 w-4" />
-                          {t('actions.changeRole')}
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          <DropdownMenuRadioGroup
-                            value={user.role}
-                            onValueChange={(value: string) => handleRoleChange(user, value)}
-                          >
-                            <DropdownMenuRadioItem value="member">
-                              {tPage('roles.member')}
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="developer">
-                              {tPage('roles.developer')}
-                            </DropdownMenuRadioItem>
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                      )}
-
-                      {/* Verify Email (only if not verified) */}
-                      {!user.emailVerified && (
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => setPendingAction({ type: "verify-email", user })}
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          {t('actions.verifyEmail')}
-                        </DropdownMenuItem>
-                      )}
-
-                      <DropdownMenuSeparator />
-
-                      {/* Suspend/Unsuspend based on current role */}
-                      {user.role === "suspended" ? (
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => setPendingAction({ type: "unsuspend", user })}
-                        >
-                          <UserCheck className="mr-2 h-4 w-4" />
-                          {t('actions.unsuspendUser')}
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem
-                          className="cursor-pointer text-yellow-600"
-                          onClick={() => setPendingAction({ type: "suspend", user })}
-                        >
-                          <Ban className="mr-2 h-4 w-4" />
-                          {t('actions.suspendUser')}
-                        </DropdownMenuItem>
-                      )}
-
-                      <DropdownMenuItem
-                        className="cursor-pointer text-destructive"
-                        onClick={() => setPendingAction({ type: "delete", user })}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {t('actions.deleteUser')}
-                      </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <DropdownMenuItem disabled title={restrictedKey(user)} data-cy={`superadmin-user-restricted-${user.id}`}>
-                        {restrictedKey(user)}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <UserActionsMenu user={user} actions={actions} />
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      {/* Confirmation Dialog */}
-      <Dialog open={!!pendingAction} onOpenChange={() => setPendingAction(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{getActionDialogContent().title}</DialogTitle>
-            <DialogDescription>
-              {getActionDialogContent().description}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingAction(null)}>
-              {t('confirm.cancel')}
-            </Button>
-            <Button
-              onClick={handleActionConfirm}
-              variant={pendingAction?.type === "delete" ? "destructive" : "default"}
-            >
-              {pendingAction?.type === "delete" ? t('confirm.delete') : t('confirm.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {actions.dialog}
     </div>
   );
 }

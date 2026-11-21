@@ -130,7 +130,10 @@
       "unsuspendDescription": "Möchten Sie {name} wirklich entsperren? Der Benutzer erhält mit der Rolle {role} wieder Zugriff auf die Anwendung.",
       "verifyEmailTitle": "E-Mail verifizieren",
       "verifyEmailDescription": "Möchten Sie die E-Mail-Adresse von {name} wirklich manuell verifizieren?",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "changeRoleTitle": "Rolle ändern",
+      "changeRoleDescription": "{name} von {from} zu {to} ändern?",
+      "changeRoleDeveloperDescription": "{name} von {from} zu {to} ändern? Ein Entwickler steht über den Superadmins und kann auf jedes Konto zugreifen, auch auf andere Entwickler."
     },
     "toast": {
       "success": "Erfolg",
