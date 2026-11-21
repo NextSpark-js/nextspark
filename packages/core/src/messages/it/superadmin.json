@@ -306,6 +306,11 @@
     "restricted": {
       "title": "Area riservata",
       "description": "Accesso riservato ai superadmin"
+    },
+    "devtools": {
+      "title": "DevTools",
+      "tooltip": "Apri gli strumenti per sviluppatori",
+      "description": "Strumenti per sviluppatori"
     }
   },
   "docs": {
@@ -680,5 +685,10 @@
     "signIn": "Accedi",
     "goBack": "Indietro",
     "dashboard": "Dashboard"
+  },
+  "notFound": {
+    "title": "Pagina non trovata",
+    "description": "Questa pagina non esiste nel pannello Super Admin.",
+    "back": "Torna a Super Admin"
   }
 }

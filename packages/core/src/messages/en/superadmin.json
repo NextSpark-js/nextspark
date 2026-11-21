@@ -306,6 +306,11 @@
     "restricted": {
       "title": "Restricted Area",
       "description": "Superadmin access only"
+    },
+    "devtools": {
+      "title": "DevTools",
+      "tooltip": "Open the developer tools",
+      "description": "Developer tools"
     }
   },
   "docs": {
@@ -680,5 +685,10 @@
     "signIn": "Sign In",
     "goBack": "Go Back",
     "dashboard": "Dashboard"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This page does not exist in the Super Admin panel.",
+    "back": "Back to Super Admin"
   }
 }

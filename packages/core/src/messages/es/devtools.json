@@ -1057,5 +1057,10 @@
     "failed": "No se pudo copiar al portapapeles",
     "tag": "Copiar tag",
     "testCommand": "Copiar comando de test"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "Esta página no existe en DevTools.",
+    "back": "Volver a DevTools"
   }
 }

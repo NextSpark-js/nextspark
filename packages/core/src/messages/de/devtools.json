@@ -1057,5 +1057,10 @@
     "failed": "Kopieren in die Zwischenablage fehlgeschlagen",
     "tag": "Tag kopieren",
     "testCommand": "Testbefehl kopieren"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Diese Seite gibt es in DevTools nicht.",
+    "back": "Zurück zu DevTools"
   }
 }

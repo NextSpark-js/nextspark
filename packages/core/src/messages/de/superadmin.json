@@ -306,6 +306,11 @@
     "restricted": {
       "title": "Eingeschränkter Bereich",
       "description": "Nur für Superadmins"
+    },
+    "devtools": {
+      "title": "DevTools",
+      "tooltip": "Entwicklerwerkzeuge öffnen",
+      "description": "Entwicklerwerkzeuge"
     }
   },
   "docs": {
@@ -680,5 +685,10 @@
     "signIn": "Anmelden",
     "goBack": "Zurück",
     "dashboard": "Dashboard"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Diese Seite gibt es im Super-Admin-Bereich nicht.",
+    "back": "Zurück zu Super Admin"
   }
 }

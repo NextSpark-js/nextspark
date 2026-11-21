@@ -24,6 +24,7 @@ import {
   Tag,
   Code,
 } from "lucide-react";
+import { useSession } from '../../../lib/auth-client';
 import { cn } from '../../../lib/utils';
 import { Button } from '../../ui/button';
 import { sel } from '../../../lib/test';
@@ -56,6 +57,9 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
   const t = useTranslations("superadmin.sidebar");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pluginItems = pluginItemsProp ?? getPluginNavItems('superadmin');
+  // /devtools is for developers only (the area's role check): a superadmin is not offered the link (#531)
+  const { data: session } = useSession();
+  const isDeveloper = (session as { user?: { role?: string } } | null | undefined)?.user?.role === 'developer';
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -276,6 +280,29 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
             </div>
           )}
         </Link>
+
+        {/* Link to DevTools (developers only), as DevTools links here */}
+        {isDeveloper && (
+          <Link
+            href="/devtools"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mt-1",
+              "hover:bg-accent hover:text-accent-foreground text-muted-foreground",
+              isCollapsed && "justify-center"
+            )}
+            title={isCollapsed ? t("devtools.title") : t("devtools.tooltip")}
+            aria-label={t("devtools.title")}
+            data-cy="superadmin-sidebar-go-to-devtools"
+          >
+            <Code className="h-5 w-5 flex-shrink-0" />
+            {!isCollapsed && (
+              <div className="flex-1">
+                <div className="text-sm font-medium">{t("devtools.title")}</div>
+                <p className="text-xs text-muted-foreground">{t("devtools.description")}</p>
+              </div>
+            )}
+          </Link>
+        )}
 
         {/* Security Notice */}
         {!isCollapsed && (

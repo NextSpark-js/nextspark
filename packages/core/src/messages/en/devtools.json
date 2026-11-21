@@ -1057,5 +1057,10 @@
     "failed": "Could not copy to the clipboard",
     "tag": "Copy tag",
     "testCommand": "Copy test command"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This page does not exist in DevTools.",
+    "back": "Back to DevTools"
   }
 }

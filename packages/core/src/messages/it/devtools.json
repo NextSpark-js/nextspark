@@ -1057,5 +1057,10 @@
     "failed": "Impossibile copiare negli appunti",
     "tag": "Copia tag",
     "testCommand": "Copia comando di test"
+  },
+  "notFound": {
+    "title": "Pagina non trovata",
+    "description": "Questa pagina non esiste in DevTools.",
+    "back": "Torna a DevTools"
   }
 }

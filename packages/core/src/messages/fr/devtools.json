@@ -1057,5 +1057,10 @@
     "failed": "Impossible de copier dans le presse-papiers",
     "tag": "Copier le tag",
     "testCommand": "Copier la commande de test"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "Cette page n'existe pas dans DevTools.",
+    "back": "Retour à DevTools"
   }
 }

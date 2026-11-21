@@ -1057,5 +1057,10 @@
     "failed": "Não foi possível copiar para a área de transferência",
     "tag": "Copiar tag",
     "testCommand": "Copiar comando de teste"
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "description": "Esta página não existe no DevTools.",
+    "back": "Voltar ao DevTools"
   }
 }
