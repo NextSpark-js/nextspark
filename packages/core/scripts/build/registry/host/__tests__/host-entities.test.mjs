@@ -608,6 +608,26 @@ test('a public entity with an archive page and no builder basePath gets an archi
   }
 })
 
+test('the archive is served at the entity URL only when the project has a dynamic page under it, so post URLs have one route (#540)', async () => {
+  const customers = "slug: 'customers', enabled: true, access: { public: true }, ui: { public: { hasArchivePage: true } }"
+  const publicRoutes = routes => targets(routes).filter(target => target.startsWith('(public)'))
+  for (const [files, expected, why] of [
+    [{ 'templates/(public)/customers/[slug]/page.tsx': PAGE }, ['(public)/customers/[slug]/page.tsx', '(public)/customers/page.tsx'], 'a dynamic page'],
+    [{ 'templates/(public)/customers/[...path]/page.tsx': PAGE }, ['(public)/customers/[...path]/page.tsx', '(public)/customers/page.tsx'], 'a catch-all page'],
+    [{ 'templates/(public)/customers/about/page.tsx': PAGE }, ['(public)/customers/[[...rest]]/page.tsx', '(public)/customers/about/page.tsx'], 'a static page keeps the catch-all'],
+    [{ 'templates/(public)/other/[slug]/page.tsx': PAGE }, ['(public)/customers/[[...rest]]/page.tsx', '(public)/other/[slug]/page.tsx'], 'a dynamic page elsewhere'],
+  ]) {
+    const w = world(files)
+    try {
+      const { routes, diagnostics } = await plan(w, [entity('customers', 'customersEntityConfig')], { customers: await factsOf(customers) })
+      assert.deepEqual(diagnostics, [], why)
+      assert.deepEqual(publicRoutes(routes), expected, why)
+    } finally {
+      w.cleanup()
+    }
+  }
+})
+
 test('a basePath the host cannot turn into a route is a diagnostic naming the entity and the fix', async () => {
   const w = world()
   try {

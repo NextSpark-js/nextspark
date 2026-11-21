@@ -252,7 +252,8 @@ spread and no expression. A host with another core (the conformance fixture) pas
   printed as `Warning:`) names it and the setting, a page or Route Handler of the project or of a plugin
   at its item URLs (`<basePath>/<dynamic segment>`: any route group, cache mode or param name, `[x]`, `[...x]` or `[[...x]]`) is not used
   and is reported as `NS_HOST_ENTITY_TEMPLATE_NOT_USED` (`Warning:`, naming the file), and the routes answer notFound() for it at request time too; a public
-  entity with an archive page and no basePath gets `(public)/<entity>/[[...rest]]`. Each is a facade over the entity's config and
+  entity with an archive page and no basePath gets `(public)/<entity>/[[...rest]]`, or `(public)/<entity>` when a page of the project
+  or of a plugin is a dynamic route under that URL (`posts/[slug]`), so each of its URLs has one route (#540). Each is a facade over the entity's config and
   one factory of its own core module (`routes/_internal/entity-*-route`, `public-*-route`): a route's module graph holds one
   entity config and only the client components its page renders, and nothing looks an entity or a template up by a key.
   A project template for an entity page (`templates/dashboard/(main)/<entity>/{page,create/page,[id]/page,[id]/edit/page}.tsx`; a public
