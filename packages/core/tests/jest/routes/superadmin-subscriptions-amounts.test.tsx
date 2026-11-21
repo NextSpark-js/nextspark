@@ -34,3 +34,10 @@ test('MRR has a line per currency and an explanation', () => {
   expect(screen.getByText(/600,00\s*€/)).toBeInTheDocument()
   expect(screen.getByLabelText('stats.mrrHelpLabel')).toBeInTheDocument()
 })
+
+test('no "back to Super Admin" button and no debug footer (#530): the sidebar has the menu, Refresh the details', () => {
+  render(<SubscriptionsPage />)
+  expect(screen.queryByText('backToSuperAdmin')).not.toBeInTheDocument()
+  expect(screen.queryByText('footer.requestedBy')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'refresh' })).toBeInTheDocument()
+})

@@ -86,7 +86,10 @@ it('keeps the rest of the page when the metrics fail', async () => {
   await renderPage()
   expect(screen.getByText('unavailable')).toBeInTheDocument()
   expect(screen.getByText('Super Admin Panel')).toBeInTheDocument()
-  expect(screen.getByText('User Management')).toBeInTheDocument()
+  // the sections are in the sidebar: no repeated cards, no "Soon", no fixed version (#530)
+  expect(screen.queryByText('User Management')).not.toBeInTheDocument()
+  expect(screen.queryByText('Soon')).not.toBeInTheDocument()
+  expect(screen.queryByText('v1.0.0')).not.toBeInTheDocument()
 })
 
 describe('access to the page', () => {
@@ -110,10 +113,10 @@ describe('access to the page', () => {
     expect(page.type).toBe(SuperadminDashboard)
   })
 
-  it('puts the metrics before the quick actions', async () => {
+  it('ends with the metrics: no cards after them repeating the sidebar (#530)', async () => {
     await renderPage()
     const metrics = document.querySelector('[data-cy="superadmin-metrics"]')!
     expect(metrics).not.toBeNull()
-    expect(metrics.compareDocumentPosition(screen.getByText('User Management')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(metrics.nextElementSibling).toBeNull()
   })
 })

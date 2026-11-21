@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Painel de Controle de Super Administrador",
     "restrictedAccess": "Área de Acesso Restrito - Apenas Superadmin e Developer",
-    "systemStatus": "Status do Sistema",
-    "systemVersion": "Versão da Plataforma",
-    "securityLevel": "Nível de Segurança",
-    "quickActions": {
-      "userManagement": {
-        "title": "Gerenciamento de Usuários",
-        "description": "Ver e gerenciar todos os usuários e superadministradores"
-      },
-      "styleGallery": {
-        "title": "Galeria de Estilos",
-        "description": "Visualizar componentes e elementos do sistema de design"
-      },
-      "analytics": {
-        "title": "Analytics",
-        "description": "Estatísticas da plataforma e métricas de uso"
-      },
-      "systemConfig": {
-        "title": "Configuração do Sistema",
-        "description": "Configurações e ajustes da aplicação"
-      }
-    },
-    "status": {
-      "online": "Online",
-      "active": "Ativo",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Total de usuários",
       "payingUsers": "Usuários pagantes",
@@ -51,10 +25,7 @@
       "mrrHelpLabel": "Como o MRR é calculado",
       "mrrHelp": "Receita mensal recorrente das assinaturas ativas em um plano pago, de equipes que ainda existem. Planos anuais contam um doze avos do preço. Testes, pagamentos em atraso, cancelamentos e assinaturas gratuitas não entram. Assinaturas mostra o mesmo número."
     },
-    "panelTitle": "Painel de Super Admin",
-    "soon": "Em breve",
-    "accessSection": "Acessar seção →",
-    "overview": "Visão geral atual da plataforma"
+    "panelTitle": "Painel de Super Admin"
   },
   "users": {
     "title": "Gerenciamento de Usuários",
@@ -502,7 +473,6 @@
   "teamDetail": {
     "title": "Detalhes da equipe",
     "subtitle": "Veja as informações da equipe e seus membros (somente leitura)",
-    "backToTeams": "Voltar para Equipes",
     "errorTitle": "Erro ao carregar a equipe",
     "notFound": "Equipe não encontrada",
     "fetchFailed": "Falha ao obter os dados da equipe",

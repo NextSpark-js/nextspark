@@ -54,3 +54,8 @@ test('the permission breakdown adds up to the total (the team permissions are in
   expect(screen.getByText('7')).toBeInTheDocument()
   expect(screen.getByText('rbac.permissionBreakdown{"core":2,"features":2,"entity":3}')).toBeInTheDocument()
 })
+
+test('no "back to Super Admin" button (#530)', () => {
+  render(<TeamRolesPage />)
+  expect(screen.queryByText('backToSuperAdmin')).not.toBeInTheDocument()
+})

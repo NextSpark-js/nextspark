@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Panel de Control de Super Administrador",
     "restrictedAccess": "Área de Acceso Restringido - Solo Superadmin y Developer",
-    "systemStatus": "Estado del Sistema",
-    "systemVersion": "Versión de la Plataforma",
-    "securityLevel": "Nivel de Seguridad",
-    "quickActions": {
-      "userManagement": {
-        "title": "Gestión de Usuarios",
-        "description": "Ver y gestionar todos los usuarios y superadministradores"
-      },
-      "styleGallery": {
-        "title": "Galería de Estilos",
-        "description": "Previsualizar componentes y elementos del sistema de diseño"
-      },
-      "analytics": {
-        "title": "Analíticas",
-        "description": "Estadísticas de la plataforma y métricas de uso"
-      },
-      "systemConfig": {
-        "title": "Configuración del Sistema",
-        "description": "Configuraciones y ajustes de la aplicación"
-      }
-    },
-    "status": {
-      "online": "En línea",
-      "active": "Activo",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Usuarios totales",
       "payingUsers": "Usuarios que pagan",
@@ -51,10 +25,7 @@
       "mrrHelpLabel": "Cómo se calcula el MRR",
       "mrrHelp": "Ingreso mensual recurrente de las suscripciones activas en un plan de pago, de equipos que siguen existiendo. Los planes anuales cuentan una doceava parte de su precio. No se cuentan pruebas, pagos vencidos, canceladas ni gratuitas. Suscripciones muestra el mismo número."
     },
-    "panelTitle": "Panel de Super Admin",
-    "soon": "Pronto",
-    "accessSection": "Acceder a la sección →",
-    "overview": "Resumen actual de la plataforma"
+    "panelTitle": "Panel de Super Admin"
   },
   "users": {
     "title": "Gestión de Usuarios",
@@ -502,7 +473,6 @@
   "teamDetail": {
     "title": "Detalles del equipo",
     "subtitle": "Consulta la información del equipo y sus miembros (solo lectura)",
-    "backToTeams": "Volver a Equipos",
     "errorTitle": "Error al cargar el equipo",
     "notFound": "Equipo no encontrado",
     "fetchFailed": "No se pudieron obtener los datos del equipo",

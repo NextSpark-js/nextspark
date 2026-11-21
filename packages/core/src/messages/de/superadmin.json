@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Super-Administrator-Kontrollzentrum",
     "restrictedAccess": "Zugangsbeschränkter Bereich - Nur für Superadmin und Developer",
-    "systemStatus": "Systemstatus",
-    "systemVersion": "Plattformversion",
-    "securityLevel": "Sicherheitsstufe",
-    "quickActions": {
-      "userManagement": {
-        "title": "Benutzerverwaltung",
-        "description": "Alle Benutzer und Superadministratoren anzeigen und verwalten"
-      },
-      "styleGallery": {
-        "title": "Stil-Galerie",
-        "description": "Komponenten und Designsystem-Elemente in der Vorschau anzeigen"
-      },
-      "analytics": {
-        "title": "Analysen",
-        "description": "Plattformstatistiken und Nutzungsmetriken"
-      },
-      "systemConfig": {
-        "title": "Systemkonfiguration",
-        "description": "Anwendungskonfigurationen und Einstellungen"
-      }
-    },
-    "status": {
-      "online": "Online",
-      "active": "Aktiv",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Benutzer gesamt",
       "payingUsers": "Zahlende Benutzer",
@@ -51,10 +25,7 @@
       "mrrHelpLabel": "So wird der MRR berechnet",
       "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife zählen mit einem Zwölftel ihres Preises. Testphasen, überfällige, gekündigte und kostenlose Abonnements zählen nicht. Abonnements zeigt dieselbe Zahl."
     },
-    "panelTitle": "Super-Admin-Bereich",
-    "soon": "Bald",
-    "accessSection": "Bereich öffnen →",
-    "overview": "Aktueller Überblick über die Plattform"
+    "panelTitle": "Super-Admin-Bereich"
   },
   "users": {
     "title": "Benutzerverwaltung",
@@ -502,7 +473,6 @@
   "teamDetail": {
     "title": "Teamdetails",
     "subtitle": "Teaminformationen und Mitglieder ansehen (nur Lesezugriff)",
-    "backToTeams": "Zurück zu Teams",
     "errorTitle": "Fehler beim Laden des Teams",
     "notFound": "Team nicht gefunden",
     "fetchFailed": "Teamdaten konnten nicht abgerufen werden",

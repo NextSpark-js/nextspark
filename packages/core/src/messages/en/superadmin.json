@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Super Administrator Control Panel",
     "restrictedAccess": "Restricted Access Area - Superadmin and Developer Only",
-    "systemStatus": "System Status",
-    "systemVersion": "Platform Version",
-    "securityLevel": "Security Level",
-    "quickActions": {
-      "userManagement": {
-        "title": "User Management",
-        "description": "View and manage all users and superadministrators"
-      },
-      "styleGallery": {
-        "title": "Style Gallery",
-        "description": "Preview components and design system elements"
-      },
-      "analytics": {
-        "title": "Analytics",
-        "description": "Platform statistics and usage metrics"
-      },
-      "systemConfig": {
-        "title": "System Config",
-        "description": "Application settings and configurations"
-      }
-    },
-    "status": {
-      "online": "Online",
-      "active": "Active",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Total users",
       "payingUsers": "Paying users",
@@ -51,10 +25,7 @@
       "mrrHelpLabel": "How MRR is calculated",
       "mrrHelp": "Monthly recurring revenue of the subscriptions that are active on a paid plan, for teams that still exist. Yearly plans count a twelfth of their price. Trials, past-due, canceled and free subscriptions are not counted. Subscriptions shows the same number."
     },
-    "panelTitle": "Super Admin Panel",
-    "soon": "Soon",
-    "accessSection": "Access Section →",
-    "overview": "Current platform overview"
+    "panelTitle": "Super Admin Panel"
   },
   "users": {
     "title": "User Management",
@@ -502,7 +473,6 @@
   "teamDetail": {
     "title": "Team Details",
     "subtitle": "View team information and members (read-only)",
-    "backToTeams": "Back to Teams",
     "errorTitle": "Error Loading Team",
     "notFound": "Team not found",
     "fetchFailed": "Failed to fetch team data",

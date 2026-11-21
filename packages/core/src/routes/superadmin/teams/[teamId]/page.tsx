@@ -14,6 +14,15 @@ import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
 import { Avatar, AvatarFallback } from "@nextsparkjs/core/components/ui/avatar";
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@nextsparkjs/core/components/ui/breadcrumb";
+import { RefreshButton } from "@nextsparkjs/core/components/superadmin/misc/RefreshButton";
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,7 +31,6 @@ import {
   TableRow,
 } from "@nextsparkjs/core/components/ui/table";
 import {
-  ArrowLeft,
   Users,
   User,
   Calendar,
@@ -185,21 +193,31 @@ function TeamDetailPage() {
     return name.slice(0, 2).toUpperCase();
   };
 
+  // "Back" is a breadcrumb: the sidebar already links to the list, this says where the page is under it
+  const breadcrumb = (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href="/superadmin/teams">{t("teamsPage.title")}</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>{teamData?.team.name ?? t("teamDetail.title")}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+
   // Loading state
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin/teams" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("teamDetail.backToTeams")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
-            <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
-          </div>
+        <div className="space-y-2">
+          {breadcrumb}
+          <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+          <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
         </div>
 
         <div className="flex items-center justify-center py-12">
@@ -213,17 +231,10 @@ function TeamDetailPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin/teams" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("teamDetail.backToTeams")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
-            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
-          </div>
+        <div className="space-y-2">
+          {breadcrumb}
+          <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+          <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
         </div>
 
         <Card>
@@ -257,28 +268,17 @@ function TeamDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin/teams" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {t("teamDetail.backToTeams")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("teamDetail.subtitle")}
-          </p>
+      <div className="space-y-2">
+        {breadcrumb}
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+            <p className="text-muted-foreground">
+              {t("teamDetail.subtitle")}
+            </p>
+          </div>
+          <RefreshButton onRefresh={() => refetch()} metadata={teamData?.metadata} />
         </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {t("shared.refresh")}
-        </Button>
       </div>
 
       {/* Team Info Card */}
@@ -685,20 +685,6 @@ function TeamDetailPage() {
         </Card>
       )}
 
-      {/* Metadata Footer */}
-      {teamData?.metadata && (
-        <Card className="bg-muted/30">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                {t("shared.footer.lastUpdated", { date: formatLocaleDate(teamData.metadata.requestedAt, locale, "dateTime") })}
-              </p>
-              <p>{t("shared.footer.requestedBy", { name: teamData.metadata.requestedBy })}</p>
-              <p>{t("shared.footer.source", { source: teamData.metadata.source })}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

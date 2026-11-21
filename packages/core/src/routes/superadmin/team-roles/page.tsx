@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -13,7 +12,6 @@ import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@nextsparkjs/core/components/ui/tabs";
 import {
-  ArrowLeft,
   Shield,
   Users,
   Lock,
@@ -43,7 +41,6 @@ import { formatLocaleDollars } from "@nextsparkjs/core/lib/i18n/format";
 function TeamRolesPage() {
   const t = useTranslations("superadmin.teamRoles");
   const tTeams = useTranslations("teams");
-  const tShared = useTranslations("superadmin.shared");
   const locale = useLocale();
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
   const planTypeLabel = (type: string) => (t.has(`planTypes.${type}`) ? t(`planTypes.${type}`) : type);
@@ -101,12 +98,6 @@ function TeamRolesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {tShared("backToSuperAdmin")}
-          </Link>
-        </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">
             {t("title")}

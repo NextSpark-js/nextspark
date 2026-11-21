@@ -28,7 +28,6 @@ import {
   SelectValue,
 } from "@nextsparkjs/core/components/ui/select";
 import {
-  ArrowLeft,
   CreditCard,
   DollarSign,
   TrendingUp,
@@ -53,6 +52,7 @@ import {
   SearchInput,
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
+import { RefreshButton } from "@nextsparkjs/core/components/superadmin/misc/RefreshButton";
 
 interface SubscriptionPlan {
   id: string;
@@ -273,12 +273,6 @@ function SubscriptionsPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {tShared("backToSuperAdmin")}
-            </Link>
-          </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
             <p className="text-muted-foreground">{t("loading")}</p>
@@ -297,12 +291,6 @@ function SubscriptionsPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {tShared("backToSuperAdmin")}
-            </Link>
-          </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
             <p className="text-muted-foreground">{tShared("errorLoadingData")}</p>
@@ -341,27 +329,13 @@ function SubscriptionsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {tShared("backToSuperAdmin")}
-          </Link>
-        </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
             {t("subtitle")}
           </p>
         </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {tShared("refresh")}
-        </Button>
+        <RefreshButton onRefresh={() => refetch()} metadata={data?.metadata} />
       </div>
 
       {/* Stats Cards */}
@@ -687,20 +661,6 @@ function SubscriptionsPage() {
         </CardContent>
       </Card>
 
-      {/* Metadata Footer */}
-      {data?.metadata && (
-        <Card className="bg-muted/30">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                {tShared("footer.lastUpdated", { date: formatLocaleDate(data.metadata.requestedAt, locale, "dateTime") })}
-              </p>
-              <p>{tShared("footer.requestedBy", { name: data.metadata.requestedBy })}</p>
-              <p>{tShared("footer.source", { source: data.metadata.source })}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

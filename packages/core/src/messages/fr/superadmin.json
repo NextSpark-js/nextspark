@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Panneau de contrôle super administrateur",
     "restrictedAccess": "Zone d'accès restreint - Super admin et developer uniquement",
-    "systemStatus": "Statut du système",
-    "systemVersion": "Version de la plateforme",
-    "securityLevel": "Niveau de sécurité",
-    "quickActions": {
-      "userManagement": {
-        "title": "Gestion des utilisateurs",
-        "description": "Voir et gérer tous les utilisateurs et super administrateurs"
-      },
-      "styleGallery": {
-        "title": "Galerie de styles",
-        "description": "Prévisualiser les composants et éléments du système de design"
-      },
-      "analytics": {
-        "title": "Analytiques",
-        "description": "Statistiques de la plateforme et métriques d'utilisation"
-      },
-      "systemConfig": {
-        "title": "Configuration système",
-        "description": "Configurations et paramètres de l'application"
-      }
-    },
-    "status": {
-      "online": "En ligne",
-      "active": "Actif",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Utilisateurs au total",
       "payingUsers": "Utilisateurs payants",
@@ -51,10 +25,7 @@
       "mrrHelpLabel": "Comment le MRR est calculé",
       "mrrHelp": "Revenu mensuel récurrent des abonnements actifs sur un forfait payant, pour les équipes qui existent encore. Les forfaits annuels comptent un douzième de leur prix. Les essais, impayés, annulés et gratuits ne sont pas comptés. Abonnements affiche le même nombre."
     },
-    "panelTitle": "Panneau Super Admin",
-    "soon": "Bientôt",
-    "accessSection": "Accéder à la section →",
-    "overview": "Aperçu actuel de la plateforme"
+    "panelTitle": "Panneau Super Admin"
   },
   "users": {
     "title": "Gestion des utilisateurs",
@@ -502,7 +473,6 @@
   "teamDetail": {
     "title": "Détails de l’équipe",
     "subtitle": "Voir les informations de l’équipe et ses membres (lecture seule)",
-    "backToTeams": "Retour aux équipes",
     "errorTitle": "Erreur lors du chargement de l’équipe",
     "notFound": "Équipe introuvable",
     "fetchFailed": "Impossible de récupérer les données de l’équipe",
