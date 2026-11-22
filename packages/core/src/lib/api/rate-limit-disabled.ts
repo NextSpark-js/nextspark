@@ -1,7 +1,8 @@
 /**
  * Check if rate limiting is disabled via environment variable.
  * Use DISABLE_RATE_LIMITING=true to disable rate limiting (development/testing only).
- * It also turns off Better Auth's own limiter (lib/auth.ts); the per-API-key limit stays.
+ * It also turns off Better Auth's own limiter (lib/auth.ts); the per-credential limit (an API key, or an MCP
+ * connection) stays.
  * WARNING: Never disable rate limiting in production!
  */
 // On globalThis so the server bundles that each load this module log once per process between them.

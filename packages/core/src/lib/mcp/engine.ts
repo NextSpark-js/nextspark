@@ -55,7 +55,7 @@ export interface McpEngine {
   requiredScopesFor: (toolName: string) => string[]
   /** Every scope some tool of this server needs. */
   toolScopes: string[]
-  /** Records the tool calls of a body refused for missing scopes; `granted` is what the credential has. */
+  /** Tries to record, best effort, the tool calls of a body refused for missing scopes; `granted` is what the credential has. */
   auditRefused: (body: unknown, ctx: ToolExecutionContext, granted: readonly string[]) => Promise<void>
 }
 

@@ -117,7 +117,7 @@ The engine knows which scopes a call to a tool needs before it runs:
 |---|---|
 | `engine.requiredScopesFor(toolName)` | A generated entity tool: `<entity>:read` for `list` and `get`, `<entity>:write` for `create` and `update`, `<entity>:delete` for `delete`. A hand-written tool: what it declares in `meta.requiredScopes`. Nothing for a hand-written tool that declares none, or for an unknown name |
 | `engine.toolScopes` | The union over all tools: every scope some tool of this server needs |
-| `engine.auditRefused(body, ctx, granted)` | Records the tool calls of a request that was refused for missing scopes |
+| `engine.auditRefused(body, ctx, granted)` | Tries to record, best effort, the tool calls of a request that was refused for missing scopes: one row for each well-formed call of a known tool; a write that fails is logged and nothing else |
 
 A hand-written tool that makes several API calls (an `extraTools` entry, a utility tool) should declare what it
 needs:

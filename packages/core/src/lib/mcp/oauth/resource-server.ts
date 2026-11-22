@@ -193,7 +193,8 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
         return jsonRpcError(400, -32700, 'Parse error: body must be JSON-RPC')
       }
 
-      // A batch is bounded: every message of one costs work, and a refused one a write to the audit trail per call
+      // A batch is bounded: every message of one costs work, and a refused one an attempted write to the audit trail
+      // for each well-formed call of a known tool
       if (Array.isArray(body) && body.length > MAX_BATCH_MESSAGES) {
         return jsonRpcError(400, -32600, `Invalid Request: a batch holds at most ${MAX_BATCH_MESSAGES} messages`)
       }
