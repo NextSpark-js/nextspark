@@ -23,7 +23,7 @@ async function stillWaiting(promise: Promise<unknown>, ms = 400): Promise<boolea
   return !(await Promise.race([settled, new Promise<false>(resolve => setTimeout(() => resolve(false), ms))]))
 }
 
-test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 300000 }, async t => {
+test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES && 'initdb, pg_ctl or postgres not on PATH', timeout: 300000 }, async t => {
   const db = await cutoverDatabase(t)
   process.env.DATABASE_URL = db.ownerUrl
   delete process.env.DATABASE_SERVICE_URL

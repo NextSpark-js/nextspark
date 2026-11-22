@@ -13,7 +13,7 @@ description: |
   from a theme. For policy SQL see database-migrations; for queryWithRLS usage see
   service-layer; for can_bypass_rls/superadmin see api-bypass-layers.
 allowed-tools: Read, Glob, Grep
-version: 1.1.0
+version: 1.2.0
 ---
 
 # RLS Enforcement Layer Skill
@@ -53,6 +53,14 @@ re-paste of the SQL.
 - **Atomicity:** `mutateWithRLS` wraps **each call** in its own BEGIN/COMMIT — N calls = N
   transactions. For "insert order + 3 items atomically", use `getTransactionClient(userId)`
   (one GUC, one commit/rollback), not N `mutateWithRLS` calls.
+- **Service-pool transaction:** `withServiceTransaction(fn)` runs `fn` in one transaction on the
+  service pool (commit when it resolves, rollback when it throws). Inside `fn`, `query` /
+  `queryOne` / `queryRows` and the `*WithRLS` calls that route to the service pool (no `userId`,
+  or `{ service: true }`) use that transaction's client. A call **with** a `userId` and
+  `getTransactionClient()` still open their own connection and commit on their own. Use it for a
+  multi-statement invariant on service-only tables: read a row with `FOR UPDATE` / `FOR SHARE`,
+  decide, write (`disconnect`, `disconnectAs`, `narrowConnection` in
+  `src/lib/mcp/oauth/connection-store.ts`).
 
 ## 2. When you MUST force the service pool
 
@@ -75,6 +83,19 @@ Adding *another* user as the acting owner or admin passes RLS under the actor's 
   statement stays scoped to its subject (`WHERE id = $1`, ...). The `/api/v1/*` routes keep RLS.
 - **`users.role`** changes on the app pool only for a caller that passes `can_bypass_rls()`, and never on the
   caller's own row: migration 037's `users_rls_role_guard` trigger. On the service pool it does nothing.
+
+- **The OAuth tables of MCP browser sign-in** (migration `048_oauth_provider.sql`: `jwks`,
+  `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`,
+  `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`) are
+  **service-only**: every policy is `can_bypass_rls()`, because the authorization server reads and
+  writes them with no user GUC (discovery, token and refresh calls carry no session) and they hold
+  credentials and the signing private key. Everything that reads them uses the service connection
+  (`query` / `queryOne` / `queryRows`, never `queryWithRLS(..., userId)`): Better Auth itself, and
+  core's `src/lib/mcp/oauth/` modules (`resource-server.ts` reads the consent on every request,
+  `revocation.ts`, `team-selection.ts`, `connection-store.ts`, `purge.ts`, `consent-plugin.ts`).
+  The authorization for those reads is done in code, each statement scoped to its subject (the
+  token's user, client and team; the session's user). Their invariants are triggers, not policies
+  (see `database-migrations` and `mcp-server`).
 
 **Other legitimate service-pool actors** (no request user → service pool by routing, since they
 call with no `userId`): Better Auth login/verification, the **scheduled-actions processor**,
@@ -190,6 +211,7 @@ Seed fixtures via the service pool / owner (first-membership inserts can't satis
 - [ ] DB call routing chosen deliberately: user-scoped → `queryWithRLS(..., userId)`; system → `query*`/no-userId; bootstrap-only → `{ service: true }`. **Not** `{ service: true }` to silence a 0-rows bug.
 - [ ] No transaction tries to mix a user-scoped (app-pool) op and a service-pool (bootstrap) op on the same `tx`.
 - [ ] Multi-row atomic write uses `getTransactionClient(userId)`, not N `mutateWithRLS` calls.
+- [ ] Multi-statement work on service-only tables (the OAuth tables) runs inside `withServiceTransaction`, with the row that orders concurrent writers locked first.
 - [ ] New core-table policy: primitive deps already defined in `001` before the migration that uses them.
 - [ ] New entity exposes `list`/`read` permissions (else 403 under enforcement); api-key callers restricted by scope or a DB policy (not `ownershipFilter`).
 - [ ] Theme RLS override drops legacy AND current core policy names.
@@ -201,3 +223,4 @@ Seed fixtures via the service pool / owner (first-membership inserts can't satis
 - `api-bypass-layers` — `can_bypass_rls()`, superadmin/developer bypass.
 - `permissions-system` — team roles, tiers, permission checks.
 - `scheduled-actions` — background/webhook handlers (service-pool actors with no request user).
+- `mcp-server` — the OAuth tables of MCP browser sign-in, their triggers and the code that reads them.

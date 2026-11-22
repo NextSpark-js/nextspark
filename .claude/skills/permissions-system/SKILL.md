@@ -7,7 +7,7 @@ description: |
   Use this skill when implementing or modifying access control features.
   For the runtime RLS model (service pool, nextspark_app cutover) see rls-enforcement.
 allowed-tools: Read, Glob, Grep
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Permissions System Skill
@@ -225,6 +225,10 @@ type Permission = `${string}.${string}`
 'page-builder.access'
 'page-builder.custom-css'
 'api-keys.manage'
+
+// Settings permissions (core system permissions, lib/permissions/system.ts; owner and admin by default)
+'settings.api_keys'
+'settings.integrations'   // also: see and end other members' MCP connections to the team
 ```
 
 ## Theme Extension Pattern
@@ -526,6 +530,51 @@ interface EntityPermissionAction {
 }
 ```
 
+## MCP Connections (`settings.integrations` and scopes)
+
+MCP browser sign-in (`features.mcpOAuth`, see the `mcp-server` skill) lets an application connect to one team on
+behalf of a user. Two parts of it are this permission system.
+
+### Managing other members' connections: `settings.integrations`
+
+A member who holds the team permission `settings.integrations` sees the other members' connections to that team
+and can end them (not edit them). It is `MANAGE_CONNECTIONS` in `packages/core/src/lib/mcp/oauth/connections.ts`.
+
+It is decided as a permission, never by role name:
+
+```typescript
+import { hasTeamPermission } from '@nextsparkjs/core/lib/permissions/app-role-bypass'
+
+// appRole: users.role; teamRole: team_members.role (null: not a member)
+hasTeamPermission(appRole, teamRole, MANAGE_CONNECTIONS)
+```
+
+- `hasTeamPermission` is the one team-permission decision (`lib/permissions/app-role-bypass.ts`). Owner and admin
+  hold `settings.integrations` by default, a project's own roles hold it when `permissions.config.ts` gives it to
+  them, and `teams.appRoleBypass` counts (an app role that skips team permissions holds every registered
+  permission in a team it belongs to, and nothing in a team it does not).
+- Do not write `role IN ('owner', 'admin')` or `role === 'admin'` for this: it breaks extended roles and the bypass
+  setting.
+- When the decision guards a write, read the roles in the transaction that does the write. `disconnectAs`
+  (`lib/mcp/oauth/connection-store.ts`) reads the actor's team role and app role `FOR SHARE` inside the service
+  transaction that ends the connection, and takes the decision as a callback so the store itself imports no
+  project configuration.
+
+### Scopes of a connection are bound by the role, twice
+
+A connection's scopes are the entity scopes API keys use (`<entity>:read|write|delete`), and a role caps them the
+same way it caps an API key (`validateScopesForUser(userId, teamId, scopes)` in `lib/api/auth.ts`):
+
+1. **At consent**: whatever the browser sends, the server rewrites the granted scopes to requested ∩ accepted ∩ what
+   the user's role can hold in that team (`consentWithinRolePlugin`). The consent screen shows a permission the
+   role cannot hold as disabled, but the screen is not the check.
+2. **On every request**: effective scopes = token scopes ∩ the connection's consent, then cut down to what the
+   user's role in the team allows **now** (`principalFromClaims` in `lib/mcp/oauth/resource-server.ts`). A role
+   lowered after consent takes effect on the next call; a member removed from the team is refused.
+
+The team of a connection is fixed when it is consented to (the token's `team_id` claim). `x-team-id` cannot
+change it.
+
 ## RLS Integration
 
 Permissions work with Row Level Security at the database level:
@@ -609,6 +658,12 @@ if (membership.hasRole('admin')) {}               // Team role
 // CORRECT: Always validate on server
 // Client: usePermission() for UI
 // Server: checkPermission() for action
+
+// NEVER: Decide a team permission by role name
+if (teamRole === 'owner' || teamRole === 'admin') { /* manage integrations */ }
+
+// CORRECT: The permission, through the one decision function
+if (hasTeamPermission(appRole, teamRole, 'settings.integrations')) {}
 ```
 
 ## Checklist
@@ -623,9 +678,12 @@ Before finalizing permission implementation:
 - [ ] Dangerous actions marked with `dangerous: true`
 - [ ] RLS policies align with permission model
 - [ ] Registry rebuilt after config changes
+- [ ] Team permissions decided through `hasTeamPermission` (extended roles, `teams.appRoleBypass`), not role names
+- [ ] Scopes granted to a credential (API key, MCP connection) bound by the role on the server, and again per request
 
 ## Related Skills
 
+- `mcp-server` - MCP connections: consent, scopes, `settings.integrations`
 - `better-auth` - Authentication patterns
 - `entity-api` - API endpoint patterns
 - `service-layer` - Service patterns with RLS

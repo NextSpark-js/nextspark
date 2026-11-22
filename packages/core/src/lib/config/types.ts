@@ -913,8 +913,9 @@ export interface AppConfig {
   consent?: ConsentConfig
 
   /**
-   * Rate limit tiers: override the numbers of a built-in tier (`auth`, `api`, `strict`, `read`, `write`,
-   * `webhook`, `ingest`) or declare a tier of your own, then pass its name to `withRateLimitTier`. A custom tier needs
+   * Rate limit tiers: override the numbers of a built-in tier (`auth`, `authIdentifier`, `api`, `strict`, `read`,
+   * `write`, `webhook`, `ingest`, and `credential`, the limit of one API key or one MCP connection) or declare a
+   * tier of your own, then pass its name to `withRateLimitTier`. A custom tier needs
    * both fields. An invalid or missing value never removes the limit: a built-in tier keeps its default and a custom
    * tier is limited as `api`. Without this entry, every tier keeps its default.
    */

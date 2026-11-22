@@ -1,10 +1,11 @@
 -- Migration: 048_oauth_provider.sql
 -- Description: tables of the OAuth 2.1 authorization server that signs MCP clients in
---              through the browser (Better Auth `jwt()`, `@better-auth/mcp`, `@better-auth/cimd`).
--- Issue: #541 (spike)
+--              through the browser (Better Auth `jwt()`, `@better-auth/mcp`, `@better-auth/cimd`),
+--              and the rules that keep a connection's tokens in step with its consent.
+-- Issue: #541
 --
--- The tables exist whether or not `MCP_OAUTH_ENABLED` is on; nothing reads or writes them
--- while it is off. Names and column types are the ones Better Auth 1.7.27 expects for this
+-- The tables exist whether or not the project turns the feature on (`features.mcpOAuth`);
+-- nothing reads or writes them while it is off. Names and column types are the ones Better Auth 1.7.27 expects for this
 -- instance (`string[]` and `json` are JSONB, `date` is TIMESTAMPTZ, ids are TEXT that Better
 -- Auth generates), with `users` as the physical user table.
 --
@@ -17,9 +18,12 @@
 -- `oauthAccessToken.token` is NOT NULL: Better Auth 1.7.27 declares the field without `required: false`, which is
 -- required, and its migration planner reports a nullable column there as drift.
 --
--- Additive only: no existing table changes; two triggers on existing tables (account, users). Undoing it is
--- dropping the four triggers and their three functions, then the ten tables (in reverse order of creation), which
--- signs every MCP client out and makes them authorize again.
+-- Additive only: no existing table changes; two of its seven triggers are on existing tables (account, users).
+-- Undoing it is dropping the seven triggers and the seven functions, then the ten tables (in reverse order of
+-- creation), which signs every MCP client out and makes them authorize again.
+--
+-- This is the only migration of the feature: everything it needs is in this file. Once it has been released it is
+-- not edited any more; a change goes in a new migration.
 
 -- ============================================
 -- TABLES

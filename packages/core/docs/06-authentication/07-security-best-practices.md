@@ -222,14 +222,12 @@ async function constantTimeDelay(startTime: number) {
 
 ### API Key Rate Limiting
 
-```typescript
-// Per-key rate limits
-const rateLimits = {
-  'tasks:read': 1000,   // requests per minute
-  'tasks:write': 500,
-  'admin:*': 10000
-}
-```
+Every API key is limited to 1000 requests per minute (the `credential` tier), on top of the per-address limit of
+the route it calls. The limit does not depend on the key's scopes.
+
+The count is kept in the process, and it is shared between instances only when Redis is configured
+(`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`). On serverless without Redis, every instance gives a key
+its own budget. See [API Keys: rate limiting](./04-api-keys.md#rate-limiting).
 
 ## OAuth Security
 
@@ -453,46 +451,91 @@ export function proxy(request: NextRequest) {
 
 ## Rate Limiting
 
+Rate limiting is built in; a project configures it, it does not write it.
+
 ### Login Rate Limiting
 
-```typescript
-// Track failed login attempts
-const loginAttempts = new Map<string, number>()
-
-async function checkLoginAttempts(email: string): Promise<boolean> {
-  const attempts = loginAttempts.get(email) || 0
-  
-  if (attempts >= MAX_ATTEMPTS) {
-    // Block for 15 minutes
-    return false
-  }
-  
-  return true
-}
-
-async function recordFailedLogin(email: string) {
-  const attempts = loginAttempts.get(email) || 0
-  loginAttempts.set(email, attempts + 1)
-  
-  // Clear after 15 minutes
-  setTimeout(() => {
-    loginAttempts.delete(email)
-  }, 15 * 60 * 1000)
-}
-```
+The sign-in `POST`s of `/api/auth/*` are limited twice: per client address (tier `auth`, 60 per 15 minutes) and per
+email (tier `authIdentifier`, 5 per 15 minutes and budget). See
+[Sign-in routes](../05-api/07-rate-limiting.md#sign-in-routes-the-auth-and-authidentifier-tiers).
 
 ### API Rate Limiting
 
-```typescript
-// Using API keys' built-in rate limiting
-// Or implement custom rate limiter
-import rateLimit from 'express-rate-limit'
+- Every route wrapped with `withRateLimitTier`, and every Route Handler a project serves under `api/`, is limited
+  per client address by its tier.
+- A request made with an API key, or by an MCP connection, is also limited per credential (tier `credential`).
+- Without Redis every counter is per process. Anything that runs as more than one process needs
+  `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+- Set `NEXTSPARK_CLIENT_IP_SOURCE` so the address that is counted is the caller's and not a proxy's.
+- Never set `DISABLE_RATE_LIMITING=true` in production.
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // 100 requests per window
-})
+See [Rate Limiting](../05-api/07-rate-limiting.md).
+
+## MCP Browser Sign-in
+
+This section applies to a project built with `features: { mcpOAuth: true }`, where the app is the OAuth 2.1
+authorization server of its MCP endpoint. See [MCP Browser Sign-in](./14-mcp-browser-sign-in.md) for what the
+feature does, and [MCP Browser Sign-In Deployment](../14-deployment/12-mcp-browser-sign-in.md) for the deployment
+checklist.
+
+**The framework does not enforce a production gate for any of the following.** The feature starts and serves
+requests whether or not they are in place, and nothing warns at startup. They are the operator's to check.
+
+### 1. List the applications that may connect
+
+By default any application that publishes a valid metadata document can start a sign-in, and the only decision is
+the user's on the consent screen. In production, name the hosts you accept:
+
+```typescript
+// config/app.config.ts
+export const APP_CONFIG_OVERRIDES = {
+  mcp: { oauth: { allowedClientHosts: ['claude.ai', 'chatgpt.com'] } },
+}
 ```
+
+Check the value after deploying. A list that names no usable host (a typo such as `'https//claude.ai'`, or `null`)
+closes the server to **every** application, and says so once in the server log. Only an absent or empty list is
+open.
+
+### 2. Configure Redis for the shared rate limit
+
+A connection is limited to 1000 requests per minute. Without Redis that count is per process, which on serverless
+is close to no limit. Set both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Vercel's Marketplace creates
+the Upstash variables as `KV_REST_API_URL` and `KV_REST_API_TOKEN`; the framework does not read those names, so add
+the two it reads by hand.
+
+### 3. Run the app with a database role that does not own the tables
+
+Every OAuth table has a service-only RLS policy: `jwks` holds the signing private key, and the token tables hold
+credentials. PostgreSQL does not apply row-level security to the owner of a table, so those policies have no effect
+while the runtime connection (`DATABASE_URL`) is the role that owns the tables. Run the app with the non-owner
+runtime role and keep the owner for migrations. See [RLS Policies](../10-backend/03-rls-policies.md#enforcement-layer-beta167).
+
+### 4. Review connected applications
+
+- Users see their connections in Settings > Security > Connected applications and can narrow or end each one.
+- A member who holds the team permission `settings.integrations` (`owner` and `admin` by default) also sees, and can
+  end, the other members' connections to that team. Decide who holds it: a connection acts with its user's role in
+  the team.
+- Changing a user's password or suspending the account ends every connection of that user.
+- Removing a user from a team stops the connection from working on the next request, but leaves its rows; the same
+  is true of deleting a team.
+
+### 5. Read the audit log
+
+Every MCP tool call that reaches its handler is a row of `api_audit_log` with the endpoint `mcp:<tool>` and the real
+status. Calls refused because the connection lacks a scope are recorded too, with status `403` and the scopes that
+were missing: an application trying to do what it was not granted is worth looking for. Rows of an OAuth call carry
+`credential: 'oauth'`, the client id and the token id in `requestBody`. Values of arguments whose key names a secret
+are stored as `[redacted]`. See [MCP Server: audit trail](../05-api/20-mcp-server.md#audit-trail).
+
+### 6. Know the switches
+
+- `MCP_OAUTH_ENABLED=false` turns browser sign-in off at runtime, without a build. Existing connections stop
+  working while it is off.
+- `MCP_ENABLED=false` (or unset in production) turns the whole MCP endpoint off.
+- Signing keys rotate every 30 days without intervention. Expired tokens and retired keys are purged when tokens
+  are issued; there is no job to schedule.
 
 ## Security Headers
 
@@ -725,6 +768,8 @@ async function logAuthEvent(event: {
 - [ ] Enable audit logging
 - [ ] Review and rotate secrets regularly
 - [ ] Monitor for suspicious activity
+- [ ] Configure Redis (`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`) so rate limits are shared between instances
+- [ ] If MCP browser sign-in is on: set `mcp.oauth.allowedClientHosts`, run the app with a non-owner database role, and review `api_audit_log` (see [MCP Browser Sign-in](#mcp-browser-sign-in))
 
 ## Security Headers Migration Guide
 
@@ -814,6 +859,7 @@ See [MDN X-XSS-Protection documentation](https://developer.mozilla.org/en-US/doc
 ## Next Steps
 
 1. **[Testing Authentication](./08-testing-authentication.md)** - Test security features
+2. **[MCP Browser Sign-in](./14-mcp-browser-sign-in.md)** - The OAuth 2.1 authorization server of the MCP endpoint
 
 ---
 

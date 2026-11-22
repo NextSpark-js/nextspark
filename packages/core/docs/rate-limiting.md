@@ -8,6 +8,15 @@ El rate limiting (limitación de tasa) es una técnica de seguridad que controla
 - **Abuso de API** (scraping, spam)
 - **Denegación de servicio (DoS)** (sobrecarga del servidor)
 
+NextSpark cuenta de dos maneras independientes, y un mismo request puede contarse en las dos:
+
+- **Por dirección de cliente y tier** (`withRateLimitTier`): protege una ruta de una misma dirección, sea quien sea el que llama.
+- **Por credencial** (tier `credential`): limita lo que puede enviar una API key o una conexión MCP, venga de la dirección que venga. Ver [Límite por credencial](#límite-por-credencial-tier-credential).
+
+No hay un contador por usuario para los requests con sesión: un request del dashboard se limita solo por el tier de la ruta, por dirección.
+
+La referencia completa (en inglés) está en [API Rate Limiting](./05-api/07-rate-limiting.md). Este documento explica los dos modos de conteo y cómo configurar Upstash.
+
 ## Modos de Rate Limiting
 
 NextSpark soporta dos modos de rate limiting:
@@ -24,6 +33,7 @@ Almacena los contadores en la memoria del servidor.
 **Limitaciones:**
 - Los contadores se reinician cuando el servidor se reinicia
 - No funciona correctamente con múltiples instancias (cada servidor tiene sus propios contadores)
+- Es un contador de ventana fija: se reinicia al terminar la ventana, así que permite una ráfaga en el borde entre dos ventanas
 
 **Ideal para:**
 - Desarrollo local
@@ -40,8 +50,11 @@ Almacena los contadores en Redis, compartidos entre todas las instancias.
 - Protección real contra ataques distribuidos
 
 **Limitaciones:**
-- Requiere configurar Upstash (o Redis propio)
+- Requiere configurar Upstash: la implementación usa solo la API REST de Upstash (`@upstash/redis`). Un Redis propio por TCP (`redis://...`) no se lee
+- Hacen falta **las dos** variables, `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`; con una sola no se usa Redis
 - Latencia adicional por request (una consulta a Redis; no medida en el repositorio)
+
+En este modo el algoritmo es de ventana deslizante (`Ratelimit.slidingWindow` de `@upstash/ratelimit`).
 
 **Ideal para:**
 - Producción con múltiples instancias
@@ -105,8 +118,7 @@ Ahora el atacante solo puede hacer **5 intentos totales**, sin importar a qué s
 - **Global**: Baja latencia desde cualquier región
 
 **Alternativas:**
-- Redis propio (AWS ElastiCache, DigitalOcean, etc.)
-- Upstash es la opción más simple para Next.js/Vercel
+- Hoy no hay: el framework solo habla con la API REST de Upstash. Un Redis propio (AWS ElastiCache, DigitalOcean, etc.) usa el protocolo TCP y no está soportado sin escribir otro adaptador.
 
 ---
 
@@ -136,9 +148,13 @@ UPSTASH_REDIS_REST_URL=https://xxxx.upstash.io
 UPSTASH_REDIS_REST_TOKEN=AxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxQ==
 ```
 
+Las dos variables son obligatorias. Si falta una, el rate limiting sigue en memoria.
+
+**Si creaste la base desde el Marketplace de Vercel:** Vercel crea las variables con otros nombres, `KV_REST_API_URL` y `KV_REST_API_TOKEN`. El framework lee `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`, así que hay que agregar esas dos a mano con los mismos valores.
+
 ### Paso 4: Verificar
 
-Reinicia tu aplicación. En los logs deberías ver que el rate limiting usa Redis.
+Reinicia tu aplicación. `isDistributedRateLimitAvailable()` devuelve `true` cuando las dos variables están definidas (ver [Verificar si Redis está disponible](#verificar-si-redis-está-disponible)).
 
 ---
 
@@ -156,8 +172,24 @@ NextSpark incluye estos niveles predefinidos:
 | `write` | 50 requests | 1 minuto | Escrituras (POST/PUT/DELETE) |
 | `webhook` | 500 requests | 1 hora | Webhooks (la firma es la defensa principal) |
 | `ingest` | 1000 requests | 1 minuto | Endpoints de ingesta de alto volumen |
+| `credential` | 1000 requests | 1 minuto | Lo que puede enviar una API key o una conexión MCP (por credencial, no por dirección) |
 
 El tier `auth` cobra por dirección de cliente solo los `POST` de `/api/auth/*` de una lista explícita (pedir/verificar código, login con contraseña, registro, reset de contraseña); `sign-out`, la sesión y los callbacks OAuth no se cobran. `authIdentifier` cuenta además por email en pedir y verificar código y en el login con contraseña. Ver [Sign-in routes](./05-api/07-rate-limiting.md#sign-in-routes-the-auth-and-authidentifier-tiers).
+
+### Límite por credencial (tier `credential`)
+
+Un request que se autentica con una API key, o con un access token de [MCP browser sign-in](./06-authentication/14-mcp-browser-sign-in.md), se cuenta además contra esa credencial: 1000 requests por minuto por defecto.
+
+- Lo aplica `credentialRateLimitResponse` (`lib/api/rate-limit.ts`), que llaman `authenticateRequest`, `validateAndAuthenticateRequest`, `validateAndAuthenticateApiRequest` y el endpoint MCP. Una ruta que autentica con alguna de ellas ya tiene el límite.
+- La credencial se identifica por el id de la API key, o por la aplicación y el usuario en una conexión MCP.
+- **Siempre se cuenta en el proceso, y además en Redis cuando está configurado**, de modo que todas las instancias comparten la cuenta. El request se rechaza si cualquiera de las dos cuentas está excedida.
+- Sin Redis cada proceso cuenta por su lado: en serverless cada instancia le da a la credencial sus propios 1000, lo que se acerca a no tener límite.
+- Si Redis falla, la verificación compartida deja pasar el request y sigue valiendo la cuenta del proceso.
+- Es un tope de seguridad: `DISABLE_RATE_LIMITING=true` **no** lo apaga (esa variable apaga los límites por dirección).
+- En `/api/mcp` una llamada a un tool cuenta dos veces: el request MCP y el handler de API que el tool llama dentro del proceso.
+- No se aplica a los requests con sesión.
+
+`apiKeyRateLimitResponse` es solo la mitad en memoria; se conserva para los proyectos que la llaman. Las llamadas de core usan `credentialRateLimitResponse`.
 
 ### Ajustar o agregar tiers
 
@@ -169,6 +201,7 @@ export const APP_CONFIG_OVERRIDES = {
   rateLimit: {
     tiers: {
       write: { limit: 120 },                       // solo cambia el límite; la ventana sigue en 1 minuto
+      credential: { limit: 3000 },                  // lo que puede enviar una API key o una conexión MCP por minuto
       exports: { limit: 5, windowMs: 10 * 60_000 }, // tier nuevo: 5 requests cada 10 minutos
     },
   },
@@ -254,11 +287,11 @@ if (isDistributedRateLimitAvailable()) {
 
 ### ¿Puedo usar mi propio Redis?
 
-Sí, pero necesitarás modificar la configuración. Upstash usa una API HTTP REST, mientras que Redis tradicional usa el protocolo TCP. La implementación actual está optimizada para Upstash.
+No sin escribir código. Upstash usa una API HTTP REST, mientras que Redis tradicional usa el protocolo TCP, y la implementación actual solo usa la primera (`UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`). No se lee ninguna variable `REDIS_URL`.
 
 ### ¿Qué pasa si Upstash está caído?
 
-El sistema "falla abierto" (fail open): si hay un error de conexión con Redis, el request se permite. Esto evita bloquear usuarios legítimos por problemas de infraestructura.
+El sistema "falla abierto" (fail open): si hay un error de conexión con Redis, el request se permite. Esto evita bloquear usuarios legítimos por problemas de infraestructura. El límite por credencial conserva además su cuenta en memoria, que sigue valiendo aunque Redis falle.
 
 ### ¿Los contadores se reinician al hacer deploy?
 
@@ -277,6 +310,8 @@ Sí: ver [Ajustar o agregar tiers](#ajustar-o-agregar-tiers).
 |----------|-----------|
 | ¿Necesito Upstash para desarrollo? | No |
 | ¿Necesito Upstash para 1 servidor en producción? | No (pero recomendado) |
-| ¿Necesito Upstash para múltiples servidores? | Sí |
+| ¿Necesito Upstash para múltiples servidores o serverless? | Sí |
+| ¿Qué variables lee el framework? | `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`, las dos |
+| ¿El límite por API key o conexión MCP se comparte entre instancias? | Solo con Upstash configurado |
 | ¿Upstash tiene tier gratuito? | Sí (10k comandos/día) |
 | ¿Funciona sin configurar nada? | Sí (usa in-memory) |

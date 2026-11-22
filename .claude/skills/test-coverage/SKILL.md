@@ -5,7 +5,7 @@ description: |
   Covers FEATURE_REGISTRY, FLOW_REGISTRY, TAGS_REGISTRY, and coverage metrics interpretation.
   Use this skill when evaluating test coverage, identifying gaps, or planning testing priorities.
 allowed-tools: Read, Glob, Grep
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Test Coverage Skill
@@ -161,6 +161,19 @@ Functional coverage: ??? (requires manual analysis)
 ```
 
 **IMPORTANT**: Registry coverage metrics are TECHNICAL. They don't indicate test quality.
+
+### What the registries do not count
+
+The registries are built from the tags of Cypress files (`*.cy.ts`). Jest suites (`packages/core/tests/jest/`)
+and the `node:test` suites (`packages/core/tests/node/`) are not in them, so a feature can be well tested and
+show no coverage here, and the reverse.
+
+A kind of gap no metric shows: **code whose correctness lives in the database** (triggers, constraints, row
+locks, two statements that must be atomic) covered only by Jest tests that mock the queries. Those tests run no
+trigger and take no lock. Such code needs a `tests/node/*-pg.test.ts` case against a throwaway PostgreSQL
+cluster (pattern in the `jest-unit` skill; reference: `tests/node/oauth-connections-pg.test.ts`, the database
+rules of MCP browser sign-in). Those suites are skipped when `initdb`, `pg_ctl` and `postgres` are not all on
+the PATH (`HAS_POSTGRES`): a skipped suite covers nothing, so check the run's output before counting it.
 
 ## Using Coverage Metrics
 

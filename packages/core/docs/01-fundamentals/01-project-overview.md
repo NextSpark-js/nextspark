@@ -29,7 +29,7 @@ NextSpark is a Next.js 16 application, designed for rapid SaaS product developme
 
 - **PostgreSQL** - Robust relational database (via Supabase)
 - **pg v8.16** - PostgreSQL client for Node.js
-- **Better Auth v1.3.5** - Modern authentication library with session management
+- **Better Auth v1.7** (`~1.7.27`) - Modern authentication library with session management
 - **Row-Level Security (RLS)** - Database-level data isolation per user
 
 ### Authentication & Security
@@ -37,7 +37,8 @@ NextSpark is a Next.js 16 application, designed for rapid SaaS product developme
 - **Better Auth** - Email/password + OAuth authentication
 - **Google OAuth** - Social authentication integration
 - **API Key Authentication** - Scope-based API access for external clients
-- **Dual Authentication System** - Sessions for dashboard, API keys for external APIs
+- **Dual Authentication System** - Sessions for dashboard, API keys for external APIs (the REST API, `/api/v1`)
+- **MCP Browser Sign-in (opt-in, experimental)** - The app as an OAuth 2.1 authorization server for its own MCP endpoint, built on the Better Auth OAuth provider plugins (`@better-auth/oauth-provider`, `@better-auth/mcp`, `@better-auth/cimd`). Its access tokens are accepted at `/api/mcp` only
 - **Resend v5.0.0** - Transactional email service for auth emails
 
 ### Testing & Quality
@@ -275,6 +276,7 @@ The authentication system provides comprehensive user management with session-ba
 - Role-based access control (RBAC)
 - Protected routes with middleware
 - Dual authentication (sessions + API keys)
+- Optional OAuth 2.1 sign-in for MCP clients (`features.mcpOAuth`)
 
 **Authentication Methods:**
 
@@ -289,6 +291,12 @@ The authentication system provides comprehensive user management with session-ba
    - Key rotation and revocation
    - Used for external API clients
    - Rate limiting per key
+
+3. **OAuth Access Tokens** (MCP clients, opt-in)
+   - Issued by the app to an MCP application the user approves in the browser
+   - Accepted at `/api/mcp` only; one team per connection
+   - Permissions chosen by the user on a consent screen, held to the user's role
+   - See [MCP Browser Sign-in](../06-authentication/14-mcp-browser-sign-in.md)
 
 **Middleware Protection:**
 ```typescript
@@ -307,9 +315,9 @@ export default async function proxy(request: NextRequest) {
 **Dual Auth in API Routes:**
 ```typescript
 // API routes support both auth methods
-const authResult = await authenticateRequest(request)
+const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
 
-if (authResult.type === 'api_key') {
+if (authResult.type === 'api-key') {
   // Check API key scopes
 } else if (authResult.type === 'session') {
   // Check user permissions
@@ -353,7 +361,7 @@ api/<path>/route.ts            # Your own endpoints, served at /api/<path>
 - Automatic CRUD endpoint generation
 - Query parameters (filtering, sorting, pagination, search)
 - Dual authentication (sessions + API keys)
-- Rate limiting per endpoint
+- Rate limiting per client address by tier, and per API key
 - Metadata system integration
 - Standardized error responses
 - Response formatting and pagination

@@ -81,9 +81,9 @@ X-API-Version: v1
 # Standard response headers
 Content-Type: application/json
 X-Request-ID: {unique_request_id}
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1640995200
+X-RateLimit-Limit: 200
+X-RateLimit-Remaining: 199
+X-RateLimit-Reset: 1767225660000
 
 # Pagination headers (LIST operations)
 X-Total-Count: 150
@@ -708,17 +708,21 @@ See [Error Handling](./08-error-handling.md) for detailed error documentation.
 
 ## Rate Limiting
 
-All endpoints are subject to rate limiting.
+Routes are limited per client address by the tier they are in, and a request made with an API key is also
+limited per key.
 
 **Default Limits:**
-- **API Key Auth:** 1,000 requests/hour per key
-- **Session Auth:** 100 requests/hour per user
+- **Entity endpoints, per client address:** 200 requests/minute for `GET` (tier `read`), 50 requests/minute for
+  `POST`, `PATCH` and `DELETE` (tier `write`)
+- **API Key Auth:** also 1,000 requests/minute per key (tier `credential`)
+- **Session Auth:** the per-address tier only; there is no per-user counter
 
-**Rate Limit Headers:**
+**Rate Limit Headers** (the per-address bucket of the route; `X-RateLimit-Reset` is a Unix timestamp in
+milliseconds):
 ```http
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1640995200
+X-RateLimit-Limit: 200
+X-RateLimit-Remaining: 199
+X-RateLimit-Reset: 1767225660000
 ```
 
 See [Rate Limiting](./07-rate-limiting.md) for detailed rate limit documentation.

@@ -9,6 +9,10 @@ API keys are an alternative authentication method designed for:
 - Third-party integrations
 - Automated scripts and services
 - Mobile applications (with caution)
+- MCP clients, on the [MCP server](../05-api/20-mcp-server.md) at `/api/mcp`
+
+An API key is accepted at `/api/v1/*` and at `/api/mcp`. For an MCP client that a user connects from its own
+interface there is a second option, browser sign-in; see [API keys and MCP connections](#api-keys-and-mcp-connections).
 
 ## API Key Structure
 
@@ -281,6 +285,11 @@ export async function authenticateRequest(
 - **External APIs**: Uses API key authentication
 - **Hybrid**: Some endpoints support both
 
+This is the whole picture for `/api/v1`. The MCP endpoint `/api/mcp` takes an API key or, when the project turns
+on MCP browser sign-in, an OAuth access token, and never a session. Inside the server such a call reaches
+`authenticateRequest` as a principal of type `'api-key'` with an `oauth` field: see
+[API Authentication](../05-api/02-authentication.md#oauth-access-token-authentication-apimcp-only).
+
 ## Scope Enforcement Fails Closed
 
 Since #93, every route calling `authenticateRequest` (or
@@ -440,27 +449,71 @@ Set expiration during creation:
 
 ## Rate Limiting
 
-API keys have per-key rate limits:
+A request made with an API key is counted twice, by two independent limits:
 
-```typescript
-// Per key, per minute
-const rateLimits = {
-  'tasks:read': 1000,
-  'tasks:write': 500,
-  'tasks:delete': 100,
-  '*': 10000 // Full access keys
-}
-```
+1. **The tier of the route, per client address** (`withRateLimitTier`): for example `read` (200 per minute) and
+   `write` (50 per minute) on `/api/v1/{entity}`. This limit does not look at the key.
+2. **The per-key limit: the `credential` tier, 1000 requests per minute per key.**
 
-**Response when rate limited:**
+### The per-key limit
+
+- It is applied by `credentialRateLimitResponse(request, auth)` (`lib/api/rate-limit.ts`), which
+  `authenticateRequest`, `validateAndAuthenticateRequest` and `validateAndAuthenticateApiRequest` call. A route that
+  authenticates through one of them has it.
+- The key is identified by its id. The limit does not depend on the key's scopes.
+- **It is always counted in the process, and also in Redis when `UPSTASH_REDIS_REST_URL` and
+  `UPSTASH_REDIS_REST_TOKEN` are both set**, so every instance shares the count. The request is refused when either
+  count is over.
+- Without Redis each process counts on its own. On serverless every instance gives the key its own 1000 per
+  minute, which is close to no limit.
+- When Redis fails, the shared check lets the request through and the count of the process still applies.
+- It is a safety cap: `DISABLE_RATE_LIMITING=true` does not turn it off.
+- The number is configurable: `rateLimit: { tiers: { credential: { limit: 3000 } } }` in `config/app.config.ts`.
+- On `/api/mcp` a tool call counts twice against the key: the MCP request, and the API handler the tool calls in
+  process.
+
+The same tier limits an MCP connection made by browser sign-in, counted per application and user.
+
+`apiKeyRateLimitResponse` is the in-process half alone, kept for projects that call it. The limits by scope in
+`RATE_LIMITS` (`lib/api/keys.ts`) belong to the older `withRateLimit` wrapper, which core's routes do not use; they
+are not the limit an API key gets from authenticating.
+
+**Response when rate limited** (status `429`, with `Retry-After` and the `X-RateLimit-*` headers):
 
 ```json
 {
   "success": false,
   "error": "Rate limit exceeded",
+  "message": "Too many requests. Limit: 1000 requests per minute",
+  "code": "RATE_LIMIT_EXCEEDED",
   "retryAfter": 60
 }
 ```
+
+See [Rate Limiting](../05-api/07-rate-limiting.md) for the tiers and Redis.
+
+## API keys and MCP connections
+
+The MCP server at `/api/mcp` accepts an API key. When a project turns on
+[MCP browser sign-in](./14-mcp-browser-sign-in.md) it also accepts an OAuth access token, which an MCP application
+obtains by sending the user to sign in and approve its permissions. The two are different credentials for the same
+tools, with the same scope names (`<entity>:read|write|delete`).
+
+What differs, stated as it is on this branch:
+
+| | API key | MCP connection (browser sign-in) |
+|---|---|---|
+| **Team** | **Not bound to a team.** Each request names one with `x-team-id`, or uses the user's default team | Bound to one team when the application is authorized |
+| **Expiry** | **Does not expire by default.** `expiresAt` is optional when the key is created | The access token lives 10 minutes and is renewed by the client |
+| **How it is created** | By the user, in Settings > API Keys; the secret is copied into the client | By the user approving the application on a consent screen; nothing is copied |
+| **Where it works** | `/api/v1/*` and `/api/mcp` | `/api/mcp` only |
+| **How it is ended** | Revoke the key | Disconnect in Settings > Security > Connected applications |
+
+These differences are known and not resolved: the two models are not unified. Creating or revoking an API key does
+not affect a connection, and disconnecting an application does not affect a key.
+
+A request to `/api/mcp` presents one credential. One that presents an API key and an access token is refused, and an
+empty `x-api-key` header is not treated as presenting a key.
 
 ## Security Best Practices
 
@@ -576,6 +629,7 @@ const isExpired = expiresAt && new Date(expiresAt) < new Date()
 1. **[Session Management](./05-session-management.md)** - Alternative authentication method
 2. **[Permissions and Roles](./06-permissions-and-roles.md)** - Understanding scopes
 3. **[Security Best Practices](./07-security-best-practices.md)** - API key security
+4. **[MCP Browser Sign-in](./14-mcp-browser-sign-in.md)** - The other credential of the MCP server
 
 ---
 

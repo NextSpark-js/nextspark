@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
 │  └────────────────────────────────────────────────────┘ │
 │                          ▼                               │
 │  ┌────────────────────────────────────────────────────┐ │
-│  │  3. Rate Limiting (Per API Key/User)               │ │
+│  │  3. Rate Limiting (Per Address + Per Credential)   │ │
 │  │     Check limits → Return 429 if exceeded          │ │
 │  └────────────────────────────────────────────────────┘ │
 │                          ▼                               │
@@ -161,8 +161,9 @@ export async function GET(request: NextRequest) {
 - Returns unified auth object with user + scopes
 
 **3. Rate Limiter (`core/lib/api/rate-limit.ts`)**
-- Per-key/user rate limiting
-- Configurable limits per scope
+- Per client address, by the tier of the route
+- Per credential (API key or MCP connection), on top of it
+- Configurable limits per tier (`rateLimit.tiers`)
 
 **4. Entity Registry (`.nextspark/registries/entity-registry.ts`)**
 - Build-time entity configuration
@@ -271,12 +272,16 @@ API v1 supports **two authentication methods** that work seamlessly together:
 - Full dashboard permissions
 - No additional headers needed
 
+The [MCP server](./20-mcp-server.md) at `/api/mcp` is not part of API v1 and authenticates differently: it takes an
+API key or, when the project turns on MCP browser sign-in, an OAuth access token, and never a session. That token
+is not accepted by API v1.
+
 ### Authentication Flow
 
 ```typescript
 // Server automatically tries both methods:
-// 1. Check for session cookie → If valid, use session auth
-// 2. If no session, check Authorization header → If valid, use API key
+// 1. Check the Authorization / x-api-key header → If a valid API key, use API key auth
+// 2. Otherwise check the session cookie → If valid, use session auth
 // 3. If both fail → Return 401 Unauthorized
 
 // Example authentication flow. The route declares the scope it needs; an

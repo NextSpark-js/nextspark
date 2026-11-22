@@ -71,6 +71,18 @@ values on purpose: they list origins an operator chose.
 A Preview scope that sets `NEXT_PUBLIC_APP_URL` (a staging domain, for example) never reaches `VERCEL_URL`, by
 design: an explicit value always wins.
 
+MCP browser sign-in (`features.mcpOAuth`) publishes two URLs built from these variables, and a client refuses a
+token whose URLs do not match what it was told:
+
+| URL | Built from | Example |
+| --- | --- | --- |
+| The MCP resource: what access tokens are issued for, and the audience `/api/mcp` accepts | The origin of the app URL (`NEXT_PUBLIC_APP_URL`, then the preview `VERCEL_URL`, then localhost), the Next.js `basePath` and `/api/mcp`. `BETTER_AUTH_URL` is not used | `https://app.yourdomain.com/api/mcp` |
+| The issuer: the authorization server | The auth base URL above. A `BETTER_AUTH_URL` with a path of its own is the issuer as it is; without a path it is the origin, the `basePath` and `/api/auth` | `https://app.yourdomain.com/api/auth` |
+
+In production set both variables to the public https URL of the app. A deployment that leaves
+`NEXT_PUBLIC_APP_URL` unset in production publishes a localhost resource, and no client can connect. See
+[MCP browser sign-in deployment](./12-mcp-browser-sign-in.md).
+
 ### Database
 
 ```bash
@@ -123,6 +135,62 @@ EMAIL_FROM_NAME=Your App Name
 `EMAIL_FROM` and `EMAIL_FROM_NAME` are the sender of every email provider. A deployment that still sets `RESEND_FROM_EMAIL` / `RESEND_FROM_NAME` keeps working: those are read when the `EMAIL_FROM` variables are unset, and when both are set `EMAIL_FROM` wins.
 
 To send through SendGrid, Mailgun, SES, Postmark or your own server instead, set `EMAIL_PROVIDER=smtp` and the `SMTP_*` variables, and run `pnpm add nodemailer`: see `docs/06-authentication/13-email-providers.md`.
+
+### MCP Server
+
+```bash
+# The MCP endpoint, /api/mcp. In production it is OFF unless this is exactly 'true'.
+# In development it is on unless this is 'false'.
+MCP_ENABLED=true
+
+# Optional. Prefix of the tool names (app_list_tasks, ...). Default: app.
+# Lowercased, and every run of other characters becomes "_".
+# MCP_TOOL_PREFIX=app
+
+# Optional. Runtime switch of MCP browser sign-in. Only the exact value 'false' turns it off,
+# without a build. Unset, the feature is on when the project was built with it.
+# MCP_OAUTH_ENABLED=false
+```
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `MCP_ENABLED` | Development: on. Production: off | With the endpoint off, `/api/mcp` answers `404`, and so does everything of browser sign-in. |
+| `MCP_TOOL_PREFIX` | `app` | Prefix of every generated tool name. |
+| `MCP_OAUTH_ENABLED` | Unset (on, if built) | `false` switches MCP browser sign-in off at runtime: the discovery documents, the consent and team pages and the internal OAuth routes answer `404`, and `/api/mcp` takes an API key only. Any other value, or none, leaves it on. |
+
+`MCP_OAUTH_ENABLED` is not what turns the feature on. That is a build-time setting of the project,
+`features: { mcpOAuth: true }` in `nextspark.config.ts`, read by `nextspark prepare` (which `nextspark build` and
+`nextspark dev` run): without it the host has none of the OAuth routes and the variable has nothing to switch.
+A project may read the variable in its own `nextspark.config.ts` to decide the build flag (the repository's
+`apps/dev` does: `features: { mcpOAuth: process.env.MCP_OAUTH_ENABLED === 'true' }`); that is the project's choice,
+not something core does.
+
+One more setting of the feature is not an environment variable: the optional list of applications that may
+connect, `mcp.oauth.allowedClientHosts` in `config/app.config.ts`. See
+[MCP browser sign-in deployment](./12-mcp-browser-sign-in.md).
+
+### Rate Limiting (Upstash Redis)
+
+```bash
+# Optional, but needed for limits that hold across instances. BOTH are required:
+# with only one set, every limit is counted in the memory of each process.
+UPSTASH_REDIS_REST_URL=https://<your-database>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<token>
+```
+
+Core talks to Redis through Upstash's REST API only (`@upstash/redis`, `@upstash/ratelimit`). A `redis://`
+connection string is not supported: `REDIS_URL` is not read, and neither are the `KV_REST_API_URL` and
+`KV_REST_API_TOKEN` that Vercel's Marketplace creates (see
+[Vercel Deployment](./03-vercel-deployment.md#upstash-redis-from-vercels-marketplace)).
+
+With both variables set, every rate limit tier is counted in Redis: the per-address tiers and the per-credential
+tier (`credential`, 1000 requests a minute per API key or MCP connection). Without them each process counts on its
+own, which on a serverless platform or behind several instances multiplies every limit by the number of instances.
+When Redis is configured and fails, the limiter lets the request through; for the per-credential tier the count of
+the process still applies.
+
+`DISABLE_RATE_LIMITING=true` turns off the per-address tiers and Better Auth's sign-in, sign-up and one-time-code
+limits. It is for development and tests, never for production. It does not turn off the per-credential tier.
 
 ### Vercel Deployment
 
@@ -369,10 +437,17 @@ RESEND_API_KEY
 # Deployment (same across environments)
 VERCEL_TEAM
 VERCEL_PROJECT
+
+# Optional: MCP server and shared rate limits
+MCP_ENABLED                 # 'true' to serve /api/mcp in production
+MCP_TOOL_PREFIX
+MCP_OAUTH_ENABLED           # 'false' switches MCP browser sign-in off at runtime
+UPSTASH_REDIS_REST_URL      # both, or neither
+UPSTASH_REDIS_REST_TOKEN
 ```
 
 ---
 
-**Last Updated:** 2025-11-20  
-**Version:** 1.0.0  
+**Last Updated:** 2026-11-22  
+**Version:** 1.1.0  
 **Status:** In Development

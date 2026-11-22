@@ -1,19 +1,31 @@
 # Better Auth Integration
 
-This guide covers the complete Better Auth v1.3.5 configuration in NextSpark, including database setup, user model customization, email verification, password reset, and session management.
+This guide covers the complete Better Auth 1.7 configuration in NextSpark, including database setup, user model customization, email verification, password reset, and session management.
 
 ## Installation
 
-Better Auth is already included in the project:
+Better Auth is already included in the project. These are the ranges `packages/core/package.json` declares:
 
 ```json
 {
   "dependencies": {
-    "better-auth": "^1.3.5",
-    "pg": "^8.16.0"
+    "better-auth": "~1.7.27",
+    "@better-auth/core": "~1.7.27",
+    "@better-auth/oauth-provider": "~1.7.27",
+    "@better-auth/mcp": "~1.7.27",
+    "@better-auth/cimd": "~1.7.27",
+    "pg": "^8.16.3"
   }
 }
 ```
+
+A generated project declares the same `better-auth` range and pins `@better-fetch/fetch` to `1.3.3`, the exact
+version Better Auth pins.
+
+The four `@better-auth/*` packages are the OAuth provider plugins: they make the app an OAuth 2.1 authorization
+server for its own MCP endpoint. They are installed with core and registered only in a project that turns on
+[MCP browser sign-in](./14-mcp-browser-sign-in.md). The supported line of each dependency is kept in the
+[support matrix](../22-stability-and-support/02-support-matrix.md).
 
 ## Configuration Files
 
@@ -99,8 +111,8 @@ export const auth = betterAuth({
   // Advanced settings
   advanced: { /* ... */ },
   
-  // Plugins
-  plugins: [nextCookies()]
+  // Plugins (see "Plugins" below for the full list)
+  plugins: [/* ... */, nextCookies()]
 });
 ```
 
@@ -401,6 +413,34 @@ advanced: {
 
 ## Plugins
 
+`core/lib/auth.ts` registers these plugins, in this order:
+
+| Plugin | When | Purpose |
+|---|---|---|
+| `registrationGuardPlugin()` | Always | Applies the registration mode to sign-ups |
+| `emailOTP()` | When an email provider is usable at runtime | One-time code by email |
+| `magicLink()` | When an email provider is usable at runtime | Sign-in link by email |
+| `mcpOAuthPlugins()` | Only with MCP browser sign-in on (`features.mcpOAuth`, and not `MCP_OAUTH_ENABLED=false`) | The OAuth 2.1 authorization server of the MCP endpoint |
+| `accountThemePlugin()` | Always | The account's saved theme in a readable cookie |
+| `nextCookies()` | Always, last | Next.js cookie handling |
+
+### OAuth Provider Plugins (MCP browser sign-in)
+
+`mcpOAuthPlugins()` (`core/lib/mcp/oauth/plugins.ts`) returns no plugin while the feature is off, so nothing is
+mounted and no table is touched. When it is on it returns four:
+
+- `jwt()` from `better-auth/plugins`: signs the access tokens (EdDSA keys in the table `jwks`, rotated every 30 days).
+- `mcp()` from `@better-auth/mcp`: the OAuth provider bound to the MCP resource. Authorization code with PKCE and
+  refresh token; access tokens valid for 10 minutes.
+- `cimd()` from `@better-auth/cimd`: lets a client identify itself with a Client ID Metadata Document.
+- `consentWithinRolePlugin()`, the project's own: holds a consent to what the user's role can hold, and applies the
+  list of accepted applications.
+
+They add the endpoints under `/api/auth/oauth2/*` and `/api/auth/jwks`, and they need migration
+`048_oauth_provider.sql`. This is the app acting as an authorization server; it is unrelated to
+`socialProviders`, where the app is a client of Google and others. See
+[MCP Browser Sign-in](./14-mcp-browser-sign-in.md).
+
 ### Next.js Cookies Plugin
 
 Required for Next.js cookie handling:
@@ -626,6 +666,7 @@ advanced: {
 1. **[OAuth Providers](./03-oauth-providers.md)** - Set up Google, GitHub, Microsoft and Apple sign-in
 2. **[Session Management](./05-session-management.md)** - Deep dive into sessions
 3. **[Security Best Practices](./07-security-best-practices.md)** - Security implementation
+4. **[MCP Browser Sign-in](./14-mcp-browser-sign-in.md)** - The OAuth provider plugins in use
 
 ---
 

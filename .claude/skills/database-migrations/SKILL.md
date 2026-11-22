@@ -6,7 +6,7 @@ description: |
   Use this skill when creating migrations, validating SQL, or generating sample data.
   For the RUNTIME RLS model (service pool, nextspark_app cutover, fail-closed) see rls-enforcement.
 allowed-tools: Read, Glob, Grep, Bash(python:*)
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Database Migrations Skill
@@ -302,6 +302,66 @@ BEFORE UPDATE ON public."entity"
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 ```
 
+## Authorization Invariants as Triggers (the lesson of migration 048)
+
+`packages/core/migrations/048_oauth_provider.sql` adds the tables of the OAuth authorization server behind MCP
+browser sign-in (see the `mcp-server` skill). Those rows are written by a library, Better Auth, from several of
+its own endpoints and in separate statements (a token renewal reads the old token, marks it replaced, then
+writes the new one). Core's code is not on those paths.
+
+**Rule: when a library writes the rows, an authorization invariant over them is a trigger with a row lock, not
+application code.** A check in a service or a route holds only for the paths you wrote. Examples from 048:
+
+| Invariant | How |
+|-----------|-----|
+| A refresh token exists only while its connection's consent does, and holds no more than it | `BEFORE INSERT` trigger that reads the consent row `FOR SHARE`: raises when there is none, cuts `NEW.scopes` down otherwise |
+| A consent that loses a scope takes it from the live tokens and refuses what was issued | `AFTER UPDATE OF scopes` trigger |
+| A consent removed ends its connection for good | `AFTER DELETE` trigger that records a revocation and deletes the tokens |
+| A changed password or a suspension ends every connection of the user | `AFTER UPDATE OF password` on `account`, `AFTER UPDATE OF role` on `users`, each with a `WHEN` clause |
+| One consent per connection | Unique index `uq_oauth_consent_connection` on `("userId", "clientId", "referenceId")` |
+
+What makes it correct under concurrency is the **lock**, not the trigger alone: the insert's `FOR SHARE` on the
+consent row and the delete or update of that same row wait for each other, so a renewal in flight and a
+disconnection can only happen in one order or the other. Decide which row orders the two writers and lock it
+in both.
+
+How to write one:
+
+```sql
+-- Idempotent: the file can be applied again without effect
+CREATE OR REPLACE FUNCTION public.require_oauth_consent_for_refresh_token()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER              -- runs whatever role wrote the row
+SET search_path = public      -- always with SECURITY DEFINER
+AS $$ ... $$;
+
+DROP TRIGGER IF EXISTS oauth_refresh_token_requires_consent ON public."oauthRefreshToken";
+CREATE TRIGGER oauth_refresh_token_requires_consent
+  BEFORE INSERT ON public."oauthRefreshToken"
+  FOR EACH ROW
+  EXECUTE FUNCTION public.require_oauth_consent_for_refresh_token();
+```
+
+- `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`,
+  `DROP TRIGGER IF EXISTS` + `CREATE TRIGGER`, `DROP POLICY IF EXISTS` + `CREATE POLICY`.
+- Narrow the trigger with `UPDATE OF <column>` and a `WHEN (...)` clause so it does not fire on unrelated writes.
+- Know how the library reacts to a raised exception before you raise: 048 cuts a token down instead of refusing
+  it because refusing after the old token was marked replaced would leave the connection with no token.
+- **Service-only RLS on library-owned tables.** The library reads and writes them with no user context, so every
+  policy is `FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls())`.
+  Core reads them on the service connection (see `rls-enforcement`).
+- **Test it against a real PostgreSQL**, with two connections to prove the lock ordering
+  (`packages/core/tests/node/oauth-connections-pg.test.ts`, see `jest-unit`). A unit test with mocked queries runs
+  no trigger.
+
+### One migration file per feature, until it is published
+
+While a feature is unreleased, everything it needs stays in its one migration file: 048 changed in several
+commits of its branch, and the branch adds no other migration and changes no existing one. Once a migration is published
+(merged and released, so projects may have applied it), **never edit it**: a change goes in a new migration.
+Editing a published file changes nothing on databases that already ran it.
+
 ## Naming Conventions
 
 | Convention | Example |
@@ -334,6 +394,13 @@ CREATE OR REPLACE FUNCTION public.get_auth_user_id()...
 
 -- ❌ NEVER: Business logic in DB triggers
 CREATE FUNCTION calculate_order_totals()...
+-- (An authorization invariant over rows a library writes is not business logic: it belongs in a trigger.
+--  See "Authorization Invariants as Triggers".)
+
+-- ❌ NEVER: Edit a published migration
+-- ✅ CORRECT: A new migration file
+
+-- ❌ NEVER: CREATE TRIGGER without DROP TRIGGER IF EXISTS, or CREATE FUNCTION without OR REPLACE
 ```
 
 ## Checklist
@@ -353,3 +420,7 @@ Before finalizing a migration:
 - [ ] Appropriate RLS policies for access pattern
 - [ ] Required indexes created
 - [ ] Sample data uses `ON CONFLICT` clause
+- [ ] The file can be applied twice without error or effect (`IF NOT EXISTS`, `OR REPLACE`, `DROP ... IF EXISTS`)
+- [ ] An invariant over rows a library writes is a trigger with a row lock, tested against a real PostgreSQL
+- [ ] Library-owned tables have service-only RLS policies
+- [ ] No published migration was edited; an unpublished feature keeps a single migration file

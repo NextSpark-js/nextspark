@@ -20,6 +20,7 @@ Everything else is **internal**, even if the exports map lets you import it.
 - A public subpath is exported by the package for as long as the major lasts. A test (`tests/node/public-api.test.ts`) fails if an entry stops resolving to a built file through the exports map.
 - A stable template cannot import a subpath that is not on the list, or build a core specifier at runtime: the same test fails and names the file and the subpath. Adding the subpath to the list is how a template makes it part of the contract. It also fails when a `template-import` entry is no longer imported by any stable template.
 - A public subpath that belongs to an **experimental surface** (billing, scheduled actions, testing helpers) follows the experimental rule until that surface is stable: no guarantee, changes in a minor with a changelog note. Those rows are marked *experimental*.
+- The same holds for a part of a public subpath that an experimental surface added. MCP browser sign-in added `features.mcpOAuth` to `./lib/config/nextspark-types`, the `mcp.oauth` block to `./lib/config/types`, and the `oauth` field to the `DualAuthResult` that `./lib/api/auth/dual-auth` returns (an OAuth connection is carried as `type: 'api-key'` with that field): those follow the experimental rule. In `./lib/api/rate-limit`, `apiKeyRateLimitResponse` is kept, and `credentialRateLimitResponse` and the built-in `credential` tier are new.
 - `./proxy` and `./instrumentation` are the request proxy and server startup. Their exports (`proxy`, `createProxy` and its options, `register`) are the contract; what they do inside (cookie names, the session hint, the order of the checks) is core's to change, like any behaviour behind a public function, and changes with a changelog note.
 
 ## What internal means
@@ -30,7 +31,7 @@ An internal subpath may change or disappear in a minor release, with no deprecat
 - the testing selectors and helpers, except `./selectors` and `./lib/selectors/selector-factory`;
 - the devtools components;
 - the built-in billing gateways and the webhook handlers (`lib/billing/stripe-webhook` and `polar-webhook` still resolve for one more minor; the webhook extension types are exported from `./lib/billing/config-types`);
-- `lib/mcp`;
+- `lib/mcp`, with `lib/mcp/oauth` (MCP browser sign-in) and `lib/api/auth/in-process-principal`;
 - the proxy plumbing behind `./proxy`: `lib/middleware`, `lib/auth/session-hint` and `lib/docs/access` (public up to 0.1.0-beta.197; the release after it made the scaffold's `proxy.ts` a facade over `./proxy`);
 - any `lib/*`, `components/*`, `hooks/*` or `utils/*` subpath not on the list.
 

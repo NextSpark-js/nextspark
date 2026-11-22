@@ -2,10 +2,11 @@
 
 ## Introduction
 
-Testing ensures code quality, prevents regressions, and builds confidence in deployments. Our testing strategy uses **Jest for unit tests** and **Cypress for E2E tests**, providing comprehensive coverage from individual functions to complete user flows.
+Testing ensures code quality, prevents regressions, and builds confidence in deployments. Our testing strategy uses **Jest for unit tests** and **Cypress for E2E tests**, providing comprehensive coverage from individual functions to complete user flows. Core also has **`node:test` suites** (`packages/core/tests/node`), many of which run against a real PostgreSQL server they start themselves.
 
 **Current Status:** ✅ Testing infrastructure is complete with:
 - Jest unit testing with coverage reporting
+- `node:test` suites in core, with a throwaway PostgreSQL cluster for the rules the database holds
 - Cypress E2E testing with theme-level isolation
 - Tag-based test filtering with @cypress/grep
 - Tag validation system with opt-in per theme
@@ -156,6 +157,30 @@ pnpm --filter @nextsparkjs/core test:watch
 - ts-jest for TypeScript
 - React Testing Library for components
 - jsdom environment for DOM testing
+
+### node:test (Node and PostgreSQL suites of core)
+
+```bash
+# Every node:test suite of core, from the repository root
+pnpm --filter @nextsparkjs/core test:node
+
+# One file, from packages/core
+npx tsx --test tests/node/oauth-connections-pg.test.ts
+
+# Jest and node:test together, from packages/core
+pnpm test:all
+```
+
+**Runner:** `node:test` through `tsx` (`test:node` is `npx tsx --test tests/node/*.test.ts`). These suites are not part of `pnpm test:core`.
+
+**Test Location:** `packages/core/tests/node/*.test.ts`
+
+**Key Features:**
+- Real modules, no Jest mocks: real Better Auth, the real migration runner, real route handlers
+- The suites that need a database start a throwaway PostgreSQL cluster, apply core's migrations to it from nothing and remove it when they end
+- They need `initdb`, `pg_ctl` and `postgres` on the `PATH`, and are **skipped** without them: a run that reports `skipped` has not checked the database rules
+
+See [Integration Testing](./07-integration-testing.md#postgresql-integration-tests-in-core-testsnode).
 
 ### Cypress (E2E Testing)
 
@@ -370,6 +395,14 @@ pnpm --filter @nextsparkjs/core test:coverage      # Coverage report
 pnpm test:core -- docs/docs-registry.test.ts   # Specific file
 ```
 
+### node:test Commands
+
+```bash
+pnpm --filter @nextsparkjs/core test:node                                  # Every node:test suite of core
+cd packages/core && npx tsx --test tests/node/oauth-connections-pg.test.ts  # One file
+cd packages/core && pnpm test:all                                          # Jest, then node:test
+```
+
 ### Cypress Commands
 
 ```bash
@@ -390,14 +423,15 @@ This testing section covers:
 4. **[Testing API Endpoints](./04-testing-api-endpoints.md)** - API testing strategies
 5. **[Mocking Strategies](./05-mocking-strategies.md)** - Mocks and stubs
 6. **[Test Data Management](./06-test-data-management.md)** - Test fixtures and factories
-7. **[Integration Testing](./07-integration-testing.md)** - Integration test patterns
+7. **[Integration Testing](./07-integration-testing.md)** - Integration test patterns, and core's PostgreSQL tests (`tests/node`)
 8. **[Test Coverage](./08-test-coverage.md)** - Coverage analysis and goals
 9. **[Tag Validation System](./09-tag-validation-system.md)** - Tag management and CI validation
 10. **[CI Workflow Templates](./10-ci-workflows.md)** - Automated testing workflows
 11. **[Allure Reporting](./11-allure-reporting.md)** - Rich HTML test reports
+12. **[Verifying the Shared Rate Limit with Redis](./12-shared-rate-limit-verification.md)** - The per-credential limit against a real deployment
 
 ---
 
-**Last Updated:** 2025-12-13
-**Version:** 2.1.0
+**Last Updated:** 2026-11-22
+**Version:** 2.2.0
 **Status:** Complete

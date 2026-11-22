@@ -1,10 +1,13 @@
 /**
  * MCP endpoint — POST /api/mcp (Streamable HTTP, stateless JSON mode).
  *
- * Auth: API key ONLY (Authorization: Bearer sk_... or x-api-key). Session
- * cookies are rejected — this endpoint is for MCP clients, not browsers.
- * authenticateRequest runs ONCE here; the resolved identity, team context and
- * api_key id travel to every tool via ToolExecutionContext.
+ * Auth: one of two credentials, never both in a request (400 when both are presented). An API key
+ * (Authorization: Bearer sk_... or x-api-key), as always. Or, in a project built with `features.mcpOAuth`, an OAuth
+ * access token from MCP browser sign-in (#541): a request that presents no API key is handed to the OAuth resource
+ * server (lib/mcp/oauth/resource-server), which answers 401 with the challenge that tells a client where to sign
+ * in. Session cookies are not a credential here — this endpoint is for MCP clients, not browsers.
+ * The credential is resolved ONCE here; the identity, team context and credential id travel to every tool via
+ * ToolExecutionContext.
  *
  * Tools and overrides are entirely registry-driven: every access.api-enabled
  * entity in ENTITY_REGISTRY becomes a set of tools automatically, and any
@@ -14,11 +17,12 @@
  * Security posture:
  * - kill-switch: MCP_ENABLED (dev: on unless 'false'; production: OFF unless 'true')
  * - Origin validated when present (DNS-rebinding protection); no CORS reflection
- * - rate limit: tier 'api' — with the in-process executor this is the ONLY
- *   rate limit on the whole MCP surface (deploy prerequisite: Redis)
+ * - rate limits: tier 'api' per address on this route, and tier 'credential' per API key or MCP connection, counted
+ *   here and again by each API handler a tool calls in-process. Both are shared between instances only with Redis
+ *   configured (UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN)
  * - team-role permissions + scopes + ownership/field guards come from the
  *   real generic entity handlers the executor calls in-process (#94/#95)
- * - every tool call is audited to api_audit_log
+ * - every tool call that reaches its handler is audited to api_audit_log, and so is one refused for a missing scope
  */
 
 import { NextRequest, NextResponse } from 'next/server'

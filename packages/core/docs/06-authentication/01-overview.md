@@ -1,12 +1,13 @@
 # Authentication Overview
 
-NextSpark implements a comprehensive authentication system powered by Better Auth v1.3.5, providing multiple authentication methods, session management, and secure API access for both internal and external clients.
+NextSpark implements a comprehensive authentication system powered by Better Auth 1.7 (`better-auth` `~1.7.27` in `packages/core/package.json`), providing multiple authentication methods, session management, and secure API access for both internal and external clients.
 
 ## Technology Stack
 
 ### Core Authentication
 
-- **Better Auth v1.3.5** - Modern authentication library with built-in security features
+- **Better Auth 1.7** (`~1.7.27`) - Modern authentication library with built-in security features
+- **Better Auth OAuth provider plugins** (`@better-auth/oauth-provider`, `@better-auth/mcp`, `@better-auth/cimd`, `@better-auth/core`, all `~1.7.27`) - Make the app an OAuth 2.1 authorization server for its own MCP endpoint. Registered only when a project turns on MCP browser sign-in
 - **PostgreSQL** - User data and session storage via Supabase
 - **Resend** - Transactional email service for verification and password resets
 - **Next.js Middleware** - Route protection and authentication checks
@@ -18,6 +19,9 @@ NextSpark implements a comprehensive authentication system powered by Better Aut
 - **Google OAuth** - Social authentication with automatic profile mapping; part of the default preset
 - **Email/Password** - Traditional authentication with email verification (opt-in via `auth.methods`)
 - **API Keys** - Scope-based authentication for external API clients
+- **OAuth access tokens for MCP clients** - Issued by the app itself to an MCP application the user approves; accepted at `/api/mcp` only (opt-in via `features.mcpOAuth`). See [MCP Browser Sign-in](./14-mcp-browser-sign-in.md)
+
+The first four are ways a person signs in and gets a session. The last two are credentials a program presents.
 
 The login methods a project offers are configured per theme with `auth.methods`
 (default: the **passwordless preset** `['email-otp', 'google']` — no password
@@ -25,7 +29,9 @@ field). See [Passwordless Preset](./12-passwordless-preset.md).
 
 ## Dual Authentication Architecture
 
-The system implements two distinct authentication mechanisms working in parallel:
+The web application and the REST API (`/api/v1`) implement two distinct authentication mechanisms working in
+parallel: sessions and API keys. A third credential, the OAuth access token, exists for one endpoint only, the MCP
+server, and only in a project that turns it on; it is described after the two.
 
 ### 1. Session-Based Authentication (Dashboard)
 
@@ -72,8 +78,38 @@ Grant access based on scope permissions
 - Scope-based permissions (e.g., `tasks:read`, `users:write`)
 - Hashed storage for security
 - Constant-time comparison to prevent timing attacks
-- Per-key rate limiting
-- Expiration and rotation support
+- Per-key rate limiting (1000 requests per minute per key; shared between instances when Redis is configured)
+- Optional expiration, and rotation support
+- Not bound to a team: each request names its team
+
+### 3. OAuth Access Tokens (MCP clients, opt-in)
+
+Used by an MCP application, such as an AI assistant, that a user connects from the application's own interface.
+Available only when the project sets `features: { mcpOAuth: true }`.
+
+```text
+MCP client calls /api/mcp with no credential
+    ↓
+401 with a challenge: where to sign in, which scopes to ask for
+    ↓
+User signs in, chooses a team, approves the permissions (consent)
+    ↓
+The app issues an access token (JWT, 10 minutes) and a rotating refresh token
+    ↓
+On every request: token verified, then user, team membership and consent read again
+    ↓
+Access granted for what the consent holds and the user's role allows
+```
+
+**Key Features:**
+- The app is the OAuth 2.1 authorization server and the resource server
+- Accepted at `/api/mcp` only, never at `/api/v1`
+- One team per connection
+- The user chooses the permissions; the server holds them to the user's role
+- Listed, narrowed and ended in Settings > Security > Connected applications
+
+This is different from **Google OAuth** below, where the app is the *client* of an external provider and the
+result is a browser session. See [MCP Browser Sign-in](./14-mcp-browser-sign-in.md).
 
 ## Authentication Methods
 
@@ -233,7 +269,7 @@ type UserFlag =
 ### Permission Flow
 
 ```text
-Request → Authenticate (Session or API Key)
+Request → Authenticate (Session or API Key; at /api/mcp, API Key or OAuth access token)
     ↓
 Load user role + flags
     ↓
@@ -251,11 +287,12 @@ Grant/Deny access
 - Better Auth validates credentials
 - Session management with secure cookies
 - API key validation with timing attack prevention
+- OAuth access token verification at `/api/mcp` (signature, issuer, audience, expiry), when MCP browser sign-in is on
 
 ### Layer 2: Authorization
 
 - Role-based access control (RBAC)
-- Scope-based API key permissions
+- Scope-based permissions for API keys and MCP connections
 - User flags for granular control
 
 ### Layer 3: Database Row-Level Security (RLS)
@@ -404,6 +441,12 @@ async function validateApiKey(key: string) {
 - **Duration**: Rotating keys recommended
 - **Features**: Audit logging, revocation
 
+### AI Assistants and Other MCP Clients
+
+- **Method**: An API key, or MCP browser sign-in (OAuth 2.1) when the project turns it on
+- **Duration**: A key does not expire by default; an OAuth access token lives 10 minutes and is renewed by the client
+- **Features**: One team per connection, per-entity consent, connected applications, audit logging
+
 ## Next Steps
 
 1. **[Better Auth Integration](./02-better-auth-integration.md)** - Detailed Better Auth configuration
@@ -414,6 +457,7 @@ async function validateApiKey(key: string) {
 6. **[Security Best Practices](./07-security-best-practices.md)** - Security implementation
 7. **[Testing Authentication](./08-testing-authentication.md)** - Testing strategies
 8. **[Extensible Roles](./09-extensible-roles.md)** - Theme role extension system
+9. **[MCP Browser Sign-in](./14-mcp-browser-sign-in.md)** - The app as an OAuth 2.1 authorization server for its MCP endpoint
 
 ---
 

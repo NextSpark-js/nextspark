@@ -146,6 +146,30 @@ describe('utils', () => {
 
 ---
 
+## What the Coverage Report Does Not Include
+
+`pnpm --filter @nextsparkjs/core test:coverage` is `jest --coverage`: it measures the lines of `src/**/*.{ts,tsx}`
+that the Jest suites execute. Two kinds of checks are outside it.
+
+**The `node:test` suites.** The files in `packages/core/tests/node` run with `tsx`, not Jest, so what they execute
+adds nothing to the report. A module can show low Jest coverage and still be exercised there, and the reverse.
+
+**Rules that live in the database.** A trigger, a policy, a unique index or a lock is SQL in a migration, not a
+line of TypeScript, so no coverage number describes it. The Jest suites of the modules that rely on such rules
+mock the queries: they can reach 100% of the module's lines while the trigger they depend on is never run. The
+case of MCP browser sign-in:
+
+| Code | Jest (in the report) | What checks the database rule |
+| --- | --- | --- |
+| `src/lib/mcp/oauth/connection-store.ts`, `purge.ts` | `tests/jest/lib/mcp/oauth/connections.test.ts`, `purge.test.ts`, with the queries mocked | `tests/node/oauth-connections-pg.test.ts`: 18 cases against a real PostgreSQL with migration 048 applied |
+| `src/lib/api/rate-limit.ts` (`credentialRateLimitResponse`) | `tests/jest/lib/api/credential-rate-limit.test.ts`, with the shared store mocked | A run against a deployment with a real Redis, by hand |
+
+Read a coverage number for these modules as "the TypeScript was executed", not as "the rule holds". See
+[Integration Testing](./07-integration-testing.md#mcp-browser-sign-in-oauth-connections-pgtestts) and
+[Verifying the shared rate limit with Redis](./12-shared-rate-limit-verification.md).
+
+---
+
 ## What NOT to Test
 
 ### Skip Low-Value Tests

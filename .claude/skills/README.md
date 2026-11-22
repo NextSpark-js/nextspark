@@ -1,6 +1,6 @@
 # Claude Code Skills
 
-This directory contains **53 skills** that provide Claude Code with specialized knowledge about this codebase.
+This directory contains **54 skills** that provide Claude Code with specialized knowledge about this codebase.
 
 ---
 
@@ -13,7 +13,7 @@ This directory contains **53 skills** that provide Claude Code with specialized 
 | 3 | [anthropics-skill-creator](./anthropics-skill-creator/) | Create, improve and measure Claude skills | Tooling |
 | 4 | [api-bypass-layers](./api-bypass-layers/) | Multi-layer security architecture for admin bypass | Auth |
 | 5 | [asana-integration](./asana-integration/) | Asana task management integration | Integration |
-| 6 | [better-auth](./better-auth/) | Better Auth: session, OAuth, API keys | Auth |
+| 6 | [better-auth](./better-auth/) | Better Auth: session, OAuth, API keys, OAuth authorization server (MCP) | Auth |
 | 7 | [billing-subscriptions](./billing-subscriptions/) | Stripe billing, subscriptions, usage tracking | Auth |
 | 8 | [block-decision-matrix](./block-decision-matrix/) | Decision framework for blocks (new/variant/existing) | Blocks |
 | 9 | [clickup-integration](./clickup-integration/) | ClickUp task management integration | Integration |
@@ -34,39 +34,40 @@ This directory contains **53 skills** that provide Claude Code with specialized 
 | 24 | [jest-unit](./jest-unit/) | Jest unit testing patterns | Testing |
 | 25 | [jira-integration](./jira-integration/) | Jira project management integration | Integration |
 | 26 | [media-library](./media-library/) | WordPress-style media management system | Backend |
-| 27 | [mock-analysis](./mock-analysis/) | Patterns for analyzing HTML/CSS mocks | Blocks |
-| 28 | [monorepo-architecture](./monorepo-architecture/) | Package structure and dependencies | Architecture |
-| 29 | [nextjs-api-development](./nextjs-api-development/) | Next.js API routes and dual auth | Backend |
-| 30 | [notion-integration](./notion-integration/) | Notion knowledge management integration | Integration |
-| 31 | [npm-development-workflow](./npm-development-workflow/) | **CRITICAL:** Dual-mode testing workflow (monorepo + npm) | Architecture |
-| 32 | [page-builder-blocks](./page-builder-blocks/) | Page builder block development | Blocks |
-| 33 | [permissions-system](./permissions-system/) | RBAC + Features + Quotas permission model | Auth |
-| 34 | [plugins](./plugins/) | Plugin development and lifecycle hooks | Infrastructure |
-| 35 | [pom-patterns](./pom-patterns/) | Page Object Model testing patterns | Testing |
-| 36 | [rate-limiting](./rate-limiting/) | Distributed rate limiting (Redis) for endpoints | Backend |
-| 37 | [react-best-practices](./react-best-practices/) | React/Next.js performance optimization | Frontend |
-| 38 | [react-patterns](./react-patterns/) | React patterns and TanStack Query | Frontend |
-| 39 | [registry-system](./registry-system/) | Auto-generated registries system | Architecture |
-| 40 | [rls-enforcement](./rls-enforcement/) | Runtime RLS: service pool, nextspark_app cutover, fail-closed | Database |
-| 41 | [scheduled-actions](./scheduled-actions/) | Background task processing, webhooks, cron | Backend |
-| 42 | [scope-enforcement](./scope-enforcement/) | Session scope validation (core/theme/plugins) | Workflow |
-| 43 | [server-actions](./server-actions/) | Next.js Server Actions for mutations | Backend |
-| 44 | [service-layer](./service-layer/) | Service layer architecture patterns | Backend |
-| 45 | [session-management](./session-management/) | Claude Code session files and workflow | Workflow |
-| 46 | [shadcn-components](./shadcn-components/) | shadcn/ui component patterns | Frontend |
-| 47 | [shadcn-theming](./shadcn-theming/) | shadcn/ui theme customization | Frontend |
-| 48 | [suspense-loading](./suspense-loading/) | Suspense and loading.tsx patterns | Frontend |
-| 49 | [tailwind-theming](./tailwind-theming/) | Tailwind CSS v4 theming system | Frontend |
-| 50 | [tanstack-query](./tanstack-query/) | TanStack Query data fetching | Frontend |
-| 51 | [test-coverage](./test-coverage/) | Test coverage metrics and registry system | Testing |
-| 52 | [web-design-guidelines](./web-design-guidelines/) | Web Interface Guidelines review | Frontend |
-| 53 | [zod-validation](./zod-validation/) | Zod schema validation patterns | Backend |
+| 27 | [mcp-server](./mcp-server/) | The app's MCP server (`/api/mcp`), MCP browser sign-in (OAuth 2.1) | Backend |
+| 28 | [mock-analysis](./mock-analysis/) | Patterns for analyzing HTML/CSS mocks | Blocks |
+| 29 | [monorepo-architecture](./monorepo-architecture/) | Package structure and dependencies | Architecture |
+| 30 | [nextjs-api-development](./nextjs-api-development/) | Next.js API routes and dual auth | Backend |
+| 31 | [notion-integration](./notion-integration/) | Notion knowledge management integration | Integration |
+| 32 | [npm-development-workflow](./npm-development-workflow/) | **CRITICAL:** Dual-mode testing workflow (monorepo + npm) | Architecture |
+| 33 | [page-builder-blocks](./page-builder-blocks/) | Page builder block development | Blocks |
+| 34 | [permissions-system](./permissions-system/) | RBAC + Features + Quotas permission model | Auth |
+| 35 | [plugins](./plugins/) | Plugin development and lifecycle hooks | Infrastructure |
+| 36 | [pom-patterns](./pom-patterns/) | Page Object Model testing patterns | Testing |
+| 37 | [rate-limiting](./rate-limiting/) | Distributed rate limiting (Redis) for endpoints | Backend |
+| 38 | [react-best-practices](./react-best-practices/) | React/Next.js performance optimization | Frontend |
+| 39 | [react-patterns](./react-patterns/) | React patterns and TanStack Query | Frontend |
+| 40 | [registry-system](./registry-system/) | Auto-generated registries system | Architecture |
+| 41 | [rls-enforcement](./rls-enforcement/) | Runtime RLS: service pool, nextspark_app cutover, fail-closed | Database |
+| 42 | [scheduled-actions](./scheduled-actions/) | Background task processing, webhooks, cron | Backend |
+| 43 | [scope-enforcement](./scope-enforcement/) | Session scope validation (core/theme/plugins) | Workflow |
+| 44 | [server-actions](./server-actions/) | Next.js Server Actions for mutations | Backend |
+| 45 | [service-layer](./service-layer/) | Service layer architecture patterns | Backend |
+| 46 | [session-management](./session-management/) | Claude Code session files and workflow | Workflow |
+| 47 | [shadcn-components](./shadcn-components/) | shadcn/ui component patterns | Frontend |
+| 48 | [shadcn-theming](./shadcn-theming/) | shadcn/ui theme customization | Frontend |
+| 49 | [suspense-loading](./suspense-loading/) | Suspense and loading.tsx patterns | Frontend |
+| 50 | [tailwind-theming](./tailwind-theming/) | Tailwind CSS v4 theming system | Frontend |
+| 51 | [tanstack-query](./tanstack-query/) | TanStack Query data fetching | Frontend |
+| 52 | [test-coverage](./test-coverage/) | Test coverage metrics and registry system | Testing |
+| 53 | [web-design-guidelines](./web-design-guidelines/) | Web Interface Guidelines review | Frontend |
+| 54 | [zod-validation](./zod-validation/) | Zod schema validation patterns | Backend |
 
 ---
 
 ## Statistics
 
-- **Total Skills:** 53
+- **Total Skills:** 54
 - **Categories:** 10
 
 ---
@@ -92,6 +93,7 @@ This directory contains **53 skills** that provide Claude Code with specialized 
 | `zod-validation` | Input validation | API/form validation |
 | `scheduled-actions` | Background tasks, webhooks | Async processing |
 | `rate-limiting` | Distributed rate limiting (Redis) | New/secured endpoints |
+| `mcp-server` | The app's MCP server, MCP browser sign-in (OAuth) | Changing `/api/mcp`, `lib/mcp/`, OAuth consent/connections, migration 048 |
 | `media-library` | Media management system | File upload/browse/select |
 
 ### Database
@@ -168,7 +170,7 @@ This directory contains **53 skills** that provide Claude Code with specialized 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
 | `anthropics-skill-creator` | Create/improve/measure skills | Authoring or optimizing a skill |
-| `anthropics-mcp-builder` | Build MCP servers | Creating an MCP server |
+| `anthropics-mcp-builder` | Build MCP servers | Creating an MCP server for another service (the app's own: `mcp-server`) |
 
 ---
 

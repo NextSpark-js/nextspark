@@ -19,7 +19,7 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | Generated host: root-first layout, generated and git-ignored `src/app`, facades of `@nextsparkjs/core/routes/*` | The only host. The host conformance suite runs in CI. |
 | Cache Components with PPR | The default rendering mode. In a project with a catch-all page (a `[slug]` route), an unknown public URL answers `200` with `noindex`; a 404 is available as a project recipe. |
 | Entities: config, generated CRUD, `/api/v1`, metadata, child entities | Conditional on the security review gate (G1). |
-| Auth: email one-time code, Google OAuth, API keys | Conditional on G1 and G2. The one-time code prints to the console only in development. Built on Better Auth 1.7 (`~1.7.7`, see [Support matrix](./02-support-matrix.md)). |
+| Auth: email one-time code, Google OAuth, API keys | Conditional on G1 and G2. The one-time code prints to the console only in development. Built on Better Auth 1.7 (`~1.7.27`, see [Support matrix](./02-support-matrix.md)). These are the ways a person or a program authenticates to the app and to `/api/v1`. MCP browser sign-in, where the app is itself an OAuth authorization server for its MCP endpoint, is a separate, experimental surface: see below. |
 | Teams, RLS, permissions | Conditional on G1. |
 | Page builder: block structure and public rendering | The dashboard editor is experimental, see below. |
 | `definePlugin` and the plugin system | The first-party plugins are experimental, see below. |
@@ -54,7 +54,8 @@ This page lists which parts of NextSpark are **stable**, **experimental** or **d
 | Scheduled actions | See [Scheduled actions](../20-scheduled-actions/01-overview.md). |
 | `nextspark skills` | The offline skill catalog of the CLI. |
 | Billing (Stripe, Polar) | The create flow defaults to the `free` plan. See [Billing](../19-billing/01-overview.md). |
-| MCP server | MCP enabled by default in every web project is not part of 1.0. See [MCP server](../05-api/20-mcp-server.md). |
+| MCP server | `/api/mcp`, with tools generated from the entity registry and an API key as the credential. In production it is off unless `MCP_ENABLED=true`. MCP enabled by default in every web project is not part of 1.0. See [MCP server](../05-api/20-mcp-server.md). |
+| MCP browser sign-in (OAuth 2.1) | Opt-in and off by default: `features: { mcpOAuth: true }` in `nextspark.config.ts`, and `MCP_OAUTH_ENABLED=false` switches it off at runtime. With it the app is the authorization server of its own MCP endpoint (Better Auth's OAuth provider, `~1.7.27`), and a client connects by signing in through the browser, bound to one team and to the permissions the user consents to. Run by hand against Claude (web, desktop and mobile); **not run against ChatGPT's hosted client**. **No production gate**: the framework does not refuse to start when the database connection owns the tables (RLS without effect) or when there is no Redis for the shared rate limit; the [deployment checklist](../14-deployment/12-mcp-browser-sign-in.md) is the operator's to follow. The rules it keeps in the database have a `node:test` suite that the CI workflows run against a real PostgreSQL (`tests/node/oauth-connections-pg.test.ts`); no CI job connects a real client. The config keys (`features.mcpOAuth`, `mcp.oauth.allowedClientHosts`), the routes, the tables of migration 048 and `lib/mcp` may change in a minor. |
 | First-party plugins: `ai`, `amplitude`, `langchain`, `marketplace-payments`, `social-media-publisher`, `walkme` | `definePlugin` itself is stable. |
 | Templates `blog`, `crm`, `productivity` | See [Project themes](../07-theme-system/01-introduction.md). |
 | AI workflow: `@nextsparkjs/ai-workflow`, `setup:ai`, `sync:ai` | Legacy, opt-in. |

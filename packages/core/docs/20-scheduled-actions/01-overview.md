@@ -75,6 +75,17 @@ Unlike in-process job queues, Scheduled Actions use an external cron trigger bec
 
 On a host that keeps processes running you can instead run the optional pg-boss worker as a second process; see [Worker (pg-boss)](./07-worker.md).
 
+### Housekeeping That Is Not a Scheduled Action
+
+Not every periodic cleanup in core goes through this system. The purge of what MCP browser sign-in leaves behind
+(expired access and refresh tokens, client assertions, team selections, old revocations, retired signing keys) is
+not a scheduled action and needs neither the cron endpoint nor the worker: `purgeExpiredOAuthIfDue()` in
+`lib/mcp/oauth/purge` runs where tokens are issued, at most once an hour per process, removes at most 2000 rows of
+each kind per run (`FOR UPDATE SKIP LOCKED`, so several instances do not wait for each other) and never fails the
+token being issued. The signing keys of that feature also rotate on their own, every 30 days. There is nothing to
+register or schedule for either. See
+[MCP Browser Sign-In Deployment](../14-deployment/12-mcp-browser-sign-in.md#operations).
+
 ## Database Schema
 
 The `scheduled_actions` table stores all scheduled tasks:
