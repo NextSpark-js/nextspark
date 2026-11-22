@@ -4,13 +4,18 @@
  *
  * A connection is a client acting for a user in one team. It is alive while it has a refresh token that is neither
  * revoked nor expired; rotation replaces that token, so the newest live one says what the connection can do and when
- * it last renewed. Ending it deletes its refresh tokens: the trigger of migration 048 records the revocation, which
- * is what refuses the access tokens already issued (lib/mcp/oauth/revocation), and the consent is removed so that
- * connecting again asks again.
+ * it last renewed. Ending it removes its consent and its refresh tokens: the trigger of migration 048 records the
+ * revocation, which is what refuses the access tokens already issued (lib/mcp/oauth/revocation), and connecting
+ * again asks for consent again.
+ *
+ * Who may see and end the connections of a team's other members is a team permission (MANAGE_CONNECTIONS), decided
+ * as every other one is: by the role's permissions, which a project can extend, and by `teams.appRoleBypass`.
  *
  * Service connection: these are the authorization server's tables, which no user role reads.
  */
-import { query, queryOne, queryRows } from '../../db'
+import { query, queryOne, queryRows, withServiceTransaction } from '../../db'
+import { hasTeamPermission } from '../../permissions/app-role-bypass'
+import type { Permission } from '../../permissions/types'
 import { entityScope } from './scope-names'
 
 export interface OAuthConnection {
@@ -92,60 +97,81 @@ const CONNECTIONS = `
    WHERE rt.revoked IS NULL AND rt."expiresAt" > now()`
 const NEWEST_FIRST = `ORDER BY rt."userId", rt."clientId", rt."referenceId", rt."createdAt" DESC`
 
+/** The team permission that lets a member see and end the other members' connections to the team. */
+export const MANAGE_CONNECTIONS = 'settings.integrations' as Permission
+
 /** The user's own live connections. */
 export async function userConnections(userId: string): Promise<OAuthConnection[]> {
   const rows = await queryRows<ConnectionRow>(`${CONNECTIONS} AND rt."userId" = $1 ${NEWEST_FIRST}`, [userId])
   return rows.map(toConnection)
 }
 
-/**
- * Other members' live connections to the teams this user owns or administers. A connection acts with its user's
- * role in the team, so whoever runs the team sees which applications reach its data and can end them.
- */
-export async function managedConnections(userId: string): Promise<OAuthConnection[]> {
-  const rows = await queryRows<ConnectionRow>(
-    `${CONNECTIONS} AND rt."userId" <> $1
-       AND rt."referenceId" IN (SELECT "teamId" FROM "team_members" WHERE "userId" = $1 AND role IN ('owner', 'admin'))
-     ${NEWEST_FIRST}`,
+/** The teams in which the user holds MANAGE_CONNECTIONS. `appRole` is the user's role in the app (users.role). */
+async function managedTeams(userId: string, appRole: string | null | undefined): Promise<string[]> {
+  const memberships = await queryRows<{ teamId: string; role: string }>(
+    `SELECT "teamId", role FROM "team_members" WHERE "userId" = $1`,
     [userId]
+  )
+  return memberships.filter(membership => hasTeamPermission(appRole, membership.role, MANAGE_CONNECTIONS)).map(membership => membership.teamId)
+}
+
+/**
+ * Other members' live connections to the teams in which this user holds MANAGE_CONNECTIONS. A connection acts with
+ * its user's role in the team, so whoever manages the team's integrations sees which applications reach its data
+ * and can end them.
+ */
+export async function managedConnections(userId: string, appRole: string | null | undefined): Promise<OAuthConnection[]> {
+  const teams = await managedTeams(userId, appRole)
+  if (!teams.length) return []
+  const rows = await queryRows<ConnectionRow>(
+    `${CONNECTIONS} AND rt."userId" <> $1 AND rt."referenceId" = ANY($2::text[]) ${NEWEST_FIRST}`,
+    [userId, teams]
   )
   return rows.map(toConnection)
 }
 
-/** Whether the user owns or administers the team. */
-export async function managesTeam(userId: string, teamId: string): Promise<boolean> {
+/** Whether the user holds MANAGE_CONNECTIONS in the team. */
+export async function managesTeam(userId: string, appRole: string | null | undefined, teamId: string): Promise<boolean> {
   const row = await queryOne<{ role: string }>(
-    `SELECT role FROM "team_members" WHERE "userId" = $1 AND "teamId" = $2 AND role IN ('owner', 'admin')`,
+    `SELECT role FROM "team_members" WHERE "userId" = $1 AND "teamId" = $2`,
     [userId, teamId]
   )
-  return Boolean(row)
+  return hasTeamPermission(appRole, row?.role ?? null, MANAGE_CONNECTIONS)
 }
 
 /**
- * Ends the connection of `clientId` for `userId` in `teamId`: its refresh tokens are deleted, which the database
- * records as a revocation that refuses the access tokens already issued, and its consent is removed. False when
- * there was nothing to end.
+ * Ends the connection of `clientId` for `userId` in `teamId`: its consent and its refresh tokens are removed, which
+ * the database records as a revocation that refuses the access tokens already issued. False when there was nothing
+ * to end.
  *
- * Deleted, not marked revoked: the authorization server takes a revoked refresh token presented again for a stolen
- * one and ends every connection of that client for the user, in every team. The application that was disconnected
- * will try its token once more; with the token gone that attempt is an unknown token and touches nothing else.
+ * In one transaction, the consent first. A refresh token can only be written for a connection that has its consent
+ * (migration 048, require_oauth_consent_for_refresh_token, which locks the consent row): a renewal in flight either
+ * writes its new token before the consent goes, and the token is removed here with the rest, or finds no consent and
+ * is refused. No renewal that races with this leaves a live token behind.
+ *
+ * The tokens are deleted, not marked revoked: the authorization server takes a revoked refresh token presented again
+ * for a stolen one and ends every connection of that client for the user, in every team. The application that was
+ * disconnected will try its token once more; with the token gone that attempt is an unknown token and touches
+ * nothing else.
  */
-export async function disconnect(userId: string, clientId: string, teamId: string): Promise<boolean> {
-  const tokens = await queryRows<{ live: boolean }>(
-    `DELETE FROM "oauthRefreshToken"
-      WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3
-      RETURNING (revoked IS NULL AND "expiresAt" > now()) AS live`,
-    [userId, clientId, teamId]
-  )
-  const consents = await queryRows<{ id: string }>(
-    `DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3 RETURNING id`,
-    [userId, clientId, teamId]
-  )
-  const live = tokens.some(token => token.live)
-  // A consent with no live refresh token (a client that asked for no offline access): no trigger ran, and its
-  // access token is still good for minutes. Record the revocation that refuses it.
-  if (!live && consents.length) {
-    await query(`INSERT INTO "oauthRevocation" ("userId", "clientId", "teamId") VALUES ($1, $2, $3)`, [userId, clientId, teamId])
-  }
-  return live || consents.length > 0
+export function disconnect(userId: string, clientId: string, teamId: string): Promise<boolean> {
+  return withServiceTransaction(async () => {
+    const consents = await queryRows<{ id: string }>(
+      `DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3 RETURNING id`,
+      [userId, clientId, teamId]
+    )
+    const tokens = await queryRows<{ live: boolean }>(
+      `DELETE FROM "oauthRefreshToken"
+        WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3
+        RETURNING (revoked IS NULL AND "expiresAt" > now()) AS live`,
+      [userId, clientId, teamId]
+    )
+    const live = tokens.some(token => token.live)
+    // No live refresh token went (a client that asked for no offline access, or one whose renewal was refused at
+    // this moment): no trigger ran, and an access token may still be good for minutes. Record the revocation.
+    if (!live && (consents.length || tokens.length)) {
+      await query(`INSERT INTO "oauthRevocation" ("userId", "clientId", "teamId") VALUES ($1, $2, $3)`, [userId, clientId, teamId])
+    }
+    return live || consents.length > 0
+  })
 }

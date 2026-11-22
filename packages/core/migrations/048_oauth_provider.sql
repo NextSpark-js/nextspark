@@ -297,9 +297,47 @@ BEGIN
   END IF;
   PERFORM public.purge_oauth_revocations(target);
   INSERT INTO public."oauthRevocation" ("userId") VALUES (target);
+  -- The consents go first: a refresh being rotated at this moment cannot write its new token without one
+  -- (require_oauth_consent_for_refresh_token), so none survives what follows. Every application asks again.
+  DELETE FROM public."oauthConsent" WHERE "userId" = target;
   UPDATE public."oauthRefreshToken" SET revoked = now() WHERE "userId" = target AND revoked IS NULL;
   RETURN NEW;
 END $$;
+
+-- ============================================
+-- A refresh token only for a connection that is consented to
+-- ============================================
+-- Ending a connection (lib/mcp/oauth/connections, and the function above) removes its consent and its refresh
+-- tokens. A refresh in flight at that moment has already replaced its old token and is about to write the new one:
+-- written after the tokens were removed, it would be a live token for a connection that was ended. This makes the
+-- two exclude each other. The new token takes a share lock on the consent row, which the removal of that row waits
+-- for (the token is then written first and removed with the rest), or which waits for the removal and then finds
+-- no consent (the token is refused). A token with no team is not an MCP grant and is left alone.
+CREATE OR REPLACE FUNCTION public.require_oauth_consent_for_refresh_token()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW."referenceId" IS NULL THEN
+    RETURN NEW;
+  END IF;
+  PERFORM 1 FROM public."oauthConsent"
+    WHERE "userId" = NEW."userId" AND "clientId" = NEW."clientId" AND "referenceId" = NEW."referenceId"
+    FOR SHARE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'oauth connection ended: no consent for client % in team %', NEW."clientId", NEW."referenceId"
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS oauth_refresh_token_requires_consent ON public."oauthRefreshToken";
+CREATE TRIGGER oauth_refresh_token_requires_consent
+  BEFORE INSERT ON public."oauthRefreshToken"
+  FOR EACH ROW
+  EXECUTE FUNCTION public.require_oauth_consent_for_refresh_token();
 
 DROP TRIGGER IF EXISTS oauth_revoke_on_password_change ON public."account";
 CREATE TRIGGER oauth_revoke_on_password_change

@@ -322,20 +322,22 @@ How it behaves:
 - **The user chooses the permissions.** A connecting client is told to ask for every scope some tool of the server
   uses. The consent screen lists them as one row per entity with read, write and delete: reading and writing come
   ticked, deleting does not, and what the user's role cannot hold cannot be ticked. Only what stays ticked is
-  granted. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
+  granted, and the server holds the grant to what the role can hold whatever the browser sends. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
   missing.
 - **Access tokens** are JWTs for `/api/mcp` only and live ten minutes; refresh tokens rotate.
 - **Ending a connection.** Revoking it, a reused refresh token, a changed password and a suspended account end
-  access on the next call, on every instance. Signing out of the browser does not disconnect an application.
+  access on the next call, on every instance. After a changed password or a suspension every application asks for
+  consent again. Signing out of the browser does not disconnect an application.
 - **Connected applications.** Settings > Security lists the user's connections (application, team, permissions,
-  dates) with a button to disconnect each. An owner or admin of a team also sees, and can end, the other members'
-  connections to that team.
+  dates) with a button to disconnect each. A member who holds the team permission `settings.integrations` (owner
+  and admin by default) also sees, and can end, the other members' connections to that team.
 - **Audit.** Every tool call is a row of `api_audit_log` (`mcp:<tool>`) with the status the API answered. A call
   refused for a missing scope is recorded too, as a 403 with the scopes it lacked. The value of an argument whose
   key names a secret (password, token, API key) is replaced before it is stored.
 - **Signing keys** rotate every 30 days; the replaced key stays published for 30 more.
-- **Housekeeping.** Expired and replaced tokens, old revocations and retired keys are purged when tokens are
-  issued, at most once an hour per process. No job has to be set up.
+- **Housekeeping.** Expired tokens, old revocations and retired keys are purged when tokens are issued, at most
+  once an hour per process and a bounded number of rows per run. No job has to be set up.
+- **Batches.** A request may batch at most 50 JSON-RPC messages when it comes with an access token.
 - **Rate limit.** A connection may send 1000 requests a minute (tier `credential` of `rateLimit.tiers`), the limit
   an API key has. It is counted in Redis when `UPSTASH_REDIS_REST_URL` is set, so every instance shares the count;
   without Redis each process counts on its own, which on serverless is close to no limit.

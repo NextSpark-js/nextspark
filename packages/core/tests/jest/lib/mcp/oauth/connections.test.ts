@@ -1,10 +1,21 @@
 const mockQuery = jest.fn();
 const mockQueryOne = jest.fn();
 const mockQueryRows = jest.fn();
+const mockTransaction = jest.fn(async (fn: () => Promise<unknown>) => fn());
 jest.mock('@/core/lib/db', () => ({
   query: (...args: unknown[]) => mockQuery(...args),
   queryOne: (...args: unknown[]) => mockQueryOne(...args),
   queryRows: (...args: unknown[]) => mockQueryRows(...args),
+  withServiceTransaction: (fn: () => Promise<unknown>) => mockTransaction(fn),
+}));
+// The permission decision of the framework, with a project's own role in it: `curator` manages integrations,
+// `admin` had the permission taken away, and the app role `developer` skips team permissions
+const mockHasTeamPermission = jest.fn((appRole: string | null | undefined, teamRole: string | null | undefined, permission: string) => {
+  if (!teamRole || permission !== 'settings.integrations') return false;
+  return appRole === 'developer' || ['owner', 'curator'].includes(teamRole);
+});
+jest.mock('@/core/lib/permissions/app-role-bypass', () => ({
+  hasTeamPermission: (...args: [string | null | undefined, string | null | undefined, string]) => mockHasTeamPermission(...args),
 }));
 
 import { disconnect, managedConnections, managesTeam, userConnections } from '@/core/lib/mcp/oauth/connections';
@@ -78,47 +89,80 @@ describe('the applications connected by MCP browser sign-in (#541)', () => {
     expect((await userConnections('user-1')).map(connection => connection.scopes)).toEqual([[], ['tasks:read']]);
   });
 
-  it('who owns or administers a team sees the other members\' connections to it, not their own again', async () => {
-    await managedConnections('user-1');
-    const [sql, params] = mockQueryRows.mock.calls[0];
-    expect(sql).toMatch(/rt\."userId" <> \$1/);
-    expect(sql).toMatch(/rt\."referenceId" IN \(SELECT "teamId" FROM "team_members" WHERE "userId" = \$1 AND role IN \('owner', 'admin'\)\)/);
-    expect(params).toEqual(['user-1']);
+  it('other members\' connections are listed for the teams whose integrations the user manages, by the permission and not by a role name', async () => {
+    mockQueryRows
+      .mockResolvedValueOnce([{ teamId: 'team-owner', role: 'owner' }, { teamId: 'team-curator', role: 'curator' }, { teamId: 'team-admin', role: 'admin' }, { teamId: 'team-member', role: 'member' }])
+      .mockResolvedValueOnce([row({ userId: 'user-2', teamId: 'team-curator' })]);
+    const managed = await managedConnections('user-1', 'member');
+    expect(managed.map(connection => connection.teamId)).toEqual(['team-curator']);
+    const [sql, params] = mockQueryRows.mock.calls[1];
+    expect(sql).toMatch(/rt\."userId" <> \$1 AND rt\."referenceId" = ANY\(\$2::text\[\]\)/);
+    // a project's own role that holds the permission counts; `admin` without it does not
+    expect(params).toEqual(['user-1', ['team-owner', 'team-curator']]);
+    expect(sql).not.toMatch(/'owner'|'admin'/);
   });
 
-  it('managing a team is owning or administering it', async () => {
-    mockQueryOne.mockResolvedValueOnce({ role: 'admin' }).mockResolvedValueOnce(null);
-    expect(await managesTeam('user-1', 'team-1')).toBe(true);
-    expect(await managesTeam('user-2', 'team-1')).toBe(false);
-    expect(mockQueryOne.mock.calls[0][0]).toMatch(/role IN \('owner', 'admin'\)/);
+  it('an app role that skips team permissions manages every team it is a member of', async () => {
+    mockQueryRows.mockResolvedValueOnce([{ teamId: 'team-member', role: 'member' }]).mockResolvedValueOnce([]);
+    await managedConnections('user-dev', 'developer');
+    expect(mockQueryRows.mock.calls[1][1]).toEqual(['user-dev', ['team-member']]);
+  });
+
+  it('a user who manages no team is asked for nothing more', async () => {
+    mockQueryRows.mockResolvedValueOnce([{ teamId: 'team-member', role: 'member' }]);
+    expect(await managedConnections('user-1', 'member')).toEqual([]);
+    expect(mockQueryRows).toHaveBeenCalledTimes(1);
+  });
+
+  it('managing a team is holding the permission in it: not for a non-member, whatever the app role', async () => {
+    mockQueryOne.mockResolvedValueOnce({ role: 'curator' }).mockResolvedValueOnce({ role: 'admin' }).mockResolvedValueOnce(null);
+    expect(await managesTeam('user-1', 'member', 'team-1')).toBe(true);
+    expect(await managesTeam('user-2', 'member', 'team-1')).toBe(false);
+    expect(await managesTeam('user-3', 'developer', 'team-1')).toBe(false);
+    expect(mockHasTeamPermission).toHaveBeenLastCalledWith('developer', null, 'settings.integrations');
   });
 });
 
 describe('ending a connection (#541)', () => {
-  it('deletes its refresh tokens, for that user, client and team only, and removes its consent', async () => {
-    mockQueryRows.mockResolvedValueOnce([{ live: false }, { live: true }]).mockResolvedValueOnce([{ id: 'consent-1' }]);
+  const sqlOf = (call: unknown[]) => String(call[0]).replace(/\s+/g, ' ');
+
+  it('removes its consent and then its refresh tokens, for that user, client and team only, in one transaction', async () => {
+    mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockResolvedValueOnce([{ live: false }, { live: true }]);
     expect(await disconnect('user-1', CLIENT, 'team-1')).toBe(true);
-    const [revoke, consent] = mockQueryRows.mock.calls;
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    const [consent, tokens] = mockQueryRows.mock.calls;
+    // the consent first: a renewal in flight needs it to write its new token (migration 048), so it either wrote
+    // the token already, and the next statement removes it, or it is refused
+    expect(sqlOf(consent)).toMatch(/^DELETE FROM "oauthConsent" WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3/);
+    expect(sqlOf(tokens)).toMatch(/^DELETE FROM "oauthRefreshToken" WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3 RETURNING/);
     // deleted and not marked revoked: a revoked token presented again would end the client's other connections
-    expect(revoke[0]).toMatch(/DELETE FROM "oauthRefreshToken"\s+WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3\s+RETURNING/);
-    expect(revoke[0]).not.toMatch(/UPDATE/);
-    expect(revoke[1]).toEqual(['user-1', CLIENT, 'team-1']);
-    expect(consent[0]).toMatch(/DELETE FROM "oauthConsent" WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3/);
+    expect(sqlOf(tokens)).not.toMatch(/UPDATE/);
     expect(consent[1]).toEqual(['user-1', CLIENT, 'team-1']);
+    expect(tokens[1]).toEqual(['user-1', CLIENT, 'team-1']);
     // the trigger of migration 048 recorded the revocation for the live token deleted: none is written here
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('a consent with no live refresh token gets its revocation written, so its access token is refused too', async () => {
-    mockQueryRows.mockResolvedValueOnce([{ live: false }]).mockResolvedValueOnce([{ id: 'consent-1' }]);
-    expect(await disconnect('user-1', CLIENT, 'team-1')).toBe(true);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
-    expect(mockQuery.mock.calls[0][0]).toMatch(/INSERT INTO "oauthRevocation" \("userId", "clientId", "teamId"\)/);
-    expect(mockQuery.mock.calls[0][1]).toEqual(['user-1', CLIENT, 'team-1']);
+  it('when no live refresh token went, the revocation is written here, so an access token still out is refused', async () => {
+    // a consent alone (no offline access), and tokens that were all replaced already (a renewal refused in flight)
+    for (const [consents, tokens] of [[[{ id: 'consent-1' }], []], [[{ id: 'consent-1' }], [{ live: false }]], [[], [{ live: false }]]] as const) {
+      jest.clearAllMocks();
+      mockQueryRows.mockResolvedValueOnce([...consents]).mockResolvedValueOnce([...tokens]);
+      await disconnect('user-1', CLIENT, 'team-1');
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+      expect(mockQuery.mock.calls[0][0]).toMatch(/INSERT INTO "oauthRevocation" \("userId", "clientId", "teamId"\)/);
+      expect(mockQuery.mock.calls[0][1]).toEqual(['user-1', CLIENT, 'team-1']);
+    }
   });
 
   it('answers false when there was nothing to end', async () => {
     expect(await disconnect('user-1', CLIENT, 'team-1')).toBe(false);
     expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('a failure rolls the whole of it back: the error leaves the transaction', async () => {
+    mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockRejectedValueOnce(new Error('connection lost'));
+    await expect(disconnect('user-1', CLIENT, 'team-1')).rejects.toThrow('connection lost');
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
   });
 });

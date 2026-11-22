@@ -70,7 +70,29 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
   }
 }
 
-const SECRET_KEY = /pass(word|phrase)?|secret|token|api[-_]?key|authorization|credential|private[-_]?key/i
+// Words that name a secret wherever they appear in a key
+const SECRET_WORDS = new Set(['password', 'passwd', 'passphrase', 'secret', 'secrets', 'authorization', 'credential', 'credentials', 'bearer', 'otp', 'pin', 'cvv', 'cvc', 'ssn'])
+// `key` and `token` name a secret by their place: `apiKey`, `privateKey`, `accessToken`, `token`, but not
+// `tokenCount` or `keyResults`
+const KEY_QUALIFIERS = new Set(['api', 'private', 'access', 'secret', 'signing', 'encryption', 'auth', 'session'])
+const AFTER_TOKEN = new Set(['value', 'hash', 'secret'])
+
+/** `accessToken`, `access_token` and `access-token` as their words: access, token. */
+function wordsOf(key: string): string[] {
+  return key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+}
+
+/** Whether a key names a secret, by its words: `password`, `clientSecret`, `apiKey`, `refresh_token`; not `tokenCount` or `secretaryName`. */
+export function namesSecret(key: string): boolean {
+  const words = wordsOf(key)
+  return words.some((word, index) => {
+    if (SECRET_WORDS.has(word)) return true
+    const next = words[index + 1]
+    if (word === 'token' || word === 'tokens') return next === undefined || AFTER_TOKEN.has(next)
+    if (word === 'key') return index > 0 && KEY_QUALIFIERS.has(words[index - 1])
+    return false
+  })
+}
 
 /**
  * The arguments with the value of every key that names a secret replaced, at any depth: the audit trail is read by
@@ -82,7 +104,7 @@ export function redactSecrets(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, inner]) => [
       key,
-      SECRET_KEY.test(key) && inner !== null && inner !== undefined ? '[redacted]' : redactSecrets(inner),
+      namesSecret(key) && inner !== null && inner !== undefined ? '[redacted]' : redactSecrets(inner),
     ])
   )
 }

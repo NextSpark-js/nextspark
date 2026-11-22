@@ -1,6 +1,6 @@
 /**
  * /api/internal/oauth-connections (#541): the signed-in user lists and ends their own MCP connections, and those of
- * other members only in a team they own or administer.
+ * other members only in a team whose integrations they manage.
  */
 import { NextRequest } from 'next/server'
 
@@ -33,7 +33,7 @@ const del = (body: unknown) =>
 beforeEach(() => {
   jest.clearAllMocks()
   enabled.mockReturnValue(true)
-  getSession.mockResolvedValue({ user: { id: 'user-1' }, session: { id: 'session-1' } })
+  getSession.mockResolvedValue({ user: { id: 'user-1', role: 'member' }, session: { id: 'session-1' } })
   connections.userConnections.mockResolvedValue([{ clientId: 'client-a', teamId: 'team-1' }])
   connections.managedConnections.mockResolvedValue([{ clientId: 'client-b', teamId: 'team-1', userId: 'user-2' }])
   connections.managesTeam.mockResolvedValue(false)
@@ -65,7 +65,7 @@ describe('/api/internal/oauth-connections', () => {
       managed: [{ clientId: 'client-b', teamId: 'team-1', userId: 'user-2' }],
     })
     expect(connections.userConnections).toHaveBeenCalledWith('user-1')
-    expect(connections.managedConnections).toHaveBeenCalledWith('user-1')
+    expect(connections.managedConnections).toHaveBeenCalledWith('user-1', 'member')
   })
 
   it('ends the user\'s own connection without asking who runs the team', async () => {
@@ -77,7 +77,7 @@ describe('/api/internal/oauth-connections', () => {
   it('refuses another member\'s connection to a team the user does not run, as if it did not exist', async () => {
     const response = await del({ clientId: 'client-b', teamId: 'team-1', userId: 'user-2' })
     expect(response.status).toBe(404)
-    expect(connections.managesTeam).toHaveBeenCalledWith('user-1', 'team-1')
+    expect(connections.managesTeam).toHaveBeenCalledWith('user-1', 'member', 'team-1')
     expect(connections.disconnect).not.toHaveBeenCalled()
   })
 

@@ -1,0 +1,96 @@
+/**
+ * The consent screen of MCP browser sign-in (#541): what it sends is what stayed ticked, and when it cannot learn
+ * what the user's role allows it asks for no entity permission.
+ */
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+const SEARCH = new URLSearchParams({
+  client_id: 'https://client.example/meta',
+  scope: 'openid offline_access tasks:read tasks:write tasks:delete customers:read',
+  code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+})
+jest.mock('next/navigation', () => ({ useSearchParams: () => SEARCH }))
+const consent = jest.fn()
+jest.mock('@/core/lib/auth-client', () => ({
+  authClient: {
+    oauth2: {
+      publicClient: jest.fn().mockResolvedValue({ data: { client_name: 'Client' } }),
+      consent: (...args: unknown[]) => consent(...args),
+    },
+  },
+}))
+jest.mock('@/core/lib/base-path', () => ({ withBasePath: (path: string) => path }))
+
+import { OAuthConsent } from '@/core/components/auth/OAuthConsent'
+
+const box = (entity: string, action: string) => document.querySelector(`[data-cy=oauth-consent-${entity}-${action}]`) as HTMLButtonElement
+const checked = (entity: string, action: string) => box(entity, action).getAttribute('aria-checked') === 'true'
+const allow = () => document.querySelector('[data-cy=oauth-consent-allow]') as HTMLButtonElement
+const sentScope = () => (consent.mock.calls[0][0] as { scope?: string }).scope
+
+const teamResponse = (allowed: string[]) => ({
+  ok: true,
+  json: async () => ({ data: [{ id: 'team-1', name: 'One' }], selected: 'team-1', allowed }),
+})
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  consent.mockResolvedValue({ data: null, error: { message: 'stay on the page' } })
+})
+
+describe('OAuthConsent', () => {
+  it('reading and writing come ticked, deleting does not, and what the role cannot hold cannot be ticked', async () => {
+    global.fetch = jest.fn().mockResolvedValue(teamResponse(['tasks:read', 'tasks:write', 'tasks:delete'])) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    expect([checked('tasks', 'read'), checked('tasks', 'write'), checked('tasks', 'delete')]).toEqual([true, true, false])
+    expect(box('tasks', 'delete').disabled).toBe(false)
+    // customers:read is not among what the role holds: unticked and locked
+    expect(checked('customers', 'read')).toBe(false)
+    expect(box('customers', 'read').disabled).toBe(true)
+  })
+
+  it('sends exactly what stayed ticked, with the scopes that are not entity permissions', async () => {
+    global.fetch = jest.fn().mockResolvedValue(teamResponse(['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read'])) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    fireEvent.click(box('tasks', 'write')) // untick
+    fireEvent.click(box('tasks', 'delete')) // tick
+    await act(async () => { fireEvent.click(allow()) })
+    expect(consent).toHaveBeenCalledWith({ accept: true, scope: 'openid offline_access tasks:read tasks:delete customers:read' })
+  })
+
+  it('cannot be accepted while what the role allows is still loading', () => {
+    global.fetch = jest.fn().mockReturnValue(new Promise(() => {})) as never
+    render(<OAuthConsent />)
+    expect(allow().disabled).toBe(true)
+    expect(box('tasks', 'read').disabled).toBe(true)
+  })
+
+  it('an HTTP error reading what the role allows leaves no entity permission to grant', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => ({}) }) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    await act(async () => { fireEvent.click(allow()) })
+    expect(sentScope()).toBe('openid offline_access')
+  })
+
+  it('a network error reading what the role allows leaves no entity permission to grant either', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    expect([checked('tasks', 'read'), checked('tasks', 'write')]).toEqual([false, false])
+    await act(async () => { fireEvent.click(allow()) })
+    expect(sentScope()).toBe('openid offline_access')
+  })
+
+  it('a refusal sends no scope', async () => {
+    global.fetch = jest.fn().mockResolvedValue(teamResponse(['tasks:read'])) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    await act(async () => { fireEvent.click(document.querySelector('[data-cy=oauth-consent-deny]') as HTMLButtonElement) })
+    expect(consent).toHaveBeenCalledWith({ accept: false })
+    expect(screen.queryByRole('alert')).not.toBeNull()
+  })
+})

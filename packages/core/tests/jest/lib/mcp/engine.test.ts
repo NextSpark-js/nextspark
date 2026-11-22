@@ -465,6 +465,17 @@ describe('the audit trail of what did not succeed (#541)', () => {
     expect(Object.keys(result).sort()).toEqual(['content', 'isError']);
   });
 
+  it('a generated tool whose API call throws is recorded as a 500 too', async () => {
+    const executor: EntityExecutor = jest.fn().mockRejectedValue(new Error('pool exhausted'));
+    const audit = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const result = await callTool(engine, 'acme_get_customer', { id: 'c-1' });
+    expect(result.isError).toBe(true);
+    expect(audit.mock.calls[0][0]).toMatchObject({ tool: 'acme_get_customer', statusCode: 500 });
+    (console.error as jest.Mock).mockRestore();
+  });
+
   it('a handler that throws is recorded as a 500', async () => {
     const executor: EntityExecutor = jest.fn();
     const audit = jest.fn().mockResolvedValue(undefined);

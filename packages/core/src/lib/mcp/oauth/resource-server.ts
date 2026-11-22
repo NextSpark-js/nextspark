@@ -136,6 +136,9 @@ function rfcResourceMetadataUrl(): string {
   return `${resource.origin}/.well-known/oauth-protected-resource${resource.pathname}`
 }
 
+/** The most JSON-RPC messages one request may batch on the OAuth path. */
+export const MAX_BATCH_MESSAGES = 50
+
 /** `missing`: what the call needs and was not granted. `ask`: what the client is told to authorize for. */
 function insufficientScope(missing: string[], ask: string[]): NextResponse {
   const response = jsonRpcError(403, -32003, `This connection was not granted: ${missing.join(', ')}.`)
@@ -175,6 +178,11 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
         body = await verified.json()
       } catch {
         return jsonRpcError(400, -32700, 'Parse error: body must be JSON-RPC')
+      }
+
+      // A batch is bounded: every message of one costs work, and a refused one a row of the audit trail per call
+      if (Array.isArray(body) && body.length > MAX_BATCH_MESSAGES) {
+        return jsonRpcError(400, -32600, `Invalid Request: a batch holds at most ${MAX_BATCH_MESSAGES} messages`)
       }
 
       const ctx: ToolExecutionContext = {

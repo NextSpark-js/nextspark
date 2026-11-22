@@ -3,7 +3,7 @@ jest.mock('@/core/lib/db', () => ({
   mutateWithRLS: (...args: unknown[]) => mockMutateWithRLS(...args),
 }));
 
-import { auditToolCall, redactSecrets } from '@/core/lib/mcp/audit';
+import { auditToolCall, namesSecret, redactSecrets } from '@/core/lib/mcp/audit';
 import type { AuditEntry } from '@/core/lib/mcp/types';
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
@@ -123,6 +123,16 @@ describe('what the audit trail keeps of a call (#541)', () => {
       nested: { access_token: '[redacted]', list: [{ clientSecret: '[redacted]', label: 'ok' }] },
       authorization: null,
     });
+  });
+
+  it('a key names a secret by its words, not by a run of letters inside it', () => {
+    for (const key of ['password', 'newPassword', 'passwordHash', 'clientSecret', 'client_secret', 'apiKey', 'api-key', 'API_KEY', 'privateKey', 'accessToken', 'access_token', 'refreshToken', 'token', 'tokenHash', 'Authorization', 'bearer', 'otp', 'otpCode', 'pin', 'cvv', 'ssn', 'credentials']) {
+      expect([key, namesSecret(key)]).toEqual([key, true]);
+    }
+    // fields an entity may well have
+    for (const key of ['tokenCount', 'tokenLimit', 'tokensUsed', 'secretaryName', 'keyResults', 'key', 'keyword', 'pinned', 'spinner', 'passenger', 'name', 'authorId', 'description']) {
+      expect([key, namesSecret(key)]).toEqual([key, false]);
+    }
   });
 
   it('arguments are written redacted', async () => {

@@ -14,13 +14,15 @@ jest.mock('@/core/lib/db', () => ({
 jest.mock('@/core/lib/auth', () => ({ auth: { api: { getSession: jest.fn(async () => null) } } }))
 
 const redis = {
+  // the `credential` tier as rateLimit.tiers of app.config leaves it
+  tier: { limit: 1000, windowMs: 60_000 },
   configured: false,
   check: jest.fn<(identifier: string, tier: string) => Promise<{ success: boolean; remaining: number; reset: number; limit?: number }>>(),
 }
 jest.mock('@/core/lib/rate-limit-redis', () => ({
   checkRateLimit: (identifier: string, tier: string) => redis.check(identifier, tier),
   maybeRedisConfigured: () => redis.configured,
-  getRateLimitTierConfig: () => ({ limit: 1000, windowMs: 60_000 }),
+  getRateLimitTierConfig: () => redis.tier,
 }))
 
 import { NextRequest } from 'next/server'
@@ -35,6 +37,7 @@ const over = () => ({ success: false, remaining: 0, reset: Date.now() + 30_000, 
 beforeEach(() => {
   jest.clearAllMocks()
   redis.configured = false
+  redis.tier = { limit: 1000, windowMs: 60_000 }
   redis.check.mockResolvedValue(allowed())
 })
 
@@ -87,5 +90,16 @@ describe('the per-credential limit', () => {
     const results: Array<number | null> = []
     for (let i = 0; i < 5; i++) results.push((await credentialRateLimitResponse(request(), credential('key-two-instances')))?.status ?? null)
     expect(results).toEqual([null, null, null, 429, 429])
+  })
+
+  it('without Redis the count of the process follows the tier a project configures, below and above the default', async () => {
+    redis.tier = { limit: 2, windowMs: 60_000 }
+    const lowered: Array<number | null> = []
+    for (let i = 0; i < 3; i++) lowered.push((await credentialRateLimitResponse(request(), credential('key-tier-lowered')))?.status ?? null)
+    expect(lowered).toEqual([null, null, 429])
+
+    redis.tier = { limit: 1500, windowMs: 60_000 }
+    rateLimitCache.set(getCacheKey('rate_limit', 'key-tier-raised'), { count: 1200, resetTime: Date.now() + 60_000 }, 60_000)
+    expect(await credentialRateLimitResponse(request(), credential('key-tier-raised'))).toBeNull()
   })
 })

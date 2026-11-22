@@ -84,7 +84,9 @@ const apiKeyChecks = new WeakMap<Request, RateLimitResult>();
 export function apiKeyRateLimitResponse(request: Request, auth: ApiKeyAuth): NextResponse | null {
   let result = apiKeyChecks.get(request);
   if (!result) {
-    result = checkRateLimit(auth.keyId);
+    // The numbers of the `credential` tier (1000 a minute unless rateLimit.tiers says otherwise), as the shared count
+    const { limit, windowMs } = getRateLimitTierConfig('credential');
+    result = checkRateLimit(auth.keyId, limit, windowMs);
     apiKeyChecks.set(request, result);
   }
   return result.allowed ? null : credentialLimitExceeded(request, result);

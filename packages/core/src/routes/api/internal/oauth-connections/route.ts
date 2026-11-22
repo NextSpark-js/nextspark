@@ -1,8 +1,8 @@
 /**
  * The applications connected by MCP browser sign-in (#541), for the signed-in user. GET: the user's own
- * connections and, as `managed`, other members' connections to the teams the user owns or administers. DELETE ends
- * one, named by its client and team: the user's own, or with `userId` another member's in a team the user owns or
- * administers. Session only: it is the app's own settings screen. 404 while MCP_OAUTH_ENABLED is off.
+ * connections and, as `managed`, other members' connections to the teams whose integrations the user manages (the
+ * team permission MANAGE_CONNECTIONS). DELETE ends one, named by its client and team: the user's own, or with
+ * `userId` another member's in such a team. Session only: it is the app's own settings screen. 404 while MCP_OAUTH_ENABLED is off.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
@@ -19,7 +19,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   if (!isMcpOAuthEnabled()) return notFound()
   const session = await getAuthorizationSession(request.headers)
   if (!session) return signedOut()
-  const [data, managed] = await Promise.all([userConnections(session.user.id), managedConnections(session.user.id)])
+  const [data, managed] = await Promise.all([userConnections(session.user.id), managedConnections(session.user.id, session.user.role)])
   return NextResponse.json({ success: true, data, managed })
 }, 'read')
 
@@ -37,9 +37,9 @@ export const DELETE = withRateLimitTier(async (request: NextRequest) => {
     return createApiError('userId must be a user id', 400, undefined, 'VALIDATION_ERROR')
   }
   const target = typeof userId === 'string' ? userId : session.user.id
-  // Another member's connection: only for who owns or administers the team it reaches. The answer for a team the
-  // user does not run is the one for a connection that does not exist.
-  if (target !== session.user.id && !(await managesTeam(session.user.id, teamId))) return notFound()
+  // Another member's connection: only for who manages the integrations of the team it reaches. The answer for a
+  // team the user does not manage is the one for a connection that does not exist.
+  if (target !== session.user.id && !(await managesTeam(session.user.id, session.user.role, teamId))) return notFound()
   if (!(await disconnect(target, clientId, teamId))) return notFound()
   return NextResponse.json({ success: true })
 }, 'write')

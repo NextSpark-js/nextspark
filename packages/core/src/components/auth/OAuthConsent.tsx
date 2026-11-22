@@ -57,7 +57,8 @@ export function OAuthConsent() {
         setAllowed(can)
         setChosen(current => new Set([...current].filter(scope => can.has(scope))))
       })
-      .catch(() => { setTeam(null); setAllowed(new Set()) })
+      // What the role allows could not be read: no entity permission stays ticked, so none is asked for
+      .catch(() => { setTeam(null); setAllowed(new Set()); setChosen(new Set()) })
   }, [params])
 
   const entities = useMemo(() => [...new Set(requested.map(scope => entityScope(scope)!.entity))].sort(), [requested])

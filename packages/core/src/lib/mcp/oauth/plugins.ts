@@ -15,6 +15,7 @@ import { fetchClientMetadataResource } from '@better-auth/cimd/node'
 import { mcp } from '@better-auth/mcp'
 import { withBasePath } from '../../base-path'
 import { queryOne } from '../../db'
+import { consentWithinRolePlugin } from './consent-plugin'
 import { purgeExpiredOAuthIfDue } from './purge'
 import { mcpOAuthResourceScopes } from './scopes'
 import { APIError } from 'better-auth'
@@ -107,5 +108,7 @@ export function mcpOAuthPlugins() {
       },
     }),
     cimd({ fetchClientMetadataResource, metadataProfile: 'mcp-2026-07-28' }),
+    // A consent grants what the client asked for, the user accepted and the role can hold: decided here, not in the page
+    consentWithinRolePlugin(),
   ]
 }

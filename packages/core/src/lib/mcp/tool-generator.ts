@@ -90,7 +90,8 @@ export function generateEntityTools(
         if (error instanceof McpToolError) return errorResult(error.message)
         console.error(`[mcp] unexpected error in ${name}:`, error)
         return errorResult(
-          `Unexpected error executing ${name}: ${error instanceof Error ? error.message : String(error)}`
+          `Unexpected error executing ${name}: ${error instanceof Error ? error.message : String(error)}`,
+          500
         )
       }
     },
