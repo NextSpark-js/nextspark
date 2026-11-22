@@ -7,7 +7,6 @@ import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core
 import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
-import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
 import { AreaToastPosition } from "@nextsparkjs/core/providers/area-toast-position";
 import { ThemeArea } from "@nextsparkjs/core/providers/theme-area";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
@@ -46,8 +45,6 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
   return (
     <ThemeArea>
       <DashboardProviders>
-        {/* The theme saved to the account, before the area paints (#495) */}
-        <AccountTheme />
         <AreaToastPosition />
         <SuperAdminGuard serverChecked={serverChecked}>
             <div className="flex h-screen bg-background" data-cy="superadmin-container">
@@ -151,7 +148,6 @@ export function guardSuperadminLayout<P extends SuperadminLayoutProps>(ProjectLa
       }>
         <ThemeArea>
           <DashboardProviders>
-            <AccountTheme />
             <AreaToastPosition />
             <SuperAdminGuard serverChecked={serverChecked}>
               <ProjectLayout {...props} />

@@ -109,6 +109,13 @@ const COLOR_SCHEMES = ["light", "dark"]
 const MEDIA = "(prefers-color-scheme: dark)"
 const DEFAULT_THEMES = ["light", "dark"]
 const isServer = typeof window === "undefined"
+/**
+ * Whether this render writes the code of the inline script: on the server, and outside a Next.js build (tests). Next
+ * replaces `typeof window` and `process.env.NEXT_RUNTIME` in each bundle, so the browser bundle drops that code: the
+ * script runs from the server HTML only, and the client renders it empty (#546). ThemeArea holds the same line: a
+ * value imported from another module is not replaced.
+ */
+const inlineScriptCode = isServer || process.env.NEXT_RUNTIME === undefined
 
 export const ThemeContext = React.createContext<(UseThemeProps & { area?: AreaTheme }) | undefined>(undefined)
 /** What ThemeArea (providers/theme-area, the only reader: public pages load none of its code) takes from the value: the forced theme prop, and how to say it is mounted */
@@ -196,14 +203,17 @@ type ThemeScriptProps = Required<Pick<ThemeProviderProps, "attribute" | "storage
   Pick<ThemeProviderProps, "forcedTheme" | "value" | "nonce" | "scriptProps">
 
 const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, attribute, enableSystem, enableColorScheme, defaultTheme, value, themes, nonce, scriptProps }: ThemeScriptProps) {
-  const args = JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme, withBasePath("")]).slice(1, -1)
   return (
     <script
       {...scriptProps}
       suppressHydrationWarning
       // The browser hides a nonce from the DOM after load, so the client renders it empty, as next-themes does
       nonce={isServer ? nonce : ""}
-      dangerouslySetInnerHTML={{ __html: `(${script.toString()})(${args})` }}
+      dangerouslySetInnerHTML={{
+        __html: inlineScriptCode
+          ? `(${script.toString()})(${JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme, withBasePath("")]).slice(1, -1)})`
+          : "",
+      }}
     />
   )
 })

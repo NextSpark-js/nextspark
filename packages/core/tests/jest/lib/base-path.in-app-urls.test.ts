@@ -206,7 +206,7 @@ const ALLOWED = [
     why: 'the inline script that applies the stored theme before paint, which carries no URL',
   },
   {
-    file: 'packages/core/src/providers/account-theme.tsx',
+    file: 'packages/core/src/providers/theme-area.tsx',
     text: 'script.toString()',
     why: 'the inline script that applies the account theme before the area paints (#495), which carries no URL',
   },
