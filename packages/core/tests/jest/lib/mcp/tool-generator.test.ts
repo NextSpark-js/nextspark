@@ -391,3 +391,24 @@ describe('normalizeDateFields', () => {
     expect(normalizeDateFields('string', ['dueDate'])).toBe('string');
   });
 });
+
+describe('the data of a result is also text (#541)', () => {
+  it('a list, a get, a create and an update return their data as JSON text after the summary, and as structured content', async () => {
+    const entity = { slug: 'customers', enabled: true, names: { singular: 'customer', plural: 'Customers' }, fields: [{ name: 'name', type: 'text', required: true, api: {} }], access: { api: true } } as never;
+    const rows = [{ id: 'c1', name: 'Acme' }];
+    const executor = jest.fn(async ({ operation }: { operation: string }) => ({
+      status: 200,
+      body: operation === 'list' ? { success: true, data: rows, info: { total: 1, page: 1, totalPages: 1 } } : { success: true, data: rows[0] },
+    }));
+    const tools = generateEntityTools(entity, ['list', 'get', 'create', 'update'], undefined, { executor: executor as never, toolPrefix: 'acme' });
+    const ctx = { userId: 'u', userRole: 'member', teamId: 't', authHeader: '', apiKeyId: 'k', scopes: [] };
+    const args: Record<string, Record<string, unknown>> = { list: {}, get: { id: 'c1' }, create: { name: 'Acme' }, update: { id: 'c1', name: 'Acme' } };
+    for (const tool of tools) {
+      const result = await tool.handler(args[tool.meta!.operation as string], ctx);
+      expect(result.isError).toBeFalsy();
+      expect(result.content).toHaveLength(2);
+      expect(JSON.parse(result.content[1].text)).toEqual(result.structuredContent);
+      expect(result.content[1].text).toContain('Acme');
+    }
+  });
+});

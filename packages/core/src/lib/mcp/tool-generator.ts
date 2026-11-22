@@ -121,15 +121,7 @@ export function generateEntityTools(
           const total = info.total ?? (Array.isArray(data) ? data.length : '?')
           const page = info.page ?? 1
           const totalPages = info.totalPages ?? 1
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `${String(total)} ${entityConfig.names.plural} (page ${String(page)}/${String(totalPages)})`,
-              },
-            ],
-            structuredContent: { data, info } as Record<string, unknown>,
-          }
+          return withData(`${String(total)} ${entityConfig.names.plural} (page ${String(page)}/${String(totalPages)})`, { data, info })
         }
       )
     )
@@ -153,10 +145,7 @@ export function generateEntityTools(
           )
           if (!result.body.success) return apiError(result, 'get')
           const data = normalizeOutput(result.body.data)
-          return {
-            content: [{ type: 'text', text: `${entityConfig.names.singular} found.` }],
-            structuredContent: { data } as Record<string, unknown>,
-          }
+          return withData(`${entityConfig.names.singular} found.`, { data })
         }
       )
     )
@@ -181,12 +170,7 @@ export function generateEntityTools(
           if (!result.body.success) return apiError(result, 'create')
           const data = normalizeOutput(result.body.data)
           const id = extractId(data)
-          return {
-            content: [
-              { type: 'text', text: `${entityConfig.names.singular} created${id ? ` (id: ${id})` : ''}.` },
-            ],
-            structuredContent: { data } as Record<string, unknown>,
-          }
+          return withData(`${entityConfig.names.singular} created${id ? ` (id: ${id})` : ''}.`, { data })
         }
       )
     )
@@ -221,10 +205,7 @@ export function generateEntityTools(
           )
           if (!result.body.success) return apiError(result, 'update')
           const data = normalizeOutput(result.body.data)
-          return {
-            content: [{ type: 'text', text: `${entityConfig.names.singular} updated.` }],
-            structuredContent: { data } as Record<string, unknown>,
-          }
+          return withData(`${entityConfig.names.singular} updated.`, { data })
         }
       )
     )
@@ -348,6 +329,21 @@ function extractId(data: unknown): string | null {
     return String((data as { id: unknown }).id)
   }
   return null
+}
+
+/**
+ * A result with its data in both forms: `structuredContent` for a client that reads it, and the same JSON as text
+ * after the summary, which the MCP specification asks of a tool that returns structured content. An assistant such
+ * as Claude reads the text only: without it a list answered "15 Tasks" and nothing else (#541).
+ */
+function withData(summary: string, structured: Record<string, unknown>): McpToolResult {
+  return {
+    content: [
+      { type: 'text', text: summary },
+      { type: 'text', text: JSON.stringify(structured) },
+    ],
+    structuredContent: structured,
+  }
 }
 
 export function errorResult(message: string): McpToolResult {
