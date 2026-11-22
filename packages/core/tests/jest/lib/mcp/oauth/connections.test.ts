@@ -158,24 +158,32 @@ describe('ending a connection (#541)', () => {
     expect(mockTransaction).toHaveBeenCalledTimes(1);
   });
 
-  it('a manager ends another member\'s connection: the permission is read, locked and decided in the same transaction', async () => {
-    mockQueryOne.mockResolvedValueOnce({ role: 'curator' });
+  it('a manager ends another member\'s connection: both roles are read, locked and decided in the same transaction', async () => {
+    mockQueryOne.mockResolvedValueOnce({ teamRole: 'curator', appRole: 'member' });
     mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockResolvedValueOnce([{ live: true }]);
-    expect(await disconnectManaged('manager-1', 'member', 'user-2', CLIENT, 'team-1')).toBe(true);
+    expect(await disconnectManaged('manager-1', 'user-2', CLIENT, 'team-1')).toBe(true);
     expect(mockTransaction).toHaveBeenCalledTimes(1);
     const [membership, params] = mockQueryOne.mock.calls[0];
-    expect(sqlOf([membership])).toMatch(/^SELECT role FROM "team_members" WHERE "userId" = \$1 AND "teamId" = \$2 FOR SHARE$/);
+    // the role in the team and the role in the app, as the database has them now and locked until this ends
+    expect(sqlOf([membership])).toMatch(/^SELECT tm\.role AS "teamRole", u\.role AS "appRole" FROM "team_members" tm JOIN "users" u ON u\.id = tm\."userId" WHERE tm\."userId" = \$1 AND tm\."teamId" = \$2 FOR SHARE$/);
     expect(params).toEqual(['manager-1', 'team-1']);
     expect(mockHasTeamPermission).toHaveBeenLastCalledWith('member', 'curator', 'settings.integrations');
     // the connection ended is the other member's
     expect(mockQueryRows.mock.calls[0][1]).toEqual(['user-2', CLIENT, 'team-1']);
   });
 
-  it('who does not hold the permission in the team ends nothing: a plain member, a non-member whatever the app role', async () => {
-    for (const [appRole, membership] of [['member', { role: 'member' }], ['member', { role: 'admin' }], ['developer', null]] as const) {
+  it('an app role that skips team permissions counts as the database has it at that moment', async () => {
+    mockQueryOne.mockResolvedValueOnce({ teamRole: 'member', appRole: 'developer' });
+    mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockResolvedValueOnce([{ live: true }]);
+    expect(await disconnectManaged('dev-1', 'user-2', CLIENT, 'team-1')).toBe(true);
+    expect(mockHasTeamPermission).toHaveBeenLastCalledWith('developer', 'member', 'settings.integrations');
+  });
+
+  it('who does not hold the permission in the team ends nothing: a plain member, an admin without it, a non-member', async () => {
+    for (const actor of [{ teamRole: 'member', appRole: 'member' }, { teamRole: 'admin', appRole: 'member' }, null]) {
       jest.clearAllMocks();
-      mockQueryOne.mockResolvedValueOnce(membership);
-      expect(await disconnectManaged('actor', appRole, 'user-2', CLIENT, 'team-1')).toBe(false);
+      mockQueryOne.mockResolvedValueOnce(actor);
+      expect(await disconnectManaged('actor', 'user-2', CLIENT, 'team-1')).toBe(false);
       expect(mockQueryRows).not.toHaveBeenCalled();
       expect(mockQuery).not.toHaveBeenCalled();
     }

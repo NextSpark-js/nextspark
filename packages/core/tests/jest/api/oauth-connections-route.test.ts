@@ -83,7 +83,7 @@ describe('/api/internal/oauth-connections', () => {
   it('another member\'s connection goes through the check of who manages the team, and a refusal is a 404', async () => {
     const response = await del({ clientId: 'client-b', teamId: 'team-1', userId: 'user-2' })
     expect(response.status).toBe(404)
-    expect(connections.disconnectManaged).toHaveBeenCalledWith('user-1', 'member', 'user-2', 'client-b', 'team-1')
+    expect(connections.disconnectManaged).toHaveBeenCalledWith('user-1', 'user-2', 'client-b', 'team-1')
     // never the unchecked path for somebody else's connection
     expect(connections.disconnect).not.toHaveBeenCalled()
   })

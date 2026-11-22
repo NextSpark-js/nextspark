@@ -363,6 +363,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  -- A scope was taken away: every access token of the connection issued until now is refused, whatever refresh
+  -- token it came from. The token that held more may have been replaced already by one that holds less, and
+  -- removing a replaced token records nothing; the access token it issued would live out its minutes. The tokens
+  -- that stay within the consent get new access tokens, which carry this revocation's number.
+  IF NOT (OLD.scopes <@ NEW.scopes) THEN
+    PERFORM public.purge_oauth_revocations(NEW."userId");
+    INSERT INTO public."oauthRevocation" ("userId", "clientId", "teamId") VALUES (NEW."userId", NEW."clientId", NEW."referenceId");
+  END IF;
   DELETE FROM public."oauthRefreshToken"
    WHERE "userId" = NEW."userId" AND "clientId" = NEW."clientId" AND "referenceId" = NEW."referenceId"
      AND NOT (scopes <@ NEW.scopes);

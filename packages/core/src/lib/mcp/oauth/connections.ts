@@ -171,18 +171,21 @@ export function disconnect(userId: string, clientId: string, teamId: string): Pr
 }
 
 /**
- * Ends another member's connection for a manager of the team: `actorId`, with app role `actorAppRole`, must hold
- * MANAGE_CONNECTIONS in `teamId`. The membership is read and locked in the transaction that ends the connection, so
- * a role taken away or a membership removed at that moment is either seen here or waits until this is done. False
- * when the actor may not, and when there was nothing to end.
+ * Ends another member's connection for a manager of the team: `actorId` must hold MANAGE_CONNECTIONS in `teamId`.
+ * What decides it, the actor's role in the team and their role in the app (`teams.appRoleBypass`), is read and
+ * locked in the transaction that ends the connection, so a role taken away or a membership removed at that moment
+ * is either seen here or waits until this is done. False when the actor may not, and when there was nothing to end.
  */
-export function disconnectManaged(actorId: string, actorAppRole: string | null | undefined, userId: string, clientId: string, teamId: string): Promise<boolean> {
+export function disconnectManaged(actorId: string, userId: string, clientId: string, teamId: string): Promise<boolean> {
   return withServiceTransaction(async () => {
-    const membership = await queryOne<{ role: string }>(
-      `SELECT role FROM "team_members" WHERE "userId" = $1 AND "teamId" = $2 FOR SHARE`,
+    const actor = await queryOne<{ teamRole: string; appRole: string | null }>(
+      `SELECT tm.role AS "teamRole", u.role AS "appRole"
+         FROM "team_members" tm JOIN "users" u ON u.id = tm."userId"
+        WHERE tm."userId" = $1 AND tm."teamId" = $2
+          FOR SHARE`,
       [actorId, teamId]
     )
-    if (!hasTeamPermission(actorAppRole, membership?.role ?? null, MANAGE_CONNECTIONS)) return false
+    if (!hasTeamPermission(actor?.appRole, actor?.teamRole ?? null, MANAGE_CONNECTIONS)) return false
     return endConnection(userId, clientId, teamId)
   })
 }

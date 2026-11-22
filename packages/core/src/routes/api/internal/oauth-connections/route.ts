@@ -41,7 +41,7 @@ export const DELETE = withRateLimitTier(async (request: NextRequest) => {
   // connection is ended. The answer for a team the user does not manage is the one for a connection that is not there.
   const ended = target === session.user.id
     ? await disconnect(target, clientId, teamId)
-    : await disconnectManaged(session.user.id, session.user.role, target, clientId, teamId)
+    : await disconnectManaged(session.user.id, target, clientId, teamId)
   if (!ended) return notFound()
   return NextResponse.json({ success: true })
 }, 'write')
