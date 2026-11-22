@@ -51,6 +51,8 @@ export interface McpEngine {
   api: EngineApi
   /** The scopes a call to a tool needs before it runs: an entity tool's own, or the ones a tool declares in `meta.requiredScopes`. */
   requiredScopesFor: (toolName: string) => string[]
+  /** Every scope some tool of this server needs. */
+  toolScopes: string[]
 }
 
 export function createMcpEngine(
@@ -244,7 +246,10 @@ export function createMcpEngine(
     return [`${meta.entitySlug}:${action}`]
   }
 
-  return { tools, handleJsonRpc, api, requiredScopesFor }
+  /** Every scope some tool needs, for telling a client what there is to ask for. */
+  const toolScopes = [...new Set(tools.flatMap(tool => requiredScopesFor(tool.name)))].sort()
+
+  return { tools, handleJsonRpc, api, requiredScopesFor, toolScopes }
 }
 
 function assertUniqueNames(tools: McpToolDefinition[]): void {

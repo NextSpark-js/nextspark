@@ -41,6 +41,8 @@ export interface OAuthMcpHandlers {
   dispatch: McpDispatch
   /** The scopes a call to a tool needs before it runs; none for a tool that declares none. */
   requiredScopesFor: (toolName: string) => string[]
+  /** Every scope some tool needs: what a connecting client is told to ask for. All of the resource's when absent. */
+  toolScopes?: readonly string[]
 }
 
 const API_KEY_BEARER = /^Bearer\s+sk_(live|test)_/i
@@ -144,7 +146,7 @@ function insufficientScope(missing: string[], ask: string[]): NextResponse {
   return response
 }
 
-export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopesFor }: OAuthMcpHandlers): Promise<NextResponse> {
+export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopesFor, toolScopes }: OAuthMcpHandlers): Promise<NextResponse> {
   const protectedHandler = requireMcpAuth(
     auth,
     async (verified, claims) => {
@@ -197,7 +199,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
       }
     },
     // The scopes the 401 tells a client to ask for (lib/mcp/oauth/scopes)
-    { resource: mcpResourceUrl(), issuer: mcpOAuthIssuer(), challengeScopes: mcpOAuthDefaultScopes() }
+    { resource: mcpResourceUrl(), issuer: mcpOAuthIssuer(), challengeScopes: mcpOAuthDefaultScopes(toolScopes) }
   )
 
   // With the basePath in the URL, as the client wrote it: a DPoP proof is made for that URL

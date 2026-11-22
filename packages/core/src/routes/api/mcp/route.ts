@@ -115,6 +115,7 @@ async function handleMcpPost(request: NextRequest): Promise<NextResponse> {
       return handleOAuthMcpRequest(request, {
         dispatch: (body, ctx) => engine.handleJsonRpc(body, ctx),
         requiredScopesFor: engine.requiredScopesFor,
+        toolScopes: engine.toolScopes,
       })
     }
   }

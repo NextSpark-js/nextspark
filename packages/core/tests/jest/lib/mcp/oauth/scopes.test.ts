@@ -17,6 +17,10 @@ describe('the scopes of MCP browser sign-in (#541)', () => {
     expect(mcpOAuthDefaultScopes()).toEqual(['offline_access', 'customers:read', 'tasks:delete', 'tasks:read', 'tasks:write']);
   });
 
+  it('a scope no tool of the server needs is not asked for', () => {
+    expect(mcpOAuthDefaultScopes(['tasks:read', 'tasks:write', 'customers:read', 'pages:read'])).toEqual(['offline_access', 'customers:read', 'tasks:read', 'tasks:write']);
+  });
+
   it('reading and writing come ticked on the consent screen, deleting does not', () => {
     expect(['tasks:read', 'tasks:write', 'tasks:delete'].map(isPreselectedScope)).toEqual([true, true, false]);
   });

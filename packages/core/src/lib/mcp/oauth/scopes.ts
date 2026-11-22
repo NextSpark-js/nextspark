@@ -19,9 +19,14 @@ export function mcpOAuthResourceScopes(): string[] {
  *
  * Asking is not getting: the consent screen lists them per entity and the user decides (isPreselectedScope). The
  * request has to carry them all because consent can only take scopes away from what was asked for.
+ *
+ * `usedByTools`: the scopes some tool of this server needs. A scope no tool needs is not asked for, so the consent
+ * screen does not offer a permission that would do nothing (an entity kept out of MCP, an operation an entity's
+ * `mcp.ts` excludes).
  */
-export function mcpOAuthDefaultScopes(): string[] {
-  return ['offline_access', ...mcpOAuthResourceScopes()]
+export function mcpOAuthDefaultScopes(usedByTools?: readonly string[]): string[] {
+  const resource = mcpOAuthResourceScopes()
+  return ['offline_access', ...(usedByTools ? resource.filter(scope => usedByTools.includes(scope)) : resource)]
 }
 
 export { entityScope, isPreselectedScope } from './scope-names'
