@@ -309,6 +309,7 @@ What the host then serves:
 | `/api/auth/.well-known/openid-configuration`, `/.well-known/oauth-authorization-server/api/auth` | The authorization server's metadata (RFC 8414) |
 | `/api/auth/oauth2/authorize`, `/api/auth/oauth2/token`, `/api/auth/oauth2/revoke` | Authorization code with PKCE (S256), refresh, revocation |
 | `/oauth/select-team`, `/oauth/consent` | The team picker (for a user in several teams) and the consent screen |
+| Settings > Security, `/api/internal/oauth-connections` | The connected applications of the signed-in user, and the API behind the screen |
 
 How it behaves:
 
@@ -318,9 +319,26 @@ How it behaves:
 - **Scopes** are the entity scopes an API key uses (`<entity>:read|write|delete`). A call whose scope was not
   granted is answered `403` with an `insufficient_scope` challenge before anything runs. What the token may do is
   also cut down, on every request, to what the user's role in the team allows at that moment.
+- **The user chooses the permissions.** A connecting client is told to ask for every scope some tool of the server
+  uses. The consent screen lists them as one row per entity with read, write and delete: reading and writing come
+  ticked, deleting does not, and what the user's role cannot hold cannot be ticked. Only what stays ticked is
+  granted. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
+  missing.
 - **Access tokens** are JWTs for `/api/mcp` only and live ten minutes; refresh tokens rotate.
 - **Ending a connection.** Revoking it, a reused refresh token, a changed password and a suspended account end
   access on the next call, on every instance. Signing out of the browser does not disconnect an application.
+- **Connected applications.** Settings > Security lists the user's connections (application, team, permissions,
+  dates) with a button to disconnect each. An owner or admin of a team also sees, and can end, the other members'
+  connections to that team.
+- **Audit.** Every tool call is a row of `api_audit_log` (`mcp:<tool>`) with the status the API answered. A call
+  refused for a missing scope is recorded too, as a 403 with the scopes it lacked. The value of an argument whose
+  key names a secret (password, token, API key) is replaced before it is stored.
+- **Signing keys** rotate every 30 days; the replaced key stays published for 30 more.
+- **Housekeeping.** Expired and replaced tokens, old revocations and retired keys are purged when tokens are
+  issued, at most once an hour per process. No job has to be set up.
+- **Rate limit.** A connection may send 1000 requests a minute (tier `credential` of `rateLimit.tiers`), the limit
+  an API key has. It is counted in Redis when `UPSTASH_REDIS_REST_URL` is set, so every instance shares the count;
+  without Redis each process counts on its own, which on serverless is close to no limit.
 - **An API key keeps working** on the same endpoint. A request that presents both is refused.
 - **A tool that makes several API calls** declares the scopes it needs in `meta.requiredScopes` to get the `403`
   up front; without it each call is checked where it is made.
@@ -328,5 +346,5 @@ How it behaves:
 - **URLs.** The MCP resource is a URL of the app (`NEXT_PUBLIC_APP_URL`); the issuer is where Better Auth is served
   (`BETTER_AUTH_URL`, with its own path when it has one).
 
-Not done yet: a screen to list and disconnect connected applications, shared (multi-instance) rate limits, and a
-run against the hosted Claude and ChatGPT applications.
+Not done yet: an allow-list of clients, a production gate that refuses to start without row-level security and a
+shared store in effect, and a run against the hosted ChatGPT application (Claude has been run).
