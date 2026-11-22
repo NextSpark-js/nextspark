@@ -11,9 +11,9 @@
  * metadata document is even fetched, when it exchanges a code or renews a token, when it reads the user's identity
  * and on every request to the MCP endpoint, so a token issued before the list changed counts no more.
  *
- * Only a list that is absent or empty leaves the server open. A list that is there and names no usable host is a
- * mistake in a security setting, and it closes the server to every application instead of opening it to all:
- * `['https//claude.ai']` must not mean "anyone".
+ * Only a list that is absent (undefined) or empty leaves the server open. Anything else that names no usable host,
+ * `null` included, is a mistake in a security setting, and it closes the server to every application instead of
+ * opening it to all: `['https//claude.ai']` must not mean "anyone".
  *
  * No imports: the rule is a function of a client id and a list.
  */
@@ -48,9 +48,9 @@ function hostOfEntry(entry: unknown): string | null {
   return wildcard ? `*.${host}` : host
 }
 
-/** Reads `mcp.oauth.allowedClientHosts`: absent or an empty array is open; anything else is closed to all but its usable hosts. */
+/** Reads `mcp.oauth.allowedClientHosts`: undefined or an empty array is open; anything else is closed to all but its usable hosts. */
 export function readAllowList(list: unknown): AllowList {
-  if (list === undefined || list === null) return OPEN
+  if (list === undefined) return OPEN
   if (!Array.isArray(list)) return { open: false, hosts: [], unusable: [String(list)] }
   if (list.length === 0) return OPEN
   const hosts: string[] = []
@@ -93,9 +93,10 @@ const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
 
 /**
  * The client a request to the token or the identity endpoint says it is from, read without verifying anything:
- * `client_id` in the body, the user of HTTP Basic, the subject of a signed client assertion, or the `azp` of a
- * bearer access token. Enough to refuse: the authorization server still authenticates that same client afterwards,
- * so naming an accepted client that one is not gains nothing. Undefined when the request names none.
+ * `client_id` in the body, the subject of a signed client assertion, the user of HTTP Basic, or the `azp` of an
+ * access token, sent as a bearer or in the body (`access_token`). Enough to refuse: the authorization server still
+ * authenticates that same client afterwards, so naming an accepted client that one is not gains nothing. Undefined
+ * when the request names none that can be read, an opaque access token included.
  */
 export function presentedClientId(request: { body?: unknown; authorization?: string | null }): string | undefined {
   const body = (request.body && typeof request.body === 'object' ? request.body : {}) as Record<string, unknown>
@@ -105,6 +106,13 @@ export function presentedClientId(request: { body?: unknown; authorization?: str
     const subject = claims?.sub ?? claims?.iss
     if (typeof subject === 'string' && subject) return subject
   }
+  const azpOf = (token: string): string | undefined => {
+    const claims = decodeJwtPayload(token)
+    const client = claims?.azp ?? claims?.client_id
+    return typeof client === 'string' && client ? client : undefined
+  }
+  // RFC 6750 section 2.2: the access token as a form field
+  if (typeof body.access_token === 'string' && body.access_token) return azpOf(body.access_token)
   const [scheme, value] = (request.authorization ?? '').trim().split(/\s+/, 2)
   if (!value) return undefined
   if (/^basic$/i.test(scheme)) {
@@ -115,10 +123,6 @@ export function presentedClientId(request: { body?: unknown; authorization?: str
       return undefined
     }
   }
-  if (/^(bearer|dpop)$/i.test(scheme)) {
-    const claims = decodeJwtPayload(value)
-    const client = claims?.azp ?? claims?.client_id
-    return typeof client === 'string' && client ? client : undefined
-  }
+  if (/^(bearer|dpop)$/i.test(scheme)) return azpOf(value)
   return undefined
 }

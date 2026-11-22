@@ -126,7 +126,13 @@ export async function grantedScopes(userId: string, clientId: string, teamId: st
   return consent ? stringList(consent.scopes).filter(scope => entityScope(scope)) : null
 }
 
-/** Removes the consent and the refresh tokens of a connection. Inside a service transaction (see disconnect). */
+/**
+ * Removes the consent and the refresh tokens of a connection. Inside a service transaction (see disconnect).
+ *
+ * Removing the consent is what ends the connection: the database records the revocation and removes the refresh
+ * tokens with it (migration 048, end_oauth_connection_of_consent). What is left for here is a connection that has
+ * tokens and no consent, which only data older than that rule can be.
+ */
 async function endConnection(userId: string, clientId: string, teamId: string): Promise<boolean> {
   const consents = await queryRows<{ id: string }>(
     `DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3 RETURNING id`,
@@ -139,9 +145,9 @@ async function endConnection(userId: string, clientId: string, teamId: string): 
     [userId, clientId, teamId]
   )
   const live = tokens.some(token => token.live)
-  // No live refresh token went (a client that asked for no offline access, or one whose renewal was refused at
-  // this moment): no trigger ran, and an access token may still be good for minutes. Record the revocation.
-  if (!live && (consents.length || tokens.length)) {
+  // Tokens with no consent and none of them live: no trigger recorded anything, and an access token may still be
+  // good for minutes. Record the revocation.
+  if (!consents.length && tokens.length && !live) {
     await query(`INSERT INTO "oauthRevocation" ("userId", "clientId", "teamId") VALUES ($1, $2, $3)`, [userId, clientId, teamId])
   }
   return live || consents.length > 0
@@ -154,8 +160,8 @@ async function endConnection(userId: string, clientId: string, teamId: string): 
  *
  * In one transaction, the consent first. A refresh token can only be written for a connection that has its consent
  * (migration 048, require_oauth_consent_for_refresh_token, which locks the consent row): a renewal in flight either
- * writes its new token before the consent goes, and the token is removed here with the rest, or finds no consent and
- * is refused. No renewal that races with this leaves a live token behind.
+ * writes its new token before the consent goes, and the token is removed with the rest, or finds no consent and is
+ * refused. No renewal that races with this leaves a live token behind.
  *
  * The tokens are deleted, not marked revoked: the authorization server takes a revoked refresh token presented again
  * for a stolen one and ends every connection of that client for the user, in every team. The application that was

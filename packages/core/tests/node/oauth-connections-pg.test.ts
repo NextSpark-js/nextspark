@@ -86,6 +86,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     const before = (await owner.query(`SELECT tgname FROM pg_trigger WHERE tgname LIKE 'oauth_%' ORDER BY tgname`)).rows.map(r => r.tgname)
     assert.deepEqual(before, [
       'oauth_consent_narrowed',
+      'oauth_consent_removed',
       'oauth_refresh_token_deleted',
       'oauth_refresh_token_requires_consent',
       'oauth_refresh_token_revoked',
@@ -142,7 +143,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.equal(await store.disconnect('u-ana', CLIENT, 'team-1'), true)
     assert.deepEqual(await tokensOf('u-ana', 'team-1'), [])
     assert.equal(await consentScopes('u-ana', 'team-1'), undefined)
-    assert.equal(await revocations('u-ana', 'team-1'), 1, 'the live token that went recorded one revocation')
+    assert.ok((await revocations('u-ana', 'team-1')) >= 1, 'the revocation is recorded')
     assert.deepEqual(await tokensOf('u-ana', 'team-2'), [elsewhere], 'the same client in another team is untouched')
     assert.equal(await revocations('u-ana', 'team-2'), 0)
     assert.deepEqual((await store.userConnections('u-ana')).map(c => c.teamId), ['team-2'])
@@ -153,7 +154,32 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     await reset()
     await consent('u-ana', 'team-1', [READ])
     assert.equal(await store.disconnect('u-ana', CLIENT, 'team-1'), true)
-    assert.equal(await revocations('u-ana', 'team-1'), 1)
+    assert.ok((await revocations('u-ana', 'team-1')) >= 1)
+  })
+
+  await t.test('a consent removed by any hand ends its connection for good: nothing comes back with the next consent', async () => {
+    await reset()
+    await consent('u-ana', 'team-1', [...BASE, READ, WRITE])
+    await consent('u-ana', 'team-2', [...BASE, READ])
+    const replaced = await token('u-ana', 'team-1', [...BASE, READ, WRITE], { replaced: true })
+    const live = await token('u-ana', 'team-1', [...BASE, READ, WRITE])
+    const elsewhere = await token('u-ana', 'team-2', [...BASE, READ])
+    const before = await revocations('u-ana', 'team-1')
+    // what the authorization server's own endpoint does: the row, and nothing else
+    await owner.query(`DELETE FROM "oauthConsent" WHERE "userId" = 'u-ana' AND "referenceId" = 'team-1'`)
+    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [], `${replaced} and ${live} went with the consent`)
+    assert.ok((await revocations('u-ana', 'team-1')) > before, 'the access tokens issued before are refused from now on')
+    assert.deepEqual(await tokensOf('u-ana', 'team-2'), [elsewhere], 'another connection of the same application is untouched')
+    // the application is authorized again: a new consent, and nothing of the connection that was ended
+    const marker = await revocations('u-ana', 'team-1')
+    await consent('u-ana', 'team-1', [...BASE, READ])
+    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [])
+    assert.equal(await revocations('u-ana', 'team-1'), marker, 'the revocation stands: a token issued before it stays refused')
+    // a consent with no team is not a connection: removing it records nothing
+    await owner.query(`INSERT INTO "oauthConsent" (id, "clientId", "userId", scopes, "createdAt", "updatedAt") VALUES ('consent-no-team', $1, 'u-ana', '["openid"]', now(), now())`, [CLIENT])
+    const all = await revocations('u-ana')
+    await owner.query(`DELETE FROM "oauthConsent" WHERE id = 'consent-no-team'`)
+    assert.equal(await revocations('u-ana'), all)
   })
 
   await t.test('a renewal that writes its token first: the disconnection waits for it and then removes it', async () => {
@@ -167,7 +193,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     await other.query('COMMIT')
     assert.equal(await ending, true)
     assert.deepEqual(await tokensOf('u-ana', 'team-1'), [], 'the token the renewal wrote is gone with the rest')
-    assert.equal(await revocations('u-ana', 'team-1'), 1)
+    assert.ok((await revocations('u-ana', 'team-1')) >= 1)
   })
 
   await t.test('a disconnection that gets there first: the renewal waits for it and is then refused', async () => {
@@ -317,7 +343,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
 
     assert.equal(await store.disconnectAs('u-ana', decide(true), 'u-bea', CLIENT, 'team-1'), true)
     assert.deepEqual(await tokensOf('u-bea', 'team-1'), [])
-    assert.equal(await revocations('u-bea', 'team-1'), 1)
+    assert.ok((await revocations('u-bea', 'team-1')) >= 1)
   })
 
   await t.test('other members\' connections are read by team, and never the reader\'s own', async () => {
@@ -338,7 +364,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     const hers = await token('u-bea', 'team-1', [...BASE, READ])
     await owner.query(`UPDATE "users" SET role = 'suspended' WHERE id = 'u-bea'`)
     assert.equal(await consentScopes('u-bea', 'team-1'), undefined)
-    assert.equal((await owner.query(`SELECT revoked IS NOT NULL AS revoked FROM "oauthRefreshToken" WHERE id = $1`, [hers])).rows[0].revoked, true)
+    assert.deepEqual(await tokensOf('u-bea', 'team-1'), [], `${hers} went with its consent`)
     assert.ok((await revocations('u-bea')) >= 1)
     await assert.rejects(owner.query(tokenSql, tokenArgs('u-bea', 'team-1', [...BASE, READ]).args), /oauth connection ended/, 'a renewal in flight cannot write its token')
     await owner.query(`UPDATE "users" SET role = 'member' WHERE id = 'u-bea'`)

@@ -5,7 +5,7 @@ const jwt = (payload: Record<string, unknown>) => `e30.${Buffer.from(JSON.string
 
 describe('which applications may connect by MCP browser sign-in (#541)', () => {
   it('every application may while the project sets no list or an empty one, and only then', () => {
-    for (const list of [undefined, null, []]) {
+    for (const list of [undefined, []]) {
       expect(readAllowList(list)).toEqual({ open: true, hosts: [], unusable: [] });
       expect(isClientAllowed(CLAUDE, list)).toBe(true);
       expect(isClientAllowed('https://anything.example/client.json', list)).toBe(true);
@@ -14,7 +14,8 @@ describe('which applications may connect by MCP browser sign-in (#541)', () => {
   });
 
   it('a list that is there and names no usable host closes the server to every application: it does not open it', () => {
-    for (const list of [['not a host!'], [''], [42], ['https//claude.ai'], ['claude.ai:8443'], ['claude.ai/path'], ['user@claude.ai'], 'claude.ai', { 0: 'claude.ai' }]) {
+    // `null` too: only a setting that is not there at all means no list
+    for (const list of [['not a host!'], [''], [42], ['https//claude.ai'], ['claude.ai:8443'], ['claude.ai/path'], ['user@claude.ai'], 'claude.ai', { 0: 'claude.ai' }, null, 0, false]) {
       expect(readAllowList(list).open).toBe(false);
       expect(isClientAllowed(CLAUDE, list)).toBe(false);
       expect(isClientAllowed('https://anything.example/client.json', list)).toBe(false);
@@ -79,10 +80,14 @@ describe('the client a request after authorization says it is from', () => {
     expect(presentedClientId({ body: { client_assertion: jwt({ sub: CLAUDE, iss: CLAUDE }) } })).toBe(CLAUDE);
     expect(presentedClientId({ authorization: `Bearer ${jwt({ azp: CLAUDE, sub: 'user-1' })}` })).toBe(CLAUDE);
     expect(presentedClientId({ authorization: `DPoP ${jwt({ client_id: CLAUDE })}` })).toBe(CLAUDE);
+    // the access token as a form field (RFC 6750 section 2.2), which the identity endpoint accepts too
+    expect(presentedClientId({ body: { access_token: jwt({ azp: CLAUDE }) } })).toBe(CLAUDE);
+    // and it is the token of the body that counts when a header is there as well
+    expect(presentedClientId({ body: { access_token: jwt({ azp: 'https://evil.example/c.json' }) }, authorization: `Bearer ${jwt({ azp: CLAUDE })}` })).toBe('https://evil.example/c.json');
   });
 
   it('is none for a request that names no client, or names it in a way that cannot be read', () => {
-    for (const request of [{}, { body: null }, { body: { client_id: '' } }, { authorization: 'Bearer not-a-jwt' }, { authorization: 'Basic ###' }, { authorization: 'Bearer' }, { body: { client_assertion: 'x.y' } }, { authorization: `Bearer ${jwt({ sub: 'user-1' })}` }]) {
+    for (const request of [{}, { body: null }, { body: { client_id: '' } }, { authorization: 'Bearer not-a-jwt' }, { authorization: 'Basic ###' }, { authorization: 'Bearer' }, { body: { client_assertion: 'x.y' } }, { authorization: `Bearer ${jwt({ sub: 'user-1' })}` }, { body: { access_token: 'opaque-token' } }]) {
       expect(presentedClientId(request)).toBeUndefined();
     }
   });

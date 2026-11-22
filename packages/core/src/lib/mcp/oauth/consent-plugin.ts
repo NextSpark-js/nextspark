@@ -10,7 +10,7 @@ import { APIError, type BetterAuthPlugin } from 'better-auth'
 import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { validateScopesForUser } from '../../api/auth'
 import { queryOne } from '../../db'
-import { isClientAllowed, presentedClientId } from './allowed-clients'
+import { isClientAllowed, presentedClientId, readAllowList } from './allowed-clients'
 import { allowedClientHosts } from './config'
 import { entityScope } from './scope-names'
 import { isAuthorizationKey, selectedTeam } from './team-selection'
@@ -64,12 +64,38 @@ export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
         // lib/mcp/oauth/plugins, and the MCP endpoint in lib/mcp/oauth/resource-server.)
         matcher: ctx => AFTER_AUTHORIZATION.includes(ctx.path ?? ''),
         handler: createAuthMiddleware(async ctx => {
+          const list = allowedClientHosts()
+          // No list: every application is accepted, and there is nothing to read
+          if (readAllowList(list).open) return
           const headers = (ctx.headers ?? ctx.request?.headers) as Headers | undefined
           const clientId = presentedClientId({ body: ctx.body, authorization: headers?.get('authorization') })
-          // A request that names no client is the endpoint's to refuse
-          if (clientId !== undefined && !isClientAllowed(clientId, allowedClientHosts())) {
+          // With a list, a request whose client cannot be read is not let through for the endpoint to work out: an
+          // access token that is not a JWT says nothing of who it was issued to. The tokens of the MCP endpoint are
+          // JWTs and every way a client authenticates at the token endpoint is read.
+          if (!isClientAllowed(clientId, list)) {
             throw new APIError('UNAUTHORIZED', { error: 'invalid_client', error_description: 'this application is not among the ones this server accepts' })
           }
+        }),
+      },
+      {
+        // The authorization server also lets the signed-in user rewrite the scopes of a consent directly. The
+        // same bound holds there: what the user's role in the team of that consent can hold, and nothing else.
+        matcher: ctx => ctx.path === '/oauth2/update-consent',
+        handler: createAuthMiddleware(async ctx => {
+          const body = (ctx.body ?? {}) as { id?: unknown; update?: { scopes?: unknown } }
+          const scopes = body.update?.scopes
+          if (typeof body.id !== 'string' || !Array.isArray(scopes)) return
+          const session = await getSessionFromCtx(ctx)
+          const consent = await queryOne<{ userId: string | null; referenceId: string | null }>(
+            'SELECT "userId", "referenceId" FROM "oauthConsent" WHERE id = $1',
+            [body.id]
+          )
+          // Not this user's consent, or not one of a team: the endpoint's to refuse or to handle
+          if (!session || !consent?.referenceId || consent.userId !== session.user.id) return
+          const named = scopes.filter((scope): scope is string => typeof scope === 'string')
+          const entityScopes = named.filter(scope => entityScope(scope))
+          const heldByRole = entityScopes.length ? (await validateScopesForUser(session.user.id, consent.referenceId, entityScopes)).allowedScopes : []
+          return { context: { body: { ...body, update: { ...body.update, scopes: consentedScopes(named, undefined, heldByRole) } } } }
         }),
       },
       {

@@ -27,9 +27,10 @@ const signedQuery = (scope = REQUESTED, challenge = CHALLENGE) => new URLSearchP
 
 type Hook = { matcher: (ctx: { path: string }) => boolean; handler: (ctx: { path: string; body: unknown }) => Promise<{ context: { body: { scope: string } } } | undefined> };
 const hooks = consentWithinRolePlugin().hooks!.before as unknown as Hook[];
-// the gate of the endpoints used after authorization, then the consent endpoint
+// the gate of the endpoints used after authorization, the direct update of a consent, then the consent endpoint
 const gate = hooks[0] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string; body?: unknown; headers?: Headers }) => Promise<void> };
-const hook = hooks[1];
+const update = hooks[1] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string; body?: unknown }) => Promise<{ context: { body: { update: { scopes: string[] } } } } | undefined> };
+const hook = hooks[2];
 const consent = (body: Record<string, unknown>) => hook.handler({ path: '/oauth2/consent', body });
 
 beforeEach(() => {
@@ -128,19 +129,50 @@ describe('an application the project does not accept', () => {
     await expect(gate.handler({ path: '/oauth2/token', body: { grant_type: 'refresh_token', client_id: 'https://evil.example/client.json' } })).rejects.toEqual(refused);
     await expect(gate.handler({ path: '/oauth2/token', body: { grant_type: 'authorization_code', client_id: 'opaque-id' } })).rejects.toEqual(refused);
     await expect(gate.handler({ path: '/oauth2/userinfo', headers: new Headers({ authorization: `Bearer ${jwt({ azp: 'https://evil.example/client.json' })}` }) })).rejects.toEqual(refused);
-    // the accepted application goes on, and a request that names no client is the endpoint's to refuse
+    // the access token sent as a form field is read too
+    await expect(gate.handler({ path: '/oauth2/userinfo', body: { access_token: jwt({ azp: 'https://evil.example/client.json' }) } })).rejects.toEqual(refused);
+    // a request whose client cannot be read is refused, not let through: an opaque token says nothing of its client
+    await expect(gate.handler({ path: '/oauth2/userinfo', headers: new Headers({ authorization: 'Bearer opaque-token' }) })).rejects.toEqual(refused);
+    await expect(gate.handler({ path: '/oauth2/userinfo', body: { access_token: 'opaque-token' } })).rejects.toEqual(refused);
+    await expect(gate.handler({ path: '/oauth2/token', body: {} })).rejects.toEqual(refused);
+    // the accepted application goes on, by any way of naming itself
     await expect(gate.handler({ path: '/oauth2/token', body: { client_id: 'https://claude.ai/oauth/mcp-oauth-client-metadata' } })).resolves.toBeUndefined();
-    await expect(gate.handler({ path: '/oauth2/token', body: {} })).resolves.toBeUndefined();
+    await expect(gate.handler({ path: '/oauth2/userinfo', body: { access_token: jwt({ azp: 'https://claude.ai/oauth/mcp-oauth-client-metadata' }) } })).resolves.toBeUndefined();
   });
 
   it('with no list, nothing after authorization is refused', async () => {
     mockAllowedHosts.mockReturnValue(undefined);
     await expect(gate.handler({ path: '/oauth2/token', body: { client_id: 'opaque-id' } })).resolves.toBeUndefined();
+    await expect(gate.handler({ path: '/oauth2/userinfo', headers: new Headers({ authorization: 'Bearer opaque-token' }) })).resolves.toBeUndefined();
+    await expect(gate.handler({ path: '/oauth2/token', body: {} })).resolves.toBeUndefined();
   });
 
   it('every application goes on while the project sets no list', () => {
     mockAllowedHosts.mockReturnValue(undefined);
     expect(() => refuseUnlistedClient('https://anything.example/client.json')).not.toThrow();
     expect(() => refuseUnlistedClient('opaque-id')).not.toThrow();
+  });
+});
+
+describe('a consent rewritten directly (the authorization server lets the signed-in user do it)', () => {
+  beforeEach(() => {
+    mockAllowedHosts.mockReturnValue(undefined);
+  });
+
+  it('is held to what the role can hold in the team of that consent', async () => {
+    mockQueryOne.mockResolvedValueOnce({ userId: 'user-1', referenceId: 'team-9' });
+    expect(update.matcher({ path: '/oauth2/update-consent' })).toBe(true);
+    const result = await update.handler({ path: '/oauth2/update-consent', body: { id: 'consent-1', update: { scopes: ['offline_access', 'tasks:read', 'tasks:delete'] } } });
+    expect(result?.context.body.update.scopes).toEqual(['offline_access', 'tasks:read']);
+    expect(mockQueryOne).toHaveBeenCalledWith(expect.stringContaining('FROM "oauthConsent" WHERE id = $1'), ['consent-1']);
+    expect(mockValidateScopes).toHaveBeenCalledWith('user-1', 'team-9', ['tasks:read', 'tasks:delete']);
+  });
+
+  it('another user\'s consent, one of no team and a body that names no scopes are left to the endpoint', async () => {
+    mockQueryOne.mockResolvedValueOnce({ userId: 'user-2', referenceId: 'team-9' }).mockResolvedValueOnce({ userId: 'user-1', referenceId: null }).mockResolvedValueOnce(null);
+    for (let i = 0; i < 3; i++) expect(await update.handler({ path: '/oauth2/update-consent', body: { id: 'c', update: { scopes: ['tasks:delete'] } } })).toBeUndefined();
+    expect(await update.handler({ path: '/oauth2/update-consent', body: { id: 'c', update: {} } })).toBeUndefined();
+    expect(await update.handler({ path: '/oauth2/update-consent', body: { update: { scopes: ['tasks:read'] } } })).toBeUndefined();
+    expect(mockValidateScopes).not.toHaveBeenCalled();
   });
 });

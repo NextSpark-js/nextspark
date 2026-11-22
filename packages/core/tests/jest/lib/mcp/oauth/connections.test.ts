@@ -135,16 +135,19 @@ describe('ending a connection (#541)', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('when no live refresh token went, the revocation is written here, so an access token still out is refused', async () => {
-    // a consent alone (no offline access), and tokens that were all replaced already (a renewal refused in flight)
-    for (const [consents, tokens] of [[[{ id: 'consent-1' }], []], [[{ id: 'consent-1' }], [{ live: false }]], [[], [{ live: false }]]] as const) {
-      jest.clearAllMocks();
-      mockQueryRows.mockResolvedValueOnce([...consents]).mockResolvedValueOnce([...tokens]);
-      await disconnect('user-1', CLIENT, 'team-1');
-      expect(mockQuery).toHaveBeenCalledTimes(1);
-      expect(mockQuery.mock.calls[0][0]).toMatch(/INSERT INTO "oauthRevocation" \("userId", "clientId", "teamId"\)/);
-      expect(mockQuery.mock.calls[0][1]).toEqual(['user-1', CLIENT, 'team-1']);
-    }
+  it('removing the consent is what ends the connection: the database records it, and nothing is written here', async () => {
+    // the consent went and its tokens with it (migration 048), so the second statement finds none
+    mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockResolvedValueOnce([]);
+    expect(await disconnect('user-1', CLIENT, 'team-1')).toBe(true);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('tokens left with no consent and none of them live get their revocation written here', async () => {
+    mockQueryRows.mockResolvedValueOnce([]).mockResolvedValueOnce([{ live: false }]);
+    expect(await disconnect('user-1', CLIENT, 'team-1')).toBe(false);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery.mock.calls[0][0]).toMatch(/INSERT INTO "oauthRevocation" \("userId", "clientId", "teamId"\)/);
+    expect(mockQuery.mock.calls[0][1]).toEqual(['user-1', CLIENT, 'team-1']);
   });
 
   it('answers false when there was nothing to end', async () => {

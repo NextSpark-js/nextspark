@@ -306,8 +306,10 @@ BEGIN
   END IF;
   PERFORM public.purge_oauth_revocations(target);
   INSERT INTO public."oauthRevocation" ("userId") VALUES (target);
-  -- The consents go first: a refresh being rotated at this moment cannot write its new token without one
-  -- (require_oauth_consent_for_refresh_token), so none survives what follows. Every application asks again.
+  -- The consents go: with each, its connection's refresh tokens (end_oauth_connection_of_consent, further down),
+  -- and a refresh being rotated at this moment cannot write its new token without one
+  -- (require_oauth_consent_for_refresh_token). Every application asks again. What is left to revoke is a token with
+  -- no consent of a team, which is not an MCP grant.
   DELETE FROM public."oauthConsent" WHERE "userId" = target;
   UPDATE public."oauthRefreshToken" SET revoked = now() WHERE "userId" = target AND revoked IS NULL;
   RETURN NEW;
@@ -408,6 +410,35 @@ CREATE TRIGGER oauth_consent_narrowed
   FOR EACH ROW
   WHEN (OLD.scopes IS DISTINCT FROM NEW.scopes)
   EXECUTE FUNCTION public.narrow_oauth_tokens_to_consent();
+
+-- 3. A consent that is removed ends its connection for good, whoever removes it: lib/mcp/oauth/connection-store,
+--    the function above for a changed password or a suspension, or the authorization server's own endpoint
+--    (`/oauth2/delete-consent`), which removes the row and nothing else. Without this the refresh tokens would stay,
+--    refused only while the row is missing, and come back to life with the next consent of the same application.
+--    The revocation is recorded and the refresh tokens removed with the row. When the user itself is being deleted
+--    the tokens go by cascade and there is nobody left to record it for.
+CREATE OR REPLACE FUNCTION public.end_oauth_connection_of_consent()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF OLD."referenceId" IS NULL OR OLD."userId" IS NULL OR NOT EXISTS (SELECT 1 FROM public."users" WHERE id = OLD."userId") THEN
+    RETURN OLD;
+  END IF;
+  PERFORM public.purge_oauth_revocations(OLD."userId");
+  INSERT INTO public."oauthRevocation" ("userId", "clientId", "teamId") VALUES (OLD."userId", OLD."clientId", OLD."referenceId");
+  DELETE FROM public."oauthRefreshToken"
+   WHERE "userId" = OLD."userId" AND "clientId" = OLD."clientId" AND "referenceId" = OLD."referenceId";
+  RETURN OLD;
+END $$;
+
+DROP TRIGGER IF EXISTS oauth_consent_removed ON public."oauthConsent";
+CREATE TRIGGER oauth_consent_removed
+  AFTER DELETE ON public."oauthConsent"
+  FOR EACH ROW
+  EXECUTE FUNCTION public.end_oauth_connection_of_consent();
 
 DROP TRIGGER IF EXISTS oauth_revoke_on_password_change ON public."account";
 CREATE TRIGGER oauth_revoke_on_password_change
