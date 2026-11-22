@@ -5,7 +5,7 @@
  * asks the API for nothing; an unknown path keeps its not-found state, and a file is requested once the tree is known.
  */
 import React from 'react'
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, waitFor, cleanup, act } from '@testing-library/react'
 
 let mockPathname = '/devtools/tests/auth'
 jest.mock('next/navigation', () => ({ usePathname: () => mockPathname, useRouter: () => ({ push: jest.fn() }) }))
@@ -72,4 +72,25 @@ test('a file is requested once, after the tree is known', async () => {
   expect(await screen.findByText('file body')).toBeInTheDocument()
   expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/devtools\/tests$/)
   expect(requested()).toHaveLength(1)
+})
+
+test('a file that answers after the URL moved to a folder is not painted', async () => {
+  let answer: (value: unknown) => void = () => {}
+  fetchMock.mockImplementation(async (url: string) =>
+    url.endsWith('/api/devtools/tests')
+      ? { ok: true, json: async () => ({ data: { tree } }) }
+      : new Promise((resolve) => { answer = resolve })
+  )
+  mockPathname = '/devtools/tests/auth/login.md'
+  const { rerender } = render(<TestCasesViewer initialPath="auth/login.md" />)
+  await waitFor(() => expect(requested()).toHaveLength(1))
+  mockPathname = '/devtools/tests/auth'
+  rerender(<TestCasesViewer initialPath="auth" />)
+  await waitFor(() => expect(document.querySelector('[data-cy="devtools-tests-folder"]')).not.toBeNull())
+  await act(async () => {
+    answer({ ok: true, json: async () => ({ data: { path: 'auth/login.md', content: 'late file body' } }) })
+  })
+  expect(screen.queryByText('late file body')).toBeNull()
+  expect(document.querySelector('[data-cy="devtools-tests-folder"]')).not.toBeNull()
+  expect(document.querySelector('[data-cy="devtools-tests-file-loading"]')).toBeNull()
 })

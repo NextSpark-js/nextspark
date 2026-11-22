@@ -88,9 +88,10 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
   }, [selectedPath, tree, isLoadingTree, selectedNode]);
   // A folder in the URL (typed or shared) shows its entries; only a file is requested from the API (#550).
   const folderNode = selectedNode?.type === "folder" ? selectedNode : null;
+  const folderPath = folderNode?.path;
   useEffect(() => {
-    if (folderNode) expandFolder(folderNode.path);
-  }, [folderNode?.path]);
+    if (folderPath) expandFolder(folderPath);
+  }, [folderPath, expandFolder]);
 
   // Load file tree on mount
   useEffect(() => {
@@ -120,8 +121,12 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
     // Nothing is requested before the tree says what the path is: a folder, or a path that is not there, is no file.
     if (!selectedPath || pathNotFound || folderNode || isLoadingTree) {
       setFileContent(null);
+      setIsLoadingFile(false);
       return;
     }
+
+    // A response that arrives after the path changed (to a folder, another file, or none) is not for this screen.
+    let stale = false;
 
     async function loadFile() {
       setIsLoadingFile(true);
@@ -135,16 +140,20 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
           throw new Error(data.error || t("loadFileFailed"));
         }
 
-        setFileContent(data.data);
+        if (!stale) setFileContent(data.data);
       } catch (err) {
+        if (stale) return;
         setError(err instanceof Error ? err.message : t("loadFileFailed"));
         setFileContent(null);
       } finally {
-        setIsLoadingFile(false);
+        if (!stale) setIsLoadingFile(false);
       }
     }
 
     loadFile();
+    return () => {
+      stale = true;
+    };
   }, [selectedPath, pathNotFound, folderNode?.path, isLoadingTree]);
 
   if (isLoadingTree) {
