@@ -791,6 +791,22 @@ plugin: "Process"
 
 ---
 
+## Texts that come from config or data
+
+Not every string on screen comes from a message catalog. Three kinds of text are written outside the catalogs, and each follows one rule:
+
+| Text | Where it is written | In another locale |
+|---|---|---|
+| The core's own permissions (`teams.*`, `settings.*`, `media.*`) and their categories | `CORE_PERMISSIONS_CONFIG` in core, in English | **Translated** through `superadmin.rolesMatrix.corePermissions.<permission id>` and `coreCategories.<category>` in the six catalogs |
+| Permissions, features, flows, blocks, entities and roles a **project** defines (`permissions.config.ts`, `features.config.ts`, `flows.config.ts`, block and entity configs, and the files a preset copies into the project) | The project's own config, in the language its authors wrote | **Shown as written**. A preset's files become the project's once they are generated; to translate them, write the text as a key of the project's own catalog |
+| Scheduled actions: payloads, results and error messages | The database (a project's handlers and its sample data) | **Shown as written**: it is data, not interface |
+
+The rule for the first row is "the catalog translates only what the core wrote": the text of a permission is looked up in the catalog only when it still equals the core's English text. A project that changes the description of a core permission, or adds its own, sees its text in every locale, never a translation laid over it. When you add a permission to `CORE_PERMISSIONS_CONFIG`, add its key to all six `superadmin.json` catalogs and its text to `components/superadmin/tables/core-permission-texts.ts` (a test fails otherwise).
+
+The role names are interface labels, not data: in the superadmin users list and user page, the badge of a role and the role filter read the same entry (`superadmin.usersPage.roles`), so they never differ.
+
+---
+
 ## Best Practices
 
 ### Do's ✅

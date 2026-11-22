@@ -359,7 +359,32 @@
     "searchPlaceholder": "Pesquisar permissões por chave ou descrição...",
     "differencesOnly": "Apenas diferenças",
     "showing": "Mostrando {shown} de {total}",
-    "noMatches": "Nenhuma permissão corresponde."
+    "noMatches": "Nenhuma permissão corresponde.",
+    "corePermissions": {
+      "teams": {
+        "invite": "Pode enviar convites a novos membros da equipe",
+        "remove_member": "Pode remover membros da equipe",
+        "change_roles": "Pode alterar a função de outros membros",
+        "settings": "Pode alterar o nome, o slug e a configuração da equipe",
+        "delete": "Pode excluir a equipe inteira"
+      },
+      "settings": {
+        "billing": "Acesso à configuração de cobrança e aos pagamentos",
+        "api_keys": "Pode criar e gerenciar as chaves de API da equipe",
+        "integrations": "Pode conectar e configurar integrações externas"
+      },
+      "media": {
+        "read": "Pode navegar e ver os arquivos de mídia da biblioteca",
+        "upload": "Pode enviar imagens, vídeos e outros arquivos de mídia",
+        "update": "Pode editar metadados, tags e legendas dos arquivos de mídia",
+        "delete": "Pode excluir arquivos de mídia permanentemente"
+      }
+    },
+    "coreCategories": {
+      "Team": "Equipe",
+      "Settings": "Configurações",
+      "Media": "Mídia"
+    }
   },
   "planMatrix": {
     "featureOrLimit": "Recurso / Limite",

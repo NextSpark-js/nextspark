@@ -359,7 +359,32 @@
     "searchPlaceholder": "Rechercher une permission par clé ou description...",
     "differencesOnly": "Différences uniquement",
     "showing": "{shown} sur {total} affichées",
-    "noMatches": "Aucune permission ne correspond."
+    "noMatches": "Aucune permission ne correspond.",
+    "corePermissions": {
+      "teams": {
+        "invite": "Peut envoyer des invitations aux nouveaux membres de l’équipe",
+        "remove_member": "Peut retirer des membres de l’équipe",
+        "change_roles": "Peut modifier le rôle des autres membres",
+        "settings": "Peut modifier le nom, le slug et la configuration de l’équipe",
+        "delete": "Peut supprimer toute l’équipe"
+      },
+      "settings": {
+        "billing": "Accès à la configuration de facturation et aux paiements",
+        "api_keys": "Peut créer et gérer les clés d’API de l’équipe",
+        "integrations": "Peut connecter et configurer des intégrations externes"
+      },
+      "media": {
+        "read": "Peut parcourir et consulter les fichiers multimédias de la bibliothèque",
+        "upload": "Peut téléverser des images, des vidéos et d’autres fichiers multimédias",
+        "update": "Peut modifier les métadonnées, les étiquettes et les légendes des médias",
+        "delete": "Peut supprimer définitivement des fichiers multimédias"
+      }
+    },
+    "coreCategories": {
+      "Team": "Équipe",
+      "Settings": "Paramètres",
+      "Media": "Médias"
+    }
   },
   "planMatrix": {
     "featureOrLimit": "Fonctionnalité / Limite",

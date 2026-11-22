@@ -20,8 +20,12 @@ interface BadgeUser {
  */
 export function UserRoleBadge({ user }: { user: BadgeUser }) {
   const getRoleName = useRoleTranslations();
+  const t = useTranslations('superadmin.usersPage');
   const role = effectiveUserRole(user.role, user.roleBeforeSuspension) as UserRole;
-  return <Badge variant={role === 'developer' ? 'default' : role === 'member' ? 'secondary' : 'outline'}>{getRoleName(role)}</Badge>;
+  // The name the role filter of the list uses (#549), so the badge and the filter never differ; a role the list does
+  // not name takes the configured name.
+  const label = t.has(`roles.${role}`) ? t(`roles.${role}`) : getRoleName(role);
+  return <Badge variant={role === 'developer' ? 'default' : role === 'member' ? 'secondary' : 'outline'}>{label}</Badge>;
 }
 
 /**

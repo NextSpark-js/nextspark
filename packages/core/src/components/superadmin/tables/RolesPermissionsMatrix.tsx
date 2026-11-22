@@ -16,6 +16,7 @@ import {
 } from '../../ui/table';
 import { cn } from '../../../lib/utils';
 import { sel } from '../../../lib/test';
+import { CORE_PERMISSION_TEXTS } from './core-permission-texts';
 
 interface PermissionData {
   id: string;
@@ -37,6 +38,23 @@ interface RolesPermissionsMatrixProps {
   onQueryChange?: (query: string) => void;
   differencesOnly?: boolean;
   onDifferencesOnlyChange?: (on: boolean) => void;
+}
+
+const CORE_PERMISSIONS = new Map(Object.entries(CORE_PERMISSION_TEXTS));
+
+/**
+ * The description of a permission in the interface language (#549). The core's own permissions (teams, settings, media)
+ * are written in English in its config, and the catalog translates them; a permission a project adds, or one whose text
+ * the project changed, is shown as written.
+ */
+export function localizedPermissionDescription(
+  t: { has: (key: string) => boolean; (key: string): string },
+  id: string,
+  description: string | undefined,
+): string | undefined {
+  const core = CORE_PERMISSIONS.get(id);
+  const key = `corePermissions.${id}`;
+  return core && description === core.description && t.has(key) ? t(key) : description;
 }
 
 /**
@@ -111,14 +129,22 @@ export function RolesPermissionsMatrix({
     return "outline"; // viewer
   };
 
+  // The core's own categories take their name from the catalog (the grouping and the order stay on the config's names)
+  const coreCategories = new Set(
+    (permissionsData ?? [])
+      .filter(p => CORE_PERMISSIONS.get(p.id)?.category === p.category)
+      .map(p => p.category)
+  );
+  const localizedData = permissionsData?.map(p => ({ ...p, description: localizedPermissionDescription(t, p.id, p.description) }));
+
   // Build category map from permissionsData
   const permissionCategoryMap = new Map<string, string>();
   const permissionLabelMap = new Map<string, string>();
   const permissionDangerousMap = new Map<string, boolean>();
   const permissionDescriptionMap = new Map<string, string>();
 
-  if (permissionsData) {
-    permissionsData.forEach(p => {
+  if (localizedData) {
+    localizedData.forEach(p => {
       permissionCategoryMap.set(p.id, p.category);
       permissionLabelMap.set(p.id, p.label);
       permissionDangerousMap.set(p.id, p.dangerous ?? false);
@@ -138,7 +164,7 @@ export function RolesPermissionsMatrix({
   };
 
   // Group permissions by category
-  const visiblePermissions = filterMatrixPermissions(allPermissions, permissionsData, roles, permissions, query, differencesOnly);
+  const visiblePermissions = filterMatrixPermissions(allPermissions, localizedData, roles, permissions, query, differencesOnly);
   const permissionsByCategory = visiblePermissions.reduce(
     (acc, permission) => {
       const category = getPermissionCategory(permission);
@@ -171,6 +197,7 @@ export function RolesPermissionsMatrix({
 
   // Format category label for display
   const formatCategoryLabel = (category: string): string => {
+    if (coreCategories.has(category) && t.has(`coreCategories.${category}`)) return t(`coreCategories.${category}`);
     // Already formatted categories
     if (category.includes(" ") || category.includes("-")) {
       return category

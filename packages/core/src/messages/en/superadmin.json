@@ -359,7 +359,32 @@
     "searchPlaceholder": "Search permissions by key or description...",
     "differencesOnly": "Differences only",
     "showing": "Showing {shown} of {total}",
-    "noMatches": "No permissions match."
+    "noMatches": "No permissions match.",
+    "corePermissions": {
+      "teams": {
+        "invite": "Can send invitations to new team members",
+        "remove_member": "Can remove members from the team",
+        "change_roles": "Can change the role of other members",
+        "settings": "Can modify team name, slug and configuration",
+        "delete": "Can delete the entire team"
+      },
+      "settings": {
+        "billing": "Access to billing configuration and payments",
+        "api_keys": "Can create and manage team API keys",
+        "integrations": "Can connect and configure external integrations"
+      },
+      "media": {
+        "read": "Can browse and view media files in the library",
+        "upload": "Can upload images, videos, and other media files",
+        "update": "Can edit media metadata, tags, and captions",
+        "delete": "Can permanently delete media files"
+      }
+    },
+    "coreCategories": {
+      "Team": "Team",
+      "Settings": "Settings",
+      "Media": "Media"
+    }
   },
   "planMatrix": {
     "featureOrLimit": "Feature / Limit",
