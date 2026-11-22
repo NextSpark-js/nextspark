@@ -15,12 +15,15 @@ jest.mock('@nextsparkjs/registries/docs-registry', () => ({
     superadmin: [{ slug: 'setup', title: 'Setup', pages: [{ slug: 'deploy', title: 'Deploy', path: 'docs/superadmin/setup/deploy.md' }] }],
   },
 }))
+jest.mock('../../../src/routes/_internal/area-access', () => ({ requireAreaAccess: async () => undefined }))
+jest.mock('../../../src/lib/docs/registry-doc', () => ({ resolveRegistryDoc: () => ({ sectionTitle: 'Setup', filePath: '/x.md' }) }))
 jest.mock('../../../src/lib/docs/parser', () => ({
   parseMarkdownFile: async () => ({ metadata: { title: 'Deploy it', description: 'How' }, html: '<p>body</p>' }),
 }))
 
 import SuperadminDocsPage from '../../../src/routes/superadmin/docs/page'
 import SuperadminDocsDetailPage from '../../../src/routes/superadmin/docs/[section]/[page]/page'
+import SuperadminDocsDetailPageCc from '../../../src/routes/superadmin/docs/[section]/[page]/page.cc'
 
 describe('superadmin docs', () => {
   test('the index has the shared header, with the tree and the documents below it', async () => {
@@ -32,11 +35,15 @@ describe('superadmin docs', () => {
     expect(screen.getByRole('link', { name: 'Deploy' })).toBeInTheDocument()
   })
 
-  test('a document has the same header, one page heading, and keeps the tree and its own title', async () => {
-    render(await SuperadminDocsDetailPage({ params: Promise.resolve({ section: 'setup', page: 'deploy' }) }))
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('indexTitle')
-    expect(screen.getByRole('heading', { level: 2, name: 'Deploy it' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'navigation' })).toBeInTheDocument()
-  })
+  // The projects use the cacheComponents variant (page.cc); the other one is the default host.
+  test.each([['page', SuperadminDocsDetailPage], ['page.cc', SuperadminDocsDetailPageCc]])(
+    'a document (%s) has the same header, one page heading, and keeps the tree and its own title',
+    async (_name, Page) => {
+      render(await Page({ params: Promise.resolve({ section: 'setup', page: 'deploy' }) }))
+      expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('indexTitle')
+      expect(screen.getByRole('heading', { level: 2, name: 'Deploy it' })).toBeInTheDocument()
+      expect(screen.getByRole('navigation', { name: 'navigation' })).toBeInTheDocument()
+    }
+  )
 })
