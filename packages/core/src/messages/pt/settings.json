@@ -487,7 +487,7 @@
       "tipRevoke": "Revogue a chave imediatamente se achar que ela foi comprometida",
       "tipHttps": "Use sempre HTTPS ao fazer solicitações à API",
       "limits": "Limites da API:",
-      "limitRate": "1.000 solicitações por minuto (uma chamada a uma ferramenta via MCP conta normalmente como duas)",
+      "limitRate": "1.000 débitos por minuto: um por solicitação e mais um por cada chamada à API feita por uma ferramenta MCP",
       "limitHeaders": "As respostas incluem cabeçalhos de limite de uso",
       "limitDocs": "Documentação completa disponível em /docs",
       "keyCopied": "Chave de API copiada!",

@@ -44,7 +44,7 @@ export interface OAuthMcpHandlers {
   requiredScopesFor: (toolName: string) => string[]
   /** Every scope some tool needs: what a connecting client is told to ask for. All of the resource's when absent. */
   toolScopes?: readonly string[]
-  /** Records the tool calls of a body refused for missing scopes (the engine's `auditRefused`). */
+  /** Records, best effort, the tool calls of a body refused for missing scopes (the engine's `auditRefused`). */
   auditRefused?: (body: unknown, ctx: ToolExecutionContext, granted: readonly string[]) => Promise<void>
 }
 
@@ -193,7 +193,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
         return jsonRpcError(400, -32700, 'Parse error: body must be JSON-RPC')
       }
 
-      // A batch is bounded: every message of one costs work, and a refused one a row of the audit trail per call
+      // A batch is bounded: every message of one costs work, and a refused one a write to the audit trail per call
       if (Array.isArray(body) && body.length > MAX_BATCH_MESSAGES) {
         return jsonRpcError(400, -32600, `Invalid Request: a batch holds at most ${MAX_BATCH_MESSAGES} messages`)
       }
@@ -209,7 +209,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
       }
 
       // Before anything runs: one missing scope refuses the whole body, a batch included, so nothing is half done.
-      // The refused calls are recorded: nothing ran, and the attempt is still part of the trail.
+      // The refused calls are recorded, best effort: nothing ran, and the attempt is still part of the trail.
       const missing = missingScopes(body, granted, requiredScopesFor)
       if (missing.length) {
         await auditRefused?.(body, ctx, granted)

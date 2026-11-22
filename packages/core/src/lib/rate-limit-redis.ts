@@ -107,7 +107,10 @@ export type BuiltInRateLimitTier = 'auth' | 'authIdentifier' | 'api' | 'strict' 
 export type RateLimitTier = BuiltInRateLimitTier | (string & {})
 
 export interface RateLimitTierConfig {
-  /** Requests allowed per window */
+  /**
+   * What the tier allows per window: requests of a client address for the per-address tiers, and charges for the
+   * `credential` tier (one for each authenticated request, so one more for each API handler an MCP tool calls)
+   */
   limit: number
   /** Window length in milliseconds */
   windowMs: number

@@ -9,12 +9,14 @@
  *
  * Stateless per request: handleJsonRpc creates an ephemeral McpServer bound
  * to the request's ToolExecutionContext, processes the message(s), and tears
- * everything down. Every tool call is audited.
+ * everything down. A tool call that reaches its handler is audited, best effort (lib/mcp/audit).
  *
  * No separate authorization layer runs here: every generated tool's executor
  * round-trips in-process through the real generic entity handlers, which
  * already enforce scope + team-role permission + ownership/field guards for
- * API-key auth (see tool-generator.ts).
+ * API-key auth (see tool-generator.ts). A hand-written tool (extraTools,
+ * utilityTools) runs its own handler and is bound by them only for the API
+ * handlers it calls through `api.execute`.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -242,8 +244,9 @@ export function createMcpEngine(
   }
 
   /**
-   * Records the tool calls of a body that was refused before anything ran because the credential lacks scopes: one
-   * row per call with status 403 and what that call was missing. An attempt to do what was not granted is the part
+   * Records, best effort, the tool calls of a body that was refused before anything ran because the credential
+   * lacks scopes: for each well-formed call of a known tool it tries to write a row with status 403 and what that
+   * call was missing (a failed write is logged, lib/mcp/audit). An attempt to do what was not granted is the part
    * of an agent's activity most worth being able to reconstruct.
    */
   async function auditRefused(body: unknown, ctx: ToolExecutionContext, granted: readonly string[]): Promise<void> {

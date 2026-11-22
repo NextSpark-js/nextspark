@@ -27,7 +27,7 @@ jest.mock('@/core/lib/rate-limit-redis', () => ({
 
 import { NextRequest } from 'next/server'
 import { rateLimitCache, getCacheKey } from '@/core/lib/api/cache'
-import { credentialRateLimitResponse } from '@/core/lib/api/rate-limit'
+import { credentialRateLimitResponse, windowLabel } from '@/core/lib/api/rate-limit'
 
 const request = () => new NextRequest('http://localhost:3000/api/mcp', { method: 'POST' })
 const credential = (keyId: string) => ({ keyId, userId: 'user-1', scopes: ['tasks:read'] })
@@ -114,5 +114,11 @@ describe('the per-credential limit', () => {
     const response = await credentialRateLimitResponse(request(), credential('key-window'))
     expect(response?.status).toBe(429)
     expect((await response!.json()).message).toContain('Limit: 2 charges per 30 seconds')
+  })
+
+  it('the window reads exactly, for any number of milliseconds a tier can be set to', () => {
+    expect([60_000, 120_000, 300_000, 1_000, 30_000, 90_000, 1_500, 90_500, 499, 1].map(windowLabel)).toEqual([
+      'minute', '2 minutes', '5 minutes', 'second', '30 seconds', '90 seconds', '1500 ms', '90500 ms', '499 ms', '1 ms',
+    ])
   })
 })

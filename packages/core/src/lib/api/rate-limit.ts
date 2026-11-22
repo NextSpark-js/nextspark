@@ -120,12 +120,22 @@ export async function credentialRateLimitResponse(request: Request, auth: ApiKey
   return result.allowed ? null : credentialLimitExceeded(request, result);
 }
 
+/**
+ * A window as it reads after "per", exact for any number of milliseconds a tier can be set to: `minute`,
+ * `5 minutes`, `second`, `30 seconds`, and `1500 ms` for one that is not a whole number of seconds.
+ */
+export function windowLabel(windowMs: number): string {
+  const unit = (count: number, name: string) => (count === 1 ? name : `${count} ${name}s`);
+  if (windowMs % 60_000 === 0) return unit(windowMs / 60_000, 'minute');
+  if (windowMs % 1000 === 0) return unit(windowMs / 1000, 'second');
+  return `${windowMs} ms`;
+}
+
 function credentialLimitExceeded(request: Request, result: RateLimitResult): NextResponse {
   const retryAfter = Math.max(1, Math.ceil((result.resetTime - Date.now()) / 1000));
   // The limit is counted in charges, not in requests of the client: one for each authenticated request, and so one
   // more for each API handler an MCP tool calls in process. The message says so, in the window the tier is set to.
-  const { windowMs } = getRateLimitTierConfig('credential');
-  const window = windowMs === 60_000 ? 'minute' : `${Math.round(windowMs / 1000)} seconds`;
+  const window = windowLabel(getRateLimitTierConfig('credential').windowMs);
   // With core's CORS for the request: the route returns this as it is, often without withRateLimitTier around it,
   // and a browser from another origin would otherwise see a CORS error instead of the 429 (#432)
   return withCors(NextResponse.json(

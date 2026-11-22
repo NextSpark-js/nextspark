@@ -94,9 +94,13 @@ fills from the generated `MCP_OVERRIDES` registry (`@nextsparkjs/registries/mcp-
 - Tool names: `{prefix}_list_{plural}`, `{prefix}_{get|create|update|delete}_{singular}`. The prefix is
   `MCP_TOOL_PREFIX` (default `app`). The plural comes from the entity **slug**, the singular from
   `names.singular`, both through `toolToken`. A duplicate name throws at startup (`assertUniqueNames`).
-- A tool runs by calling the real generic entity handler in process (`executeEntityOperation`), with
+- A generated tool runs by calling the real generic entity handler in process (`executeEntityOperation`), with
   `x-team-id` set to the resolved team. Scopes, team-role permissions, ownership and field guards are the
-  handler's: there is no second authorization layer to keep in step.
+  handler's: there is no second authorization layer to keep in step. A hand-written tool (`extraTools`,
+  `utilityTools`) runs its own handler and is bound by them only for the handlers it calls through
+  `api.execute`.
+- A delete tool is refused unless its arguments carry `confirm: true`, before the executor is called. The flag
+  is set by the model, after asking the user: it is not a confirmation the server gets from a person.
 - Entity tools return their data twice (`withData` in `tool-generator.ts`): as `structuredContent`, and as the
   same JSON in a second text block after the summary. Clients such as Claude read only the text; without the
   second block a list answered "15 Tasks" and nothing else. This applies to both credentials.

@@ -7,10 +7,12 @@
  * few-shot examples). Delete tools require confirm:true and carry destructive
  * warnings.
  *
- * No separate authorization gate is re-implemented here: every tool call
- * round-trips in-process through the real generic entity handler (see
- * executor.ts), which already runs `checkAuthPermission` + `hasRequiredScope`
- * + ownership/field guards for API-key auth (fixed for #94/#95). A denied
+ * No separate authorization gate is re-implemented here: every call of a tool
+ * generated in this file round-trips in-process through the real generic
+ * entity handler (see executor.ts), which already runs `checkAuthPermission`
+ * + `hasRequiredScope` + ownership/field guards for API-key auth (fixed for
+ * #94/#95). A hand-written tool (extraTools, utilityTools) is not generated
+ * here and is bound by them only for the API handlers it calls. A denied
  * call surfaces as a normal API error, translated via errors.ts.
  */
 

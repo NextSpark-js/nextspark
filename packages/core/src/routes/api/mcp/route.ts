@@ -20,9 +20,13 @@
  * - rate limits: tier 'api' per address on this route, and tier 'credential' per API key or MCP connection, counted
  *   here and again by each API handler a tool calls in-process. Both are shared between instances only with Redis
  *   configured (UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN)
- * - team-role permissions + scopes + ownership/field guards come from the
- *   real generic entity handlers the executor calls in-process (#94/#95)
- * - every tool call that reaches its handler is audited to api_audit_log, and so is one refused for a missing scope
+ * - for a generated entity tool, team-role permissions + scopes + ownership/field guards come from the real
+ *   generic entity handler its executor calls in-process (#94/#95). A hand-written tool (extraTools,
+ *   utilityTools) runs its own handler: it is bound by those checks only for the API handlers it calls through
+ *   `api.execute`, and has to check whatever else it does itself
+ * - audit, best effort: a tool call that reaches its handler is written to api_audit_log, and so is one refused
+ *   for a missing scope; a call the SDK rejects before the handler leaves no row, and a failed write is logged
+ *   without stopping the call
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -125,9 +129,10 @@ async function handleMcpPost(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // Transport-level auth only: per-tool scopes (`<entity>:read/write/delete`)
-  // are enforced by the generic entity handlers the executor invokes for each
-  // tool call, so this entry point accepts any valid key explicitly (#93).
+  // Transport-level auth only, so this entry point accepts any valid key explicitly (#93). The scopes of a
+  // generated entity tool (`<entity>:read/write/delete`) are enforced by the generic entity handler its executor
+  // invokes; a hand-written tool is held to them for each API handler it calls through `api.execute`, and with
+  // an API key there is no check of `meta.requiredScopes` before it runs.
   const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (authResult.rateLimitResponse) {
     // A valid key over its per-key limit: say so, with the limit's Retry-After, instead of the 401 below.
