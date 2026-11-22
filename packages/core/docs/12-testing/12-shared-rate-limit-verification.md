@@ -179,7 +179,7 @@ curl -s "$UPSTASH_REDIS_REST_URL" -H "Authorization: Bearer $UPSTASH_REDIS_REST_
 ```
 
 The counter of the connection reads the limit (1000) when the count was kept in Redis. The database's dashboard
-shows the spike of commands of the run as well.
+shows the peak of commands of the run as well.
 
 ### 7. Put the limits back
 

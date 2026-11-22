@@ -499,7 +499,7 @@ The MCP server at `/api/mcp` accepts an API key. When a project turns on
 obtains by sending the user to sign in and approve its permissions. The two are different credentials for the same
 tools, with the same scope names (`<entity>:read|write|delete`).
 
-What differs, stated as it is on this branch:
+What differs today:
 
 | | API key | MCP connection (browser sign-in) |
 |---|---|---|

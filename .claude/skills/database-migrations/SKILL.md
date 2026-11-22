@@ -357,8 +357,8 @@ CREATE TRIGGER oauth_refresh_token_requires_consent
 
 ### One migration file per feature, until it is published
 
-While a feature is unreleased, everything it needs stays in its one migration file: 048 changed in several
-commits of its branch, and the branch adds no other migration and changes no existing one. Once a migration is published
+While a feature is unreleased, everything it needs stays in its one migration file: 048 was rewritten several
+times before its release, and the feature has no other migration and changes no existing one. Once a migration is published
 (merged and released, so projects may have applied it), **never edit it**: a change goes in a new migration.
 Editing a published file changes nothing on databases that already ran it.
 

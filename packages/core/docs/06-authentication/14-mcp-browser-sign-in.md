@@ -61,7 +61,7 @@ scope vocabulary (`<entity>:read|write|delete`) and the same entity handlers, an
 | **Secret handling** | A long-lived secret the user copies into the client's configuration | Nothing is copied; the client holds short-lived tokens it obtained itself |
 | **Audit** | `api_audit_log` rows carry `apiKeyId` | `apiKeyId` is null; the row carries `credential: 'oauth'`, the client id and the token id |
 
-The two models are not unified on this branch. In particular an API key still acts in whichever team a request
+The two models are not unified. In particular an API key still acts in whichever team a request
 names, and a connection never does.
 
 ---
@@ -410,8 +410,8 @@ Also in the migration:
 - Every OAuth table, `jwks` and `oauthRevocation` included, has RLS enabled with a service-only policy. `jwks` holds
   the signing private key and the token tables hold credentials.
 
-Everything is in the single file `048_oauth_provider.sql`. The branch adds no other migration and changes no
-existing one; later changes go in new migrations.
+Everything is in the single file `048_oauth_provider.sql`: the feature has no other migration and changes no
+existing one. Once it is released, changes go in new migrations.
 
 ### The revocation number
 
