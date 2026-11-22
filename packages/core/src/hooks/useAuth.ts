@@ -95,7 +95,7 @@ const SESSION_DROP_TIMEOUT_MS = 2000
  * answers each with 401. So the store is brought up to date first, for at most SESSION_DROP_TIMEOUT_MS:
  * the redirect never depends on that request. Best effort: a store that cannot be refreshed leaves the order as it was.
  *
- * `$store.atoms.session` is an undocumented internal of better-auth, checked against 1.7.7 (client/session-atom.mjs: the atom's
+ * `$store.atoms.session` is an undocumented internal of better-auth, checked against 1.7.27 (client/session-atom.mjs: the atom's
  * value carries `refetch`). If an upgrade renames it this becomes a no-op and the 401s come back:
  * tests/jest/hooks/useAuth.signed-in-data.test.tsx pins the call, re-check it when better-auth is bumped.
  */
