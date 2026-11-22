@@ -9,6 +9,8 @@ jest.mock('better-auth/api', () => ({
 }));
 const mockQueryOne = jest.fn();
 jest.mock('@/core/lib/db', () => ({ queryOne: (...args: unknown[]) => mockQueryOne(...args) }));
+const mockAllowedHosts = jest.fn<unknown, []>();
+jest.mock('@/core/lib/mcp/oauth/config', () => ({ allowedClientHosts: () => mockAllowedHosts() }));
 const mockValidateScopes = jest.fn();
 jest.mock('@/core/lib/api/auth', () => ({ validateScopesForUser: (...args: unknown[]) => mockValidateScopes(...args) }));
 const mockSelectedTeam = jest.fn();
@@ -17,7 +19,7 @@ jest.mock('@/core/lib/mcp/oauth/team-selection', () => ({
   selectedTeam: (...args: unknown[]) => mockSelectedTeam(...args),
 }));
 
-import { consentedScopes, consentWithinRolePlugin, refuseConsentSkippingClient } from '@/core/lib/mcp/oauth/consent-plugin';
+import { consentedScopes, consentWithinRolePlugin, refuseConsentSkippingClient, refuseUnlistedClient } from '@/core/lib/mcp/oauth/consent-plugin';
 
 const CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
 const REQUESTED = 'openid offline_access tasks:read tasks:write tasks:delete customers:read';
@@ -103,5 +105,19 @@ describe('a client that skips consent', () => {
     await expect(refuseConsentSkippingClient('c')).resolves.toBeUndefined();
     await expect(refuseConsentSkippingClient(undefined)).resolves.toBeUndefined();
     expect(mockQueryOne).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('an application the project does not accept', () => {
+  it('is refused when it asks for authorization', () => {
+    mockAllowedHosts.mockReturnValue(['claude.ai']);
+    expect(() => refuseUnlistedClient('https://evil.example/oauth/client.json')).toThrow(expect.objectContaining({ body: expect.objectContaining({ error: 'access_denied' }) }));
+    expect(() => refuseUnlistedClient('https://claude.ai/oauth/mcp-oauth-client-metadata')).not.toThrow();
+  });
+
+  it('every application goes on while the project sets no list', () => {
+    mockAllowedHosts.mockReturnValue(undefined);
+    expect(() => refuseUnlistedClient('https://anything.example/client.json')).not.toThrow();
+    expect(() => refuseUnlistedClient('opaque-id')).not.toThrow();
   });
 });

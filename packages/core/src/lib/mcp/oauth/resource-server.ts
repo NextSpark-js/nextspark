@@ -31,7 +31,8 @@ import { TeamMemberService } from '../../services/team-member.service'
 import { withBasePathRequest } from '../../base-path'
 import { RATE_LIMIT_MESSAGE } from '../errors'
 import type { ToolExecutionContext } from '../types'
-import { mcpOAuthIssuer, mcpResourceMetadataUrl, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
+import { isClientAllowed } from './allowed-clients'
+import { allowedClientHosts, mcpOAuthIssuer, mcpResourceMetadataUrl, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
 import { isRevokedSince } from './revocation'
 import { mcpOAuthDefaultScopes, mcpOAuthStepUpScopes } from './scopes'
 
@@ -79,6 +80,10 @@ async function principalFromClaims(
   const clientId = claimString(claims.azp) ?? claimString(claims.client_id)
   if (!userId || !clientId) return jsonRpcError(401, -32001, 'The access token names no user or no client.')
   if (!teamId) return jsonRpcError(403, -32002, 'The access token is not bound to a team. Connect again.')
+  // The project's list of accepted applications, as it is now: a token issued before the list changed counts no more
+  if (!isClientAllowed(clientId, allowedClientHosts())) {
+    return jsonRpcError(403, -32002, 'This application is not among the ones this server accepts.')
+  }
 
   const user = await queryOne<{ email: string; role: string; name: string }>(
     'SELECT email, role, name FROM "users" WHERE id = $1',

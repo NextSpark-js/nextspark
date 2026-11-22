@@ -15,14 +15,15 @@ import { fetchClientMetadataResource } from '@better-auth/cimd/node'
 import { mcp } from '@better-auth/mcp'
 import { withBasePath } from '../../base-path'
 import { queryOne } from '../../db'
-import { consentWithinRolePlugin, refuseConsentSkippingClient } from './consent-plugin'
+import { isClientAllowed } from './allowed-clients'
+import { consentWithinRolePlugin, refuseConsentSkippingClient, refuseUnlistedClient } from './consent-plugin'
 import { purgeExpiredOAuthIfDue } from './purge'
 import { mcpOAuthResourceScopes } from './scopes'
 import { APIError } from 'better-auth'
 import { isSuspendedRole } from '../../auth/suspension'
 import { tryGetCurrentAuthEndpointContext } from '@better-auth/core/context'
 import { isAuthorizationKey, selectableTeams, selectedTeam, selectTeam } from './team-selection'
-import { isMcpOAuthEnabled, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
+import { allowedClientHosts, isMcpOAuthEnabled, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
 import { latestRevocation } from './revocation'
 
 /** A suspended account's browser session can still be alive in its cookie cache: it authorizes nothing. */
@@ -102,6 +103,7 @@ export function mcpOAuthPlugins() {
         consentReferenceId: async ({ user, session }) => {
           await refuseSuspendedNow(user.id)
           // Asked for by every authorization before a code is issued, with or without a consent screen
+          refuseUnlistedClient(currentClientId())
           await refuseConsentSkippingClient(currentClientId())
           const teamId = await selectedTeam(session.id, currentAuthorization(), user.id)
           if (!teamId) throw noTeam()
@@ -117,7 +119,12 @@ export function mcpOAuthPlugins() {
         return { [TEAM_CLAIM]: referenceId, [REVOCATION_CLAIM]: await latestRevocation(user.id) }
       },
     }),
-    cimd({ fetchClientMetadataResource, metadataProfile: 'mcp-2026-07-28' }),
+    cimd({
+      fetchClientMetadataResource,
+      metadataProfile: 'mcp-2026-07-28',
+      // The project's list of accepted applications, before the document of one that is not on it is fetched
+      isMetadataDocumentUrlAllowed: clientIdUrl => isClientAllowed(clientIdUrl, allowedClientHosts()),
+    }),
     // A consent grants what the client asked for, the user accepted and the role can hold: decided here, not in the page
     consentWithinRolePlugin(),
   ]

@@ -11,6 +11,7 @@
  */
 import { FEATURES } from '@nextsparkjs/registries/features'
 import { withBasePath } from '../../base-path'
+import { APP_CONFIG_MERGED } from '../../config/config-client'
 import { resolveAppUrl, resolveBaseUrl } from '../../utils/base-url'
 
 /** MCP kill switch: on in development unless 'false', off in production unless 'true'. */
@@ -27,6 +28,11 @@ export function isMcpOAuthBuilt(): boolean {
 
 export function isMcpOAuthEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return isMcpOAuthBuilt() && env.MCP_OAUTH_ENABLED !== 'false' && isMcpEnabled(env)
+}
+
+/** `mcp.oauth.allowedClientHosts` of app.config, read on each call; undefined when the project sets none. */
+export function allowedClientHosts(): unknown {
+  return (APP_CONFIG_MERGED as { mcp?: { oauth?: { allowedClientHosts?: unknown } } } | undefined)?.mcp?.oauth?.allowedClientHosts
 }
 
 const trimSlash = (url: string) => url.replace(/\/+$/, '')

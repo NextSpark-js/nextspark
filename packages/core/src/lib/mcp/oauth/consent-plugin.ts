@@ -10,6 +10,8 @@ import { APIError, type BetterAuthPlugin } from 'better-auth'
 import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { validateScopesForUser } from '../../api/auth'
 import { queryOne } from '../../db'
+import { isClientAllowed } from './allowed-clients'
+import { allowedClientHosts } from './config'
 import { entityScope } from './scope-names'
 import { isAuthorizationKey, selectedTeam } from './team-selection'
 
@@ -33,6 +35,16 @@ export async function refuseConsentSkippingClient(clientId: string | null | unde
   const client = await queryOne<{ skipConsent: boolean | null }>('SELECT "skipConsent" FROM "oauthClient" WHERE "clientId" = $1', [clientId])
   if (client?.skipConsent) {
     throw new APIError('BAD_REQUEST', { error: 'access_denied', error_description: 'this server asks the user for consent: a client that skips it is not accepted' })
+  }
+}
+
+/**
+ * Refuses an authorization for an application the project does not accept (`mcp.oauth.allowedClientHosts`,
+ * lib/mcp/oauth/allowed-clients). Without a list every application is accepted.
+ */
+export function refuseUnlistedClient(clientId: string | null | undefined): void {
+  if (!isClientAllowed(clientId, allowedClientHosts())) {
+    throw new APIError('BAD_REQUEST', { error: 'access_denied', error_description: 'this application is not among the ones this server accepts' })
   }
 }
 
