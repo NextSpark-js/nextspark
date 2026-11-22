@@ -192,3 +192,21 @@ describe('readPublishedEntries', () => {
     expect(run).not.toHaveBeenCalled()
   })
 })
+
+describe('the blog template posts (#551)', () => {
+  // the entity as the project declares it: a public entity with its own post page, not a builder entity
+  const { postEntityConfig } = jest.requireActual('../../../../templates/projects/blog/entities/posts/posts.config')
+
+  it('is listed with /posts and /posts/<slug>, as the page answers', async () => {
+    expect(isSitemapEntity(postEntityConfig)).toBe(true)
+    const run = jest.fn().mockResolvedValue({ rows: [{ slug: 'hello', updatedAt: '2026-01-01' }] })
+    const rows = await readPublishedEntries(postEntityConfig, run)
+
+    expect(run.mock.calls[0][0]).toContain(`status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())`)
+    expect(urls(buildSitemap({ ...BASE, entities: [{ config: postEntityConfig, rows }] }))).toEqual(['https://example.com/posts', 'https://example.com/posts/hello'])
+  })
+
+  it('an entity with no page of its own is still left out without the builder', () => {
+    expect(isSitemapEntity(entity({ builder: undefined, ui: { public: { hasSinglePage: false } } }))).toBe(false)
+  })
+})
