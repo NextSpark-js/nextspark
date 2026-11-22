@@ -42,11 +42,11 @@ export const OMITTED_CORE_ROUTES = Object.freeze({
 
 /**
  * The core route targets of an opt-in flag: left out unless the flag is `true`.
- * `mcpOAuth` (#541): the OAuth discovery documents, the consent and team pages and the team picker's API. Without
+ * `mcpOAuth` (#541): the OAuth discovery documents, the consent and team pages, the team picker's API and the connected applications' API. Without
  * the flag the host has none of them, so a project's own routes at those paths are its own.
  */
 export const OPT_IN_CORE_ROUTES = Object.freeze({
-  mcpOAuth: [/^\.well-known\/(oauth-protected-resource|oauth-authorization-server)\//, /^\(auth\)\/oauth\//, /^api\/internal\/oauth-team\//],
+  mcpOAuth: [/^\.well-known\/(oauth-protected-resource|oauth-authorization-server)\//, /^\(auth\)\/oauth\//, /^api\/internal\/oauth-(team|connections)\//],
 })
 
 /** The flag that leaves out the core route at `target` (set to false, or an opt-in one not set to true), or null. */

@@ -571,5 +571,29 @@
         "description": "Full system access"
       }
     }
+  },
+  "connectedApps": {
+    "title": "Connected applications",
+    "description": "Applications that signed in to your account to work with your data, such as an AI assistant. Each one works with a single team.",
+    "empty": "No application is connected.",
+    "loading": "Loading",
+    "loadError": "The connections could not be loaded.",
+    "unknownClient": "An application",
+    "team": "Team: {team}",
+    "teamAndUser": "Team: {team} · {user}",
+    "since": "Connected on {date} · last renewed on {renewed}",
+    "disconnect": "Disconnect",
+    "disconnected": "The application was disconnected.",
+    "error": "The application could not be disconnected.",
+    "managedTitle": "Connections of other members",
+    "managedDescription": "Applications other members connected to teams you own or administer.",
+    "confirmTitle": "Disconnect {client}?",
+    "confirmDescription": "It loses access to {team} right away. To use it again it has to be connected and authorized again.",
+    "cancel": "Cancel",
+    "actions": {
+      "read": "read",
+      "write": "create and edit",
+      "delete": "delete"
+    }
   }
 }

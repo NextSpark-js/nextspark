@@ -571,5 +571,29 @@
         "description": "Accès complet au système"
       }
     }
+  },
+  "connectedApps": {
+    "title": "Applications connectées",
+    "description": "Applications qui se sont connectées à votre compte pour travailler avec vos données, comme un assistant IA. Chacune travaille avec une seule équipe.",
+    "empty": "Aucune application n’est connectée.",
+    "loading": "Chargement",
+    "loadError": "Impossible de charger les connexions.",
+    "unknownClient": "Une application",
+    "team": "Équipe : {team}",
+    "teamAndUser": "Équipe : {team} · {user}",
+    "since": "Connectée le {date} · renouvelée pour la dernière fois le {renewed}",
+    "disconnect": "Déconnecter",
+    "disconnected": "L’application a été déconnectée.",
+    "error": "Impossible de déconnecter l’application.",
+    "managedTitle": "Connexions des autres membres",
+    "managedDescription": "Applications que d’autres membres ont connectées aux équipes dont vous êtes propriétaire ou administrateur.",
+    "confirmTitle": "Déconnecter {client} ?",
+    "confirmDescription": "Elle perd immédiatement l’accès à {team}. Pour l’utiliser à nouveau, il faut la reconnecter et l’autoriser.",
+    "cancel": "Annuler",
+    "actions": {
+      "read": "lire",
+      "write": "créer et modifier",
+      "delete": "supprimer"
+    }
   }
 }

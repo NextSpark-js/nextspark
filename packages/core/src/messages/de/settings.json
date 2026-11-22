@@ -571,5 +571,29 @@
         "description": "Vollzugriff auf das System"
       }
     }
+  },
+  "connectedApps": {
+    "title": "Verbundene Anwendungen",
+    "description": "Anwendungen, die sich bei Ihrem Konto angemeldet haben, um mit Ihren Daten zu arbeiten, etwa ein KI-Assistent. Jede arbeitet mit einem einzigen Team.",
+    "empty": "Keine Anwendung ist verbunden.",
+    "loading": "Wird geladen",
+    "loadError": "Die Verbindungen konnten nicht geladen werden.",
+    "unknownClient": "Eine Anwendung",
+    "team": "Team: {team}",
+    "teamAndUser": "Team: {team} · {user}",
+    "since": "Verbunden am {date} · zuletzt erneuert am {renewed}",
+    "disconnect": "Trennen",
+    "disconnected": "Die Anwendung wurde getrennt.",
+    "error": "Die Anwendung konnte nicht getrennt werden.",
+    "managedTitle": "Verbindungen anderer Mitglieder",
+    "managedDescription": "Anwendungen, die andere Mitglieder mit Teams verbunden haben, deren Inhaber oder Administrator Sie sind.",
+    "confirmTitle": "{client} trennen?",
+    "confirmDescription": "Sie verliert sofort den Zugriff auf {team}. Um sie wieder zu nutzen, muss sie erneut verbunden und autorisiert werden.",
+    "cancel": "Abbrechen",
+    "actions": {
+      "read": "lesen",
+      "write": "erstellen und bearbeiten",
+      "delete": "löschen"
+    }
   }
 }

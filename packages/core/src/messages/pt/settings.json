@@ -571,5 +571,29 @@
         "description": "Acesso total ao sistema"
       }
     }
+  },
+  "connectedApps": {
+    "title": "Aplicações ligadas",
+    "description": "Aplicações que iniciaram sessão na sua conta para trabalhar com os seus dados, como um assistente de IA. Cada uma trabalha com uma só equipa.",
+    "empty": "Não há nenhuma aplicação ligada.",
+    "loading": "A carregar",
+    "loadError": "Não foi possível carregar as ligações.",
+    "unknownClient": "Uma aplicação",
+    "team": "Equipa: {team}",
+    "teamAndUser": "Equipa: {team} · {user}",
+    "since": "Ligada em {date} · renovada pela última vez em {renewed}",
+    "disconnect": "Desligar",
+    "disconnected": "A aplicação foi desligada.",
+    "error": "Não foi possível desligar a aplicação.",
+    "managedTitle": "Ligações de outros membros",
+    "managedDescription": "Aplicações que outros membros ligaram a equipas de que é proprietário ou administrador.",
+    "confirmTitle": "Desligar {client}?",
+    "confirmDescription": "Perde de imediato o acesso a {team}. Para a voltar a usar é preciso ligá-la e autorizá-la de novo.",
+    "cancel": "Cancelar",
+    "actions": {
+      "read": "ler",
+      "write": "criar e editar",
+      "delete": "eliminar"
+    }
   }
 }

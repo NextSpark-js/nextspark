@@ -36,6 +36,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { formatLocaleDate } from '@nextsparkjs/core/lib/i18n/format'
 import { useUserWithMetaSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 import { SecurityPageSkeleton } from '@nextsparkjs/core/components/settings/SettingsPageSkeleton'
+import { ConnectedApps } from '@nextsparkjs/core/components/settings/ConnectedApps'
 
 function SecurityPage() {
   const t = useTranslations('settings')
@@ -335,6 +336,9 @@ function SecurityPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Applications connected by MCP browser sign-in; nothing in a project built without it */}
+          <ConnectedApps />
 
           {/* Two Column Layout for Sessions and History */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

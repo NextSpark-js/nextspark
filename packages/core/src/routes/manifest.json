@@ -139,6 +139,11 @@
   },
   {
     "kind": "route",
+    "target": "api/internal/oauth-connections/route.ts",
+    "specifier": "@nextsparkjs/core/routes/api/internal/oauth-connections/route"
+  },
+  {
+    "kind": "route",
     "target": "api/internal/oauth-team/route.ts",
     "specifier": "@nextsparkjs/core/routes/api/internal/oauth-team/route"
   },
