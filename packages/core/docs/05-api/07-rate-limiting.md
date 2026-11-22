@@ -363,7 +363,7 @@ It carries the same four headers and core's CORS headers. On `/api/mcp` the same
 JSON-RPC error with `Retry-After`. The sign-in routes answer the shorter body shown in
 [Sign-in routes](#sign-in-routes-the-auth-and-authidentifier-tiers).
 
-All of them use the code `RATE_LIMIT_EXCEEDED` and send `Retry-After`: a client should read those two and wait.
+The REST responses use the code `RATE_LIMIT_EXCEEDED`; `/api/mcp` answers a JSON-RPC error, whose `code` is the protocol's number, not that string. All of them send `Retry-After`: a client should read that and wait.
 
 ---
 

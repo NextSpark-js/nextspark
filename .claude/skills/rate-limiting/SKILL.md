@@ -192,7 +192,7 @@ All rate-limited responses include these headers:
 ```
 X-RateLimit-Limit: 200        # Max requests in window
 X-RateLimit-Remaining: 150    # Requests remaining
-X-RateLimit-Reset: 1705432100 # Unix timestamp when window resets
+X-RateLimit-Reset: 1705432100000 # When the window resets, in milliseconds since the epoch
 ```
 
 When limit is exceeded (429 response):

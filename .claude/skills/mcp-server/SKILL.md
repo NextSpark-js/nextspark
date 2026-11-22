@@ -322,10 +322,14 @@ action. A project that wants its own schedule calls `purgeExpiredOAuth()`.
 
 `src/lib/mcp/audit.ts`, table `api_audit_log`, endpoint `mcp:<tool>`:
 
-- Every tool call that reaches its handler is a row. `statusCode` is `200`; the HTTP status the API answered
-  for an error (403, 404, 409...); `400` for an error that never reached the API (invalid arguments); `500`
-  for a handler that threw. The generic handler writes its own `/api/v1/...` row too: the two are
-  complementary.
+- Every tool call that reaches its handler is a `mcp:<tool>` row. `statusCode` is `200`; the HTTP status the
+  API answered for an error (403, 404, 409...); `400` for an error that never reached the API (a rule the
+  handler checks, such as an update with no fields); `500` for a handler that threw.
+- A generated entity tool also leaves the row of the generic handler it calls (`/api/v1/...`): what the agent
+  asked for, and what the API answered. A hand-written tool leaves one such row per API handler it actually
+  calls: none, one or several.
+- **Known gaps:** a call the SDK rejects before the handler (wrong shape or type, an unknown parameter or tool)
+  leaves no row, and the audit write is best effort: a failed insert is logged and the call goes on.
 - A call refused before running because the connection lacks a scope is recorded too (`engine.auditRefused`):
   status `403`, `requestBody.refused = 'insufficient_scope'`, `requestBody.missingScopes`.
 - An OAuth call has `apiKeyId` null and `requestBody.credential = 'oauth'`, `oauthClientId`, `oauthTokenId`.

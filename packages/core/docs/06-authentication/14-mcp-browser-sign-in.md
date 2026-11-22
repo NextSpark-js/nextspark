@@ -57,7 +57,7 @@ scope vocabulary (`<entity>:read|write|delete`) and the same entity handlers, an
 | **Who can create one** | A signed-in user, in Settings > API Keys, with scopes the user's role allows | A signed-in user, by approving the application on the consent screen, with scopes the role allows in the chosen team |
 | **What it may do over time** | The scopes it was created with | The consent, read on every request and cut down to what the role allows at that moment |
 | **Revocation** | The user revokes the key. Another instance that has the key in its 5-minute cache can accept it until the entry expires | Disconnect in Settings > Security, a changed password, a suspension, and the events listed in [What ends a connection](#what-ends-a-connection). Refused on the next request on every instance |
-| **Rate limit** | Tier `credential`: 1000 requests per minute per key | Tier `credential`: 1000 requests per minute per application and user |
+| **Rate limit** | Tier `credential`: 1000 charges per minute per key | Tier `credential`: 1000 charges per minute per application and user |
 | **Secret handling** | A long-lived secret the user copies into the client's configuration | Nothing is copied; the client holds short-lived tokens it obtained itself |
 | **Audit** | `api_audit_log` rows carry `apiKeyId` | `apiKeyId` is null; the row carries `credential: 'oauth'`, the client id and the token id |
 
@@ -381,8 +381,8 @@ Each guarantee, and what enforces it.
 | Only accepted applications connect | `allowedClientHosts`, applied in four places |
 | A suspended account authorizes nothing and gets no token | Checked at authorization (read from the database, since the session's copy of the user can be older than the suspension), at every token issuance and on every request; a suspension also ends every connection of the user |
 | The authorization server's tables are not readable through a user's database role | Service-only RLS policies on every OAuth table |
-| One connection cannot flood the server | The `credential` rate limit tier |
-| What an application did, and tried to do, can be reconstructed | `api_audit_log` |
+| What one connection may send is limited | The `credential` rate limit tier, shared between instances only with Redis configured |
+| What an application did, and what it was refused for lack of a permission, is recorded | `api_audit_log`, best effort: a call rejected before its handler for malformed arguments leaves no row, and a failed audit write does not stop the call |
 
 ### Rules that live in the database (migration 048)
 
@@ -453,8 +453,9 @@ secret are replaced by `[redacted]`. The full contract is in
 
 ### Rate limit
 
-A connection may send 1000 requests per minute, the built-in tier `credential`, which is also what an API key gets.
-It is counted per application and user. The count is shared between instances only when Redis is configured; see
+A connection has 1000 charges per minute against the built-in tier `credential`, which is also what an API key
+gets. A request such as `ping` or `tools/list` is one charge; a generated entity tool is two, the MCP request and
+the API handler it calls, so about 500 such calls fit in a minute. It is counted per application and user. The count is shared between instances only when Redis is configured; see
 [Rate Limiting: the per-credential limit](../05-api/07-rate-limiting.md#the-per-credential-limit-the-credential-tier).
 
 ### Housekeeping

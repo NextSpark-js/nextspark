@@ -178,7 +178,7 @@ El tier `auth` cobra por dirección de cliente solo los `POST` de `/api/auth/*` 
 
 ### Límite por credencial (tier `credential`)
 
-Un request que se autentica con una API key, o con un access token de [MCP browser sign-in](./06-authentication/14-mcp-browser-sign-in.md), se cuenta además contra esa credencial: 1000 requests por minuto por defecto.
+Un request que se autentica con una API key, o con un access token de [MCP browser sign-in](./06-authentication/14-mcp-browser-sign-in.md), se cuenta además contra esa credencial: 1000 cargos por minuto por defecto. Un request común es un cargo; una llamada a una herramienta MCP generada son dos (el request MCP y el handler de la API que ejecuta), así que entran unas 500 por minuto.
 
 - Lo aplica `credentialRateLimitResponse` (`lib/api/rate-limit.ts`), que llaman `authenticateRequest`, `validateAndAuthenticateRequest`, `validateAndAuthenticateApiRequest` y el endpoint MCP. Una ruta que autentica con alguna de ellas ya tiene el límite.
 - La credencial se identifica por el id de la API key, o por la aplicación y el usuario en una conexión MCP.

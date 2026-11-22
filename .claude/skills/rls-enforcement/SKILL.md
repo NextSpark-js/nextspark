@@ -129,15 +129,20 @@ any *user-scoped* sub-operation must re-introduce the resolved userId via
 - A **thrown error** in the permission check returns **`500 PERMISSION_CHECK_FAILED`**
   (fail-closed) — never "allow". Themes must declare `list`/`read` per entity
   (`default`/`starter` already do).
-- **api-key vs session — two different layers, two different behaviors:**
-  - The **entity-permission** check is session-only (api-key uses scopes), so it's *skipped* for api-key.
-  - But **DB RLS still applies to api-key** requests — api-key auth carries a `userId`, so reads
-    route to the app pool and policies evaluate (team isolation holds).
-  - **`ownershipFilter` (role-based row scoping) is OFF for api-key and admin-bypass**
-    (`resolveOwnershipFilter` returns `{applies:false}` for those). So an api-key caller is *not*
-    narrowed to "their own" rows by `ownershipFilter`; they see everything their team-RLS policy
-    allows. To restrict api-key callers, scope the key narrowly or enforce it in a DB RLS policy
-    (which fires for any app-pool request), not via `ownershipFilter`.
+- **api-key vs session — the same layers apply to both** (`lib/api/entity/generic-handler.ts`):
+  - The **entity-permission** check (`checkAuthPermission`) runs for a session user and for an API-key
+    owner alike: the key carries the same real `users.id`, resolved to a `team_members` role the same
+    way. It runs **in addition to** the key's scope check (`<slug>:read|write|delete`), so an API key
+    gets both layers.
+  - **DB RLS applies to api-key requests** — api-key auth carries a `userId`, so reads route to the
+    app pool and policies evaluate (team isolation holds).
+  - **`ownershipFilter` (role-based row scoping) runs identically for session and api-key**
+    (`resolveOwnershipFilter`). Only an **admin bypass** skips it (`{applies:false}`): a
+    superadmin/service-context request is not scoped by any single team role. `fieldGuards` run for
+    both as well.
+  - **An MCP call is one of these**: with either credential it reaches the handler as `type: 'api-key'`
+    (an OAuth connection adds `oauth: { clientId, tokenId }`), so permission, ownership and field guards
+    all apply to it, never in bypass mode. See the `mcp-server` skill.
 
 ## 5. `ownershipFilter` (entity `access` config, `entities/types.ts`)
 

@@ -103,9 +103,10 @@ Security architecture for superadmin and developer bypass access in the API laye
 >   `x-admin-bypass` is never present and `canBypassTeamContext` answers false. Do not add that header there.
 > - The team of an OAuth call is the token's `team_id` claim, re-checked against the membership on every
 >   request; a caller cannot widen it with `x-team-id`.
-> - Each tool call leaves two rows in `api_audit_log`: the handler's (`/api/v1/...`) and the MCP one
->   (`mcp:<tool>`, with `requestBody.credential = 'oauth'` for an OAuth call). A call refused before running for
->   a missing scope is recorded with status 403.
+> - A tool call that reaches its handler leaves the MCP row in `api_audit_log` (`mcp:<tool>`, with
+>   `requestBody.credential = 'oauth'` for an OAuth call), and a generated entity tool also leaves the row of the
+>   handler it calls (`/api/v1/...`). A call refused before running for a missing scope is recorded with status
+>   403. A call the SDK rejects before the handler leaves no row.
 
 ## When to Use This Skill
 

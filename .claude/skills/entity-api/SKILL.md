@@ -357,8 +357,9 @@ app's MCP server (`/api/mcp`) runs through: the MCP engine calls the generic han
 OAuth access token (MCP browser sign-in) carries no credential: the verified principal is attached to the
 request object and `authenticateRequest` returns it as `type: 'api-key'` with `oauth: { clientId, tokenId }`.
 The scope table below applies to it unchanged, and so do team-role permissions, ownership and field guards.
-Such a call is audited twice in `api_audit_log`: the handler's own `/api/v1/...` row and the MCP row
-`mcp:<tool>`. See the `mcp-server` skill.
+A generated entity tool is audited twice in `api_audit_log`: the handler's own `/api/v1/...` row and the MCP row
+`mcp:<tool>`. A hand-written tool leaves the `mcp:` row and one handler row per API handler it actually calls.
+See the `mcp-server` skill.
 
 ### Scope Requirements
 

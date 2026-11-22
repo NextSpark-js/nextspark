@@ -111,8 +111,9 @@ UPSTASH_REDIS_REST_URL=https://<your-database>.upstash.io
 UPSTASH_REDIS_REST_TOKEN=<token>
 ```
 
-A connection may send 1000 requests a minute (tier `credential`; change it in `rateLimit.tiers` of
-`config/app.config.ts`). Without Redis that count is kept by each process, so a deployment with several instances,
+A connection has 1000 charges a minute (tier `credential`; change it in `rateLimit.tiers` of
+`config/app.config.ts`): one per request, and one more for each API handler a tool calls, so a generated entity
+tool costs two. Without Redis that count is kept by each process, so a deployment with several instances,
 and any serverless deployment, multiplies it by the number of instances. Both variables are required, and only
 Upstash's REST API is supported. On Vercel the Marketplace integration creates other variable names: see
 [Vercel Deployment](./03-vercel-deployment.md#upstash-redis-from-vercels-marketplace).

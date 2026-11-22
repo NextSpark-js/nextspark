@@ -201,7 +201,8 @@ An empty or whitespace-only `x-api-key` (a proxy that always sets the header) do
 key.
 
 Inside the server both credentials become the same thing: a user, a team and a list of scopes, handed to the
-entity handlers. The handlers do not know which credential the request came with. See
+entity handlers, which run the same checks for both. A handler can tell them apart if it has to: the principal of
+an OAuth call carries `oauth: { clientId, tokenId }`. See
 [API Authentication](./02-authentication.md#oauth-access-token-authentication-apimcp-only) for how an OAuth call
 travels to them.
 
@@ -354,15 +355,16 @@ operation, the record id, the team and the arguments.
   `apiKey` and `refresh_token` are redacted while `tokenCount` and `secretaryName` are left alone.
 - **Truncation.** Arguments longer than 4000 characters as JSON are stored as a truncated preview.
 
-Each tool call also produces the row of the underlying API request (endpoint `/api/v1/...`), written by the
-generic entity handler. The two are complementary: the `mcp:` row carries what the agent asked for, the other what
-the API answered.
+A generated entity tool also produces the row of the underlying API request (endpoint `/api/v1/...`), written by
+the generic entity handler. The two are complementary: the `mcp:` row carries what the agent asked for, the other
+what the API answered. A hand-written tool produces one such row per API handler it actually calls: none, one or
+several. The audit write is best effort: when the insert fails the failure is logged and the call goes on.
 
 ---
 
 ## Rate Limits
 
-Two limits apply to `/api/mcp`, and both count on every request.
+Two limits apply to `/api/mcp`. The per-address one counts every request; the per-credential one counts every request that presents a valid credential.
 
 | Limit | Counted by | Default | Where |
 |---|---|---|---|

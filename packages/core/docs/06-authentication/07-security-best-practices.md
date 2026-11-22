@@ -479,7 +479,9 @@ feature does, and [MCP Browser Sign-In Deployment](../14-deployment/12-mcp-brows
 checklist.
 
 **The framework does not enforce a production gate for any of the following.** The feature starts and serves
-requests whether or not they are in place, and nothing warns at startup. They are the operator's to check.
+requests whether or not they are in place. The warnings that exist do not block and do not cover everything: a
+database role that bypasses RLS is reported at startup and a list of accepted applications with unusable entries
+is logged once, but nothing says that Redis or the list is absent. They are the operator's to check.
 
 ### 1. List the applications that may connect
 
