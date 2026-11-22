@@ -95,11 +95,9 @@ describe('SuperadminSidebar', () => {
 })
 
 describe('SuperadminDocsSidebar', () => {
-  test('names its navigation and its heading in Spanish', () => {
+  test('names its navigation in Spanish', () => {
     render(<SuperadminDocsSidebar sections={[]} />)
     expect(screen.getByLabelText(es.superadmin.docs.navigation)).toBeInTheDocument()
-    expect(screen.getByText(es.superadmin.docs.sidebarTitle)).toBeInTheDocument()
-    expect(screen.queryByText('Admin Docs')).toBeNull()
   })
 })
 

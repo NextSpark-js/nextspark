@@ -312,8 +312,6 @@
   },
   "docs": {
     "navigation": "Navegação da documentação de administração",
-    "sidebarTitle": "Documentação de admin",
-    "sidebarSubtitle": "Documentação para administradores",
     "pageNotFound": "Página não encontrada",
     "metaTitle": "{title} | Documentação de admin",
     "metaDescription": "Documentação de administração de {title}",
