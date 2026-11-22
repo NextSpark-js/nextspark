@@ -234,7 +234,6 @@
     "error": "Error"
   },
   "shared": {
-    "backToSuperAdmin": "Volver a Super Admin",
     "errorLoadingData": "Error al cargar los datos",
     "refresh": "Actualizar",
     "id": "ID: {id}",
