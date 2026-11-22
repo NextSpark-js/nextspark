@@ -184,7 +184,7 @@ connection string is not supported: `REDIS_URL` is not read, and neither are the
 [Vercel Deployment](./03-vercel-deployment.md#upstash-redis-from-vercels-marketplace)).
 
 With both variables set, every rate limit tier is counted in Redis: the per-address tiers and the per-credential
-tier (`credential`, 1000 requests a minute per API key or MCP connection). Without them each process counts on its
+tier (`credential`, 1000 charges a minute per API key or MCP connection). Without them each process counts on its
 own, which on a serverless platform or behind several instances multiplies every limit by the number of instances.
 When Redis is configured and fails, the limiter lets the request through; for the per-credential tier the count of
 the process still applies.

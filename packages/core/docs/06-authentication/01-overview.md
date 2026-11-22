@@ -78,7 +78,7 @@ Grant access based on scope permissions
 - Scope-based permissions (e.g., `tasks:read`, `users:write`)
 - Hashed storage for security
 - Constant-time comparison to prevent timing attacks
-- Per-key rate limiting (1000 requests per minute per key; shared between instances when Redis is configured)
+- Per-key rate limiting (1000 charges per minute per key, one per REST request and two per generated MCP tool; shared between instances when Redis is configured)
 - Optional expiration, and rotation support
 - Not bound to a team: each request names its team
 

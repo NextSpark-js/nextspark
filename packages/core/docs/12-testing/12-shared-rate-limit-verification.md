@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Every API key and every MCP connection has a limit of its own, the `credential` tier: 1000 requests per minute
+Every API key and every MCP connection has a limit of its own, the `credential` tier: 1000 charges per minute (a plain request such as `ping` is one charge)
 unless `rateLimit.tiers` of `config/app.config.ts` says otherwise. `credentialRateLimitResponse` in
 `src/lib/api/rate-limit.ts` counts it in the process and, when Redis is configured, in Redis as well, so every
 instance of a deployment shares one count. A request is refused when either count is over.

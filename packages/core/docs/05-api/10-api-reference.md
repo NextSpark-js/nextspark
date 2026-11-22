@@ -714,7 +714,7 @@ limited per key.
 **Default Limits:**
 - **Entity endpoints, per client address:** 200 requests/minute for `GET` (tier `read`), 50 requests/minute for
   `POST`, `PATCH` and `DELETE` (tier `write`)
-- **API Key Auth:** also 1,000 requests/minute per key (tier `credential`)
+- **API Key Auth:** also 1,000 charges/minute per key (tier `credential`; a REST request is one charge)
 - **Session Auth:** the per-address tier only; there is no per-user counter
 
 **Rate Limit Headers** (the per-address bucket of the route; `X-RateLimit-Reset` is a Unix timestamp in

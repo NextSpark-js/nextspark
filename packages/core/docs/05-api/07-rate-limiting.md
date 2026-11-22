@@ -194,7 +194,7 @@ The identifier is any string; the tier gives the limit and the window.
 A request that authenticates with a scoped credential is counted against that credential, on top of the per-address
 limit of the route.
 
-- **Limit:** the `credential` tier, **1000 requests per minute** by default.
+- **Limit:** the `credential` tier, **1000 charges per minute** by default: a plain request is one charge and a generated MCP tool, which also calls an API handler, is two.
 - **Function:** `credentialRateLimitResponse(request, auth)` in `lib/api/rate-limit.ts`. It returns a `429` ready to
   send when the credential is over its limit, and `null` otherwise.
 - **Who calls it:** `authenticateRequest`, `validateAndAuthenticateRequest` and `validateAndAuthenticateApiRequest`

@@ -88,9 +88,10 @@ Security architecture for superadmin and developer bypass access in the API laye
 >   subscription bootstrap) run on a separate pool (`DATABASE_SERVICE_URL`). This is the
 >   plumbing that keeps the bypass paths working once the app connects as the non-owner
 >   `nextspark_app` role.
-> - **Fail-closed permission check:** in `generic-handler.ts`, LIST/READ now enforce session
->   permissions and a thrown permission check returns `500 PERMISSION_CHECK_FAILED` (never
->   "allow"). Admin-bypass and api-key paths are skipped.
+> - **Fail-closed permission check:** in `generic-handler.ts`, LIST/READ now enforce the entity
+>   permissions of the authenticated identity and a thrown permission check returns `500 PERMISSION_CHECK_FAILED` (never
+>   "allow"). The check runs for a session and for an API key alike (an API key gets it on top of
+>   its scope check); only the admin-bypass path is skipped.
 
 > **A third credential, on `/api/mcp` only (see the `mcp-server` skill):** Layer 1 above is what `/api/v1/**`
 > accepts over HTTP: an API key or a session. With `features.mcpOAuth`, `/api/mcp` also accepts an OAuth access

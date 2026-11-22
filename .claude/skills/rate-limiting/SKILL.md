@@ -187,7 +187,8 @@ export const DELETE = withRateLimitTier(async (request: NextRequest) => {
 
 ## Response Headers
 
-All rate-limited responses include these headers:
+The REST responses of a rate-limited route include these headers (the 429 of `/api/mcp` for the per-credential
+limit is a JSON-RPC error that carries `Retry-After` only):
 
 ```
 X-RateLimit-Limit: 200        # Max requests in window

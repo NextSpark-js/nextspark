@@ -333,7 +333,11 @@ entities: {
 
 ### Scope-Based Permissions
 
-API keys use scope-based permissions:
+API keys use scope-based permissions, on top of the team-role permissions of the key's owner. On the entity
+endpoints a request made with a key passes the scope check and then the same role permission, ownership filter and
+field guards a session gets (`lib/api/entity/generic-handler.ts`); the scope narrows what the key may do, it does
+not replace the role. An MCP connection is checked the same way.
+
 
 ```typescript
 // API key scopes

@@ -39,17 +39,19 @@ ChatGPT, or any MCP-compatible client) can call directly — no per-entity code 
   registered with `access.api: true`, the same way they get REST routes today.
 - ✅ **Zero per-entity code** — tool schemas are derived from each entity's `EntityField[]`
   definitions; descriptions are seeded from `api/presets.ts`.
-- ✅ **Real validation, not a shadow copy** — every tool call round-trips in-process through
-  the same `handleGenericList/Create/Read/Update/Delete` handlers the REST API uses, so scope
-  checks, team-role permissions, ownership filtering, and field guards are enforced exactly
-  once, in one place.
+- ✅ **Real validation, not a shadow copy** — every generated entity tool round-trips in-process
+  through the same `handleGenericList/Create/Read/Update/Delete` handlers the REST API uses, so scope
+  checks, team-role permissions, ownership filtering, and field guards are the handlers' own, not a
+  copy kept for MCP. A hand-written tool is bound by them for each API handler it calls. With
+  browser sign-in the scopes are checked a second time, earlier: before anything runs.
 - ✅ **Two credentials** — an API key, or, when the project turns on
   [browser sign-in](#browser-sign-in-experimental), an OAuth access token the client obtains by sending the user to
   sign in. Session cookies are not a credential for this endpoint.
 - ✅ **Theme-extensible** — a theme can customize or extend any entity's MCP surface via an
   `entities/<slug>/mcp.ts` file, discovered by the registry build the same way
   `entities/<slug>/api/presets.ts` is discovered today.
-- ✅ **Audited** — every tool call that reaches its handler, success or failure, is written to `api_audit_log`. See
+- ✅ **Audited** — every tool call that reaches its handler, success or failure, is recorded in `api_audit_log`
+  (best effort: a failed write is logged and does not stop the call). See
   [Audit Trail](#audit-trail).
 
 ---
@@ -327,7 +329,8 @@ Tool calls are recorded in `api_audit_log` by `lib/mcp/audit.ts`, with the endpo
 
 **What is recorded:**
 
-- **Every tool call that reaches its handler**, whether it succeeds or fails: one row.
+- **Every tool call that reaches its handler**, whether it succeeds or fails: one row, written best effort (see
+  the end of this section).
 - **A call refused before it ran because an OAuth connection lacks a scope**: one row per refused call, with status
   `403`, `requestBody.refused = 'insufficient_scope'` and `requestBody.missingScopes` (`engine.auditRefused`).
   Nothing ran, and the attempt is still part of the trail.
@@ -369,7 +372,7 @@ Two limits apply to `/api/mcp`. The per-address one counts every request; the pe
 | Limit | Counted by | Default | Where |
 |---|---|---|---|
 | Tier `api` | Client address | 100 requests per minute | `withRateLimitTier(handleMcpPost, 'api')`, before anything is authenticated |
-| Tier `credential` | The API key, or the OAuth connection (application and user) | 1000 requests per minute | `credentialRateLimitResponse`, after the credential is verified |
+| Tier `credential` | The API key, or the OAuth connection (application and user) | 1000 charges per minute | `credentialRateLimitResponse`, after the credential is verified |
 
 - **A tool call counts twice against the credential limit**: once for the MCP request and once for the API handler
   the tool calls in process. This is the same for both credentials. A tool that makes several API calls counts once
@@ -524,7 +527,9 @@ user's role in the team does not allow the action. For an API key, mint a new ke
 granted and the user's role no longer allows it; a scope that was never granted produces the `403` below instead.
 
 **A tool call left no row in `api_audit_log`**
-The call did not reach a tool handler: the MCP SDK rejected its arguments first. See [Audit Trail](#audit-trail).
+Either the call did not reach a tool handler (the MCP SDK rejected its arguments first), or the audit write
+failed: it is best effort, and a failed insert is logged as `[mcp:audit] failed to write api_audit_log entry`
+without stopping the call. See [Audit Trail](#audit-trail).
 
 ### API key
 

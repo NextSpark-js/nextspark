@@ -1094,9 +1094,11 @@ GRANT authenticated TO nextspark_app; ALTER ROLE nextspark_app INHERIT;  -- Post
 
 ### Fail-closed permission enforcement (`generic-handler.ts`)
 
-- LIST and READ now check the session entity permission (previously only
-  create/update/delete). A member without `entity.list` / `entity.read` gets **403**.
-  Admin-bypass and API-key (scope-based) paths are unaffected.
+- LIST and READ check the entity permission of the authenticated identity (previously only
+  create/update/delete), for a session and for an API key alike. A member without
+  `entity.list` / `entity.read` gets **403** with either credential; for an API key this is in
+  addition to its scope check. `ownershipFilter` and field guards apply to both as well. Only the
+  admin-bypass path is skipped.
 - A **thrown error** during the permission check returns **`500 PERMISSION_CHECK_FAILED`**
   (fail-closed) — never "allow". Themes must declare `list`/`read` permissions per
   entity (the starter convention already follows).

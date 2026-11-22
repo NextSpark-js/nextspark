@@ -73,7 +73,7 @@ That is all. Nothing else changes for a project that leaves the feature off:
 - Core's own call sites now use `credentialRateLimitResponse(request, auth)`, which is async and adds the shared
   count: with `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` both set, the per-key limit is counted in
   Redis too, so every instance shares it. A deployment that already has Redis configured gets this without doing
-  anything: a key that used to get 1000 requests a minute from each instance now gets 1000 in total, and each
+  anything: a key that used to get 1000 charges a minute from each instance now gets 1000 in total, and each
   check costs Redis commands (about 4).
 - The numbers are those of the new `credential` tier, and `rateLimit.tiers.credential` in `config/app.config.ts`
   changes them. A project that had declared a custom tier of its own with that name is now configuring the

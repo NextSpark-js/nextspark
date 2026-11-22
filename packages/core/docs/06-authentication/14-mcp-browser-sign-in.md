@@ -445,8 +445,8 @@ team, the team deleted, the application dropped from `allowedClientHosts`.
 
 ### Audit
 
-Every tool call that reaches its handler is a row of `api_audit_log` with the endpoint `mcp:<tool>` and the real
-status. A call refused for a missing scope is recorded too, with status `403`. An OAuth call has `apiKeyId` null and
+Every tool call that reaches its handler is recorded in `api_audit_log`, best effort, with the endpoint
+`mcp:<tool>` and the real status. A call refused for a missing scope is recorded too, with status `403`. An OAuth call has `apiKeyId` null and
 carries `credential: 'oauth'`, `oauthClientId` and `oauthTokenId` in `requestBody`. Argument values whose key names a
 secret are replaced by `[redacted]`. The full contract is in
 [MCP Server: audit trail](../05-api/20-mcp-server.md#audit-trail).

@@ -453,7 +453,7 @@ A request made with an API key is counted twice, by two independent limits:
 
 1. **The tier of the route, per client address** (`withRateLimitTier`): for example `read` (200 per minute) and
    `write` (50 per minute) on `/api/v1/{entity}`. This limit does not look at the key.
-2. **The per-key limit: the `credential` tier, 1000 requests per minute per key.**
+2. **The per-key limit: the `credential` tier, 1000 charges per minute per key.** A REST request is one charge; a generated MCP tool called with the key is two.
 
 ### The per-key limit
 

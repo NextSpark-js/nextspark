@@ -123,9 +123,10 @@ any *user-scoped* sub-operation must re-introduce the resolved userId via
 
 ## 4. Fail-closed permission enforcement (`generic-handler.ts`)
 
-- LIST and READ now check the session entity permission (was create/update/delete only).
-  A member without `entity.list`/`entity.read` → **403**. Admin-bypass and api-key (scope)
-  paths are skipped.
+- LIST and READ check the entity permission of the authenticated identity (was
+  create/update/delete only), for a session and for an API key alike: a member without
+  `entity.list`/`entity.read` → **403**, with either credential. For an API key this is in
+  addition to the scope check. Only the admin-bypass path is skipped.
 - A **thrown error** in the permission check returns **`500 PERMISSION_CHECK_FAILED`**
   (fail-closed) — never "allow". Themes must declare `list`/`read` per entity
   (`default`/`starter` already do).
@@ -218,7 +219,7 @@ Seed fixtures via the service pool / owner (first-membership inserts can't satis
 - [ ] Multi-row atomic write uses `getTransactionClient(userId)`, not N `mutateWithRLS` calls.
 - [ ] Multi-statement work on service-only tables (the OAuth tables) runs inside `withServiceTransaction`, with the row that orders concurrent writers locked first.
 - [ ] New core-table policy: primitive deps already defined in `001` before the migration that uses them.
-- [ ] New entity exposes `list`/`read` permissions (else 403 under enforcement); api-key callers restricted by scope or a DB policy (not `ownershipFilter`).
+- [ ] New entity exposes `list`/`read` permissions (else 403 under enforcement, for sessions and API keys alike); `ownershipFilter` narrows session and API-key callers the same way, and only an admin bypass skips it.
 - [ ] Theme RLS override drops legacy AND current core policy names.
 
 ## Related skills

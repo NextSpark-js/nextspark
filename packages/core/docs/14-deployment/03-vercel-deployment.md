@@ -209,7 +209,7 @@ The other options of `vercel.json` do not solve this:
 On Vercel every function instance is a process of its own, so a rate limit counted in memory is counted per
 instance: with ten instances a limit of 100 lets 1000 through. Core counts its limits in Redis when
 `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are both set, and every instance then shares the count.
-This matters most for the per-credential limit of API keys and MCP connections (tier `credential`, 1000 requests
+This matters most for the per-credential limit of API keys and MCP connections (tier `credential`, 1000 charges
 a minute).
 
 **The variables Vercel creates are not the ones core reads.** An Upstash Redis database created from Vercel's

@@ -222,7 +222,8 @@ async function constantTimeDelay(startTime: number) {
 
 ### API Key Rate Limiting
 
-Every API key is limited to 1000 requests per minute (the `credential` tier), on top of the per-address limit of
+Every API key is limited to 1000 charges per minute (the `credential` tier: a REST request is one charge, a
+generated MCP tool two), on top of the per-address limit of
 the route it calls. The limit does not depend on the key's scopes.
 
 The count is kept in the process, and it is shared between instances only when Redis is configured
@@ -501,7 +502,7 @@ open.
 
 ### 2. Configure Redis for the shared rate limit
 
-A connection is limited to 1000 requests per minute. Without Redis that count is per process, which on serverless
+A connection is limited to 1000 charges per minute, and a generated tool costs two. Without Redis that count is per process, which on serverless
 is close to no limit. Set both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Vercel's Marketplace creates
 the Upstash variables as `KV_REST_API_URL` and `KV_REST_API_TOKEN`; the framework does not read those names, so add
 the two it reads by hand.
