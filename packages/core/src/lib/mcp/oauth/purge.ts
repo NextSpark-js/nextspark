@@ -20,6 +20,7 @@ export interface OAuthPurgeResult {
   clientAssertions: number
   teamSelections: number
   revocations: number
+  signingKeys: number
 }
 
 const count = async (sql: string): Promise<number> => (await queryRows<{ id: string }>(sql)).length
@@ -48,7 +49,10 @@ export async function purgeExpiredOAuth(): Promise<OAuthPurgeResult> {
         AND old.id < (SELECT MAX(newest.id) FROM "oauthRevocation" newest WHERE newest."userId" = old."userId")
       RETURNING old.id::text AS id`
   )
-  return { refreshTokens, accessTokens, clientAssertions, teamSelections, revocations }
+  // A signing key stays published for 30 days after it is replaced (Better Auth's grace period); a day after that
+  // nothing asks for it. The key that signs now has not expired and is never among these.
+  const signingKeys = await count(`DELETE FROM "jwks" WHERE "expiresAt" < now() - interval '31 days' RETURNING id`)
+  return { refreshTokens, accessTokens, clientAssertions, teamSelections, revocations, signingKeys }
 }
 
 const HOUR_MS = 60 * 60 * 1000

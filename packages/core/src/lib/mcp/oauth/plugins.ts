@@ -54,12 +54,18 @@ function currentAuthorization(): string | undefined {
 const noTeam = () =>
   new APIError('BAD_REQUEST', { error: 'access_denied', error_description: 'choose the team this connection is for' })
 
+/** How long a signing key signs before a new one takes over: 30 days. */
+export const SIGNING_KEY_ROTATION_SECONDS = 30 * 24 * 60 * 60
+
 export function mcpOAuthPlugins() {
   if (!isMcpOAuthEnabled()) return []
   const resourceScopes = mcpOAuthResourceScopes()
   return [
     // No `set-auth-jwt` header on session responses: the key signs OAuth access tokens only.
-    jwt({ disableSettingJwtHeader: true }),
+    // The signing key is replaced every SIGNING_KEY_ROTATION_SECONDS: a key that leaked stops being of use, and
+    // nothing has to be done by hand. The key it replaces stays published for Better Auth's grace period (30
+    // days), far longer than the ten minutes a token it signed can live, so no token fails over a rotation.
+    jwt({ disableSettingJwtHeader: true, jwks: { rotationInterval: SIGNING_KEY_ROTATION_SECONDS } }),
     mcp({
       resource: mcpResourceUrl(),
       loginPage: withBasePath('/login'),

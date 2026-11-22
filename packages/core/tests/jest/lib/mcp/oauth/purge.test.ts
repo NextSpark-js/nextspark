@@ -31,9 +31,12 @@ describe('housekeeping of the authorization server\'s tables (#541)', () => {
       .mockResolvedValueOnce(rows(3)) // refresh tokens
       .mockResolvedValueOnce(rows(2)) // client assertions
       .mockResolvedValueOnce(rows(1)) // team selections
-      .mockResolvedValueOnce(rows(4)); // revocations
-    expect(await purgeExpiredOAuth()).toEqual({ accessTokens: 5, refreshTokens: 3, clientAssertions: 2, teamSelections: 1, revocations: 4 });
-    const [access, refresh, assertions, selections, revocations] = statements();
+      .mockResolvedValueOnce(rows(4)) // revocations
+      .mockResolvedValueOnce(rows(1)); // signing keys
+    expect(await purgeExpiredOAuth()).toEqual({ accessTokens: 5, refreshTokens: 3, clientAssertions: 2, teamSelections: 1, revocations: 4, signingKeys: 1 });
+    const [access, refresh, assertions, selections, revocations, keys] = statements();
+    // a replaced signing key goes only after the 30 days it stays published, and one that never expires never goes
+    expect(keys).toMatch(/^DELETE FROM "jwks" WHERE "expiresAt" < now\(\) - interval '31 days'/);
     expect(access).toMatch(/^DELETE FROM "oauthAccessToken" WHERE "expiresAt" < now\(\) - interval '1 day'/);
     expect(refresh).toMatch(/^DELETE FROM "oauthRefreshToken" WHERE "expiresAt" < now\(\) - interval '1 day' OR revoked < now\(\) - interval '1 day'/);
     expect(assertions).toMatch(/^DELETE FROM "oauthClientAssertion" WHERE "expiresAt" < now\(\) - interval '1 day'/);
@@ -58,9 +61,9 @@ describe('housekeeping of the authorization server\'s tables (#541)', () => {
     const start = 1_800_000_000_000;
     expect(await purgeExpiredOAuthIfDue(start)).not.toBeNull();
     expect(await purgeExpiredOAuthIfDue(start + 59 * 60 * 1000)).toBeNull();
-    expect(mockQueryRows).toHaveBeenCalledTimes(5);
+    expect(mockQueryRows).toHaveBeenCalledTimes(6);
     expect(await purgeExpiredOAuthIfDue(start + 60 * 60 * 1000)).not.toBeNull();
-    expect(mockQueryRows).toHaveBeenCalledTimes(10);
+    expect(mockQueryRows).toHaveBeenCalledTimes(12);
   });
 
   it('a purge that fails is reported and never thrown: the token being issued is not its victim', async () => {
