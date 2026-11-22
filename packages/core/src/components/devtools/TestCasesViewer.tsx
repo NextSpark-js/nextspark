@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from '../ui/card';
 import { Button } from '../ui/button';
-import { Loader2, FileText, AlertCircle, ArrowLeft, LayoutDashboard } from "lucide-react";
+import { Loader2, FileText, AlertCircle, ArrowLeft, LayoutDashboard, Folder, File } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTreeNavigation } from '../../hooks/useTreeNavigation';
 import { withBasePath } from "../../lib/base-path"
@@ -32,18 +32,19 @@ interface TestCasesViewerProps {
 }
 
 /**
- * Helper function to check if a path exists in the tree
+ * Helper function to find the node of a path in the tree
  */
-function pathExistsInTree(tree: FileTreeNode[], path: string): boolean {
+function findNode(tree: FileTreeNode[], path: string): FileTreeNode | null {
   for (const node of tree) {
     if (node.path === path) {
-      return true;
+      return node;
     }
-    if (node.children && pathExistsInTree(node.children, path)) {
-      return true;
+    const inChildren = node.children ? findNode(node.children, path) : null;
+    if (inChildren) {
+      return inChildren;
     }
   }
-  return false;
+  return null;
 }
 
 /**
@@ -72,14 +73,24 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
     expandedFolders,
     navigateToFile,
     toggleFolder,
+    expandFolder,
     clearSelection,
   } = useTreeNavigation({ basePath: "/devtools/tests" });
 
   // Check if the selected path exists in the tree (for 404 detection)
+  const selectedNode = useMemo(
+    () => (selectedPath && !isLoadingTree ? findNode(tree, selectedPath) : null),
+    [selectedPath, tree, isLoadingTree]
+  );
   const pathNotFound = useMemo(() => {
     if (!selectedPath || isLoadingTree || tree.length === 0) return false;
-    return !pathExistsInTree(tree, selectedPath);
-  }, [selectedPath, tree, isLoadingTree]);
+    return !selectedNode;
+  }, [selectedPath, tree, isLoadingTree, selectedNode]);
+  // A folder in the URL (typed or shared) shows its entries; only a file is requested from the API (#550).
+  const folderNode = selectedNode?.type === "folder" ? selectedNode : null;
+  useEffect(() => {
+    if (folderNode) expandFolder(folderNode.path);
+  }, [folderNode?.path]);
 
   // Load file tree on mount
   useEffect(() => {
@@ -106,7 +117,8 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
 
   // Load file content when selectedPath changes (and path exists)
   useEffect(() => {
-    if (!selectedPath || pathNotFound) {
+    // Nothing is requested before the tree says what the path is: a folder, or a path that is not there, is no file.
+    if (!selectedPath || pathNotFound || folderNode || isLoadingTree) {
       setFileContent(null);
       return;
     }
@@ -133,7 +145,7 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
     }
 
     loadFile();
-  }, [selectedPath, pathNotFound]);
+  }, [selectedPath, pathNotFound, folderNode?.path, isLoadingTree]);
 
   if (isLoadingTree) {
     return (
@@ -219,6 +231,40 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   {t("backToList")}
                 </Button>
+              </div>
+            )}
+
+            {/* Folder: its entries */}
+            {folderNode && (
+              <div data-cy="devtools-tests-folder">
+                <div className="mb-4 pb-4 border-b border-border">
+                  <h2 className="text-xl font-semibold flex items-center gap-2 text-violet-600 dark:text-violet-400">
+                    <Folder className="h-5 w-5" />
+                    {t("folder")} {folderNode.path}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t("folderItems", { count: folderNode.children?.length ?? 0 })}
+                  </p>
+                </div>
+                {folderNode.children?.length ? (
+                  <ul className="space-y-1">
+                    {folderNode.children.map((child) => (
+                      <li key={child.path}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start gap-2"
+                          onClick={() => navigateToFile(child.path)}
+                        >
+                          {child.type === "folder" ? <Folder className="h-4 w-4" /> : <File className="h-4 w-4" />}
+                          {child.name}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("folderEmpty")}</p>
+                )}
               </div>
             )}
 

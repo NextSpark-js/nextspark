@@ -65,6 +65,9 @@
     "backToList": "Voltar para lista",
     "selectFile": "Selecione um arquivo",
     "selectFileDescription": "Escolha um arquivo de teste da árvore para ver seu conteúdo",
+    "folder": "Pasta",
+    "folderItems": "{count, plural, one {# item} other {# itens}}",
+    "folderEmpty": "Esta pasta não tem documentação de testes",
     "error": "Erro carregando arquivo",
     "dashboard": {
       "title": "Painel de Cobertura de Testes",

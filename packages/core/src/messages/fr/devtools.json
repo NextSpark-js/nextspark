@@ -65,6 +65,9 @@
     "backToList": "Retour à la liste",
     "selectFile": "Sélectionnez un fichier",
     "selectFileDescription": "Choisissez un fichier de test de l'arborescence pour voir son contenu",
+    "folder": "Dossier",
+    "folderItems": "{count, plural, one {# élément} other {# éléments}}",
+    "folderEmpty": "Ce dossier ne contient aucune documentation de test",
     "error": "Erreur lors du chargement du fichier",
     "dashboard": {
       "title": "Tableau de Bord Couverture Tests",

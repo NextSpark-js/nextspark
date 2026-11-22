@@ -146,6 +146,9 @@
     "backToList": "Back to list",
     "selectFile": "Select a file",
     "selectFileDescription": "Choose a test file from the tree to view its content",
+    "folder": "Folder",
+    "folderItems": "{count, plural, one {# item} other {# items}}",
+    "folderEmpty": "This folder has no test documentation",
     "error": "Error loading file",
     "dashboard": {
       "title": "Test Coverage Dashboard",

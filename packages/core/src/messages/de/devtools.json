@@ -65,6 +65,9 @@
     "backToList": "Zurück zur Liste",
     "selectFile": "Datei auswählen",
     "selectFileDescription": "Wählen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
+    "folder": "Ordner",
+    "folderItems": "{count, plural, one {# Eintrag} other {# Einträge}}",
+    "folderEmpty": "Dieser Ordner enthält keine Testdokumentation",
     "error": "Fehler beim Laden der Datei",
     "dashboard": {
       "title": "Übersicht der Testabdeckung",
