@@ -110,30 +110,15 @@ const MEDIA = "(prefers-color-scheme: dark)"
 const DEFAULT_THEMES = ["light", "dark"]
 const isServer = typeof window === "undefined"
 
-const ThemeContext = React.createContext<UseThemeProps | undefined>(undefined)
-/** The value inside an area with a session (no public theme), and how ThemeArea tells the provider it is mounted */
-const AreaThemeContext = React.createContext<[UseThemeProps, (inArea: boolean) => void] | undefined>(undefined)
+export const ThemeContext = React.createContext<(UseThemeProps & { area?: AreaTheme }) | undefined>(undefined)
+/** What ThemeArea (providers/theme-area, the only reader: public pages load none of its code) takes from the value: the forced theme prop, and how to say it is mounted */
+export type AreaTheme = [forcedTheme: string | undefined, setArea: (inArea: boolean) => void]
 const defaultContext: UseThemeProps = { setTheme: () => {}, themes: [] }
 
 export const useTheme = (): UseThemeProps => React.useContext(ThemeContext) ?? defaultContext
 
-/**
- * Wraps an area with a session (dashboard, devtools, superadmin): inside it `useTheme()` answers without the public
- * theme, and while it is mounted the provider applies the visitor's theme (#510).
- */
-export function ThemeArea({ children }: React.PropsWithChildren) {
-  const area = React.useContext(AreaThemeContext)
-  React.useLayoutEffect(() => {
-    area?.[1](true)
-    return () => area?.[1](false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the setter is stable; the value changes with the theme
-  }, [])
-  return area ? <ThemeContext.Provider value={area[0]}>{children}</ThemeContext.Provider> : children
-}
-
 /** The areas with a session, where the visitor's theme applies; the blocking script holds the same pattern (#510) */
-const AREAS = "/(dashboard|devtools|superadmin)(/|$)"
-const inArea = (path: string) => RegExp("^" + withBasePath("") + AREAS).test(path)
+const inArea = (path: string) => RegExp("^" + withBasePath("") + "/(dashboard|devtools|superadmin)(/|$)").test(path)
 /** The theme of every other page: the default when it is dark, light otherwise */
 const publicThemeOf = (defaultTheme: string) => (defaultTheme === "dark" ? "dark" : "light")
 
@@ -316,35 +301,32 @@ function ColorModeProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- applyTheme changes only with the nonce
   }, [forcedTheme, theme])
 
-  // Two values that do not depend on `area`: outside the areas the public theme is forced, inside only a forced one
-  const areaValue = React.useMemo<UseThemeProps>(() => ({
+  // Outside the areas the public theme is forced, whatever `area` says: ThemeArea gives its subtree the same value with only the forced prop
+  const providerValue = React.useMemo<UseThemeProps & { area: AreaTheme }>(() => ({
     theme,
     setTheme,
-    forcedTheme: forcedThemeProp,
+    forcedTheme: forcedThemeProp ?? publicTheme,
     resolvedTheme: theme === "system" ? systemTheme : theme,
     themes: enableSystem ? [...themes, "system"] : themes,
     systemTheme: enableSystem ? systemTheme : undefined,
-  }), [theme, setTheme, forcedThemeProp, systemTheme, enableSystem, themes])
-  const providerValue = React.useMemo<UseThemeProps>(() => ({ ...areaValue, forcedTheme: forcedThemeProp ?? publicTheme }), [areaValue, forcedThemeProp, publicTheme])
-  const areaContext = React.useMemo<[UseThemeProps, (inArea: boolean) => void]>(() => [areaValue, setArea], [areaValue])
+    area: [forcedThemeProp, setArea],
+  }), [theme, setTheme, forcedThemeProp, publicTheme, systemTheme, enableSystem, themes])
 
   return (
     <ThemeContext.Provider value={providerValue}>
-      <AreaThemeContext.Provider value={areaContext}>
-        <ThemeScript
-          forcedTheme={forcedThemeProp}
-          storageKey={storageKey}
-          attribute={attribute}
-          enableSystem={enableSystem}
-          enableColorScheme={enableColorScheme}
-          defaultTheme={defaultTheme}
-          value={value}
-          themes={themes}
-          nonce={nonce}
-          scriptProps={scriptProps}
-        />
-        {children}
-      </AreaThemeContext.Provider>
+      <ThemeScript
+        forcedTheme={forcedThemeProp}
+        storageKey={storageKey}
+        attribute={attribute}
+        enableSystem={enableSystem}
+        enableColorScheme={enableColorScheme}
+        defaultTheme={defaultTheme}
+        value={value}
+        themes={themes}
+        nonce={nonce}
+        scriptProps={scriptProps}
+      />
+      {children}
     </ThemeContext.Provider>
   )
 }

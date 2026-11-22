@@ -11,7 +11,8 @@ import { renderToString } from 'react-dom/server'
 
 jest.mock('next/navigation', () => ({ usePathname: () => '/dashboard' }))
 
-import { ThemeArea, ThemeProvider, useTheme, type UseThemeProps } from '@nextsparkjs/core/providers/theme-provider'
+import { ThemeProvider, useTheme, type UseThemeProps } from '@nextsparkjs/core/providers/theme-provider'
+import { ThemeArea } from '@nextsparkjs/core/providers/theme-area'
 import { AccountTheme } from '@nextsparkjs/core/providers/account-theme'
 
 const originalMatchMedia = window.matchMedia

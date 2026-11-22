@@ -9,7 +9,7 @@ import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAd
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
 import { AreaToastPosition } from "@nextsparkjs/core/providers/area-toast-position";
-import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
+import { ThemeArea } from "@nextsparkjs/core/providers/theme-area";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Loader2 } from 'lucide-react'
 import { Metadata } from "next";

@@ -10,8 +10,8 @@ const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{childre
 jest.mock('@/core/providers/account-theme', () => ({ AccountTheme: () => <i data-testid="account-theme" /> }))
 jest.mock('@nextsparkjs/core/providers/account-theme', () => ({ AccountTheme: () => <i data-testid="account-theme" /> }))
 // #510: each area is wrapped in ThemeArea, where the visitor's theme applies
-jest.mock('@/core/providers/theme-provider', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
-jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
+jest.mock('@/core/providers/theme-area', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
+jest.mock('@nextsparkjs/core/providers/theme-area', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
 jest.mock('@/core/providers/DashboardProviders', () => ({ DashboardProviders: Passthrough }))
 jest.mock('@nextsparkjs/core/providers/DashboardProviders', () => ({ DashboardProviders: Passthrough }))
 jest.mock('@nextsparkjs/core/components/app/guards/SuperAdminGuard', () => ({ SuperAdminGuard: Passthrough }))

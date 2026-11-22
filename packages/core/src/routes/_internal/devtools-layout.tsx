@@ -3,7 +3,7 @@ import { DeveloperGuard } from "@nextsparkjs/core/components/app/guards/Develope
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
 import { AreaToastPosition } from "@nextsparkjs/core/providers/area-toast-position";
-import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
+import { ThemeArea } from "@nextsparkjs/core/providers/theme-area";
 import { DevtoolsSidebar } from "@nextsparkjs/core/components/devtools/DevtoolsSidebar";
 import { DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools/DevtoolsMobileHeader";
 import { Metadata } from "next";
