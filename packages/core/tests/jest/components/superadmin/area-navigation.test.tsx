@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  *
  * #531: a developer reaches /devtools from the superadmin sidebar (a superadmin is not offered the link), and each area
- * answers an unknown URL with its own not-found page, with the way back to its home.
+ * shows its own not-found page for a plugin page that does not exist, with the way back to its home.
  */
 import React from 'react'
 import { render, screen, cleanup } from '@testing-library/react'
@@ -29,8 +29,6 @@ jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children, ..
 import { SuperadminSidebar } from '@/core/components/superadmin/layouts/SuperadminSidebar'
 import DevtoolsNotFound from '@/core/routes/devtools/not-found'
 import SuperadminNotFound from '@/core/routes/superadmin/not-found'
-import DevtoolsUnknownPage from '@/core/routes/devtools/[...slug]/page'
-import SuperadminUnknownPage from '@/core/routes/superadmin/[...slug]/page'
 import en from '@/core/messages/en/index'
 
 afterEach(() => {
@@ -62,10 +60,5 @@ describe('the not-found page of each area', () => {
     render(<SuperadminNotFound />)
     expect(screen.getByText(en.superadmin.notFound.title)).toBeInTheDocument()
     expect(screen.getByText(en.superadmin.notFound.back).closest('a')).toHaveAttribute('href', '/superadmin')
-  })
-
-  test('an unknown URL of each area ends in notFound(), which renders that page', () => {
-    expect(() => DevtoolsUnknownPage()).toThrow('NEXT_NOT_FOUND')
-    expect(() => SuperadminUnknownPage()).toThrow('NEXT_NOT_FOUND')
   })
 })

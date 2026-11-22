@@ -675,11 +675,6 @@
   },
   {
     "kind": "page",
-    "target": "devtools/[...slug]/page.tsx",
-    "specifier": "@nextsparkjs/core/routes/devtools/[...slug]/page"
-  },
-  {
-    "kind": "page",
     "target": "devtools/api/[[...endpoint]]/page.tsx",
     "specifier": "@nextsparkjs/core/routes/devtools/api/[[...endpoint]]/page"
   },
@@ -786,11 +781,6 @@
     "kind": "sitemap",
     "target": "sitemap.ts",
     "specifier": "@nextsparkjs/core/routes/sitemap"
-  },
-  {
-    "kind": "page",
-    "target": "superadmin/[...slug]/page.tsx",
-    "specifier": "@nextsparkjs/core/routes/superadmin/[...slug]/page"
   },
   {
     "kind": "page",
