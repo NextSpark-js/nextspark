@@ -15,22 +15,13 @@ import { fetchClientMetadataResource } from '@better-auth/cimd/node'
 import { mcp } from '@better-auth/mcp'
 import { withBasePath } from '../../base-path'
 import { queryOne } from '../../db'
-import { ScopeService } from '../../services/scope.service'
+import { mcpOAuthResourceScopes } from './scopes'
 import { APIError } from 'better-auth'
 import { isSuspendedRole } from '../../auth/suspension'
 import { tryGetCurrentAuthEndpointContext } from '@better-auth/core/context'
 import { isAuthorizationKey, selectableTeams, selectedTeam, selectTeam } from './team-selection'
 import { isMcpOAuthEnabled, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
 import { latestRevocation } from './revocation'
-
-/** Every scope a team role can hold: the vocabulary API keys already use. Wildcards are never offered. */
-export function mcpOAuthResourceScopes(): string[] {
-  const scopes = new Set<string>(ScopeService.getBaseScopes())
-  for (const role of ScopeService.getRoles()) {
-    for (const scope of ScopeService.getRoleScopes(role)) scopes.add(scope)
-  }
-  return [...scopes].filter(scope => !scope.includes('*')).sort()
-}
 
 /** A suspended account's browser session can still be alive in its cookie cache: it authorizes nothing. */
 function refuseSuspended(user: { role?: unknown } | Record<string, unknown>, error: 'access_denied' | 'invalid_grant' = 'access_denied'): void {

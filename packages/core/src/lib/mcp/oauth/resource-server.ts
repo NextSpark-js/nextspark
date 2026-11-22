@@ -12,8 +12,8 @@
  *   minutes, a revocation must not wait for that.
  * - the token was granted what the call needs. A call to a tool whose scope was never granted (an entity tool, or
  *   another tool that declares `meta.requiredScopes`) is answered
- *   403 with an RFC 6750 `insufficient_scope` challenge naming it, before anything runs, so the client can ask the
- *   user for more. A scope that was granted and the user's role no longer allows is refused by the tool instead:
+ *   403 with an RFC 6750 `insufficient_scope` challenge, before anything runs, so the client can ask the user for
+ *   more: its `scope` is what the client has plus what the call needs. A scope that was granted and the user's role no longer allows is refused by the tool instead:
  *   asking again would not help.
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -33,6 +33,7 @@ import { RATE_LIMIT_MESSAGE } from '../errors'
 import type { ToolExecutionContext } from '../types'
 import { mcpOAuthIssuer, mcpResourceMetadataUrl, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
 import { isRevokedSince } from './revocation'
+import { mcpOAuthDefaultScopes, mcpOAuthStepUpScopes } from './scopes'
 
 type McpDispatch = (body: unknown, ctx: ToolExecutionContext) => Promise<JSONRPCMessage | JSONRPCMessage[] | null>
 
@@ -131,12 +132,13 @@ function rfcResourceMetadataUrl(): string {
   return `${resource.origin}/.well-known/oauth-protected-resource${resource.pathname}`
 }
 
-function insufficientScope(scopes: string[]): NextResponse {
-  const response = jsonRpcError(403, -32003, `This connection was not granted: ${scopes.join(', ')}.`)
+/** `missing`: what the call needs and was not granted. `ask`: what the client is told to authorize for. */
+function insufficientScope(missing: string[], ask: string[]): NextResponse {
+  const response = jsonRpcError(403, -32003, `This connection was not granted: ${missing.join(', ')}.`)
   // RFC 6750 section 3.1, with the RFC 9728 pointer a client needs to start the new authorization
   response.headers.set(
     'WWW-Authenticate',
-    `Bearer error="insufficient_scope", scope="${scopes.join(' ')}", resource_metadata="${mcpResourceMetadataUrl()}"`
+    `Bearer error="insufficient_scope", scope="${ask.join(' ')}", resource_metadata="${mcpResourceMetadataUrl()}"`
   )
   response.headers.set('Access-Control-Expose-Headers', 'WWW-Authenticate')
   return response
@@ -173,7 +175,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
 
       // Before anything runs: one missing scope refuses the whole body, a batch included, so nothing is half done
       const missing = missingScopes(body, granted, requiredScopesFor)
-      if (missing.length) return insufficientScope(missing)
+      if (missing.length) return insufficientScope(missing, mcpOAuthStepUpScopes(granted, missing))
 
       const ctx: ToolExecutionContext = {
         userId: principal.user!.id,
@@ -194,7 +196,8 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
         return jsonRpcError(500, -32603, 'Internal error processing MCP request')
       }
     },
-    { resource: mcpResourceUrl(), issuer: mcpOAuthIssuer() }
+    // The scopes the 401 tells a client to ask for (lib/mcp/oauth/scopes)
+    { resource: mcpResourceUrl(), issuer: mcpOAuthIssuer(), challengeScopes: mcpOAuthDefaultScopes() }
   )
 
   // With the basePath in the URL, as the client wrote it: a DPoP proof is made for that URL
