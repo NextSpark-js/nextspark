@@ -23,7 +23,7 @@ import * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
 import { isApiOperationEnabled } from '../entities/api-access'
 import { StatelessJsonRpcTransport } from './transport'
-import { generateEntityTools, normalizeDateFields } from './tool-generator'
+import { errorResult, errorStatusOf, generateEntityTools, normalizeDateFields } from './tool-generator'
 import { buildEntitySchemas } from './schema-builder'
 import { executeEntityOperation } from './executor'
 import { auditToolCall } from './audit'
@@ -53,6 +53,8 @@ export interface McpEngine {
   requiredScopesFor: (toolName: string) => string[]
   /** Every scope some tool of this server needs. */
   toolScopes: string[]
+  /** Records the tool calls of a body refused for missing scopes; `granted` is what the credential has. */
+  auditRefused: (body: unknown, ctx: ToolExecutionContext, granted: readonly string[]) => Promise<void>
 }
 
 export function createMcpEngine(
@@ -174,15 +176,7 @@ export function createMcpEngine(
           try {
             result = await tool.handler(args ?? {}, ctx)
           } catch (error) {
-            result = {
-              content: [
-                {
-                  type: 'text',
-                  text: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
-                },
-              ],
-              isError: true,
-            }
+            result = errorResult(`Unexpected error: ${error instanceof Error ? error.message : String(error)}`, 500)
           }
           await audit({
             apiKeyId: ctx.apiKeyId,
@@ -193,7 +187,8 @@ export function createMcpEngine(
             operation: tool.meta?.operation,
             recordId: typeof args?.id === 'string' ? args.id : undefined,
             teamId: ctx.teamId,
-            statusCode: result.isError ? 400 : 200,
+            // An API error keeps its status (403, 404, 409...); 400 is an error that never reached the API
+            statusCode: result.isError ? (errorStatusOf(result) ?? 400) : 200,
             requestSummary: (args ?? {}) as Record<string, unknown>,
             responseTimeMs: Date.now() - startedAt,
           })
@@ -246,10 +241,39 @@ export function createMcpEngine(
     return [`${meta.entitySlug}:${action}`]
   }
 
+  /**
+   * Records the tool calls of a body that was refused before anything ran because the credential lacks scopes: one
+   * row per call with status 403 and what that call was missing. An attempt to do what was not granted is the part
+   * of an agent's activity most worth being able to reconstruct.
+   */
+  async function auditRefused(body: unknown, ctx: ToolExecutionContext, granted: readonly string[]): Promise<void> {
+    for (const message of Array.isArray(body) ? body : [body]) {
+      const call = message as { jsonrpc?: unknown; method?: unknown; params?: { name?: unknown; arguments?: unknown } } | null
+      if (call?.jsonrpc !== '2.0' || call.method !== 'tools/call' || typeof call.params?.name !== 'string') continue
+      const tool = tools.find(candidate => candidate.name === call.params!.name)
+      if (!tool) continue
+      const args = (call.params.arguments && typeof call.params.arguments === 'object' ? call.params.arguments : {}) as Record<string, unknown>
+      await audit({
+        apiKeyId: ctx.apiKeyId,
+        oauth: ctx.principal?.oauth,
+        userId: ctx.userId,
+        tool: tool.name,
+        entitySlug: tool.meta?.entitySlug,
+        operation: tool.meta?.operation,
+        recordId: typeof args.id === 'string' ? args.id : undefined,
+        teamId: ctx.teamId,
+        statusCode: 403,
+        requestSummary: args,
+        responseTimeMs: 0,
+        missingScopes: requiredScopesFor(tool.name).filter(scope => !granted.includes(scope)),
+      })
+    }
+  }
+
   /** Every scope some tool needs, for telling a client what there is to ask for. */
   const toolScopes = [...new Set(tools.flatMap(tool => requiredScopesFor(tool.name)))].sort()
 
-  return { tools, handleJsonRpc, api, requiredScopesFor, toolScopes }
+  return { tools, handleJsonRpc, api, requiredScopesFor, toolScopes, auditRefused }
 }
 
 function assertUniqueNames(tools: McpToolDefinition[]): void {

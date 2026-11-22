@@ -113,7 +113,7 @@ describe('createMcpEngine', () => {
     });
   });
 
-  it('audits failed tool calls with statusCode 400', async () => {
+  it('audits a failed tool call with the status the API answered', async () => {
     const registry = { customers: makeEntity({ slug: 'customers' }) };
     const executor: EntityExecutor = jest.fn().mockResolvedValue({
       status: 403,
@@ -124,7 +124,7 @@ describe('createMcpEngine', () => {
 
     const result = await callTool(engine, 'acme_get_customer', { id: 'c1' });
     expect(result.isError).toBe(true);
-    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 400 });
+    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 403 });
   });
 
   it('joins override.extraTools and options.utilityTools into the final tool set', () => {
@@ -438,5 +438,73 @@ describe('the scopes a tool call needs (#541)', () => {
     expect(engine.requiredScopesFor('acme_customer_report')).toEqual([]);
     expect(engine.requiredScopesFor('acme_customer_merge')).toEqual(['customers:read', 'customers:delete']);
     expect(engine.requiredScopesFor('no_such_tool')).toEqual([]);
+  });
+});
+
+describe('the audit trail of what did not succeed (#541)', () => {
+  const registry: Record<string, EntityConfig> = { customers: makeEntity({ slug: 'customers' }) };
+
+  it('an error that never reached the API (arguments the tool rejects) is recorded as a 400', async () => {
+    const executor: EntityExecutor = jest.fn();
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const result = await callTool(engine, 'acme_update_customer', { id: 'c-1' });
+    expect(result.isError).toBe(true);
+    expect(executor).not.toHaveBeenCalled();
+    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 400 });
+  });
+
+  it('an API error is recorded with its own status, not as a 400', async () => {
+    const executor: EntityExecutor = jest.fn().mockResolvedValue({ status: 404, body: { success: false, error: 'Not found' } });
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const result = await callTool(engine, 'acme_get_customer', { id: 'missing' });
+    expect(result.isError).toBe(true);
+    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 404, recordId: 'missing' });
+    // The status stays in the trail: the client is sent the result as before
+    expect(Object.keys(result).sort()).toEqual(['content', 'isError']);
+  });
+
+  it('a handler that throws is recorded as a 500', async () => {
+    const executor: EntityExecutor = jest.fn();
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const overrides: Record<string, McpEntityOverride> = {
+      customers: {
+        extraTools: () => [{
+          name: 'acme_broken', title: 'Broken', description: 'Throws', inputSchema: {},
+          handler: async () => { throw new Error('boom'); },
+        }] as never,
+      },
+    };
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit, overrides });
+    await callTool(engine, 'acme_broken', {});
+    expect(audit.mock.calls[0][0]).toMatchObject({ tool: 'acme_broken', statusCode: 500 });
+  });
+
+  it('calls refused for missing scopes are recorded one by one, with what each lacked, and nothing runs', async () => {
+    const executor: EntityExecutor = jest.fn();
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const ctx = { ...CTX, apiKeyId: null, principal: { oauth: { clientId: 'https://client.example/meta', tokenId: 'jti-1' } } } as unknown as ToolExecutionContext;
+    await engine.auditRefused(
+      [
+        req(1, 'tools/call', { name: 'acme_delete_customer', arguments: { id: 'c-1' } }),
+        req(2, 'tools/call', { name: 'acme_list_customers', arguments: {} }),
+        req(3, 'tools/list'),
+        req(4, 'tools/call', { name: 'acme_unknown', arguments: {} }),
+        { method: 'tools/call', params: { name: 'acme_delete_customer' } },
+      ],
+      ctx,
+      ['customers:read']
+    );
+    expect(executor).not.toHaveBeenCalled();
+    expect(audit).toHaveBeenCalledTimes(2);
+    expect(audit.mock.calls[0][0]).toMatchObject({
+      tool: 'acme_delete_customer', entitySlug: 'customers', operation: 'delete', recordId: 'c-1',
+      statusCode: 403, missingScopes: ['customers:delete'], teamId: 'team-1', userId: 'user-1',
+      oauth: { clientId: 'https://client.example/meta', tokenId: 'jti-1' },
+    });
+    // The call of the same batch that was allowed did not run either: recorded as refused, missing nothing itself
+    expect(audit.mock.calls[1][0]).toMatchObject({ tool: 'acme_list_customers', statusCode: 403, missingScopes: [] });
   });
 });

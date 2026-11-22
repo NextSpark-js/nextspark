@@ -39,7 +39,9 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
     operation: entry.operation ?? null,
     recordId: entry.recordId ?? null,
     teamId: entry.teamId,
-    args: truncate(entry.requestSummary),
+    args: truncate(redactSecrets(entry.requestSummary) as Record<string, unknown>),
+    // A call refused before it ran: what it needed and the credential did not have
+    ...(entry.missingScopes ? { refused: 'insufficient_scope', missingScopes: entry.missingScopes } : {}),
     // An OAuth call has no api_key row: the client and the token's id identify the credential
     ...(entry.oauth ? { credential: 'oauth', oauthClientId: entry.oauth.clientId, oauthTokenId: entry.oauth.tokenId ?? null } : {}),
   }
@@ -66,6 +68,23 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
     // Auditing must never break the tool call, but must never fail silently either.
     console.error('[mcp:audit] failed to write api_audit_log entry:', error)
   }
+}
+
+const SECRET_KEY = /pass(word|phrase)?|secret|token|api[-_]?key|authorization|credential|private[-_]?key/i
+
+/**
+ * The arguments with the value of every key that names a secret replaced, at any depth: the audit trail is read by
+ * people who should not learn a password or a token from it.
+ */
+export function redactSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSecrets)
+  if (value === null || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, inner]) => [
+      key,
+      SECRET_KEY.test(key) && inner !== null && inner !== undefined ? '[redacted]' : redactSecrets(inner),
+    ])
+  )
 }
 
 function truncate(args: Record<string, unknown>): Record<string, unknown> {

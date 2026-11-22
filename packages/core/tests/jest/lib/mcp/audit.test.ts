@@ -3,7 +3,7 @@ jest.mock('@/core/lib/db', () => ({
   mutateWithRLS: (...args: unknown[]) => mockMutateWithRLS(...args),
 }));
 
-import { auditToolCall } from '@/core/lib/mcp/audit';
+import { auditToolCall, redactSecrets } from '@/core/lib/mcp/audit';
 import type { AuditEntry } from '@/core/lib/mcp/types';
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
@@ -105,5 +105,41 @@ describe('auditToolCall for an OAuth access token (#541)', () => {
   it('still skips a call that has neither an api key nor an OAuth client', async () => {
     await auditToolCall(entry({ apiKeyId: null }));
     expect(mockMutateWithRLS).not.toHaveBeenCalled();
+  });
+});
+
+describe('what the audit trail keeps of a call (#541)', () => {
+  it('the value of a key that names a secret is replaced, at any depth', () => {
+    expect(redactSecrets({
+      name: 'Acme',
+      password: 'hunter2',
+      apiKey: 'sk_live_1',
+      nested: { access_token: 'abc', list: [{ clientSecret: 'x', label: 'ok' }] },
+      authorization: null,
+    })).toEqual({
+      name: 'Acme',
+      password: '[redacted]',
+      apiKey: '[redacted]',
+      nested: { access_token: '[redacted]', list: [{ clientSecret: '[redacted]', label: 'ok' }] },
+      authorization: null,
+    });
+  });
+
+  it('arguments are written redacted', async () => {
+    await auditToolCall(entry({ requestSummary: { name: 'Acme', password: 'hunter2' } }));
+    const requestBody = JSON.parse(mockMutateWithRLS.mock.calls[0][1][7]);
+    expect(requestBody.args).toEqual({ name: 'Acme', password: '[redacted]' });
+  });
+
+  it('a call refused for missing scopes says so, with the scopes', async () => {
+    await auditToolCall(entry({ apiKeyId: null, oauth: { clientId: 'https://client.example/meta' }, statusCode: 403, missingScopes: ['customers:write'] }));
+    const [, params] = mockMutateWithRLS.mock.calls[0];
+    expect(params[4]).toBe(403);
+    expect(JSON.parse(params[7])).toMatchObject({ refused: 'insufficient_scope', missingScopes: ['customers:write'], credential: 'oauth' });
+  });
+
+  it('a call that ran has no refusal fields', async () => {
+    await auditToolCall(entry());
+    expect(JSON.parse(mockMutateWithRLS.mock.calls[0][1][7])).not.toHaveProperty('refused');
   });
 });

@@ -171,6 +171,8 @@ export interface AuditEntry {
   statusCode: number
   requestSummary: Record<string, unknown>
   responseTimeMs: number
+  /** Set for a call refused before it ran because the credential lacks these scopes (403 `insufficient_scope`). */
+  missingScopes?: string[]
 }
 
 export interface EntityPresetInfo {

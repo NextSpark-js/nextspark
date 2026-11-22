@@ -43,6 +43,8 @@ export interface OAuthMcpHandlers {
   requiredScopesFor: (toolName: string) => string[]
   /** Every scope some tool needs: what a connecting client is told to ask for. All of the resource's when absent. */
   toolScopes?: readonly string[]
+  /** Records the tool calls of a body refused for missing scopes (the engine's `auditRefused`). */
+  auditRefused?: (body: unknown, ctx: ToolExecutionContext, granted: readonly string[]) => Promise<void>
 }
 
 const API_KEY_BEARER = /^Bearer\s+sk_(live|test)_/i
@@ -146,7 +148,7 @@ function insufficientScope(missing: string[], ask: string[]): NextResponse {
   return response
 }
 
-export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopesFor, toolScopes }: OAuthMcpHandlers): Promise<NextResponse> {
+export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopesFor, toolScopes, auditRefused }: OAuthMcpHandlers): Promise<NextResponse> {
   const protectedHandler = requireMcpAuth(
     auth,
     async (verified, claims) => {
@@ -175,10 +177,6 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
         return jsonRpcError(400, -32700, 'Parse error: body must be JSON-RPC')
       }
 
-      // Before anything runs: one missing scope refuses the whole body, a batch included, so nothing is half done
-      const missing = missingScopes(body, granted, requiredScopesFor)
-      if (missing.length) return insufficientScope(missing, mcpOAuthStepUpScopes(granted, missing))
-
       const ctx: ToolExecutionContext = {
         userId: principal.user!.id,
         userRole: principal.user!.role,
@@ -187,6 +185,14 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
         apiKeyId: null,
         scopes: principal.scopes ?? [],
         principal,
+      }
+
+      // Before anything runs: one missing scope refuses the whole body, a batch included, so nothing is half done.
+      // The refused calls are recorded: nothing ran, and the attempt is still part of the trail.
+      const missing = missingScopes(body, granted, requiredScopesFor)
+      if (missing.length) {
+        await auditRefused?.(body, ctx, granted)
+        return insufficientScope(missing, mcpOAuthStepUpScopes(granted, missing))
       }
 
       try {

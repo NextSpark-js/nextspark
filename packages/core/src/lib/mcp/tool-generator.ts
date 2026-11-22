@@ -98,7 +98,8 @@ export function generateEntityTools(
 
   const apiError = (result: EntityApiResult, operation: string) =>
     errorResult(
-      translateApiError(result, { slug, operation, hints: override?.errorHints })
+      translateApiError(result, { slug, operation, hints: override?.errorHints }),
+      result.status
     )
 
   // ── LIST ────────────────────────────────────────────────────────────────
@@ -346,8 +347,19 @@ function withData(summary: string, structured: Record<string, unknown>): McpTool
   }
 }
 
-export function errorResult(message: string): McpToolResult {
-  return { content: [{ type: 'text', text: message }], isError: true }
+// Kept beside the result and not in it: the result is sent to the client as it is
+const errorStatuses = new WeakMap<McpToolResult, number>()
+
+/** `status`: the HTTP status of the API answer behind the error, for the audit trail. */
+export function errorResult(message: string, status?: number): McpToolResult {
+  const result: McpToolResult = { content: [{ type: 'text', text: message }], isError: true }
+  if (status) errorStatuses.set(result, status)
+  return result
+}
+
+/** The API status behind an error result; undefined for an error that never reached the API (invalid arguments). */
+export function errorStatusOf(result: McpToolResult): number | undefined {
+  return errorStatuses.get(result)
 }
 
 function formatZodIssues(error: z.ZodError): string {
