@@ -315,6 +315,17 @@ How it behaves:
 
 - **Clients** identify themselves with a Client ID Metadata Document, as Claude and ChatGPT do. Dynamic client
   registration is closed.
+- **Which applications may connect** is the project's to decide. By default any application with a valid
+  metadata document can start a sign-in and the user decides on the consent screen, which names the application
+  and its host. To accept only some, list their hosts in `config/app.config.ts`:
+
+  ```ts
+  mcp: { oauth: { allowedClientHosts: ['claude.ai', 'chatgpt.com'] } }
+  ```
+
+  With a list, an application is accepted only when its client id is an https URL on one of those hosts
+  (`*.example.com` accepts the subdomains of a host). Any other is refused when it asks for authorization, before
+  its document is fetched, and a token it was issued before the list changed stops being accepted.
 - **One team per connection.** The access token carries the team the user chose; `x-team-id` cannot change it.
 - **Scopes** are the entity scopes an API key uses (`<entity>:read|write|delete`). A call whose scope was not
   granted is answered `403` with an `insufficient_scope` challenge before anything runs. What the token may do is
@@ -324,15 +335,20 @@ How it behaves:
   ticked, deleting does not, and what the user's role cannot hold cannot be ticked. Only what stays ticked is
   granted, and the server holds the grant to what the role can hold whatever the browser sends.
   Consenting again to less ends the tokens of that connection that held more. A client set to skip consent is not
-  accepted. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
+  accepted.
+- **Connecting again.** When the application is already connected to the team, the consent screen comes with what
+  the connection holds ticked and nothing else: accepting it as it is takes nothing away and adds nothing. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
   missing.
 - **Access tokens** are JWTs for `/api/mcp` only and live ten minutes; refresh tokens rotate.
 - **Ending a connection.** Revoking it, a reused refresh token, a changed password and a suspended account end
   access on the next call, on every instance. After a changed password or a suspension every application asks for
   consent again. Signing out of the browser does not disconnect an application.
 - **Connected applications.** Settings > Security lists the user's connections (application, team, permissions,
-  dates) with a button to disconnect each. A member who holds the team permission `settings.integrations` (owner
-  and admin by default) also sees, and can end, the other members' connections to that team.
+  dates) with a button to disconnect each and one to edit its permissions. Editing only takes permissions away:
+  the application stays connected with what is left, and what it had been issued before is refused at once. More
+  is asked for from the application, on the consent screen. A member who holds the team permission
+  `settings.integrations` (owner and admin by default) also sees, and can end, the other members' connections to
+  that team.
 - **Audit.** Every tool call is a row of `api_audit_log` (`mcp:<tool>`) with the status the API answered. A call
   refused for a missing scope is recorded too, as a 403 with the scopes it lacked. The value of an argument whose
   key names a secret (password, token, API key) is replaced before it is stored.
@@ -350,5 +366,5 @@ How it behaves:
 - **URLs.** The MCP resource is a URL of the app (`NEXT_PUBLIC_APP_URL`); the issuer is where Better Auth is served
   (`BETTER_AUTH_URL`, with its own path when it has one).
 
-Not done yet: an allow-list of clients, a production gate that refuses to start without row-level security and a
-shared store in effect, and a run against the hosted ChatGPT application (Claude has been run).
+Not done yet: a production gate that refuses to start without row-level security and a shared store in effect,
+and a run against the hosted ChatGPT application (Claude has been run).

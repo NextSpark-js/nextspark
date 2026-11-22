@@ -2,7 +2,9 @@
  * The applications connected by MCP browser sign-in (#541), for the signed-in user. GET: the user's own
  * connections and, as `managed`, other members' connections to the teams whose integrations the user manages (the
  * team permission MANAGE_CONNECTIONS). DELETE ends one, named by its client and team: the user's own, or with
- * `userId` another member's in such a team. Session only: it is the app's own settings screen. 404 while MCP_OAUTH_ENABLED is off.
+ * `userId` another member's in such a team. PATCH takes permissions away from one of the user's own and leaves it
+ * connected: `scopes` are the entity permissions it keeps. Session only: it is the app's own settings screen. 404
+ * while MCP_OAUTH_ENABLED is off.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
@@ -10,7 +12,7 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { isMcpOAuthEnabled } from '@nextsparkjs/core/lib/mcp/oauth/config'
-import { disconnect, disconnectManaged, managedConnections, userConnections } from '@nextsparkjs/core/lib/mcp/oauth/connections'
+import { disconnect, disconnectManaged, managedConnections, narrowConnection, userConnections } from '@nextsparkjs/core/lib/mcp/oauth/connections'
 
 const notFound = () => createApiError('Not found', 404, undefined, 'NOT_FOUND')
 const signedOut = () => createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_FAILED')
@@ -44,6 +46,26 @@ export const DELETE = withRateLimitTier(async (request: NextRequest) => {
     : await disconnectManaged(session.user.id, target, clientId, teamId)
   if (!ended) return notFound()
   return NextResponse.json({ success: true })
+}, 'write')
+
+export const PATCH = withRateLimitTier(async (request: NextRequest) => {
+  if (!isMcpOAuthEnabled()) return notFound()
+  const session = await getAuthorizationSession(request.headers)
+  if (!session) return signedOut()
+  const parsed = await readJsonObject(request)
+  if (parsed.error) return parsed.error
+  const { clientId, teamId, scopes } = parsed.data
+  if (typeof clientId !== 'string' || !clientId || typeof teamId !== 'string' || !teamId) {
+    return createApiError('clientId and teamId are required', 400, undefined, 'VALIDATION_ERROR')
+  }
+  if (!Array.isArray(scopes) || !scopes.every((scope): scope is string => typeof scope === 'string')) {
+    return createApiError('scopes must be the list of permissions to keep', 400, undefined, 'VALIDATION_ERROR')
+  }
+  const result = await narrowConnection(session.user.id, clientId, teamId, scopes)
+  if (result === 'not-found') return notFound()
+  // Keeping nothing is ending the connection, which is DELETE: said as it is instead of done by surprise
+  if (result === 'nothing-left') return createApiError('A connection keeps at least one permission; disconnect it to take them all away', 400, undefined, 'NO_PERMISSION_LEFT')
+  return NextResponse.json({ success: true, changed: result === 'narrowed' })
 }, 'write')
 
 export const OPTIONS = corsPreflight

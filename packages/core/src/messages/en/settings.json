@@ -594,6 +594,15 @@
       "read": "read",
       "write": "create and edit",
       "delete": "delete"
+    },
+    "edit": {
+      "open": "Edit permissions",
+      "title": "Permissions of {client}",
+      "description": "Untick what it should no longer do in {team}. It stays connected with what is left. To give it more, ask for it from the application: it opens the consent screen.",
+      "save": "Save",
+      "saved": "The permissions were updated.",
+      "error": "The permissions could not be updated.",
+      "empty": "To take every permission away, disconnect the application."
     }
   }
 }

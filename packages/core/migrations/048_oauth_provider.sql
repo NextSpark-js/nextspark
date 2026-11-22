@@ -186,6 +186,15 @@ CREATE INDEX IF NOT EXISTS idx_oauth_access_token_refresh    ON public."oauthAcc
 CREATE INDEX IF NOT EXISTS idx_oauth_consent_client          ON public."oauthConsent"("clientId");
 CREATE INDEX IF NOT EXISTS idx_oauth_consent_user            ON public."oauthConsent"("userId");
 CREATE INDEX IF NOT EXISTS idx_oauth_client_assertion_expiry ON public."oauthClientAssertion"("expiresAt");
+-- What the purge of expired rows looks for (lib/mcp/oauth/purge)
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_token_expiry    ON public."oauthRefreshToken"("expiresAt");
+CREATE INDEX IF NOT EXISTS idx_oauth_access_token_expiry     ON public."oauthAccessToken"("expiresAt");
+-- A connection is a client acting for a user in a team: its tokens are read, narrowed and removed by those three
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_token_connection ON public."oauthRefreshToken"("userId", "clientId", "referenceId");
+-- One consent per connection. Better Auth looks for the consent and then creates it, in two statements: two first
+-- authorizations of one connection at the same moment would otherwise leave two rows, and the rules below read one.
+-- The second of them fails and is started again. A consent with no team is not an MCP grant and is not constrained.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_oauth_consent_connection ON public."oauthConsent"("userId", "clientId", "referenceId");
 
 -- ============================================
 -- RLS: service-only on every table

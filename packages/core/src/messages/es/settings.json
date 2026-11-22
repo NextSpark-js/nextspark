@@ -594,6 +594,15 @@
       "read": "leer",
       "write": "crear y editar",
       "delete": "eliminar"
+    },
+    "edit": {
+      "open": "Editar permisos",
+      "title": "Permisos de {client}",
+      "description": "Desmarca lo que ya no debe poder hacer en {team}. Sigue conectada con lo que quede. Para darle más, pídelo desde la aplicación: abre la pantalla de consentimiento.",
+      "save": "Guardar",
+      "saved": "Los permisos fueron actualizados.",
+      "error": "No se pudieron actualizar los permisos.",
+      "empty": "Para quitar todos los permisos, desconecta la aplicación."
     }
   }
 }

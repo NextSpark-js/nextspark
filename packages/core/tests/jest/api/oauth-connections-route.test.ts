@@ -15,23 +15,29 @@ const connections = {
   managedConnections: jest.fn(),
   disconnectManaged: jest.fn(),
   disconnect: jest.fn(),
+  narrowConnection: jest.fn(),
 }
 jest.mock('@nextsparkjs/core/lib/mcp/oauth/connections', () => ({
   userConnections: (...args: unknown[]) => connections.userConnections(...args),
   managedConnections: (...args: unknown[]) => connections.managedConnections(...args),
   disconnectManaged: (...args: unknown[]) => connections.disconnectManaged(...args),
   disconnect: (...args: unknown[]) => connections.disconnect(...args),
+  narrowConnection: (...args: unknown[]) => connections.narrowConnection(...args),
 }))
 
-import { DELETE, GET } from '../../../src/routes/api/internal/oauth-connections/route'
+import { DELETE, GET, PATCH } from '../../../src/routes/api/internal/oauth-connections/route'
 
 const URL = 'http://localhost:3000/api/internal/oauth-connections'
 const get = () => GET(new NextRequest(URL), undefined as never)
 const del = (body: unknown) =>
   DELETE(new NextRequest(URL, { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }), undefined as never)
 
+const patch = (body: unknown) =>
+  PATCH(new NextRequest(URL, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }), undefined as never)
+
 beforeEach(() => {
   jest.clearAllMocks()
+  connections.narrowConnection.mockResolvedValue('narrowed')
   enabled.mockReturnValue(true)
   getSession.mockResolvedValue({ user: { id: 'user-1', role: 'member' }, session: { id: 'session-1' } })
   connections.userConnections.mockResolvedValue([{ clientId: 'client-a', teamId: 'team-1' }])
@@ -106,5 +112,36 @@ describe('/api/internal/oauth-connections', () => {
       expect(await response.json()).toMatchObject({ code: 'VALIDATION_ERROR' })
     }
     expect(connections.disconnect).not.toHaveBeenCalled()
+  })
+
+  it('PATCH takes permissions away from the user\'s own connection, and only that: no user can be named', async () => {
+    const response = await patch({ clientId: 'client-a', teamId: 'team-1', scopes: ['tasks:read'], userId: 'user-2' })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ success: true, changed: true })
+    expect(connections.narrowConnection).toHaveBeenCalledWith('user-1', 'client-a', 'team-1', ['tasks:read'])
+  })
+
+  it('PATCH says when nothing changed, when the connection is not there and when nothing would be left', async () => {
+    connections.narrowConnection.mockResolvedValueOnce('unchanged')
+    expect(await (await patch({ clientId: 'client-a', teamId: 'team-1', scopes: ['tasks:read'] })).json()).toEqual({ success: true, changed: false })
+    connections.narrowConnection.mockResolvedValueOnce('not-found')
+    expect((await patch({ clientId: 'gone', teamId: 'team-1', scopes: ['tasks:read'] })).status).toBe(404)
+    connections.narrowConnection.mockResolvedValueOnce('nothing-left')
+    const empty = await patch({ clientId: 'client-a', teamId: 'team-1', scopes: [] })
+    expect(empty.status).toBe(400)
+    expect(await empty.json()).toMatchObject({ code: 'NO_PERMISSION_LEFT' })
+  })
+
+  it('PATCH needs the feature, a session and a body that names a client, a team and a list of permissions', async () => {
+    for (const body of [{}, { clientId: 'client-a', teamId: 'team-1' }, { clientId: 'client-a', teamId: 'team-1', scopes: 'tasks:read' }, { clientId: 'client-a', teamId: 'team-1', scopes: ['tasks:read', 7] }, { teamId: 'team-1', scopes: [] }]) {
+      const response = await patch(body)
+      expect(response.status).toBe(400)
+      expect(await response.json()).toMatchObject({ code: 'VALIDATION_ERROR' })
+    }
+    getSession.mockResolvedValueOnce(null)
+    expect((await patch({ clientId: 'client-a', teamId: 'team-1', scopes: ['tasks:read'] })).status).toBe(401)
+    enabled.mockReturnValue(false)
+    expect((await patch({ clientId: 'client-a', teamId: 'team-1', scopes: ['tasks:read'] })).status).toBe(404)
+    expect(connections.narrowConnection).not.toHaveBeenCalled()
   })
 })

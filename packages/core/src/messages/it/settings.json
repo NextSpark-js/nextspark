@@ -594,6 +594,15 @@
       "read": "leggere",
       "write": "creare e modificare",
       "delete": "eliminare"
+    },
+    "edit": {
+      "open": "Modifica autorizzazioni",
+      "title": "Autorizzazioni di {client}",
+      "description": "Deseleziona ciò che non deve più poter fare in {team}. Resta connessa con ciò che rimane. Per darle di più, chiedilo dall’applicazione: apre la schermata di consenso.",
+      "save": "Salva",
+      "saved": "Le autorizzazioni sono state aggiornate.",
+      "error": "Impossibile aggiornare le autorizzazioni.",
+      "empty": "Per togliere tutte le autorizzazioni, disconnetti l’applicazione."
     }
   }
 }

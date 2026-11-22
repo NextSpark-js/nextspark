@@ -18,7 +18,7 @@ jest.mock('@/core/lib/permissions/app-role-bypass', () => ({
   hasTeamPermission: (...args: [string | null | undefined, string | null | undefined, string]) => mockHasTeamPermission(...args),
 }));
 
-import { disconnect, disconnectManaged, managedConnections, userConnections } from '@/core/lib/mcp/oauth/connections';
+import { disconnect, disconnectManaged, grantedScopes, managedConnections, narrowConnection, userConnections } from '@/core/lib/mcp/oauth/connections';
 
 const CLIENT = 'https://claude.ai/oauth/mcp-oauth-client-metadata';
 
@@ -187,5 +187,63 @@ describe('ending a connection (#541)', () => {
       expect(mockQueryRows).not.toHaveBeenCalled();
       expect(mockQuery).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe('taking permissions away from a connection (#541)', () => {
+  const sqlOf = (call: unknown[]) => String(call[0]).replace(/\s+/g, ' ');
+  const CONSENT = { id: 'consent-1', scopes: ['openid', 'offline_access', 'tasks:read', 'tasks:write', 'customers:read', 'customers:delete'] };
+
+  it('keeps of its entity permissions only the ones named, cuts its tokens down first and then writes the consent', async () => {
+    mockQueryOne.mockResolvedValueOnce(CONSENT);
+    expect(await narrowConnection('user-1', CLIENT, 'team-1', ['tasks:read', 'customers:read'])).toBe('narrowed');
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    // the consent row is locked: a renewal in flight waits for this, as it does for a disconnection
+    expect(sqlOf(mockQueryOne.mock.calls[0])).toMatch(/^SELECT id, scopes FROM "oauthConsent" WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3 FOR UPDATE$/);
+    const [tokens, consent] = mockQuery.mock.calls;
+    const next = ['openid', 'offline_access', 'tasks:read', 'customers:read'];
+    // the tokens first, so that none holds more than the consent about to be written (the database would remove it)
+    expect(sqlOf(tokens)).toMatch(/^UPDATE "oauthRefreshToken" SET scopes = \(SELECT COALESCE\(jsonb_agg\(held\.scope\), '\[\]'::jsonb\) FROM jsonb_array_elements_text\("oauthRefreshToken"\.scopes\) AS held\(scope\) WHERE held\.scope = ANY\(\$4::text\[\]\)\) WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3$/);
+    expect(tokens[1]).toEqual(['user-1', CLIENT, 'team-1', next]);
+    expect(sqlOf(consent)).toMatch(/^UPDATE "oauthConsent" SET scopes = \$2::jsonb, "updatedAt" = now\(\) WHERE id = \$1$/);
+    expect(consent[1]).toEqual(['consent-1', JSON.stringify(next)]);
+  });
+
+  it('never adds: a permission named that the connection does not hold is not given to it', async () => {
+    mockQueryOne.mockResolvedValueOnce(CONSENT);
+    await narrowConnection('user-1', CLIENT, 'team-1', ['tasks:read', 'posts:delete', 'admin:everything']);
+    expect(mockQuery.mock.calls[1][1]).toEqual(['consent-1', JSON.stringify(['openid', 'offline_access', 'tasks:read'])]);
+  });
+
+  it('the scopes that are not entity permissions stay whatever is named', async () => {
+    mockQueryOne.mockResolvedValueOnce(CONSENT);
+    await narrowConnection('user-1', CLIENT, 'team-1', ['tasks:write']);
+    expect(mockQuery.mock.calls[1][1]).toEqual(['consent-1', JSON.stringify(['openid', 'offline_access', 'tasks:write'])]);
+  });
+
+  it('keeping everything changes nothing, and writes nothing', async () => {
+    mockQueryOne.mockResolvedValueOnce(CONSENT);
+    expect(await narrowConnection('user-1', CLIENT, 'team-1', ['tasks:read', 'tasks:write', 'customers:read', 'customers:delete'])).toBe('unchanged');
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('keeping nothing is not done here: it is ending the connection', async () => {
+    mockQueryOne.mockResolvedValueOnce(CONSENT);
+    expect(await narrowConnection('user-1', CLIENT, 'team-1', [])).toBe('nothing-left');
+    mockQueryOne.mockResolvedValueOnce(CONSENT);
+    expect(await narrowConnection('user-1', CLIENT, 'team-1', ['posts:read'])).toBe('nothing-left');
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('a connection that is not there is not found', async () => {
+    mockQueryOne.mockResolvedValueOnce(null);
+    expect(await narrowConnection('user-1', CLIENT, 'team-1', ['tasks:read'])).toBe('not-found');
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('what a connection holds is the entity permissions of its consent, and null when it has none', async () => {
+    mockQueryOne.mockResolvedValueOnce(CONSENT).mockResolvedValueOnce(null);
+    expect(await grantedScopes('user-1', CLIENT, 'team-1')).toEqual(['tasks:read', 'tasks:write', 'customers:read', 'customers:delete']);
+    expect(await grantedScopes('user-1', CLIENT, 'team-2')).toBeNull();
   });
 });

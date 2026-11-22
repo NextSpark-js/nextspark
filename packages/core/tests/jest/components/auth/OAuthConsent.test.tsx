@@ -29,9 +29,9 @@ const checked = (entity: string, action: string) => box(entity, action).getAttri
 const allow = () => document.querySelector('[data-cy=oauth-consent-allow]') as HTMLButtonElement
 const sentScope = () => (consent.mock.calls[0][0] as { scope?: string }).scope
 
-const teamResponse = (allowed: string[]) => ({
+const teamResponse = (allowed: string[], granted: string[] | null = null) => ({
   ok: true,
-  json: async () => ({ data: [{ id: 'team-1', name: 'One' }], selected: 'team-1', allowed }),
+  json: async () => ({ data: [{ id: 'team-1', name: 'One' }], selected: 'team-1', allowed, granted }),
 })
 
 beforeEach(() => {
@@ -92,5 +92,35 @@ describe('OAuthConsent', () => {
     await act(async () => { fireEvent.click(document.querySelector('[data-cy=oauth-consent-deny]') as HTMLButtonElement) })
     expect(consent).toHaveBeenCalledWith({ accept: false })
     expect(screen.queryByRole('alert')).not.toBeNull()
+  })
+
+  it('an application already connected starts from what it holds: its delete stays ticked, nothing it lacks is ticked', async () => {
+    const all = ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read']
+    global.fetch = jest.fn().mockResolvedValue(teamResponse(all, ['tasks:read', 'tasks:delete'])) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    // what it has, delete included; not the write it was not given, nor a read it never had
+    expect([checked('tasks', 'read'), checked('tasks', 'write'), checked('tasks', 'delete'), checked('customers', 'read')]).toEqual([true, false, true, false])
+    expect(document.querySelector('[data-cy=oauth-consent-hint]')?.textContent).toBe('hintConnected')
+    // accepting as it is grants what it had: nothing is taken away, nothing is added
+    await act(async () => { fireEvent.click(allow()) })
+    expect(sentScope()).toBe('openid offline_access tasks:read tasks:delete')
+    // the screen asked what this application holds in the chosen team
+    expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain('client_id=https%3A%2F%2Fclient.example%2Fmeta')
+  })
+
+  it('an application already connected does not keep ticked what the role can no longer hold', async () => {
+    global.fetch = jest.fn().mockResolvedValue(teamResponse(['tasks:read'], ['tasks:read', 'tasks:write'])) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    expect([checked('tasks', 'read'), checked('tasks', 'write')]).toEqual([true, false])
+    expect(box('tasks', 'write').disabled).toBe(true)
+  })
+
+  it('a first connection keeps the defaults and their hint', async () => {
+    global.fetch = jest.fn().mockResolvedValue(teamResponse(['tasks:read', 'tasks:write', 'tasks:delete'], null)) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    expect(document.querySelector('[data-cy=oauth-consent-hint]')?.textContent).toBe('hint')
   })
 })

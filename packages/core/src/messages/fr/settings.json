@@ -594,6 +594,15 @@
       "read": "lire",
       "write": "créer et modifier",
       "delete": "supprimer"
+    },
+    "edit": {
+      "open": "Modifier les autorisations",
+      "title": "Autorisations de {client}",
+      "description": "Décochez ce qu’elle ne doit plus pouvoir faire dans {team}. Elle reste connectée avec ce qui reste. Pour lui en donner davantage, demandez-le depuis l’application : elle ouvre l’écran de consentement.",
+      "save": "Enregistrer",
+      "saved": "Les autorisations ont été mises à jour.",
+      "error": "Impossible de mettre à jour les autorisations.",
+      "empty": "Pour retirer toutes les autorisations, déconnectez l’application."
     }
   }
 }

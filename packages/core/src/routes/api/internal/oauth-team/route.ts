@@ -11,6 +11,7 @@ import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth'
 import { isMcpOAuthEnabled } from '@nextsparkjs/core/lib/mcp/oauth/config'
+import { grantedScopes } from '@nextsparkjs/core/lib/mcp/oauth/connection-store'
 import { mcpOAuthResourceScopes } from '@nextsparkjs/core/lib/mcp/oauth/scopes'
 import { isAuthorizationKey, selectableTeams, selectedTeam, selectTeam } from '@nextsparkjs/core/lib/mcp/oauth/team-selection'
 
@@ -27,7 +28,11 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   // `allowed`: of the resource's scopes, the ones the user's role in that team can hold. The consent screen offers
   // only those; the server cuts a token down to them on every request whatever was granted.
   const allowed = selected ? (await validateScopesForUser(session.user.id, selected, mcpOAuthResourceScopes())).allowedScopes : []
-  return NextResponse.json({ success: true, data: teams, selected: selected ?? null, allowed })
+  // `granted`: what this application already holds in that team (?client_id=), null when it is not connected to it.
+  // The consent screen ticks that when the application connects again, so that accepting takes nothing away.
+  const clientId = request.nextUrl.searchParams.get('client_id')
+  const granted = selected && clientId ? await grantedScopes(session.user.id, clientId, selected) : null
+  return NextResponse.json({ success: true, data: teams, selected: selected ?? null, allowed, granted })
 }, 'read')
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {

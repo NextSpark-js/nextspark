@@ -2,8 +2,9 @@
 
 /**
  * Consent screen of an MCP browser sign-in (#541): names the client that asks and the team, and lists what it asks
- * for as one row per entity with read, write and delete. Reading and writing come ticked, deleting does not; the
- * user sends only what stays ticked. A permission the user's role in the team cannot hold is shown and cannot be
+ * for as one row per entity with read, write and delete. The first time, reading and writing come ticked and
+ * deleting does not. When the application is already connected to the team, what it holds comes ticked and nothing
+ * else, so accepting as it is takes nothing away and adds nothing. The user sends only what stays ticked. A permission the user's role in the team cannot hold is shown and cannot be
  * ticked. The signed query in the URL is what the server acts on; this page displays it and never rebuilds it.
  */
 import { useEffect, useMemo, useState } from 'react'
@@ -37,6 +38,8 @@ export function OAuthConsent() {
   // null until the server says which of them the user's role in the team can hold
   const [allowed, setAllowed] = useState<Set<string> | null>(null)
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(requested.filter(isPreselectedScope)))
+  // The application is already connected to this team: the screen starts from what it holds
+  const [connected, setConnected] = useState(false)
   const [pending, setPending] = useState<'accept' | 'deny' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const oauth2 = (authClient as unknown as { oauth2: OAuthCalls }).oauth2
@@ -48,18 +51,21 @@ export function OAuthConsent() {
 
   // The team this connection is for, and what the user's role in it can hold
   useEffect(() => {
-    const authorization = encodeURIComponent(params.get('code_challenge') ?? '')
-    fetch(withBasePath(`/api/internal/oauth-team?authorization=${authorization}`), { credentials: 'include' })
+    const query = new URLSearchParams({ authorization: params.get('code_challenge') ?? '', client_id: clientId })
+    fetch(withBasePath(`/api/internal/oauth-team?${query}`), { credentials: 'include' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null; allowed?: string[] } | null) => {
+      .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null; allowed?: string[]; granted?: string[] | null } | null) => {
         setTeam(body?.data?.find(candidate => candidate.id === body.selected)?.name ?? null)
         const can = new Set(body?.allowed ?? [])
         setAllowed(can)
-        setChosen(current => new Set([...current].filter(scope => can.has(scope))))
+        const granted = Array.isArray(body?.granted) ? body.granted : null
+        setConnected(granted !== null)
+        // Already connected: what it holds. Not yet: the defaults. Either way, only what the role can hold.
+        setChosen(new Set(requested.filter(scope => can.has(scope) && (granted ? granted.includes(scope) : isPreselectedScope(scope)))))
       })
       // What the role allows could not be read: no entity permission stays ticked, so none is asked for
       .catch(() => { setTeam(null); setAllowed(new Set()); setChosen(new Set()) })
-  }, [params])
+  }, [params, clientId, requested])
 
   const entities = useMemo(() => [...new Set(requested.map(scope => entityScope(scope)!.entity))].sort(), [requested])
   const toggle = (scope: string, on: boolean) => setChosen(current => {
@@ -132,7 +138,7 @@ export function OAuthConsent() {
           </table>
         )}
         {entities.length === 0 && <p className="text-sm text-muted-foreground">{t('identityOnly')}</p>}
-        {entities.length > 0 && <p className="text-xs text-muted-foreground">{t('hint')}</p>}
+        {entities.length > 0 && <p className="text-xs text-muted-foreground" data-cy="oauth-consent-hint">{t(connected ? 'hintConnected' : 'hint')}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </CardContent>
       <CardFooter className="flex justify-end gap-2">

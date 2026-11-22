@@ -594,6 +594,15 @@
       "read": "lesen",
       "write": "erstellen und bearbeiten",
       "delete": "löschen"
+    },
+    "edit": {
+      "open": "Berechtigungen bearbeiten",
+      "title": "Berechtigungen von {client}",
+      "description": "Entfernen Sie das Häkchen bei dem, was sie in {team} nicht mehr tun soll. Sie bleibt mit dem Rest verbunden. Mehr erhält sie, wenn es aus der Anwendung angefordert wird: Sie öffnet den Zustimmungsbildschirm.",
+      "save": "Speichern",
+      "saved": "Die Berechtigungen wurden aktualisiert.",
+      "error": "Die Berechtigungen konnten nicht aktualisiert werden.",
+      "empty": "Um alle Berechtigungen zu entziehen, trennen Sie die Anwendung."
     }
   }
 }
