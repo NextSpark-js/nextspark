@@ -122,13 +122,17 @@ export async function credentialRateLimitResponse(request: Request, auth: ApiKey
 
 function credentialLimitExceeded(request: Request, result: RateLimitResult): NextResponse {
   const retryAfter = Math.max(1, Math.ceil((result.resetTime - Date.now()) / 1000));
+  // The limit is counted in charges, not in requests of the client: one for each authenticated request, and so one
+  // more for each API handler an MCP tool calls in process. The message says so, in the window the tier is set to.
+  const { windowMs } = getRateLimitTierConfig('credential');
+  const window = windowMs === 60_000 ? 'minute' : `${Math.round(windowMs / 1000)} seconds`;
   // With core's CORS for the request: the route returns this as it is, often without withRateLimitTier around it,
   // and a browser from another origin would otherwise see a CORS error instead of the 429 (#432)
   return withCors(NextResponse.json(
     {
       success: false,
       error: 'Rate limit exceeded',
-      message: `Too many requests. Limit: ${result.limit} requests per minute`,
+      message: `Too many requests for this credential. Limit: ${result.limit} charges per ${window}: one per request, and one more for each API call an MCP tool makes`,
       code: 'RATE_LIMIT_EXCEEDED',
       retryAfter
     },

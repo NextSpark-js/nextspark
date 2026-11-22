@@ -487,7 +487,7 @@
       "tipRevoke": "Révoquez immédiatement la clé si vous pensez qu'elle est compromise",
       "tipHttps": "Utilisez toujours HTTPS pour vos requêtes à l'API",
       "limits": "Limites de l'API :",
-      "limitRate": "1 000 requêtes par minute",
+      "limitRate": "1 000 requêtes par minute (un appel d’outil via MCP compte généralement pour deux)",
       "limitHeaders": "Les réponses incluent des en-têtes de limitation de débit",
       "limitDocs": "Documentation complète disponible sur /docs",
       "keyCopied": "Clé API copiée !",

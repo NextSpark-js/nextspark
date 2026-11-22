@@ -487,7 +487,7 @@
       "tipRevoke": "Revoke the key immediately if you think it's compromised",
       "tipHttps": "Always use HTTPS when making requests to the API",
       "limits": "API limits:",
-      "limitRate": "1,000 requests per minute",
+      "limitRate": "1,000 requests per minute (a tool call on the MCP endpoint usually counts as two)",
       "limitHeaders": "Rate limiting headers included in responses",
       "limitDocs": "Full documentation available at /docs",
       "keyCopied": "API Key Copied!",

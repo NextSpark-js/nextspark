@@ -68,7 +68,11 @@ describe('the per-credential limit', () => {
     redis.check.mockResolvedValue(over())
     const response = await credentialRateLimitResponse(request(), credential('key-shared-over'))
     expect(response?.status).toBe(429)
-    expect(await response!.json()).toMatchObject({ code: 'RATE_LIMIT_EXCEEDED', message: expect.stringContaining('1000') })
+    // the message counts in charges, the unit the limit is kept in: a request of the client can cost more than one
+    expect(await response!.json()).toMatchObject({
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many requests for this credential. Limit: 1000 charges per minute: one per request, and one more for each API call an MCP tool makes',
+    })
     const retryAfter = Number(response!.headers.get('Retry-After'))
     expect(retryAfter).toBeGreaterThanOrEqual(1)
     expect(retryAfter).toBeLessThanOrEqual(30)
@@ -101,5 +105,14 @@ describe('the per-credential limit', () => {
     redis.tier = { limit: 1500, windowMs: 60_000 }
     rateLimitCache.set(getCacheKey('rate_limit', 'key-tier-raised'), { count: 1200, resetTime: Date.now() + 60_000 }, 60_000)
     expect(await credentialRateLimitResponse(request(), credential('key-tier-raised'))).toBeNull()
+  })
+
+  it('the message names the window the tier is set to', async () => {
+    redis.tier = { limit: 2, windowMs: 30_000 }
+    await credentialRateLimitResponse(request(), credential('key-window'))
+    await credentialRateLimitResponse(request(), credential('key-window'))
+    const response = await credentialRateLimitResponse(request(), credential('key-window'))
+    expect(response?.status).toBe(429)
+    expect((await response!.json()).message).toContain('Limit: 2 charges per 30 seconds')
   })
 })

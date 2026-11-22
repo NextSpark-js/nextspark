@@ -485,7 +485,7 @@ On `/api/mcp` the same condition is a JSON-RPC error that carries `Retry-After` 
 {
   "success": false,
   "error": "Rate limit exceeded",
-  "message": "Too many requests. Limit: 1000 requests per minute",
+  "message": "Too many requests for this credential. Limit: 1000 charges per minute: one per request, and one more for each API call an MCP tool makes",
   "code": "RATE_LIMIT_EXCEEDED",
   "retryAfter": 60
 }
