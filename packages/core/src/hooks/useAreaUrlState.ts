@@ -77,12 +77,14 @@ export function useAreaUrlState<S extends UrlStateSpec>(spec: S, options: { debo
   const ownedQuery = buildUrlQuery(spec, readUrlState(spec, searchParams))
   useEffect(() => {
     if (ownedQuery === syncedQuery.current) return
-    clearTimeout(timer.current)
+    // a write is pending: the user is changing the state now, and that write wins over a stale URL
+    if (timer.current) return
     syncedQuery.current = ownedQuery
+    rememberQuery(pathname, ownedQuery)
     const next = readUrlState(spec, paramsRef.current)
     stateRef.current = next
     setLocal(next)
-  }, [ownedQuery, spec])
+  }, [ownedQuery, spec, pathname])
 
   useEffect(() => {
     rememberQuery(pathname, syncedQuery.current)
@@ -101,6 +103,7 @@ export function useAreaUrlState<S extends UrlStateSpec>(spec: S, options: { debo
       setLocal(next)
       clearTimeout(timer.current)
       timer.current = setTimeout(() => {
+        timer.current = undefined
         const query = buildUrlQuery(spec, next, new URLSearchParams(paramsRef.current.toString()))
         const owned = buildUrlQuery(spec, next)
         syncedQuery.current = owned

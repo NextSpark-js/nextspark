@@ -80,6 +80,12 @@ export default function ScheduledActionsPage() {
     queryFn: () => fetchScheduledActions(filters, page, limit, t('fetchFailed')),
   })
 
+  // A type that is not registered (a stale link) lists nothing: it is no filter
+  const registeredTypes = data?.data.meta.registeredActionTypes
+  useEffect(() => {
+    if (url.type && registeredTypes && !registeredTypes.includes(url.type)) setUrl({ type: '', page: '1' })
+  }, [url.type, registeredTypes, setUrl])
+
   // "Updated 12 seconds ago", ticking, so the list says how stale it is instead of passing for live.
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {

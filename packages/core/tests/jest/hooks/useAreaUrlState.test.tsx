@@ -110,3 +110,34 @@ describe('useListBackHref', () => {
     expect(result.current).toBe('/superadmin/users?tab=superadmins&page=2')
   })
 })
+
+describe('timing and pending writes', () => {
+  it('waits the debounce: nothing is written before it, one write after', () => {
+    const { result } = renderHook(() => useAreaUrlState(SPEC))
+    act(() => result.current[1]({ search: 'a' }))
+    act(() => jest.advanceTimersByTime(100))
+    expect(mockReplace).not.toHaveBeenCalled()
+    act(() => jest.advanceTimersByTime(200))
+    expect(mockReplace).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not take a stale URL while a write is pending, and the pending write wins', () => {
+    mockSearch = 'search=old'
+    const { result, rerender } = renderHook(() => useAreaUrlState(SPEC))
+    act(() => result.current[1]({ search: 'typing' }))
+    mockSearch = 'search=other'
+    rerender()
+    expect(result.current[0].search).toBe('typing')
+    act(() => jest.advanceTimersByTime(300))
+    expect(mockReplace).toHaveBeenLastCalledWith('/superadmin/users?search=typing', { scroll: false })
+  })
+
+  it('remembers the query it follows from outside, so Back points at it', () => {
+    mockSearch = 'search=ana'
+    const { rerender } = renderHook(() => useAreaUrlState(SPEC))
+    mockSearch = ''
+    rerender()
+    const { result } = renderHook(() => useListBackHref('/superadmin/users'))
+    expect(result.current).toBe('/superadmin/users')
+  })
+})
