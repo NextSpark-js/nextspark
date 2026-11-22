@@ -15,6 +15,7 @@ import { fetchClientMetadataResource } from '@better-auth/cimd/node'
 import { mcp } from '@better-auth/mcp'
 import { withBasePath } from '../../base-path'
 import { queryOne } from '../../db'
+import { purgeExpiredOAuthIfDue } from './purge'
 import { mcpOAuthResourceScopes } from './scopes'
 import { APIError } from 'better-auth'
 import { isSuspendedRole } from '../../auth/suspension'
@@ -94,6 +95,8 @@ export function mcpOAuthPlugins() {
         // Every token, refreshed ones included, is issued through here: none for a suspended account
         if (user) refuseSuspended(user, 'invalid_grant')
         if (!user || !referenceId) return {}
+        // Housekeeping rides on token issuance: at most once an hour per process, and it never fails the token
+        await purgeExpiredOAuthIfDue()
         return { [TEAM_CLAIM]: referenceId, [REVOCATION_CLAIM]: await latestRevocation(user.id) }
       },
     }),

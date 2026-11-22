@@ -44,7 +44,10 @@ function byEntity(scopes: string[]): Array<[string, string[]]> {
     const parsed = entityScope(scope)
     if (parsed) grouped.set(parsed.entity, [...(grouped.get(parsed.entity) ?? []), parsed.action])
   }
-  return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b))
+  const order = ['read', 'write', 'delete']
+  return [...grouped.entries()]
+    .map(([entity, actions]): [string, string[]] => [entity, actions.sort((a, b) => order.indexOf(a) - order.indexOf(b))])
+    .sort(([a], [b]) => a.localeCompare(b))
 }
 
 export function ConnectedApps() {

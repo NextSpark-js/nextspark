@@ -73,15 +73,18 @@ function toConnection(row: ConnectionRow): OAuthConnection {
   }
 }
 
-// One row per connection: its newest live refresh token, with when its first token of any state was issued
+// One row per connection: its newest live refresh token, with when it was first consented to (the tokens that came
+// before the live one are purged a day after they are replaced, the consent stays)
 const CONNECTIONS = `
   SELECT DISTINCT ON (rt."userId", rt."clientId", rt."referenceId")
          rt."clientId", c.name AS "clientName", c.uri AS "clientUri",
          rt."referenceId" AS "teamId", t.name AS "teamName",
          rt."userId", u.name AS "userName", u.email AS "userEmail",
          rt.scopes, rt."createdAt" AS "lastRenewedAt",
-         (SELECT MIN(first."createdAt") FROM "oauthRefreshToken" first
-           WHERE first."userId" = rt."userId" AND first."clientId" = rt."clientId" AND first."referenceId" = rt."referenceId") AS "connectedAt"
+         COALESCE(
+           (SELECT MIN(consent."createdAt") FROM "oauthConsent" consent
+             WHERE consent."userId" = rt."userId" AND consent."clientId" = rt."clientId" AND consent."referenceId" = rt."referenceId"),
+           rt."createdAt") AS "connectedAt"
     FROM "oauthRefreshToken" rt
     JOIN "oauthClient" c ON c."clientId" = rt."clientId"
     JOIN "users" u ON u.id = rt."userId"
