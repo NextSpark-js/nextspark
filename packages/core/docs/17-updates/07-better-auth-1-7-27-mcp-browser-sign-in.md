@@ -14,7 +14,7 @@ project that does not turn the feature on has two things to do: move two depende
 | Core's own dependencies | | `@better-auth/oauth-provider`, `@better-auth/mcp`, `@better-auth/cimd` and `@better-auth/core`, all `~1.7.27`. They come with `@nextsparkjs/core`: a project does not declare them |
 | Migrations | Up to `047` | `048_oauth_provider.sql`: ten service-only tables and seven triggers for the OAuth authorization server. No existing table is altered |
 | MCP endpoint (`/api/mcp`) | API key only | API key, and, only when the project turns it on, an OAuth access token obtained by signing in through the browser |
-| Rate limit tiers | `auth`, `authIdentifier`, `api`, `strict`, `read`, `write`, `webhook`, `ingest` | The same plus `credential`: 1000 requests a minute per API key or MCP connection |
+| Rate limit tiers | `auth`, `authIdentifier`, `api`, `strict`, `read`, `write`, `webhook`, `ingest` | The same plus `credential`: 1000 charges a minute per API key or MCP connection |
 | `features` of `nextspark.config.ts` | `billing`, `superadmin` (both on by default) | The same plus `mcpOAuth`, **off** by default |
 | `config/app.config.ts` | | Optional `mcp.oauth.allowedClientHosts` |
 | New projects | | `create-nextspark-app` and the CLI wizard write `better-auth ~1.7.27` and `@better-fetch/fetch 1.3.3` |

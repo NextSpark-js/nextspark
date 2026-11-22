@@ -121,8 +121,8 @@ Upstash's REST API is supported. On Vercel the Marketplace integration creates o
 To check it on the deployment, and to size the Redis plan (about 4 commands for each per-credential check), follow
 [Verifying the shared rate limit with Redis](../12-testing/12-shared-rate-limit-verification.md).
 
-The limit is a safety cap: `DISABLE_RATE_LIMITING=true` does not turn it off. A tool call counts twice, once for
-the MCP request and once for the API handler the tool calls.
+The limit is a safety cap: `DISABLE_RATE_LIMITING=true` does not turn it off. As said above, a request with one generated entity
+tool costs two charges.
 
 ### 6. A runtime database role that is not the owner
 
@@ -198,7 +198,8 @@ row per entity. After accepting:
 
 - the client lists the tools and a call returns data;
 - **Settings > Security > Connected applications** shows the connection, with its team and permissions;
-- the call is a row of `api_audit_log` with the endpoint `mcp:<tool>`;
+- the call is recorded in `api_audit_log` with the endpoint `mcp:<tool>` (the write is best effort: if the row is
+  missing, look for `[mcp:audit]` in the server log);
 - **Disconnect** on that screen ends it: the next call from the client is refused.
 
 `/api/mcp` also has the per-address `api` tier (100 requests a minute), which applies to the `curl` checks too.

@@ -469,8 +469,8 @@ A request made with an API key is counted twice, by two independent limits:
 - When Redis fails, the shared check lets the request through and the count of the process still applies.
 - It is a safety cap: `DISABLE_RATE_LIMITING=true` does not turn it off.
 - The number is configurable: `rateLimit: { tiers: { credential: { limit: 3000 } } }` in `config/app.config.ts`.
-- On `/api/mcp` a tool call counts twice against the key: the MCP request, and the API handler the tool calls in
-  process.
+- On `/api/mcp` the key pays one charge for the request and one more for each API handler a tool calls in process: a request
+  with one generated entity tool costs two.
 
 The same tier limits an MCP connection made by browser sign-in, counted per application and user.
 
@@ -478,7 +478,8 @@ The same tier limits an MCP connection made by browser sign-in, counted per appl
 `RATE_LIMITS` (`lib/api/keys.ts`) belong to the older `withRateLimit` wrapper, which core's routes do not use; they
 are not the limit an API key gets from authenticating.
 
-**Response when rate limited** (status `429`, with `Retry-After` and the `X-RateLimit-*` headers):
+**Response when rate limited** on a REST route (status `429`, with `Retry-After` and the `X-RateLimit-*` headers).
+On `/api/mcp` the same condition is a JSON-RPC error that carries `Retry-After` only:
 
 ```json
 {

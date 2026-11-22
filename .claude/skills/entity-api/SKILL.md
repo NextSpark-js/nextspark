@@ -351,14 +351,17 @@ headers: {
 }
 ```
 
-Over HTTP these endpoints accept a session or an API key, nothing else. They are also what every tool of the
-app's MCP server (`/api/mcp`) runs through: the MCP engine calls the generic handlers in process, with
-`x-team-id` set to the team it resolved. A tool call made with an API key forwards that key; one made with an
+Over HTTP these endpoints accept a session or an API key, nothing else. They are also what every **generated
+entity tool** of the app's MCP server (`/api/mcp`) runs through: the MCP engine calls the generic handlers in
+process, with `x-team-id` set to the team it resolved. A hand-written tool (`extraTools`, `utilityTools`) runs its
+own handler and is bound by these checks only for the API handlers it calls through `api.execute`; whatever else
+it does, it has to check itself. A tool call made with an API key forwards that key; one made with an
 OAuth access token (MCP browser sign-in) carries no credential: the verified principal is attached to the
 request object and `authenticateRequest` returns it as `type: 'api-key'` with `oauth: { clientId, tokenId }`.
 The scope table below applies to it unchanged, and so do team-role permissions, ownership and field guards.
-A generated entity tool is audited twice in `api_audit_log`: the handler's own `/api/v1/...` row and the MCP row
-`mcp:<tool>`. A hand-written tool leaves the `mcp:` row and one handler row per API handler it actually calls.
+A generated entity tool is audited twice in `api_audit_log`, best effort (a failed audit write is logged and does
+not stop the call): the handler's own `/api/v1/...` row and the MCP row `mcp:<tool>`. A hand-written tool gets the
+`mcp:` row and one handler row per API handler it actually calls.
 See the `mcp-server` skill.
 
 ### Scope Requirements

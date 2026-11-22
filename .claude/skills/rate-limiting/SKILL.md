@@ -263,8 +263,8 @@ credential, on top of the per-address limit: `credentialRateLimitResponse(reques
 - **Once per request**, however many times the request is authenticated (a `WeakMap` keyed by the request).
 - **A safety cap**: it stays on with `DISABLE_RATE_LIMITING=true`, which only turns off the per-address limits and
   Better Auth's own limiter.
-- **An MCP tool call counts twice**: the MCP request, and the API handler the tool calls in process. Same with an
-  API key.
+- **What an MCP request costs**: one charge for the request and one more for each API handler a tool calls in process. A request with one
+  generated entity tool costs two, a hand-written tool one plus the handlers it calls. Same with an API key.
 - `apiKeyRateLimitResponse` is the in-process half alone. It is kept for projects that call it; new code calls
   `credentialRateLimitResponse` (it is async: `await` it).
 

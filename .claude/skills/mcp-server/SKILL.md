@@ -340,9 +340,11 @@ action. A project that wants its own schedule calls `purgeExpiredOAuth()`.
 ## Rate limit
 
 - The route's own tier is `api`, per address.
-- On top, the per-credential limit `credentialRateLimitResponse` (tier `credential`, 1000 a minute): for an
+- On top, the per-credential limit `credentialRateLimitResponse` (tier `credential`, 1000 charges a minute): for an
   API key by its key id, for an OAuth connection by `oauthRateLimitKey` (`oauth:<clientId>:<userId>`).
-- A tool call counts twice: the MCP request, and the API handler it calls in process. Same with an API key.
+- The charge is per authenticated `Request` object: one charge for the request and one more for each API handler a tool calls in process. A request with one generated entity tool
+  costs two; a hand-written tool costs one plus the handlers it calls; a batch pays the outer request once and
+  then each handler. Same with an API key.
 - On the OAuth path a request batches at most 50 JSON-RPC messages (`MAX_BATCH_MESSAGES`); a larger batch is
   `400 -32600`.
 
@@ -485,6 +487,6 @@ DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenc
 - `rls-enforcement` - service-only tables, `withServiceTransaction`
 - `jest-unit` - when a mocked-query test is not enough; `tests/node/*-pg.test.ts`
 - `nextjs-api-development` - session-only internal routes, feature-gated routes
-- `entity-api` - the handlers every tool runs through
+- `entity-api` - the handlers every generated entity tool runs through
 - `entity-system` - `access.api`, which decides what becomes a tool
 - `anthropics-mcp-builder` - building an MCP server for another service

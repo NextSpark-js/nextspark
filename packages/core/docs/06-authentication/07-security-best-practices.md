@@ -526,8 +526,8 @@ runtime role and keep the owner for migrations. See [RLS Policies](../10-backend
 
 ### 5. Read the audit log
 
-Every MCP tool call that reaches its handler is a row of `api_audit_log` with the endpoint `mcp:<tool>` and the real
-status. Calls refused because the connection lacks a scope are recorded too, with status `403` and the scopes that
+Every MCP tool call that reaches its handler is recorded in `api_audit_log`, best effort, with the endpoint
+`mcp:<tool>` and the real status (a failed audit write is logged and does not stop the call). Calls refused because the connection lacks a scope are recorded too, with status `403` and the scopes that
 were missing: an application trying to do what it was not granted is worth looking for. Rows of an OAuth call carry
 `credential: 'oauth'`, the client id and the token id in `requestBody`. Values of arguments whose key names a secret
 are stored as `[redacted]`. See [MCP Server: audit trail](../05-api/20-mcp-server.md#audit-trail).

@@ -374,9 +374,9 @@ Two limits apply to `/api/mcp`. The per-address one counts every request; the pe
 | Tier `api` | Client address | 100 requests per minute | `withRateLimitTier(handleMcpPost, 'api')`, before anything is authenticated |
 | Tier `credential` | The API key, or the OAuth connection (application and user) | 1000 charges per minute | `credentialRateLimitResponse`, after the credential is verified |
 
-- **A tool call counts twice against the credential limit**: once for the MCP request and once for the API handler
-  the tool calls in process. This is the same for both credentials. A tool that makes several API calls counts once
-  more per call.
+- **The credential limit charges per request, and again per API handler**: one charge for the request and one more for each API handler a tool calls in process. A request with one
+  generated entity tool therefore costs two, a hand-written tool one plus the handlers it calls, and a batch pays
+  the outer request once and then each handler. This is the same for both credentials.
 - **The in-process handlers are not counted per address.** The executor calls the entity handlers directly, without
   the per-route wrapper, so the `api` tier on `/api/mcp` is the only per-address limit on the whole MCP surface.
   Size it with MCP traffic in mind: the users of a hosted client can arrive from a few shared addresses.
@@ -516,7 +516,7 @@ A client configured with a static `x-api-key` header that also signed in through
 
 **`429`**
 A JSON-RPC error "Request limit reached..." means the credential is over the `credential` tier; remember that a
-tool call counts twice against it. A plain JSON body with `"code": "RATE_LIMIT_EXCEEDED"` and "Too many requests"
+generated tool costs two charges, the request and the API handler it calls. A plain JSON body with `"code": "RATE_LIMIT_EXCEEDED"` and "Too many requests"
 means the client address is over the `api` tier. Both carry `Retry-After`. See [Rate Limits](#rate-limits).
 
 **"No permission for `<op>` on `<slug>`... needs the `<slug>:<op>` scope... your role in the team does not allow

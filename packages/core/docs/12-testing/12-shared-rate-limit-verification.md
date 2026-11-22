@@ -215,8 +215,8 @@ sent, not when they are counted.
 - **An API key.** The same function limits an API key, by the id of the key, but the run was made with an MCP
   connection only.
 - **Redis failing.** See [Unit suite](#unit-suite): the fail-open path has no test.
-- **Tool calls.** A tool call counts twice: once for the MCP request and once for the API handler the tool calls
-  in process. That is the same for an API key, and the run (`ping` requests) does not measure it.
+- **Tool calls.** The credential pays one charge for the request and one more for each API handler a tool calls in process, so a request
+  with one generated entity tool costs two. That is the same for an API key, and the run (`ping` requests) does not measure it.
 
 ---
 

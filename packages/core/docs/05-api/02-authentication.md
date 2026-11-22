@@ -1178,7 +1178,7 @@ Authentication does not set the limit of a request by its scopes. Two limits app
 | Limit | Counted by | Default |
 |---|---|---|
 | The tier of the route (`withRateLimitTier`) | Client address | `read`: 200 per minute, `write`: 50 per minute on `/api/v1/{entity}`; `api`: 100 per minute on `/api/mcp` |
-| The `credential` tier (`credentialRateLimitResponse`) | The API key, or the MCP connection | 1000 per minute |
+| The `credential` tier (`credentialRateLimitResponse`) | The API key, or the MCP connection | 1000 charges per minute: one charge for the request and one more for each API handler a tool calls in process |
 
 - A request authenticated with a **session** is limited by the tier of the route only. There is no per-user
   counter.

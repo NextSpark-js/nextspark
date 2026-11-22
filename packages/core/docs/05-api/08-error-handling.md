@@ -545,7 +545,7 @@ Authorization: Bearer sk_live_abc123
 
 **When it occurs:**
 - Too many requests from the client address in the window of the route's tier
-- Too many requests from one API key or MCP connection (the `credential` tier, 1000 per minute by default)
+- One API key or MCP connection over its limit (the `credential` tier, 1000 charges per minute by default: one charge for the request and one more for each API handler a tool calls in process)
 
 **Error Response:**
 ```json

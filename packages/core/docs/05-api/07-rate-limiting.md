@@ -214,17 +214,18 @@ the count. The request is refused when **either** count is over.
 
 | Situation | Result |
 |---|---|
-| No Redis | Each process counts on its own. On serverless, where every instance is a process, each gives the credential its own 1000 per minute, which is close to no limit |
+| No Redis | Each process counts on its own. On serverless, where every instance is a process, each gives the credential its own 1000 charges per minute, which is close to no limit |
 | Redis configured | One shared count for the credential across all instances, plus the count of each process |
 | Redis configured and failing | The shared check lets the request through; the count of the process still applies |
 
 `apiKeyRateLimitResponse(request, auth)` is the in-process half alone. It is kept for projects that call it; core's
 own call sites use `credentialRateLimitResponse`.
 
-### MCP tool calls count twice
+### What an MCP request costs
 
-A tool call on `/api/mcp` counts twice against the credential: once for the MCP request, and once for the API
-handler the tool calls in process. This is the same for an API key and for an MCP connection. See
+On `/api/mcp` the credential pays one charge for the request and one more for each API handler a tool calls in process. A request with one generated entity tool costs two; a
+hand-written tool costs one plus the handlers it calls; a batch pays the outer request once and then each handler.
+This is the same for an API key and for an MCP connection. See
 [MCP Server: rate limits](./20-mcp-server.md#rate-limits).
 
 ### `withRateLimit` and `RATE_LIMITS`
