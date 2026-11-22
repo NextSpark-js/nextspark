@@ -35,4 +35,14 @@ describe('ApiEndpointsSidebar saved state', () => {
     expect(billing.getAttribute('aria-expanded')).toBe('true')
     expect(JSON.parse(localStorage.getItem(P + 'sidebar:expandedPrefixes')!)).toEqual(['core:billing'])
   })
+
+  // React runs a mount's effects twice in StrictMode (development): a persist effect that writes the defaults before the
+  // saved state was read would then have the second read find the defaults.
+  test('the saved state survives a mount whose effects run twice (the persist waits for the read)', () => {
+    localStorage.setItem(P + 'sidebar:expandedPrefixes', JSON.stringify(['core:billing']))
+    localStorage.setItem(P + 'sidebar:expandedCategories', JSON.stringify(['core']))
+    render(<React.StrictMode><ApiEndpointsSidebar {...props} /></React.StrictMode>)
+    expect(JSON.parse(localStorage.getItem(P + 'sidebar:expandedPrefixes')!)).toEqual(['core:billing'])
+    expect(JSON.parse(localStorage.getItem(P + 'sidebar:expandedCategories')!)).toEqual(['core'])
+  })
 })
