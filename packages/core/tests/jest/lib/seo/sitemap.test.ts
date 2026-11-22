@@ -206,6 +206,12 @@ describe('the blog template posts (#551)', () => {
     expect(urls(buildSitemap({ ...BASE, entities: [{ config: postEntityConfig, rows }] }))).toEqual(['https://example.com/posts', 'https://example.com/posts/hello'])
   })
 
+  it('drops a nested slug: the post page is one `[slug]` segment, unlike the builder\'s `[...slug]`', async () => {
+    const run = jest.fn().mockResolvedValue({ rows: [{ slug: 'hello' }, { slug: 'a/b' }] })
+    expect((await readPublishedEntries(postEntityConfig, run)).map(r => r.slug)).toEqual(['hello'])
+    expect((await readPublishedEntries(entity(), run)).map(r => r.slug)).toEqual(['hello', 'a/b'])
+  })
+
   it('an entity with no page of its own is still left out without the builder', () => {
     expect(isSitemapEntity(entity({ builder: undefined, ui: { public: { hasSinglePage: false } } }))).toBe(false)
   })

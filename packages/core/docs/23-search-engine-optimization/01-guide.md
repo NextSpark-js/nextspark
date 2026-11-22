@@ -190,7 +190,7 @@ A page-builder page uses `@type: 'WebPage'` with `name` and `url`. Describe the 
 `/sitemap.xml` lists, once per URL:
 
 1. **Static public pages**: the `(public)` pages of your `templates/` and of your plugins whose URL has no dynamic segment (`templates/(public)/support/page.tsx` is `/support`; the home is `/` once `templates/(public)/page.tsx` exists). Core's own public pages are not listed: its default home only redirects to the dashboard, and the docs are not your content.
-2. **Public entity entries**: for every entity that is a builder entity (`builder.enabled: true`) with `access.basePath` and `access.public: true`, its archive page when `ui.public.hasArchivePage` is set, and each **published** row. Posts, page-builder pages and any entity you declare this way are covered with no per-entity code.
+2. **Public entity entries**: for every entity with `access.basePath` and `access.public: true` that is a builder entity (`builder.enabled: true`) or has `ui.public.hasSinglePage: true` (the project's own page at `<basePath>/<slug>`, as the blog template's posts; its slugs are one segment), and whose table has the `slug` and `status` columns, its archive page when `ui.public.hasArchivePage` is set, and each **published** row. Posts, page-builder pages and any entity you declare this way are covered with no per-entity code.
 3. **Your extra URLs** (`sitemap.urls`).
 
 Each entry has `lastmod` from the row's `updatedAt`.
