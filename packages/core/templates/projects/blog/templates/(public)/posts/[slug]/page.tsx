@@ -12,9 +12,6 @@
  * request data (#493). A slug with no published post never gets here: the request hook answers it with a 404.
  */
 import { Suspense } from 'react'
-// The post body's typography (.article-content): imported here, so only the post page loads it (#512)
-import '@/styles/article.css'
-
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -22,6 +19,7 @@ import Image from 'next/image'
 import { ArrowLeft, Calendar, Clock, Share2, Bookmark } from 'lucide-react'
 import { sanitizeBlockHtml } from '@nextsparkjs/core/lib/blocks/sanitize-html'
 import { pageMetadata } from '@nextsparkjs/core/lib/seo/page-metadata'
+import { ARTICLE_CSS } from '@/lib/article-css'
 import { getPublishedPostBySlug, getRelatedPosts } from '@/lib/public-posts'
 import { ReadingProgress } from '@/components/public/ReadingProgress'
 import { PostDate } from '@/components/public/PostDate'
@@ -217,6 +215,8 @@ async function Post({ params }: PageProps) {
         )}
 
         {/* Article Content */}
+        {/* The post body's typography, inline: a stylesheet import would be preloaded by every page that links to a post (#552) */}
+        <style>{ARTICLE_CSS}</style>
         <div className="article-content">
           <div dangerouslySetInnerHTML={{ __html: sanitizeBlockHtml(renderContent(post.content)) }} />
         </div>

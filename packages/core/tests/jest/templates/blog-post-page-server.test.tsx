@@ -20,7 +20,7 @@ jest.mock('@nextsparkjs/core/lib/seo/page-metadata', () => ({
 }))
 // the old client page's own import: lets the suite reach its assertions
 jest.mock('@/lib/sanitize-post-html', () => ({ sanitizePostHtml: (html: string) => html }), { virtual: true })
-jest.mock('@/styles/article.css', () => ({}), { virtual: true })
+jest.mock('@/lib/article-css', () => ({ ARTICLE_CSS: '.article-content{margin:0}' }), { virtual: true })
 jest.mock('@/components/public/ReadingProgress', () => ({ ReadingProgress: () => null }), { virtual: true })
 jest.mock('@/components/public/PostDate', () => ({ PostDate: ({ value }: { value: string }) => <time>date:{value}</time> }), { virtual: true })
 jest.mock('@/components/public/AuthorBio', () => ({ AuthorBio: () => null }), { virtual: true })
@@ -97,10 +97,20 @@ test('a markdown body gets its headings, paragraphs, code and lists, with the it
   )
 })
 
-test('the post page loads the article styles itself, so no other page carries them (#512)', () => {
+test('the post page carries the article styles inline, and imports no stylesheet that a link to a post would preload (#552)', async () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const source = require('fs').readFileSync(require.resolve('../../../templates/projects/blog/templates/(public)/posts/[slug]/page.tsx'), 'utf8')
-  expect(source).toMatch(/^import '@\/styles\/article\.css'$/m)
+  expect(source).not.toMatch(/^import '.*\.css'$/m)
+  expect(renderToStaticMarkup(await renderPost(post.slug))).toContain('<style>.article-content{margin:0}</style>')
+})
+
+test('the inline article styles are the rules of .article-content, with no stylesheet file left behind (#552)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { readFileSync, existsSync } = require('fs')
+  const css = readFileSync(require.resolve('../../../templates/projects/blog/lib/article-css.ts'), 'utf8')
+  expect(css).toContain('export const ARTICLE_CSS')
+  expect(css).toContain('.article-content h2')
+  expect(existsSync(require.resolve('../../../templates/projects/blog/package.json').replace('package.json', 'styles/article.css'))).toBe(false)
 })
 
 test('a post published without a date shows its creation date instead of a placeholder (#542)', async () => {

@@ -1,14 +1,13 @@
 /**
- * Blog Theme - Article Typography
+ * Blog Theme - Article Typography (the styles of `.article-content`)
  *
- * Clean, readable typography for long-form content.
- * Optimized for reading comfort and legibility.
+ * Clean, readable typography for long-form content, optimized for reading comfort and legibility.
+ *
+ * Rendered inline by the post page (`<style>`), not imported as a stylesheet: a CSS import is a chunk the router
+ * preloads whenever a page prefetches a link to a post, so `/` and `/posts` (which link to posts) warned that a
+ * preloaded stylesheet was not used (#552). Inline, only the post page carries it.
  */
-
-/* ============================================================================
-   ARTICLE CONTAINER
-   ============================================================================ */
-
+export const ARTICLE_CSS = `
 .article-content {
   max-width: 680px;
   margin: 0 auto;
@@ -17,11 +16,6 @@
   line-height: 1.8;
   color: var(--foreground);
 }
-
-/* ============================================================================
-   HEADINGS
-   ============================================================================ */
-
 .article-content h1,
 .article-content h2,
 .article-content h3,
@@ -34,13 +28,11 @@
   letter-spacing: -0.01em;
   color: var(--foreground);
 }
-
 .article-content h1 {
   font-size: clamp(2rem, 1.5rem + 2vw, 2.5rem);
   margin-top: 0;
   margin-bottom: 1.5rem;
 }
-
 .article-content h2 {
   font-size: clamp(1.5rem, 1.25rem + 1vw, 1.875rem);
   margin-top: 3rem;
@@ -48,36 +40,26 @@
   padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
-
 .article-content h3 {
   font-size: clamp(1.25rem, 1.125rem + 0.5vw, 1.5rem);
   margin-top: 2.5rem;
   margin-bottom: 0.75rem;
 }
-
 .article-content h4 {
   font-size: 1.125rem;
   margin-top: 2rem;
   margin-bottom: 0.5rem;
 }
-
-/* ============================================================================
-   PARAGRAPHS & TEXT
-   ============================================================================ */
-
 .article-content p {
   margin-bottom: 1.75rem;
 }
-
 .article-content strong {
   font-weight: 700;
   color: var(--foreground);
 }
-
 .article-content em {
   font-style: italic;
 }
-
 .article-content a {
   color: var(--primary);
   text-decoration: underline;
@@ -85,41 +67,26 @@
   text-decoration-thickness: 1px;
   transition: text-decoration-thickness 0.2s ease;
 }
-
 .article-content a:hover {
   text-decoration-thickness: 2px;
 }
-
-/* ============================================================================
-   LISTS
-   ============================================================================ */
-
 .article-content ul,
 .article-content ol {
   margin-bottom: 1.75rem;
   padding-left: 1.5rem;
 }
-
 .article-content li {
   margin-bottom: 0.5rem;
 }
-
 .article-content li::marker {
   color: var(--primary);
 }
-
 .article-content ul li {
   list-style-type: disc;
 }
-
 .article-content ol li {
   list-style-type: decimal;
 }
-
-/* ============================================================================
-   BLOCKQUOTES
-   ============================================================================ */
-
 .article-content blockquote {
   margin: 2rem 0;
   padding: 1.5rem 2rem;
@@ -129,15 +96,9 @@
   font-style: italic;
   color: var(--muted-foreground);
 }
-
 .article-content blockquote p:last-child {
   margin-bottom: 0;
 }
-
-/* ============================================================================
-   CODE
-   ============================================================================ */
-
 .article-content code {
   font-family: var(--font-mono, 'Fira Code', monospace);
   font-size: 0.875em;
@@ -145,7 +106,6 @@
   background-color: var(--muted);
   border-radius: 0.25rem;
 }
-
 .article-content pre {
   margin: 2rem 0;
   padding: 1.5rem;
@@ -155,87 +115,60 @@
   font-size: 0.875rem;
   line-height: 1.6;
 }
-
 .article-content pre code {
   background: none;
   padding: 0;
   font-size: inherit;
 }
-
-/* ============================================================================
-   IMAGES
-   ============================================================================ */
-
 .article-content img {
   max-width: 100%;
   height: auto;
   border-radius: 0.5rem;
   margin: 2rem 0;
 }
-
-/* ============================================================================
-   HORIZONTAL RULE
-   ============================================================================ */
-
 .article-content hr {
   margin: 3rem 0;
   border: none;
   border-top: 1px solid var(--border);
 }
-
-/* ============================================================================
-   TABLES
-   ============================================================================ */
-
 .article-content table {
   width: 100%;
   margin: 2rem 0;
   border-collapse: collapse;
   font-size: 0.9375rem;
 }
-
 .article-content th,
 .article-content td {
   padding: 0.75rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
 }
-
 .article-content th {
   font-family: var(--font-sans);
   font-weight: 600;
   background-color: var(--muted);
 }
-
 .article-content tr:last-child td {
   border-bottom: none;
 }
-
-/* ============================================================================
-   RESPONSIVE ADJUSTMENTS
-   ============================================================================ */
-
 @media (max-width: 768px) {
   .article-content {
     font-size: 1rem;
     line-height: 1.7;
   }
-
   .article-content blockquote {
     padding: 1rem 1.25rem;
     margin: 1.5rem 0;
   }
-
   .article-content pre {
     padding: 1rem;
     font-size: 0.8125rem;
   }
-
   .article-content h2 {
     margin-top: 2rem;
   }
-
   .article-content h3 {
     margin-top: 1.5rem;
   }
 }
+`.replace(/\n\s*/g, '') // every line ends in , { ; or }, so joining them keeps the rules and shortens the page
