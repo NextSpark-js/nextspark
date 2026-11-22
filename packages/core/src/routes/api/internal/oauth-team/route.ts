@@ -9,7 +9,9 @@ import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
+import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth'
 import { isMcpOAuthEnabled } from '@nextsparkjs/core/lib/mcp/oauth/config'
+import { mcpOAuthResourceScopes } from '@nextsparkjs/core/lib/mcp/oauth/scopes'
 import { isAuthorizationKey, selectableTeams, selectedTeam, selectTeam } from '@nextsparkjs/core/lib/mcp/oauth/team-selection'
 
 const notFound = () => createApiError('Not found', 404, undefined, 'NOT_FOUND')
@@ -22,7 +24,10 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   // `selected`: the team chosen for the authorization the page is part of (?authorization=<its PKCE challenge>)
   const authorization = request.nextUrl.searchParams.get('authorization') ?? undefined
   const [teams, selected] = await Promise.all([selectableTeams(session.user.id), selectedTeam(session.session.id, authorization, session.user.id)])
-  return NextResponse.json({ success: true, data: teams, selected: selected ?? null })
+  // `allowed`: of the resource's scopes, the ones the user's role in that team can hold. The consent screen offers
+  // only those; the server cuts a token down to them on every request whatever was granted.
+  const allowed = selected ? (await validateScopesForUser(session.user.id, selected, mcpOAuthResourceScopes())).allowedScopes : []
+  return NextResponse.json({ success: true, data: teams, selected: selected ?? null, allowed })
 }, 'read')
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {

@@ -13,16 +13,18 @@ export function mcpOAuthResourceScopes(): string[] {
 }
 
 /**
- * What a client is told to ask for when it connects: read access to every entity, and `offline_access`, without
- * which the authorization server issues no refresh token and the connection ends with its first access token.
+ * What a client is told to ask for when it connects: every scope of the resource, and `offline_access`, without
+ * which the authorization server issues no refresh token and the connection ends with its first access token (a
+ * client that is told nothing asks for the resource's scopes and for no refresh token).
  *
- * A client that is told nothing asks for every scope the resource lists, writes and deletes included, and for no
- * refresh token (the MCP authorization spec: the challenge's `scope`, else the resource's `scopes_supported`).
- * Write and delete are asked for when a call needs them: the 403 names the scope and the client steps up.
+ * Asking is not getting: the consent screen lists them per entity and the user decides (isPreselectedScope). The
+ * request has to carry them all because consent can only take scopes away from what was asked for.
  */
 export function mcpOAuthDefaultScopes(): string[] {
-  return ['offline_access', ...mcpOAuthResourceScopes().filter(scope => scope.endsWith(':read'))]
+  return ['offline_access', ...mcpOAuthResourceScopes()]
 }
+
+export { entityScope, isPreselectedScope } from './scope-names'
 
 /**
  * What a client is told to ask for when a call needs scopes it was not granted: those, with what it already has and

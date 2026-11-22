@@ -6,15 +6,26 @@ jest.mock('@/core/lib/services/scope.service', () => ({
   },
 }));
 
-import { mcpOAuthDefaultScopes, mcpOAuthResourceScopes, mcpOAuthStepUpScopes } from '@/core/lib/mcp/oauth/scopes';
+import { entityScope, isPreselectedScope, mcpOAuthDefaultScopes, mcpOAuthResourceScopes, mcpOAuthStepUpScopes } from '@/core/lib/mcp/oauth/scopes';
 
 describe('the scopes of MCP browser sign-in (#541)', () => {
   it('are the ones a team role can hold, without wildcards', () => {
     expect(mcpOAuthResourceScopes()).toEqual(['customers:read', 'tasks:delete', 'tasks:read', 'tasks:write']);
   });
 
-  it('a connecting client is told to ask for read access and a refresh token, not for writes or deletes', () => {
-    expect(mcpOAuthDefaultScopes()).toEqual(['offline_access', 'customers:read', 'tasks:read']);
+  it('a connecting client is told to ask for every scope and a refresh token; the consent screen decides', () => {
+    expect(mcpOAuthDefaultScopes()).toEqual(['offline_access', 'customers:read', 'tasks:delete', 'tasks:read', 'tasks:write']);
+  });
+
+  it('reading and writing come ticked on the consent screen, deleting does not', () => {
+    expect(['tasks:read', 'tasks:write', 'tasks:delete'].map(isPreselectedScope)).toEqual([true, true, false]);
+  });
+
+  it('an entity permission is told apart from any other scope', () => {
+    expect(entityScope('tasks:write')).toEqual({ entity: 'tasks', action: 'write' });
+    expect(entityScope('blog-posts:delete')).toEqual({ entity: 'blog-posts', action: 'delete' });
+    expect(entityScope('offline_access')).toBeNull();
+    expect(entityScope('admin:api-keys')).toBeNull();
   });
 
   it('a client that needs more is told to ask for what it has plus what is missing, keeping the refresh token', () => {

@@ -1,26 +1,28 @@
 'use client'
 
 /**
- * Consent screen of an MCP browser sign-in (#541, spike): names the client that asks, lists what it asks for grouped
- * by read, write and delete, and sends the decision. The signed query in the URL is what the server acts on; this
- * page only displays it and never rebuilds it.
+ * Consent screen of an MCP browser sign-in (#541): names the client that asks and the team, and lists what it asks
+ * for as one row per entity with read, write and delete. Reading and writing come ticked, deleting does not; the
+ * user sends only what stays ticked. A permission the user's role in the team cannot hold is shown and cannot be
+ * ticked. The signed query in the URL is what the server acts on; this page displays it and never rebuilds it.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { authClient } from '../../lib/auth-client'
 import { withBasePath } from '../../lib/base-path'
+import { entityScope, isPreselectedScope } from '../../lib/mcp/oauth/scope-names'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
+import { Checkbox } from '../ui/checkbox'
 
-const IDENTITY_SCOPES = new Set(['openid', 'profile', 'email', 'offline_access'])
 const ACTIONS = ['read', 'write', 'delete'] as const
 
 interface PublicClient { client_name?: string; client_uri?: string; client_id?: string }
 
 type OAuthCalls = {
   publicClient: (input: { query: { client_id: string } }) => Promise<{ data: PublicClient | null }>
-  consent: (input: { accept: boolean }) => Promise<{ data: { url?: string; redirect_uri?: string } | null; error: { message?: string } | null }>
+  consent: (input: { accept: boolean; scope?: string }) => Promise<{ data: { url?: string; redirect_uri?: string } | null; error: { message?: string } | null }>
 }
 
 export function OAuthConsent() {
@@ -28,8 +30,13 @@ export function OAuthConsent() {
   const params = useSearchParams()
   const clientId = params.get('client_id') ?? ''
   const scopes = useMemo(() => (params.get('scope') ?? '').split(/\s+/).filter(Boolean), [params])
+  // The entity permissions asked for; anything else (offline_access, identity) is not the user's to untick
+  const requested = useMemo(() => scopes.filter(scope => entityScope(scope)), [scopes])
   const [client, setClient] = useState<PublicClient | null>(null)
   const [team, setTeam] = useState<string | null>(null)
+  // null until the server says which of them the user's role in the team can hold
+  const [allowed, setAllowed] = useState<Set<string> | null>(null)
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(requested.filter(isPreselectedScope)))
   const [pending, setPending] = useState<'accept' | 'deny' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const oauth2 = (authClient as unknown as { oauth2: OAuthCalls }).oauth2
@@ -39,21 +46,34 @@ export function OAuthConsent() {
     oauth2.publicClient({ query: { client_id: clientId } }).then(({ data }) => setClient(data)).catch(() => setClient(null))
   }, [clientId, oauth2])
 
-  // The team this connection is for: the one chosen (or the only one) for this authorization
+  // The team this connection is for, and what the user's role in it can hold
   useEffect(() => {
     const authorization = encodeURIComponent(params.get('code_challenge') ?? '')
     fetch(withBasePath(`/api/internal/oauth-team?authorization=${authorization}`), { credentials: 'include' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null } | null) => {
+      .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null; allowed?: string[] } | null) => {
         setTeam(body?.data?.find(candidate => candidate.id === body.selected)?.name ?? null)
+        const can = new Set(body?.allowed ?? [])
+        setAllowed(can)
+        setChosen(current => new Set([...current].filter(scope => can.has(scope))))
       })
-      .catch(() => setTeam(null))
+      .catch(() => { setTeam(null); setAllowed(new Set()) })
   }, [params])
+
+  const entities = useMemo(() => [...new Set(requested.map(scope => entityScope(scope)!.entity))].sort(), [requested])
+  const toggle = (scope: string, on: boolean) => setChosen(current => {
+    const next = new Set(current)
+    if (on) next.add(scope)
+    else next.delete(scope)
+    return next
+  })
 
   const decide = async (accept: boolean) => {
     setPending(accept ? 'accept' : 'deny')
     setError(null)
-    const { data, error: failure } = await oauth2.consent({ accept })
+    // What stays ticked, with the scopes that are not entity permissions as they were asked for
+    const granted = scopes.filter(scope => !entityScope(scope) || chosen.has(scope))
+    const { data, error: failure } = await oauth2.consent(accept ? { accept, scope: granted.join(' ') } : { accept })
     const next = data?.url ?? data?.redirect_uri
     if (failure || !next) {
       setError(t('error'))
@@ -63,7 +83,6 @@ export function OAuthConsent() {
     window.location.assign(next)
   }
 
-  const resourceScopes = scopes.filter(scope => !IDENTITY_SCOPES.has(scope))
   const clientHost = (() => {
     try { return new URL(client?.client_uri ?? clientId).host } catch { return null }
   })()
@@ -76,22 +95,48 @@ export function OAuthConsent() {
       </CardHeader>
       <CardContent className="space-y-4">
         {team && <p className="text-sm font-medium" data-cy="oauth-consent-team">{t('team', { team })}</p>}
-        {ACTIONS.map(action => {
-          const entities = resourceScopes.filter(scope => scope.endsWith(`:${action}`)).map(scope => scope.slice(0, -action.length - 1))
-          if (!entities.length) return null
-          return (
-            <div key={action} data-cy={`oauth-consent-${action}`}>
-              <p className="text-sm font-medium">{t(action)}</p>
-              <p className="text-sm text-muted-foreground">{entities.join(', ')}</p>
-            </div>
-          )
-        })}
-        {resourceScopes.length === 0 && <p className="text-sm text-muted-foreground">{t('identityOnly')}</p>}
+        {entities.length > 0 && (
+          <table className="w-full text-sm" data-cy="oauth-consent-permissions">
+            <thead>
+              <tr className="text-left text-muted-foreground">
+                <th className="py-1 font-normal">{t('entity')}</th>
+                {ACTIONS.map(action => <th key={action} className="py-1 text-center font-normal">{t(action)}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {entities.map(entity => (
+                <tr key={entity} className="border-t">
+                  <td className="py-2 font-medium">{entity}</td>
+                  {ACTIONS.map(action => {
+                    const scope = `${entity}:${action}`
+                    const asked = requested.includes(scope)
+                    const can = asked && allowed !== null && allowed.has(scope)
+                    return (
+                      <td key={action} className="py-2 text-center">
+                        {asked && (
+                          <Checkbox
+                            checked={chosen.has(scope)}
+                            disabled={!can || pending !== null}
+                            onCheckedChange={value => toggle(scope, value === true)}
+                            aria-label={`${entity}: ${t(action)}`}
+                            data-cy={`oauth-consent-${entity}-${action}`}
+                          />
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {entities.length === 0 && <p className="text-sm text-muted-foreground">{t('identityOnly')}</p>}
+        {entities.length > 0 && <p className="text-xs text-muted-foreground">{t('hint')}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
         <Button variant="outline" disabled={pending !== null} onClick={() => decide(false)} data-cy="oauth-consent-deny">{t('deny')}</Button>
-        <Button disabled={pending !== null} onClick={() => decide(true)} data-cy="oauth-consent-allow">{t('allow')}</Button>
+        <Button disabled={pending !== null || allowed === null} onClick={() => decide(true)} data-cy="oauth-consent-allow">{t('allow')}</Button>
       </CardFooter>
     </Card>
   )
