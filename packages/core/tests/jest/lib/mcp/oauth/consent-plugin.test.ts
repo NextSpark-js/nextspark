@@ -135,6 +135,15 @@ describe('an application the project does not accept', () => {
     await expect(gate.handler({ path: '/oauth2/userinfo', headers: new Headers({ authorization: 'Bearer opaque-token' }) })).rejects.toEqual(refused);
     await expect(gate.handler({ path: '/oauth2/userinfo', body: { access_token: 'opaque-token' } })).rejects.toEqual(refused);
     await expect(gate.handler({ path: '/oauth2/token', body: {} })).rejects.toEqual(refused);
+    // an accepted client named in the body beside a refused one in HTTP Basic: the endpoint would authenticate the
+    // Basic one, so the request is refused; and the other way round, for the same reason
+    const basicOf = (id: string) => new Headers({ authorization: `Basic ${Buffer.from(`${encodeURIComponent(id)}:secret`).toString('base64')}` });
+    const accepted = 'https://claude.ai/oauth/mcp-oauth-client-metadata';
+    for (const grant_type of ['authorization_code', 'refresh_token']) {
+      await expect(gate.handler({ path: '/oauth2/token', body: { grant_type, client_id: accepted }, headers: basicOf('https://evil.example/client.json') })).rejects.toEqual(refused);
+      await expect(gate.handler({ path: '/oauth2/token', body: { grant_type, client_id: 'https://evil.example/client.json' }, headers: basicOf(accepted) })).rejects.toEqual(refused);
+      await expect(gate.handler({ path: '/oauth2/token', body: { grant_type, client_id: accepted }, headers: basicOf(accepted) })).resolves.toBeUndefined();
+    }
     // the accepted application goes on, by any way of naming itself
     await expect(gate.handler({ path: '/oauth2/token', body: { client_id: 'https://claude.ai/oauth/mcp-oauth-client-metadata' } })).resolves.toBeUndefined();
     await expect(gate.handler({ path: '/oauth2/userinfo', body: { access_token: jwt({ azp: 'https://claude.ai/oauth/mcp-oauth-client-metadata' }) } })).resolves.toBeUndefined();

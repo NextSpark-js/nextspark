@@ -10,7 +10,7 @@ import { APIError, type BetterAuthPlugin } from 'better-auth'
 import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { validateScopesForUser } from '../../api/auth'
 import { queryOne } from '../../db'
-import { isClientAllowed, presentedClientId, readAllowList } from './allowed-clients'
+import { isClientAllowed, isRequestAllowed } from './allowed-clients'
 import { allowedClientHosts } from './config'
 import { entityScope } from './scope-names'
 import { isAuthorizationKey, selectedTeam } from './team-selection'
@@ -64,15 +64,12 @@ export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
         // lib/mcp/oauth/plugins, and the MCP endpoint in lib/mcp/oauth/resource-server.)
         matcher: ctx => AFTER_AUTHORIZATION.includes(ctx.path ?? ''),
         handler: createAuthMiddleware(async ctx => {
-          const list = allowedClientHosts()
-          // No list: every application is accepted, and there is nothing to read
-          if (readAllowList(list).open) return
           const headers = (ctx.headers ?? ctx.request?.headers) as Headers | undefined
-          const clientId = presentedClientId({ body: ctx.body, authorization: headers?.get('authorization') })
-          // With a list, a request whose client cannot be read is not let through for the endpoint to work out: an
-          // access token that is not a JWT says nothing of who it was issued to. The tokens of the MCP endpoint are
-          // JWTs and every way a client authenticates at the token endpoint is read.
-          if (!isClientAllowed(clientId, list)) {
+          // With a list, the request names a client that can be read and every client it names is accepted. One
+          // whose client cannot be read is not let through for the endpoint to work out (an access token that is
+          // not a JWT says nothing of who it was issued to), and neither is one that names an accepted client in
+          // one place and another in a second: which of them the endpoint goes by is not decided here.
+          if (!isRequestAllowed({ body: ctx.body, authorization: headers?.get('authorization') }, allowedClientHosts())) {
             throw new APIError('UNAUTHORIZED', { error: 'invalid_client', error_description: 'this application is not among the ones this server accepts' })
           }
         }),

@@ -1,4 +1,4 @@
-import { isClientAllowed, presentedClientId, readAllowList } from '@/core/lib/mcp/oauth/allowed-clients';
+import { isClientAllowed, isRequestAllowed, presentedClientIds, readAllowList } from '@/core/lib/mcp/oauth/allowed-clients';
 
 const CLAUDE = 'https://claude.ai/oauth/mcp-oauth-client-metadata';
 const jwt = (payload: Record<string, unknown>) => `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`;
@@ -73,22 +73,62 @@ describe('which applications may connect by MCP browser sign-in (#541)', () => {
   });
 });
 
-describe('the client a request after authorization says it is from', () => {
-  it('is the client_id of the body, the user of HTTP Basic, the subject of a client assertion or the azp of a bearer token', () => {
-    expect(presentedClientId({ body: { grant_type: 'refresh_token', client_id: CLAUDE } })).toBe(CLAUDE);
-    expect(presentedClientId({ body: {}, authorization: `Basic ${Buffer.from(`${encodeURIComponent(CLAUDE)}:secret`).toString('base64')}` })).toBe(CLAUDE);
-    expect(presentedClientId({ body: { client_assertion: jwt({ sub: CLAUDE, iss: CLAUDE }) } })).toBe(CLAUDE);
-    expect(presentedClientId({ authorization: `Bearer ${jwt({ azp: CLAUDE, sub: 'user-1' })}` })).toBe(CLAUDE);
-    expect(presentedClientId({ authorization: `DPoP ${jwt({ client_id: CLAUDE })}` })).toBe(CLAUDE);
+const basic = (clientId: string) => `Basic ${Buffer.from(`${encodeURIComponent(clientId)}:secret`).toString('base64')}`;
+const EVIL = 'https://evil.example/client.json';
+
+describe('the clients a request after authorization names', () => {
+  it('are the client_id of the body, the subject of a client assertion, the user of HTTP Basic and the azp of an access token', () => {
+    expect(presentedClientIds({ body: { grant_type: 'refresh_token', client_id: CLAUDE } })).toEqual([CLAUDE]);
+    expect(presentedClientIds({ body: {}, authorization: basic(CLAUDE) })).toEqual([CLAUDE]);
+    expect(presentedClientIds({ body: { client_assertion: jwt({ sub: CLAUDE, iss: CLAUDE }) } })).toEqual([CLAUDE]);
+    expect(presentedClientIds({ authorization: `Bearer ${jwt({ azp: CLAUDE, sub: 'user-1' })}` })).toEqual([CLAUDE]);
+    expect(presentedClientIds({ authorization: `DPoP ${jwt({ client_id: CLAUDE })}` })).toEqual([CLAUDE]);
     // the access token as a form field (RFC 6750 section 2.2), which the identity endpoint accepts too
-    expect(presentedClientId({ body: { access_token: jwt({ azp: CLAUDE }) } })).toBe(CLAUDE);
-    // and it is the token of the body that counts when a header is there as well
-    expect(presentedClientId({ body: { access_token: jwt({ azp: 'https://evil.example/c.json' }) }, authorization: `Bearer ${jwt({ azp: CLAUDE })}` })).toBe('https://evil.example/c.json');
+    expect(presentedClientIds({ body: { access_token: jwt({ azp: CLAUDE }) } })).toEqual([CLAUDE]);
   });
 
-  it('is none for a request that names no client, or names it in a way that cannot be read', () => {
+  it('are all of them when a request names more than one, wherever each is', () => {
+    expect(presentedClientIds({ body: { client_id: CLAUDE }, authorization: basic(EVIL) })).toEqual([CLAUDE, EVIL]);
+    expect(presentedClientIds({ body: { access_token: jwt({ azp: EVIL }) }, authorization: `Bearer ${jwt({ azp: CLAUDE })}` })).toEqual([EVIL, CLAUDE]);
+    expect(presentedClientIds({ body: { client_id: CLAUDE, client_assertion: jwt({ sub: EVIL, iss: CLAUDE }) } })).toEqual([CLAUDE, EVIL]);
+  });
+
+  it('are none for a request that names no client, or names it in a way that cannot be read', () => {
     for (const request of [{}, { body: null }, { body: { client_id: '' } }, { authorization: 'Bearer not-a-jwt' }, { authorization: 'Basic ###' }, { authorization: 'Bearer' }, { body: { client_assertion: 'x.y' } }, { authorization: `Bearer ${jwt({ sub: 'user-1' })}` }, { body: { access_token: 'opaque-token' } }]) {
-      expect(presentedClientId(request)).toBeUndefined();
+      expect(presentedClientIds(request)).toEqual([]);
+    }
+  });
+});
+
+describe('a request after authorization, under a list of accepted applications', () => {
+  const list = ['claude.ai'];
+
+  it('goes on when the one client it names is accepted, and not when it is not', () => {
+    expect(isRequestAllowed({ body: { client_id: CLAUDE } }, list)).toBe(true);
+    expect(isRequestAllowed({ authorization: basic(CLAUDE) }, list)).toBe(true);
+    expect(isRequestAllowed({ body: { client_id: EVIL } }, list)).toBe(false);
+    expect(isRequestAllowed({ authorization: basic(EVIL) }, list)).toBe(false);
+  });
+
+  it('naming an accepted client beside another one gains nothing, whichever the endpoint would go by', () => {
+    // the authorization server authenticates the Basic client and takes the body's client_id for a mere parameter
+    expect(isRequestAllowed({ body: { client_id: CLAUDE }, authorization: basic(EVIL) }, list)).toBe(false);
+    expect(isRequestAllowed({ body: { client_id: EVIL }, authorization: basic(CLAUDE) }, list)).toBe(false);
+    expect(isRequestAllowed({ body: { client_id: CLAUDE, client_assertion: jwt({ sub: EVIL }) } }, list)).toBe(false);
+    expect(isRequestAllowed({ body: { access_token: jwt({ azp: EVIL }) }, authorization: `Bearer ${jwt({ azp: CLAUDE })}` }, list)).toBe(false);
+    // the same accepted client named twice is one client
+    expect(isRequestAllowed({ body: { client_id: CLAUDE }, authorization: basic(CLAUDE) }, list)).toBe(true);
+  });
+
+  it('is refused when it names no client that can be read', () => {
+    expect(isRequestAllowed({ body: {} }, list)).toBe(false);
+    expect(isRequestAllowed({ authorization: 'Bearer opaque-token' }, list)).toBe(false);
+  });
+
+  it('with no list every request goes on, whatever it names', () => {
+    for (const none of [undefined, []]) {
+      expect(isRequestAllowed({ body: { client_id: CLAUDE }, authorization: basic(EVIL) }, none)).toBe(true);
+      expect(isRequestAllowed({ body: {} }, none)).toBe(true);
     }
   });
 });

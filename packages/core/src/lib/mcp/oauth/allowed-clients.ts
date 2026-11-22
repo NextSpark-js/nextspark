@@ -92,37 +92,50 @@ const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
 }
 
 /**
- * The client a request to the token or the identity endpoint says it is from, read without verifying anything:
- * `client_id` in the body, the subject of a signed client assertion, the user of HTTP Basic, or the `azp` of an
- * access token, sent as a bearer or in the body (`access_token`). Enough to refuse: the authorization server still
- * authenticates that same client afterwards, so naming an accepted client that one is not gains nothing. Undefined
- * when the request names none that can be read, an opaque access token included.
+ * Every client a request to the token or the identity endpoint names, read without verifying anything: `client_id`
+ * in the body, the subject of a signed client assertion, the user of HTTP Basic, and the `azp` of an access token
+ * sent in the body (`access_token`) or as a bearer. All of them and not the first: a request can carry more than
+ * one, and which one the authorization server then goes by is its own business. A request is let through only when
+ * every client it names is accepted (isRequestAllowed), so naming an accepted one beside the real one gains
+ * nothing. Empty when the request names none that can be read, an opaque access token included.
  */
-export function presentedClientId(request: { body?: unknown; authorization?: string | null }): string | undefined {
+export function presentedClientIds(request: { body?: unknown; authorization?: string | null }): string[] {
   const body = (request.body && typeof request.body === 'object' ? request.body : {}) as Record<string, unknown>
-  if (typeof body.client_id === 'string' && body.client_id) return body.client_id
+  const named: string[] = []
+  const add = (value: unknown) => {
+    if (typeof value === 'string' && value) named.push(value)
+  }
+  const azpOf = (token: unknown) => {
+    const claims = typeof token === 'string' ? decodeJwtPayload(token) : null
+    add(claims?.azp ?? claims?.client_id)
+  }
+  add(body.client_id)
   if (typeof body.client_assertion === 'string') {
     const claims = decodeJwtPayload(body.client_assertion)
-    const subject = claims?.sub ?? claims?.iss
-    if (typeof subject === 'string' && subject) return subject
-  }
-  const azpOf = (token: string): string | undefined => {
-    const claims = decodeJwtPayload(token)
-    const client = claims?.azp ?? claims?.client_id
-    return typeof client === 'string' && client ? client : undefined
+    add(claims?.sub)
+    add(claims?.iss)
   }
   // RFC 6750 section 2.2: the access token as a form field
-  if (typeof body.access_token === 'string' && body.access_token) return azpOf(body.access_token)
+  azpOf(body.access_token)
   const [scheme, value] = (request.authorization ?? '').trim().split(/\s+/, 2)
-  if (!value) return undefined
-  if (/^basic$/i.test(scheme)) {
+  if (value && /^basic$/i.test(scheme)) {
     try {
       const user = atob(value).split(':')[0]
-      return user ? decodeURIComponent(user) : undefined
+      add(user ? decodeURIComponent(user) : undefined)
     } catch {
-      return undefined
+      // not Basic credentials: nothing named
     }
   }
-  if (/^(bearer|dpop)$/i.test(scheme)) return azpOf(value)
-  return undefined
+  if (value && /^(bearer|dpop)$/i.test(scheme)) azpOf(value)
+  return [...new Set(named)]
+}
+
+/**
+ * Whether a request to the token or the identity endpoint may go on under `list`. No list: it may. With a list: it
+ * names at least one client that can be read, and every client it names is accepted.
+ */
+export function isRequestAllowed(request: { body?: unknown; authorization?: string | null }, list: unknown): boolean {
+  if (readAllowList(list).open) return true
+  const named = presentedClientIds(request)
+  return named.length > 0 && named.every(clientId => isClientAllowed(clientId, list))
 }
