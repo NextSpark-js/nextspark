@@ -325,7 +325,10 @@ How it behaves:
 
   With a list, an application is accepted only when its client id is an https URL on one of those hosts
   (`*.example.com` accepts the subdomains of a host). Any other is refused when it asks for authorization, before
-  its document is fetched, and a token it was issued before the list changed stops being accepted.
+  its document is fetched; when it exchanges a code, renews a token or reads the user's identity; and on every
+  request to `/api/mcp`, so what it was issued before the list changed stops being accepted. Only a list that is
+  absent or empty leaves the server open: one that names no usable host (a typo) closes it to every application
+  and says so in the server log.
 - **One team per connection.** The access token carries the team the user chose; `x-team-id` cannot change it.
 - **Scopes** are the entity scopes an API key uses (`<entity>:read|write|delete`). A call whose scope was not
   granted is answered `403` with an `insufficient_scope` challenge before anything runs. What the token may do is
@@ -334,8 +337,9 @@ How it behaves:
   uses. The consent screen lists them as one row per entity with read, write and delete: reading and writing come
   ticked, deleting does not, and what the user's role cannot hold cannot be ticked. Only what stays ticked is
   granted, and the server holds the grant to what the role can hold whatever the browser sends.
-  Consenting again to less ends the tokens of that connection that held more. A client set to skip consent is not
-  accepted.
+  The consent is what the connection may do from then on: it is read on every request, so a token counts for what
+  it holds and the consent still has. Consenting again to less cuts the connection's tokens down to it and refuses
+  what was issued before. A client set to skip consent is not accepted.
 - **Connecting again.** When the application is already connected to the team, the consent screen comes with what
   the connection holds ticked and nothing else: accepting it as it is takes nothing away and adds nothing. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
   missing.

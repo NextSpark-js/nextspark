@@ -100,9 +100,17 @@ async function principalFromClaims(
     return jsonRpcError(401, -32001, 'This connection was revoked. Connect again.')
   }
 
+  // The consent of the connection is what it may do now: a token counts for what it holds and the consent still
+  // has. A connection with no consent was ended, whatever its token says.
+  const consent = await queryOne<{ scopes: unknown }>(
+    'SELECT scopes FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3',
+    [userId, clientId, teamId]
+  )
+  if (!consent) return jsonRpcError(401, -32001, 'This connection was ended. Connect again.')
+  const consented = Array.isArray(consent.scopes) ? (consent.scopes as unknown[]) : []
   const granted = (claimString(claims.scope) ?? '')
     .split(/\s+/)
-    .filter(scope => scope && !(OIDC_SCOPES as readonly string[]).includes(scope) && !scope.includes('*'))
+    .filter(scope => scope && !(OIDC_SCOPES as readonly string[]).includes(scope) && !scope.includes('*') && consented.includes(scope))
   // Granted at consent, cut down to what the user's role in the team allows now
   const { allowedScopes } = await validateScopesForUser(userId, teamId, granted)
 

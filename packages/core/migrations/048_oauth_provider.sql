@@ -317,22 +317,40 @@ END $$;
 -- A refresh token only for a connection that is consented to, and only within its consent
 -- ============================================
 -- The consent row of a connection (client, user, team) says what the connection may do: Better Auth rewrites its
--- scopes every time the user consents. Two rules hang on it.
+-- scopes every time the user consents, and lib/mcp/oauth/connection-store narrows them when the user takes
+-- permissions away. The resource server reads it on every request (lib/mcp/oauth/resource-server): a token counts
+-- for what it holds and the consent still has. Two rules keep the refresh tokens in step with it.
 --
--- 1. A refresh token is written only while that consent exists and covers the token's scopes. Ending a connection
+-- 1. A refresh token is written only while that consent exists, and holding no more than it. Ending a connection
 --    (lib/mcp/oauth/connections, and the function above) removes its consent and its refresh tokens. A refresh in
 --    flight at that moment has already replaced its old token and is about to write the new one: written after the
 --    tokens were removed, it would be a live token for a connection that was ended. This makes the two exclude each
 --    other. The new token takes a share lock on the consent row, which the removal of that row waits for (the token
 --    is then written first and removed with the rest), or which waits for the removal and then finds no consent
---    (the token is refused). The same lock orders it against a consent being narrowed.
--- 2. When the user consents again to less, the refresh tokens of that connection that hold more are removed, and
---    with them (the trigger further up records the revocation) the access tokens already issued. Without this a
---    token issued before would keep, and renew, permissions the user has just taken away.
+--    (the token is refused). The same lock orders it against a consent being narrowed: a token that would hold more
+--    than the consent is written with what the consent has. It is cut down and not refused because the
+--    authorization server renews in steps (it reads the old token, marks it replaced, writes the new one): refusing
+--    the new one after the old was marked would leave the connection with no token at all.
+-- 2. When a consent loses a scope, the live refresh tokens of that connection are cut down to it, and a revocation
+--    is recorded so that every access token issued until then is refused. The connection goes on with less. The
+--    tokens that rotation already replaced are left as they are: they issue nothing, and the authorization server
+--    needs them unchanged to answer a request repeated within its replay window.
 --
 -- A token with no team is not an MCP grant and is left alone. A client that skips consent has no consent row: MCP
 -- browser sign-in does not accept one (lib/mcp/oauth/consent-plugin), since the consent is where the user chooses
 -- the permissions.
+
+-- The scopes of `held` that `consented` has too, in the order of `held`.
+CREATE OR REPLACE FUNCTION public.oauth_scopes_within(held JSONB, consented JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT COALESCE(jsonb_agg(scope ORDER BY position), '[]'::jsonb)
+    FROM jsonb_array_elements_text(held) WITH ORDINALITY AS item(scope, position)
+   WHERE consented ? scope;
+$$;
+
 CREATE OR REPLACE FUNCTION public.require_oauth_consent_for_refresh_token()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -353,8 +371,7 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
   IF NOT (NEW.scopes <@ consented) THEN
-    RAISE EXCEPTION 'oauth consent narrowed: client % in team % no longer holds every scope of this token', NEW."clientId", NEW."referenceId"
-      USING ERRCODE = 'check_violation';
+    NEW.scopes := public.oauth_scopes_within(NEW.scopes, consented);
   END IF;
   RETURN NEW;
 END $$;
@@ -373,16 +390,15 @@ SET search_path = public
 AS $$
 BEGIN
   -- A scope was taken away: every access token of the connection issued until now is refused, whatever refresh
-  -- token it came from. The token that held more may have been replaced already by one that holds less, and
-  -- removing a replaced token records nothing; the access token it issued would live out its minutes. The tokens
-  -- that stay within the consent get new access tokens, which carry this revocation's number.
+  -- token it came from. The tokens that stay get new access tokens, which carry this revocation's number.
   IF NOT (OLD.scopes <@ NEW.scopes) THEN
     PERFORM public.purge_oauth_revocations(NEW."userId");
     INSERT INTO public."oauthRevocation" ("userId", "clientId", "teamId") VALUES (NEW."userId", NEW."clientId", NEW."referenceId");
   END IF;
-  DELETE FROM public."oauthRefreshToken"
+  UPDATE public."oauthRefreshToken"
+     SET scopes = public.oauth_scopes_within(scopes, NEW.scopes)
    WHERE "userId" = NEW."userId" AND "clientId" = NEW."clientId" AND "referenceId" = NEW."referenceId"
-     AND NOT (scopes <@ NEW.scopes);
+     AND revoked IS NULL AND NOT (scopes <@ NEW.scopes);
   RETURN NEW;
 END $$;
 

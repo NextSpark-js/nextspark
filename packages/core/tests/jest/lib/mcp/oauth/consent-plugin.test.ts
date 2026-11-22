@@ -26,7 +26,10 @@ const REQUESTED = 'openid offline_access tasks:read tasks:write tasks:delete cus
 const signedQuery = (scope = REQUESTED, challenge = CHALLENGE) => new URLSearchParams({ scope, code_challenge: challenge, client_id: 'client' }).toString();
 
 type Hook = { matcher: (ctx: { path: string }) => boolean; handler: (ctx: { path: string; body: unknown }) => Promise<{ context: { body: { scope: string } } } | undefined> };
-const hook = (consentWithinRolePlugin().hooks!.before as unknown as Hook[])[0];
+const hooks = consentWithinRolePlugin().hooks!.before as unknown as Hook[];
+// the gate of the endpoints used after authorization, then the consent endpoint
+const gate = hooks[0] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string; body?: unknown; headers?: Headers }) => Promise<void> };
+const hook = hooks[1];
 const consent = (body: Record<string, unknown>) => hook.handler({ path: '/oauth2/consent', body });
 
 beforeEach(() => {
@@ -113,6 +116,26 @@ describe('an application the project does not accept', () => {
     mockAllowedHosts.mockReturnValue(['claude.ai']);
     expect(() => refuseUnlistedClient('https://evil.example/oauth/client.json')).toThrow(expect.objectContaining({ body: expect.objectContaining({ error: 'access_denied' }) }));
     expect(() => refuseUnlistedClient('https://claude.ai/oauth/mcp-oauth-client-metadata')).not.toThrow();
+  });
+
+  const jwt = (payload: Record<string, unknown>) => `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`;
+
+  it('exchanges no code, renews no token and reads no identity once it is off the list', async () => {
+    mockAllowedHosts.mockReturnValue(['claude.ai']);
+    expect(['/oauth2/token', '/oauth2/userinfo'].map(path => gate.matcher({ path }))).toEqual([true, true]);
+    expect(['/oauth2/consent', '/oauth2/authorize', '/oauth2/revoke', undefined].map(path => gate.matcher({ path }))).toEqual([false, false, false, false]);
+    const refused = expect.objectContaining({ body: expect.objectContaining({ error: 'invalid_client' }) });
+    await expect(gate.handler({ path: '/oauth2/token', body: { grant_type: 'refresh_token', client_id: 'https://evil.example/client.json' } })).rejects.toEqual(refused);
+    await expect(gate.handler({ path: '/oauth2/token', body: { grant_type: 'authorization_code', client_id: 'opaque-id' } })).rejects.toEqual(refused);
+    await expect(gate.handler({ path: '/oauth2/userinfo', headers: new Headers({ authorization: `Bearer ${jwt({ azp: 'https://evil.example/client.json' })}` }) })).rejects.toEqual(refused);
+    // the accepted application goes on, and a request that names no client is the endpoint's to refuse
+    await expect(gate.handler({ path: '/oauth2/token', body: { client_id: 'https://claude.ai/oauth/mcp-oauth-client-metadata' } })).resolves.toBeUndefined();
+    await expect(gate.handler({ path: '/oauth2/token', body: {} })).resolves.toBeUndefined();
+  });
+
+  it('with no list, nothing after authorization is refused', async () => {
+    mockAllowedHosts.mockReturnValue(undefined);
+    await expect(gate.handler({ path: '/oauth2/token', body: { client_id: 'opaque-id' } })).resolves.toBeUndefined();
   });
 
   it('every application goes on while the project sets no list', () => {

@@ -10,7 +10,7 @@ import { APIError, type BetterAuthPlugin } from 'better-auth'
 import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { validateScopesForUser } from '../../api/auth'
 import { queryOne } from '../../db'
-import { isClientAllowed } from './allowed-clients'
+import { isClientAllowed, presentedClientId } from './allowed-clients'
 import { allowedClientHosts } from './config'
 import { entityScope } from './scope-names'
 import { isAuthorizationKey, selectedTeam } from './team-selection'
@@ -51,10 +51,27 @@ export function refuseUnlistedClient(clientId: string | null | undefined): void 
 const scopeList = (value: unknown): string[] | undefined =>
   typeof value === 'string' ? value.split(/\s+/).filter(Boolean) : undefined
 
+/** The endpoints a client uses after it was authorized: exchanging a code, renewing a token, reading the identity. */
+const AFTER_AUTHORIZATION = ['/oauth2/token', '/oauth2/userinfo']
+
 export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
   id: 'mcp-consent-within-role',
   hooks: {
     before: [
+      {
+        // The project's list of accepted applications, for a client that was authorized before the list changed:
+        // it exchanges no code, renews no token and reads no identity. (Asking for authorization is refused in
+        // lib/mcp/oauth/plugins, and the MCP endpoint in lib/mcp/oauth/resource-server.)
+        matcher: ctx => AFTER_AUTHORIZATION.includes(ctx.path ?? ''),
+        handler: createAuthMiddleware(async ctx => {
+          const headers = (ctx.headers ?? ctx.request?.headers) as Headers | undefined
+          const clientId = presentedClientId({ body: ctx.body, authorization: headers?.get('authorization') })
+          // A request that names no client is the endpoint's to refuse
+          if (clientId !== undefined && !isClientAllowed(clientId, allowedClientHosts())) {
+            throw new APIError('UNAUTHORIZED', { error: 'invalid_client', error_description: 'this application is not among the ones this server accepts' })
+          }
+        }),
+      },
       {
         matcher: ctx => ctx.path === '/oauth2/consent',
         handler: createAuthMiddleware(async ctx => {

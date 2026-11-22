@@ -105,8 +105,10 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     await consent('u-ana', 'team-1', [...BASE, READ])
     await token('u-ana', 'team-1', [...BASE, READ])
     await token('u-ana', 'team-1', [READ], {}) // a renewal that asked for less
-    const wider = tokenArgs('u-ana', 'team-1', [...BASE, READ, WRITE])
-    await assert.rejects(owner.query(tokenSql, wider.args), /oauth consent narrowed/, 'more than the consent: refused')
+    // a token that would hold more than the consent is written with what the consent has, in the token's order
+    const wider = tokenArgs('u-ana', 'team-1', [WRITE, READ, 'customers:read', 'offline_access'])
+    await owner.query(tokenSql, wider.args)
+    assert.deepEqual(await scopesOf(wider.id), [READ, 'offline_access'])
     // the consent of another team, or of another client, is not this connection's
     await assert.rejects(owner.query(tokenSql, tokenArgs('u-ana', 'team-2', [READ]).args), /oauth connection ended/)
     await assert.rejects(owner.query(tokenSql, tokenArgs('u-ana', 'team-1', [READ], { clientId: 'opaque-client' }).args), /oauth connection ended/)
@@ -183,53 +185,92 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.deepEqual(await tokensOf('u-ana', 'team-1'), [], 'no live token survives')
   })
 
-  await t.test('consenting again to less removes the tokens that hold more and refuses every access token issued before', async () => {
+  await t.test('consenting again to less cuts the live tokens down to the consent and refuses every access token issued before', async () => {
     await reset()
     await consent('u-ana', 'team-1', [...BASE, READ, WRITE])
     const broadLive = await token('u-ana', 'team-1', [...BASE, READ, WRITE])
     const narrowLive = await token('u-ana', 'team-1', [...BASE, READ])
     await owner.query(`UPDATE "oauthConsent" SET scopes = $1::jsonb WHERE "userId" = 'u-ana' AND "referenceId" = 'team-1'`, [JSON.stringify([...BASE, READ])])
-    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [narrowLive], `${broadLive} held more and is gone`)
-    assert.ok((await revocations('u-ana', 'team-1')) >= 1)
+    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [broadLive, narrowLive].sort(), 'no token is removed: the connection goes on')
+    assert.deepEqual(await scopesOf(broadLive), [...BASE, READ], 'the one that held more holds what the consent has')
+    assert.deepEqual(await scopesOf(narrowLive), [...BASE, READ])
+    assert.equal(await revocations('u-ana', 'team-1'), 1)
   })
 
   await t.test('the token that held more was already replaced by one that holds less: the revocation is recorded all the same', async () => {
     await reset()
     await consent('u-ana', 'team-1', [...BASE, READ, WRITE])
-    await token('u-ana', 'team-1', [...BASE, READ, WRITE], { replaced: true }) // its access token is still out
+    const ancestor = await token('u-ana', 'team-1', [...BASE, READ, WRITE], { replaced: true }) // its access token is still out
     const successor = await token('u-ana', 'team-1', [...BASE, READ])
     await owner.query(`UPDATE "oauthConsent" SET scopes = $1::jsonb WHERE "userId" = 'u-ana' AND "referenceId" = 'team-1'`, [JSON.stringify([...BASE, READ])])
-    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [successor])
-    assert.equal(await revocations('u-ana', 'team-1'), 1, 'removing a replaced token records nothing: the narrowing itself does')
-    // consenting to more refuses nothing
+    assert.equal(await revocations('u-ana', 'team-1'), 1, 'no live token held more, and the access token of the replaced one is refused all the same')
+    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [ancestor, successor].sort())
+    // a replaced token is left as it is: it issues nothing, and the authorization server answers a repeated request from it
+    assert.deepEqual(await scopesOf(ancestor), [...BASE, READ, WRITE])
+    // consenting to more refuses nothing and changes no token
     await owner.query(`UPDATE "oauthConsent" SET scopes = $1::jsonb WHERE "userId" = 'u-ana' AND "referenceId" = 'team-1'`, [JSON.stringify([...BASE, READ, WRITE])])
     assert.equal(await revocations('u-ana', 'team-1'), 1)
-    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [successor])
+    assert.deepEqual(await scopesOf(successor), [...BASE, READ])
   })
 
-  await t.test('a renewal of a token that holds more, in flight while the consent is narrowed, leaves nothing that holds more', async () => {
+  await t.test('a renewal of a token that holds more, in flight while the consent is narrowed, ends up holding no more than the consent', async () => {
     await reset()
     await consent('u-ana', 'team-1', [...BASE, READ, WRITE])
-    // the narrowing gets there first: the renewal waits and is refused
+    // the narrowing gets there first: the renewal waits and writes its token with what the consent has by then
     await other.query('BEGIN')
     await other.query(`UPDATE "oauthConsent" SET scopes = $1::jsonb WHERE "userId" = 'u-ana' AND "referenceId" = 'team-1'`, [JSON.stringify([...BASE, READ])])
-    const renewal = owner.query(tokenSql, tokenArgs('u-ana', 'team-1', [...BASE, READ, WRITE]).args)
-    renewal.catch(() => {})
+    const late = tokenArgs('u-ana', 'team-1', [...BASE, READ, WRITE])
+    const renewal = owner.query(tokenSql, late.args)
     assert.equal(await stillWaiting(renewal), true)
     await other.query('COMMIT')
-    await assert.rejects(renewal, /oauth consent narrowed/)
-    // the renewal gets there first: the narrowing waits and then removes what it wrote
+    await renewal
+    assert.deepEqual(await scopesOf(late.id), [...BASE, READ])
+    // the renewal gets there first: the narrowing waits and then cuts down what it wrote
     await owner.query(`UPDATE "oauthConsent" SET scopes = $1::jsonb WHERE "userId" = 'u-ana' AND "referenceId" = 'team-1'`, [JSON.stringify([...BASE, READ, WRITE])])
     await other.query('BEGIN')
-    await other.query(tokenSql, tokenArgs('u-ana', 'team-1', [...BASE, READ, WRITE]).args)
+    const early = tokenArgs('u-ana', 'team-1', [...BASE, READ, WRITE])
+    await other.query(tokenSql, early.args)
     const narrowing = owner.query(`UPDATE "oauthConsent" SET scopes = $1::jsonb WHERE "userId" = 'u-ana' AND "referenceId" = 'team-1'`, [JSON.stringify([...BASE, READ])])
     assert.equal(await stillWaiting(narrowing), true)
     await other.query('COMMIT')
     await narrowing
-    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [])
+    assert.deepEqual(await scopesOf(early.id), [...BASE, READ])
+    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [late.id, early.id].sort(), 'both renewals left a token: neither was refused')
   })
 
-  await t.test('taking permissions away from a connection cuts its tokens down in place: it stays connected with less', async () => {
+  // Better Auth renews in steps, each its own statement: it reads the old token, marks it replaced, writes the new
+  // one with the scopes it read. What happens between those steps is what these two follow.
+  const markReplaced = (id: string) => owner.query(`UPDATE "oauthRefreshToken" SET revoked = now(), "rotatedAt" = now() WHERE id = $1 AND revoked IS NULL`, [id])
+  const liveOf = async (userId: string, teamId: string) =>
+    (await owner.query(`SELECT id, scopes FROM "oauthRefreshToken" WHERE "userId" = $1 AND "referenceId" = $2 AND revoked IS NULL AND "expiresAt" > now() ORDER BY id`, [userId, teamId])).rows
+
+  await t.test('permissions taken away between the steps of a renewal: the renewal still leaves a live token, holding less', async () => {
+    await reset()
+    await consent('u-ana', 'team-1', [...BASE, READ, WRITE])
+    const old = await token('u-ana', 'team-1', [...BASE, READ, WRITE])
+    const read = await scopesOf(old) // step 1: the authorization server reads the token it is about to replace
+    assert.equal(await store.narrowConnection('u-ana', CLIENT, 'team-1', [READ]), 'narrowed') // the user edits the permissions
+    assert.deepEqual(await scopesOf(old), [...BASE, READ])
+    assert.equal(await revocations('u-ana', 'team-1'), 1)
+    await markReplaced(old) // step 2
+    const next = tokenArgs('u-ana', 'team-1', read) // step 3: with the scopes it read at step 1
+    await owner.query(tokenSql, next.args)
+    assert.deepEqual(await liveOf('u-ana', 'team-1'), [{ id: next.id, scopes: [...BASE, READ] }], 'still connected, with what the consent has')
+    assert.equal(await revocations('u-ana', 'team-1'), 1, 'replacing a token is not ending a connection')
+  })
+
+  await t.test('a connection ended between the steps of a renewal: the renewal leaves nothing', async () => {
+    await reset()
+    await consent('u-ana', 'team-1', [...BASE, READ])
+    const old = await token('u-ana', 'team-1', [...BASE, READ])
+    const read = await scopesOf(old) // step 1
+    assert.equal(await store.disconnect('u-ana', CLIENT, 'team-1'), true)
+    assert.equal((await markReplaced(old)).rowCount, 0) // step 2 finds nothing to mark
+    await assert.rejects(owner.query(tokenSql, tokenArgs('u-ana', 'team-1', read).args), /oauth connection ended/) // step 3
+    assert.deepEqual(await liveOf('u-ana', 'team-1'), [])
+  })
+
+  await t.test('taking permissions away from a connection cuts its live tokens down: it stays connected with less', async () => {
     await reset()
     await consent('u-ana', 'team-1', [...BASE, READ, WRITE, 'customers:read'])
     const replaced = await token('u-ana', 'team-1', [...BASE, READ, WRITE, 'customers:read'], { replaced: true })
@@ -239,11 +280,9 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.deepEqual(await consentScopes('u-ana', 'team-1'), [...BASE, READ, 'customers:read'], 'what was named and held; nothing is added')
     assert.deepEqual(await tokensOf('u-ana', 'team-1'), [replaced, live].sort(), 'no token is removed')
     assert.deepEqual(await scopesOf(live), [...BASE, READ, 'customers:read'])
-    assert.deepEqual(await scopesOf(replaced), [...BASE, READ, 'customers:read'])
+    assert.deepEqual(await scopesOf(replaced), [...BASE, READ, WRITE, 'customers:read'], 'a replaced token is left as it is')
     assert.equal(await revocations('u-ana', 'team-1'), 1, 'the access tokens issued before are refused')
     assert.deepEqual(await store.grantedScopes('u-ana', CLIENT, 'team-1'), [READ, 'customers:read'])
-    // a renewal of the live token writes what the token now holds: accepted
-    await token('u-ana', 'team-1', [...BASE, READ, 'customers:read'])
 
     assert.equal(await store.narrowConnection('u-ana', CLIENT, 'team-1', [READ, 'customers:read']), 'unchanged')
     assert.equal(await revocations('u-ana', 'team-1'), 1, 'nothing changed, nothing refused')

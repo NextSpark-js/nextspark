@@ -200,11 +200,11 @@ export type NarrowResult = 'narrowed' | 'unchanged' | 'nothing-left' | 'not-foun
  * screen. `nothing-left` when `keep` would leave no entity permission (that is ending the connection, which
  * disconnect does), `not-found` when there is no such connection.
  *
- * In one transaction with the consent row locked: the refresh tokens of the connection are cut down first, so none
- * holds more than the consent about to be written, and then the consent. Writing a narrower consent records a
- * revocation (migration 048, narrow_oauth_tokens_to_consent): the access tokens already issued are refused at once
- * and the application renews with the token it has, which now holds less. A renewal in flight waits on the consent
- * row, as it does for disconnect.
+ * The consent is what is written, with its row locked. The database does the rest in the same statement (migration
+ * 048, narrow_oauth_tokens_to_consent): the live refresh tokens of the connection are cut down to the new consent
+ * and a revocation is recorded, so the access tokens already issued are refused at once and the application renews
+ * with the token it has, which now holds less. A renewal in flight is ordered by the same row: the token it writes
+ * holds no more than the consent it finds, whichever of the two got there first.
  */
 export function narrowConnection(userId: string, clientId: string, teamId: string, keep: readonly string[]): Promise<NarrowResult> {
   return withServiceTransaction(async () => {
@@ -217,14 +217,6 @@ export function narrowConnection(userId: string, clientId: string, teamId: strin
     const next = current.filter(scope => !entityScope(scope) || keep.includes(scope))
     if (!next.some(scope => entityScope(scope))) return 'nothing-left'
     if (next.length === current.length) return 'unchanged'
-    await query(
-      `UPDATE "oauthRefreshToken"
-          SET scopes = (SELECT COALESCE(jsonb_agg(held.scope), '[]'::jsonb)
-                          FROM jsonb_array_elements_text("oauthRefreshToken".scopes) AS held(scope)
-                         WHERE held.scope = ANY($4::text[]))
-        WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3`,
-      [userId, clientId, teamId, next]
-    )
     await query(`UPDATE "oauthConsent" SET scopes = $2::jsonb, "updatedAt" = now() WHERE id = $1`, [consent.id, JSON.stringify(next)])
     return 'narrowed'
   })

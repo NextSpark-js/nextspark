@@ -28,7 +28,8 @@ const net = require('node:net')
 const os = require('node:os')
 const path = require('node:path')
 
-const HAS_POSTGRES = ['initdb', 'pg_ctl'].every(bin => spawnSync(bin, ['--version']).status === 0)
+// initdb and pg_ctl come with the client tools alone on some installs (Homebrew's libpq): a cluster needs the server too
+const HAS_POSTGRES = ['initdb', 'pg_ctl', 'postgres'].every(bin => spawnSync(bin, ['--version']).status === 0)
 
 const START_TIMEOUT_SECONDS = 90
 const START_ATTEMPTS = 5

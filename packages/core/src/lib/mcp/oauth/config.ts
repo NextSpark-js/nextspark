@@ -12,6 +12,7 @@
 import { FEATURES } from '@nextsparkjs/registries/features'
 import { withBasePath } from '../../base-path'
 import { APP_CONFIG_MERGED } from '../../config/config-client'
+import { readAllowList } from './allowed-clients'
 import { resolveAppUrl, resolveBaseUrl } from '../../utils/base-url'
 
 /** MCP kill switch: on in development unless 'false', off in production unless 'true'. */
@@ -30,9 +31,27 @@ export function isMcpOAuthEnabled(env: NodeJS.ProcessEnv = process.env): boolean
   return isMcpOAuthBuilt() && env.MCP_OAUTH_ENABLED !== 'false' && isMcpEnabled(env)
 }
 
-/** `mcp.oauth.allowedClientHosts` of app.config, read on each call; undefined when the project sets none. */
+let warnedAbout: string | undefined
+
+/**
+ * `mcp.oauth.allowedClientHosts` of app.config, read on each call; undefined when the project sets none. An entry
+ * that names no host is said once, loudly: the list still closes the server to everything it does not name.
+ */
 export function allowedClientHosts(): unknown {
-  return (APP_CONFIG_MERGED as { mcp?: { oauth?: { allowedClientHosts?: unknown } } } | undefined)?.mcp?.oauth?.allowedClientHosts
+  const list = (APP_CONFIG_MERGED as { mcp?: { oauth?: { allowedClientHosts?: unknown } } } | undefined)?.mcp?.oauth?.allowedClientHosts
+  const read = readAllowList(list)
+  if (!read.open && read.unusable.length) {
+    const about = read.unusable.join(', ')
+    if (warnedAbout !== about) {
+      warnedAbout = about
+      console.error(
+        `[mcp:oauth] mcp.oauth.allowedClientHosts has entries that name no host and are ignored: ${about}. ` +
+          (read.hosts.length ? `Only ${read.hosts.join(', ')} may connect.` : 'No entry is usable, so NO application may connect.') +
+          " Write hosts such as 'claude.ai' or '*.example.com'."
+      )
+    }
+  }
+  return list
 }
 
 const trimSlash = (url: string) => url.replace(/\/+$/, '')
