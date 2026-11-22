@@ -98,7 +98,7 @@ export interface RateLimitCheckResult {
 /**
  * The tiers core ships
  */
-export type BuiltInRateLimitTier = 'auth' | 'authIdentifier' | 'api' | 'strict' | 'read' | 'write' | 'webhook' | 'ingest'
+export type BuiltInRateLimitTier = 'auth' | 'authIdentifier' | 'api' | 'strict' | 'read' | 'write' | 'webhook' | 'ingest' | 'credential'
 
 /**
  * Rate limit tiers available for API endpoints: the built-in ones and any name declared in
@@ -125,6 +125,8 @@ const DEFAULT_TIERS: Record<BuiltInRateLimitTier, RateLimitTierConfig> = {
   write: { limit: 50, windowMs: 60 * 1000 },
   webhook: { limit: 500, windowMs: 60 * 60 * 1000 },
   ingest: { limit: 1000, windowMs: 60 * 1000 },
+  // What one API key or one MCP connection may send, counted by the credential and not by the address
+  credential: { limit: 1000, windowMs: 60 * 1000 },
 }
 
 const warned = new Set<string>()

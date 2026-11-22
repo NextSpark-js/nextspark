@@ -26,7 +26,7 @@ const mockCheckRateLimit = jest.fn();
 jest.mock('@/core/lib/api/rate-limit', () => ({
   checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
   addRateLimitHeaders: jest.fn(),
-  apiKeyRateLimitResponse: (_request: unknown, auth: { keyId: string }) =>
+  credentialRateLimitResponse: async (_request: unknown, auth: { keyId: string }) =>
     mockCheckRateLimit(auth.keyId).allowed ? null : { status: 429 },
 }));
 

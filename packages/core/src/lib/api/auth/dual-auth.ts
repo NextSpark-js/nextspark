@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
 import { isSuspendedRole } from '../../auth/suspension'
-import { apiKeyRateLimitResponse } from '../rate-limit'
+import { credentialRateLimitResponse } from '../rate-limit'
 import { queryOne } from '../../db'
 import { TeamMemberService } from '../../services/team-member.service'
 import { TeamService } from '../../services/team.service'
@@ -118,7 +118,7 @@ export async function authenticateRequest(
     const failure = resolveApiKeyScopeFailure(injected.scopes, options, describeRoute(request))
     if (failure) return { ...injected, success: false, error: failure }
     // The per-credential limit, counted on this request exactly as an API key's is
-    const rateLimitResponse = apiKeyRateLimitResponse(request, {
+    const rateLimitResponse = await credentialRateLimitResponse(request, {
       userId: injected.user!.id,
       keyId: oauthRateLimitKey(injected),
       scopes: injected.scopes ?? [],
@@ -157,7 +157,7 @@ export async function authenticateRequest(
       }
     }
     // The same per-key limit validateAndAuthenticate*Request apply, on top of the route's per-address one.
-    const rateLimitResponse = apiKeyRateLimitResponse(request, {
+    const rateLimitResponse = await credentialRateLimitResponse(request, {
       userId: apiKeyResult.user!.id,
       keyId: apiKeyResult.keyId!,
       scopes: apiKeyResult.scopes ?? [],

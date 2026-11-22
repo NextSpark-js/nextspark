@@ -23,7 +23,7 @@ import { auth } from '../../auth'
 import { isSuspendedRole } from '../../auth/suspension'
 import { queryOne } from '../../db'
 import { validateScopesForUser } from '../../api/auth'
-import { apiKeyRateLimitResponse } from '../../api/rate-limit'
+import { credentialRateLimitResponse } from '../../api/rate-limit'
 import type { DualAuthResult } from '../../api/auth/dual-auth'
 import { oauthRateLimitKey } from '../../api/auth/in-process-principal'
 import { TeamService } from '../../services/team.service'
@@ -158,7 +158,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
 
       // The per-credential limit API keys have, for this client and user: counted here for the MCP request and,
       // as for a key, once more by each API handler a tool calls (authenticateRequest)
-      const limited = apiKeyRateLimitResponse(request, {
+      const limited = await credentialRateLimitResponse(request, {
         userId: principal.user!.id,
         keyId: oauthRateLimitKey(principal),
         scopes: principal.scopes ?? [],

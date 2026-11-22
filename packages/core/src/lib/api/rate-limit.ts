@@ -87,8 +87,39 @@ export function apiKeyRateLimitResponse(request: Request, auth: ApiKeyAuth): Nex
     result = checkRateLimit(auth.keyId);
     apiKeyChecks.set(request, result);
   }
-  if (result.allowed) return null;
-  const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
+  return result.allowed ? null : credentialLimitExceeded(request, result);
+}
+
+/** The per-credential check each request got from the shared store, so it is counted there once too. */
+const sharedCredentialChecks = new WeakMap<Request, Promise<RateLimitResult>>();
+
+/**
+ * The per-credential limit, for an API key or an MCP connection (`auth.keyId` names either): what
+ * apiKeyRateLimitResponse counts in this process, and with Redis configured the same limit counted in the shared
+ * store (tier `credential`, 1000 a minute unless `rateLimit.tiers` says otherwise). In memory alone the limit is per
+ * process: on serverless every instance gives a credential its own 1000, which is close to no limit. The request is
+ * refused when either count is over; when Redis fails the shared check lets it through (the limiter fails open) and
+ * the count of this process still applies.
+ */
+export async function credentialRateLimitResponse(request: Request, auth: ApiKeyAuth): Promise<NextResponse | null> {
+  const local = apiKeyRateLimitResponse(request, auth);
+  if (local || !maybeRedisConfigured()) return local;
+  let check = sharedCredentialChecks.get(request);
+  if (!check) {
+    check = checkRedisRateLimit(auth.keyId, 'credential').then(result => ({
+      allowed: result.success,
+      remaining: result.remaining,
+      resetTime: result.reset,
+      limit: result.limit ?? getRateLimitTierConfig('credential').limit,
+    }));
+    sharedCredentialChecks.set(request, check);
+  }
+  const result = await check;
+  return result.allowed ? null : credentialLimitExceeded(request, result);
+}
+
+function credentialLimitExceeded(request: Request, result: RateLimitResult): NextResponse {
+  const retryAfter = Math.max(1, Math.ceil((result.resetTime - Date.now()) / 1000));
   // With core's CORS for the request: the route returns this as it is, often without withRateLimitTier around it,
   // and a browser from another origin would otherwise see a CORS error instead of the 429 (#432)
   return withCors(NextResponse.json(

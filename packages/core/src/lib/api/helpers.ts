@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyAuth, getValidatedApiKey, validateApiKey } from './auth';
 import { mutateWithRLS, queryWithRLS } from '../db';
-import { apiKeyRateLimitResponse } from './rate-limit';
+import { credentialRateLimitResponse } from './rate-limit';
 import { getRecordedClientIp } from './client-ip';
 import { getApplicationConfig } from '../config';
 import { auth } from '../auth';
@@ -114,7 +114,7 @@ export async function validateAndAuthenticateRequest(
     };
   }
 
-  const rateLimitResponse = apiKeyRateLimitResponse(request, apiKeyAuth);
+  const rateLimitResponse = await credentialRateLimitResponse(request, apiKeyAuth);
   return rateLimitResponse ? { auth: apiKeyAuth, rateLimitResponse } : { auth: apiKeyAuth };
 }
 
@@ -216,7 +216,7 @@ export async function validateAndAuthenticateApiRequest(request: NextRequest): P
     throw new Error('Invalid API key');
   }
 
-  const rateLimitResponse = apiKeyRateLimitResponse(request, auth);
+  const rateLimitResponse = await credentialRateLimitResponse(request, auth);
   return rateLimitResponse ? { auth, rateLimitResponse } : { auth };
 }
 

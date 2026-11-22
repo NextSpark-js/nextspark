@@ -59,7 +59,7 @@ jest.mock('@/core/lib/api/rate-limit', () => ({
   withAddressRateLimit: (handler: unknown) => handler,
   checkRateLimit: () => ({ allowed: true, limit: 100, remaining: 99, resetTime: Date.now() + 60_000 }),
   addRateLimitHeaders: jest.fn(),
-  apiKeyRateLimitResponse: jest.fn(),
+  credentialRateLimitResponse: jest.fn().mockResolvedValue(null),
 }))
 
 // What lib/api/helpers imports and the routes under test do not exercise.
