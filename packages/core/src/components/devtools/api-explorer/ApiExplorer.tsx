@@ -82,7 +82,7 @@ function findRouteByPath(
 export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabled = true }: ApiExplorerProps) {
   const t = useTranslations('devtools.api')
   // Sidebar state (collapse persisted)
-  const [isCollapsed, setIsCollapsed] = useState(() => loadState<boolean>('sidebarCollapsed') ?? false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Selected endpoint
@@ -94,24 +94,17 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
   const [queryParams, setQueryParams] = useState<KeyValuePair[]>(() => createEmptyRows())
   const [headers, setHeaders] = useState<KeyValuePair[]>(() => createEmptyRows())
   // Session/auth config is persisted (see effect below) so it survives reloads.
-  const [authType, setAuthType] = useState<AuthType>(() => loadState<AuthType>('authType') ?? 'session')
-  const [apiKey, setApiKey] = useState(() => loadState<string>('apiKey') ?? '')
-  const [bypassMode, setBypassMode] = useState(() => loadState<boolean>('bypassMode') ?? false)
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(() => {
-    const saved = loadState<string>('selectedTeamId')
-    if (saved) return saved
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('activeTeamId')
-    }
-    return null
-  })
+  const [authType, setAuthType] = useState<AuthType>('session')
+  const [apiKey, setApiKey] = useState('')
+  const [bypassMode, setBypassMode] = useState(false)
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [body, setBody] = useState('')
   // Raised by a send with no team, not by loading the screen (see handleSend and the effect below).
   const [teamErrorShown, setTeamErrorShown] = useState(false)
   // Optional act-as-user override for the request (persisted; the server strictly gates it)
-  const [actAsUserId, setActAsUserId] = useState(() => loadState<string>('actAsUserId') ?? '')
+  const [actAsUserId, setActAsUserId] = useState('')
   // What to show for that id (the user's email), kept with it so the chip and the response can name the user.
-  const [actAsLabel, setActAsLabel] = useState(() => loadState<string>('actAsLabel') ?? '')
+  const [actAsLabel, setActAsLabel] = useState('')
   // What the rest of the screen uses: with act-as off, a remembered user counts for nothing (the server ignores the
   // header), so it is neither sent nor shown as the identity of a request.
   const activeActAsId = actAsEnabled ? actAsUserId : ''
@@ -120,10 +113,26 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
     setActAsUserId(id)
     setActAsLabel(label)
   }, [])
+  // The saved session, sidebar and recent requests come from localStorage, which the server render cannot see:
+  // they are read after mount (reading them in the initializers made the first client render differ from the
+  // server HTML, a hydration mismatch). Nothing is written back, and no default team is picked, until this ran.
+  // Declared before every effect that reads or writes that state.
+  const [restored, setRestored] = useState(false)
+  useEffect(() => {
+    setIsCollapsed(loadState<boolean>('sidebarCollapsed') ?? false)
+    setAuthType(loadState<AuthType>('authType') ?? 'session')
+    setApiKey(loadState<string>('apiKey') ?? '')
+    setBypassMode(loadState<boolean>('bypassMode') ?? false)
+    setSelectedTeamId(loadState<string>('selectedTeamId') || localStorage.getItem('activeTeamId'))
+    setActAsUserId(loadState<string>('actAsUserId') ?? '')
+    setActAsLabel(loadState<string>('actAsLabel') ?? '')
+    setRecent(loadState<RecentRequest[]>('recent') ?? [])
+    setRestored(true)
+  }, [])
   // How the last request was made, captured at send time (see handleSend).
   const [requestContext, setRequestContext] = useState<RequestContext | null>(null)
   // The last requests sent from this browser (20), and the one in flight, which joins the list when it answers.
-  const [recent, setRecent] = useState<RecentRequest[]>(() => loadState<RecentRequest[]>('recent') ?? [])
+  const [recent, setRecent] = useState<RecentRequest[]>([])
   const sentRef = useRef<RecentRequest | null>(null)
 
   // How the request/response split is divided, as a percentage of the row. Persisted, because a
@@ -195,32 +204,33 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
 
   // Persist session/auth config so it survives reloads.
   useEffect(() => {
+    if (!restored) return
     saveState('authType', authType)
     saveState('apiKey', apiKey)
     saveState('bypassMode', bypassMode)
     saveState('selectedTeamId', selectedTeamId)
     saveState('actAsUserId', actAsUserId)
     saveState('actAsLabel', actAsLabel)
-  }, [authType, apiKey, bypassMode, selectedTeamId, actAsUserId, actAsLabel])
+  }, [restored, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, actAsLabel])
 
   // A team is preselected: the last one used (restored above), else the dashboard's active team, else
   // the user's only team. Read-only for a team already set, and not applied in cross-team mode, where
   // "no team" is a choice.
   const { teams: userTeams, isLoading: teamsLoading } = useUserTeams()
   useEffect(() => {
-    if (bypassMode || selectedTeamId || teamsLoading) return
+    if (!restored || bypassMode || selectedTeamId || teamsLoading) return
     const active = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
     const picked = pickDefaultTeamId(userTeams, selectedTeamId, active)
     if (picked) setSelectedTeamId(picked)
-  }, [bypassMode, selectedTeamId, teamsLoading, userTeams])
+  }, [restored, bypassMode, selectedTeamId, teamsLoading, userTeams])
   useEffect(() => {
     if (selectedTeamId || bypassMode) setTeamErrorShown(false)
   }, [selectedTeamId, bypassMode])
 
   // Persist whether the sidebar is collapsed.
   useEffect(() => {
-    saveState('sidebarCollapsed', isCollapsed)
-  }, [isCollapsed])
+    if (restored) saveState('sidebarCollapsed', isCollapsed)
+  }, [restored, isCollapsed])
 
   // Handle endpoint selection - updates URL and local state
   const handleSelectEndpoint = useCallback(

@@ -78,16 +78,25 @@ export function ApiEndpointsSidebar({
   const t = useTranslations('devtools.api.sidebar')
   const [searchQuery, setSearchQuery] = useState('')
   // Expand/collapse state is persisted, so the chosen layout
-  // (e.g. Core/Entities collapsed but Theme open) survives reloads.
-  const [expandedCategories, setExpandedCategories] = useState<Set<RouteCategory>>(() => {
-    const saved = loadState<RouteCategory[]>('sidebar:expandedCategories')
-    return new Set(saved ?? ['core', 'entity', 'theme', 'plugin'])
-  })
+  // (e.g. Core/Entities collapsed but Theme open) survives reloads. It is read after mount, not in the
+  // initializer: localStorage does not exist on the server, so reading it while rendering makes the
+  // first client render differ from the server HTML (a hydration mismatch).
+  const [expandedCategories, setExpandedCategories] = useState<Set<RouteCategory>>(
+    () => new Set<RouteCategory>(['core', 'entity', 'theme', 'plugin'])
+  )
   // Groups start closed, and the one that holds the selected endpoint opens by itself (see the effect
   // below), so the sidebar always shows where you are and never favours one category over another.
-  const [expandedPrefixes, setExpandedPrefixes] = useState<Set<string>>(
-    () => new Set(loadState<string[]>('sidebar:expandedPrefixes') ?? [])
-  )
+  const [expandedPrefixes, setExpandedPrefixes] = useState<Set<string>>(() => new Set())
+  // Nothing is written back until the saved state has been read, or the defaults would overwrite it.
+  const [restored, setRestored] = useState(false)
+  // Declared before the effect that opens the selected group, so that one applies on top of the restored sets.
+  useEffect(() => {
+    const categories = loadState<RouteCategory[]>('sidebar:expandedCategories')
+    if (categories) setExpandedCategories(new Set(categories))
+    const prefixes = loadState<string[]>('sidebar:expandedPrefixes')
+    if (prefixes) setExpandedPrefixes(new Set(prefixes))
+    setRestored(true)
+  }, [])
 
   // Open the category and group of the selected endpoint, whether it was picked, deep-linked or restored.
   const selectedPath = selectedEndpoint?.path
@@ -101,12 +110,12 @@ export function ApiEndpointsSidebar({
   }, [selectedPath, routes])
 
   useEffect(() => {
-    saveState('sidebar:expandedCategories', Array.from(expandedCategories))
-  }, [expandedCategories])
+    if (restored) saveState('sidebar:expandedCategories', Array.from(expandedCategories))
+  }, [restored, expandedCategories])
 
   useEffect(() => {
-    saveState('sidebar:expandedPrefixes', Array.from(expandedPrefixes))
-  }, [expandedPrefixes])
+    if (restored) saveState('sidebar:expandedPrefixes', Array.from(expandedPrefixes))
+  }, [restored, expandedPrefixes])
 
   // Filter routes by search query
   const filteredRoutes = useMemo(() => {
