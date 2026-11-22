@@ -121,15 +121,29 @@ describe('timing and pending writes', () => {
     expect(mockReplace).toHaveBeenCalledTimes(1)
   })
 
-  it('does not take a stale URL while a write is pending, and the pending write wins', () => {
-    mockSearch = 'search=old'
+  it('a navigation from outside while a write is pending wins over the pending write', () => {
+    mockSearch = 'search=garcia'
     const { result, rerender } = renderHook(() => useAreaUrlState(SPEC))
-    act(() => result.current[1]({ search: 'typing' }))
-    mockSearch = 'search=other'
+    act(() => result.current[1]({ search: 'garciaX' })) // pending write
+    mockSearch = '' // a sidebar link to the bare screen
     rerender()
-    expect(result.current[0].search).toBe('typing')
     act(() => jest.advanceTimersByTime(300))
-    expect(mockReplace).toHaveBeenLastCalledWith('/superadmin/users?search=typing', { scroll: false })
+    expect(result.current[0].search).toBe('')
+    expect(mockReplace).not.toHaveBeenCalledWith('/superadmin/users?search=garciaX', { scroll: false })
+  })
+
+  it('an older write of its own landing late while a newer change is pending does not reset the state', () => {
+    const { result, rerender } = renderHook(() => useAreaUrlState(SPEC))
+    act(() => result.current[1]({ search: 'a' }))
+    act(() => jest.advanceTimersByTime(300)) // write A sent
+    act(() => result.current[1]({ search: 'ab' }))
+    act(() => jest.advanceTimersByTime(300)) // write B sent
+    act(() => result.current[1]({ search: 'abc' })) // C pending
+    mockSearch = 'search=a' // A lands late
+    rerender()
+    expect(result.current[0].search).toBe('abc')
+    act(() => jest.advanceTimersByTime(300))
+    expect(mockReplace).toHaveBeenLastCalledWith('/superadmin/users?search=abc', { scroll: false })
   })
 
   it('remembers the query it follows from outside, so Back points at it', () => {

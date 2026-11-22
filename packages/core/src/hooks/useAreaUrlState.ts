@@ -72,13 +72,19 @@ export function useAreaUrlState<S extends UrlStateSpec>(spec: S, options: { debo
   const paramsRef = useRef(searchParams)
   paramsRef.current = searchParams
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // the owned queries we sent that have not landed yet
+  const inFlight = useRef(new Set<string>())
 
   // the query changed from outside (link to this same screen, back/forward): the state follows it
   const ownedQuery = buildUrlQuery(spec, readUrlState(spec, searchParams))
   useEffect(() => {
-    if (ownedQuery === syncedQuery.current) return
-    // a write is pending: the user is changing the state now, and that write wins over a stale URL
-    if (timer.current) return
+    if (ownedQuery === syncedQuery.current) { inFlight.current.clear(); return }
+    // one of our own earlier writes landing late: not a navigation
+    if (inFlight.current.has(ownedQuery)) return
+    // a navigation (sidebar link, back/forward): it wins over a pending write
+    clearTimeout(timer.current)
+    timer.current = undefined
+    inFlight.current.clear()
     syncedQuery.current = ownedQuery
     rememberQuery(pathname, ownedQuery)
     const next = readUrlState(spec, paramsRef.current)
@@ -107,6 +113,7 @@ export function useAreaUrlState<S extends UrlStateSpec>(spec: S, options: { debo
         const query = buildUrlQuery(spec, next, new URLSearchParams(paramsRef.current.toString()))
         const owned = buildUrlQuery(spec, next)
         syncedQuery.current = owned
+        inFlight.current.add(owned)
         rememberQuery(pathname, owned)
         router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
       }, debounceMs)
