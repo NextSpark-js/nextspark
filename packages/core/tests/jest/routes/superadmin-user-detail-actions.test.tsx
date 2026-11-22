@@ -46,7 +46,7 @@ it('has the actions of the table in the header, without View Profile (this is th
 it('a suspended developer shows Developer and Suspended, and offers Unsuspend instead of Suspend', () => {
   mockUser = { ...base, role: 'suspended', roleBeforeSuspension: 'developer' }
   render(<UserDetailPage />)
-  expect(screen.getByText('<developer>')).toBeInTheDocument()
+  expect(screen.getByText('Developer')).toBeInTheDocument()
   expect(screen.getByText('Suspended')).toBeInTheDocument()
   expect(screen.getByRole('menuitem', { name: 'Unsuspend User' })).toBeInTheDocument()
   expect(screen.queryByRole('menuitem', { name: 'Suspend User' })).toBeNull()
