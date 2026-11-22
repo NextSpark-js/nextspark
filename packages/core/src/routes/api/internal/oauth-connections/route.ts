@@ -10,7 +10,7 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { isMcpOAuthEnabled } from '@nextsparkjs/core/lib/mcp/oauth/config'
-import { disconnect, managedConnections, managesTeam, userConnections } from '@nextsparkjs/core/lib/mcp/oauth/connections'
+import { disconnect, disconnectManaged, managedConnections, userConnections } from '@nextsparkjs/core/lib/mcp/oauth/connections'
 
 const notFound = () => createApiError('Not found', 404, undefined, 'NOT_FOUND')
 const signedOut = () => createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_FAILED')
@@ -37,10 +37,12 @@ export const DELETE = withRateLimitTier(async (request: NextRequest) => {
     return createApiError('userId must be a user id', 400, undefined, 'VALIDATION_ERROR')
   }
   const target = typeof userId === 'string' ? userId : session.user.id
-  // Another member's connection: only for who manages the integrations of the team it reaches. The answer for a
-  // team the user does not manage is the one for a connection that does not exist.
-  if (target !== session.user.id && !(await managesTeam(session.user.id, session.user.role, teamId))) return notFound()
-  if (!(await disconnect(target, clientId, teamId))) return notFound()
+  // Another member's connection: only for who manages the integrations of the team it reaches, checked where the
+  // connection is ended. The answer for a team the user does not manage is the one for a connection that is not there.
+  const ended = target === session.user.id
+    ? await disconnect(target, clientId, teamId)
+    : await disconnectManaged(session.user.id, session.user.role, target, clientId, teamId)
+  if (!ended) return notFound()
   return NextResponse.json({ success: true })
 }, 'write')
 

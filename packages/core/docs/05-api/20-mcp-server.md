@@ -322,7 +322,9 @@ How it behaves:
 - **The user chooses the permissions.** A connecting client is told to ask for every scope some tool of the server
   uses. The consent screen lists them as one row per entity with read, write and delete: reading and writing come
   ticked, deleting does not, and what the user's role cannot hold cannot be ticked. Only what stays ticked is
-  granted, and the server holds the grant to what the role can hold whatever the browser sends. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
+  granted, and the server holds the grant to what the role can hold whatever the browser sends.
+  Consenting again to less ends the tokens of that connection that held more. A client set to skip consent is not
+  accepted. A call that later needs more gets the `403`, and the client asks again for what it has plus what is
   missing.
 - **Access tokens** are JWTs for `/api/mcp` only and live ten minutes; refresh tokens rotate.
 - **Ending a connection.** Revoking it, a reused refresh token, a changed password and a suspended account end

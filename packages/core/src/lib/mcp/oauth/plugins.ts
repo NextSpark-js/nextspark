@@ -15,7 +15,7 @@ import { fetchClientMetadataResource } from '@better-auth/cimd/node'
 import { mcp } from '@better-auth/mcp'
 import { withBasePath } from '../../base-path'
 import { queryOne } from '../../db'
-import { consentWithinRolePlugin } from './consent-plugin'
+import { consentWithinRolePlugin, refuseConsentSkippingClient } from './consent-plugin'
 import { purgeExpiredOAuthIfDue } from './purge'
 import { mcpOAuthResourceScopes } from './scopes'
 import { APIError } from 'better-auth'
@@ -50,6 +50,14 @@ function currentAuthorization(): string | undefined {
   const signed = ctx?.body?.oauth_query
   const fromBody = typeof signed === 'string' ? new URLSearchParams(signed).get('code_challenge') : undefined
   return isAuthorizationKey(fromBody) ? fromBody : undefined
+}
+
+/** The client of the authorization request the current auth endpoint is handling, read as currentAuthorization does. */
+function currentClientId(): string | undefined {
+  const ctx = tryGetCurrentAuthEndpointContext() as { query?: Record<string, unknown>; body?: Record<string, unknown> } | undefined
+  if (typeof ctx?.query?.client_id === 'string') return ctx.query.client_id
+  const signed = ctx?.body?.oauth_query
+  return typeof signed === 'string' ? new URLSearchParams(signed).get('client_id') ?? undefined : undefined
 }
 
 const noTeam = () =>
@@ -93,6 +101,8 @@ export function mcpOAuthPlugins() {
         },
         consentReferenceId: async ({ user, session }) => {
           await refuseSuspendedNow(user.id)
+          // Asked for by every authorization before a code is issued, with or without a consent screen
+          await refuseConsentSkippingClient(currentClientId())
           const teamId = await selectedTeam(session.id, currentAuthorization(), user.id)
           if (!teamId) throw noTeam()
           return teamId

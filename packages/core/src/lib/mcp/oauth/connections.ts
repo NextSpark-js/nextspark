@@ -130,13 +130,25 @@ export async function managedConnections(userId: string, appRole: string | null 
   return rows.map(toConnection)
 }
 
-/** Whether the user holds MANAGE_CONNECTIONS in the team. */
-export async function managesTeam(userId: string, appRole: string | null | undefined, teamId: string): Promise<boolean> {
-  const row = await queryOne<{ role: string }>(
-    `SELECT role FROM "team_members" WHERE "userId" = $1 AND "teamId" = $2`,
-    [userId, teamId]
+/** Removes the consent and the refresh tokens of a connection. Inside a service transaction (see disconnect). */
+async function endConnection(userId: string, clientId: string, teamId: string): Promise<boolean> {
+  const consents = await queryRows<{ id: string }>(
+    `DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3 RETURNING id`,
+    [userId, clientId, teamId]
   )
-  return hasTeamPermission(appRole, row?.role ?? null, MANAGE_CONNECTIONS)
+  const tokens = await queryRows<{ live: boolean }>(
+    `DELETE FROM "oauthRefreshToken"
+      WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3
+      RETURNING (revoked IS NULL AND "expiresAt" > now()) AS live`,
+    [userId, clientId, teamId]
+  )
+  const live = tokens.some(token => token.live)
+  // No live refresh token went (a client that asked for no offline access, or one whose renewal was refused at
+  // this moment): no trigger ran, and an access token may still be good for minutes. Record the revocation.
+  if (!live && (consents.length || tokens.length)) {
+    await query(`INSERT INTO "oauthRevocation" ("userId", "clientId", "teamId") VALUES ($1, $2, $3)`, [userId, clientId, teamId])
+  }
+  return live || consents.length > 0
 }
 
 /**
@@ -155,23 +167,22 @@ export async function managesTeam(userId: string, appRole: string | null | undef
  * nothing else.
  */
 export function disconnect(userId: string, clientId: string, teamId: string): Promise<boolean> {
+  return withServiceTransaction(() => endConnection(userId, clientId, teamId))
+}
+
+/**
+ * Ends another member's connection for a manager of the team: `actorId`, with app role `actorAppRole`, must hold
+ * MANAGE_CONNECTIONS in `teamId`. The membership is read and locked in the transaction that ends the connection, so
+ * a role taken away or a membership removed at that moment is either seen here or waits until this is done. False
+ * when the actor may not, and when there was nothing to end.
+ */
+export function disconnectManaged(actorId: string, actorAppRole: string | null | undefined, userId: string, clientId: string, teamId: string): Promise<boolean> {
   return withServiceTransaction(async () => {
-    const consents = await queryRows<{ id: string }>(
-      `DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3 RETURNING id`,
-      [userId, clientId, teamId]
+    const membership = await queryOne<{ role: string }>(
+      `SELECT role FROM "team_members" WHERE "userId" = $1 AND "teamId" = $2 FOR SHARE`,
+      [actorId, teamId]
     )
-    const tokens = await queryRows<{ live: boolean }>(
-      `DELETE FROM "oauthRefreshToken"
-        WHERE "userId" = $1 AND "clientId" = $2 AND "referenceId" = $3
-        RETURNING (revoked IS NULL AND "expiresAt" > now()) AS live`,
-      [userId, clientId, teamId]
-    )
-    const live = tokens.some(token => token.live)
-    // No live refresh token went (a client that asked for no offline access, or one whose renewal was refused at
-    // this moment): no trigger ran, and an access token may still be good for minutes. Record the revocation.
-    if (!live && (consents.length || tokens.length)) {
-      await query(`INSERT INTO "oauthRevocation" ("userId", "clientId", "teamId") VALUES ($1, $2, $3)`, [userId, clientId, teamId])
-    }
-    return live || consents.length > 0
+    if (!hasTeamPermission(actorAppRole, membership?.role ?? null, MANAGE_CONNECTIONS)) return false
+    return endConnection(userId, clientId, teamId)
   })
 }

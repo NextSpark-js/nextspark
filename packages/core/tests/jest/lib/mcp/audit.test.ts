@@ -126,7 +126,7 @@ describe('what the audit trail keeps of a call (#541)', () => {
   });
 
   it('a key names a secret by its words, not by a run of letters inside it', () => {
-    for (const key of ['password', 'newPassword', 'passwordHash', 'clientSecret', 'client_secret', 'apiKey', 'api-key', 'API_KEY', 'privateKey', 'accessToken', 'access_token', 'refreshToken', 'token', 'tokenHash', 'Authorization', 'bearer', 'otp', 'otpCode', 'pin', 'cvv', 'ssn', 'credentials']) {
+    for (const key of ['password', 'newPassword', 'passwordHash', 'clientSecret', 'client_secret', 'apiKey', 'api-key', 'API_KEY', 'privateKey', 'accessToken', 'access_token', 'refreshToken', 'token', 'tokenHash', 'Authorization', 'bearer', 'otp', 'otpCode', 'pin', 'cvv', 'ssn', 'credentials', 'apikey', 'accesstoken', 'clientsecret']) {
       expect([key, namesSecret(key)]).toEqual([key, true]);
     }
     // fields an entity may well have

@@ -13,13 +13,13 @@ jest.mock('@nextsparkjs/core/lib/mcp/oauth/config', () => ({ isMcpOAuthEnabled: 
 const connections = {
   userConnections: jest.fn(),
   managedConnections: jest.fn(),
-  managesTeam: jest.fn(),
+  disconnectManaged: jest.fn(),
   disconnect: jest.fn(),
 }
 jest.mock('@nextsparkjs/core/lib/mcp/oauth/connections', () => ({
   userConnections: (...args: unknown[]) => connections.userConnections(...args),
   managedConnections: (...args: unknown[]) => connections.managedConnections(...args),
-  managesTeam: (...args: unknown[]) => connections.managesTeam(...args),
+  disconnectManaged: (...args: unknown[]) => connections.disconnectManaged(...args),
   disconnect: (...args: unknown[]) => connections.disconnect(...args),
 }))
 
@@ -36,7 +36,7 @@ beforeEach(() => {
   getSession.mockResolvedValue({ user: { id: 'user-1', role: 'member' }, session: { id: 'session-1' } })
   connections.userConnections.mockResolvedValue([{ clientId: 'client-a', teamId: 'team-1' }])
   connections.managedConnections.mockResolvedValue([{ clientId: 'client-b', teamId: 'team-1', userId: 'user-2' }])
-  connections.managesTeam.mockResolvedValue(false)
+  connections.disconnectManaged.mockResolvedValue(false)
   connections.disconnect.mockResolvedValue(true)
 })
 
@@ -68,23 +68,30 @@ describe('/api/internal/oauth-connections', () => {
     expect(connections.managedConnections).toHaveBeenCalledWith('user-1', 'member')
   })
 
-  it('ends the user\'s own connection without asking who runs the team', async () => {
+  it('ends the user\'s own connection without asking who manages the team', async () => {
     expect((await del({ clientId: 'client-a', teamId: 'team-1' })).status).toBe(200)
     expect(connections.disconnect).toHaveBeenCalledWith('user-1', 'client-a', 'team-1')
-    expect(connections.managesTeam).not.toHaveBeenCalled()
+    expect(connections.disconnectManaged).not.toHaveBeenCalled()
   })
 
-  it('refuses another member\'s connection to a team the user does not run, as if it did not exist', async () => {
+  it('naming oneself as the user is one\'s own connection too', async () => {
+    expect((await del({ clientId: 'client-a', teamId: 'team-1', userId: 'user-1' })).status).toBe(200)
+    expect(connections.disconnect).toHaveBeenCalledWith('user-1', 'client-a', 'team-1')
+    expect(connections.disconnectManaged).not.toHaveBeenCalled()
+  })
+
+  it('another member\'s connection goes through the check of who manages the team, and a refusal is a 404', async () => {
     const response = await del({ clientId: 'client-b', teamId: 'team-1', userId: 'user-2' })
     expect(response.status).toBe(404)
-    expect(connections.managesTeam).toHaveBeenCalledWith('user-1', 'member', 'team-1')
+    expect(connections.disconnectManaged).toHaveBeenCalledWith('user-1', 'member', 'user-2', 'client-b', 'team-1')
+    // never the unchecked path for somebody else's connection
     expect(connections.disconnect).not.toHaveBeenCalled()
   })
 
-  it('ends another member\'s connection to a team the user owns or administers', async () => {
-    connections.managesTeam.mockResolvedValue(true)
+  it('ends another member\'s connection to a team whose integrations the user manages', async () => {
+    connections.disconnectManaged.mockResolvedValue(true)
     expect((await del({ clientId: 'client-b', teamId: 'team-1', userId: 'user-2' })).status).toBe(200)
-    expect(connections.disconnect).toHaveBeenCalledWith('user-2', 'client-b', 'team-1')
+    expect(connections.disconnect).not.toHaveBeenCalled()
   })
 
   it('answers 404 for a connection that is not there', async () => {

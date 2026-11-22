@@ -18,7 +18,7 @@ jest.mock('@/core/lib/permissions/app-role-bypass', () => ({
   hasTeamPermission: (...args: [string | null | undefined, string | null | undefined, string]) => mockHasTeamPermission(...args),
 }));
 
-import { disconnect, managedConnections, managesTeam, userConnections } from '@/core/lib/mcp/oauth/connections';
+import { disconnect, disconnectManaged, managedConnections, userConnections } from '@/core/lib/mcp/oauth/connections';
 
 const CLIENT = 'https://claude.ai/oauth/mcp-oauth-client-metadata';
 
@@ -113,14 +113,6 @@ describe('the applications connected by MCP browser sign-in (#541)', () => {
     expect(await managedConnections('user-1', 'member')).toEqual([]);
     expect(mockQueryRows).toHaveBeenCalledTimes(1);
   });
-
-  it('managing a team is holding the permission in it: not for a non-member, whatever the app role', async () => {
-    mockQueryOne.mockResolvedValueOnce({ role: 'curator' }).mockResolvedValueOnce({ role: 'admin' }).mockResolvedValueOnce(null);
-    expect(await managesTeam('user-1', 'member', 'team-1')).toBe(true);
-    expect(await managesTeam('user-2', 'member', 'team-1')).toBe(false);
-    expect(await managesTeam('user-3', 'developer', 'team-1')).toBe(false);
-    expect(mockHasTeamPermission).toHaveBeenLastCalledWith('developer', null, 'settings.integrations');
-  });
 });
 
 describe('ending a connection (#541)', () => {
@@ -164,5 +156,28 @@ describe('ending a connection (#541)', () => {
     mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockRejectedValueOnce(new Error('connection lost'));
     await expect(disconnect('user-1', CLIENT, 'team-1')).rejects.toThrow('connection lost');
     expect(mockTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('a manager ends another member\'s connection: the permission is read, locked and decided in the same transaction', async () => {
+    mockQueryOne.mockResolvedValueOnce({ role: 'curator' });
+    mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockResolvedValueOnce([{ live: true }]);
+    expect(await disconnectManaged('manager-1', 'member', 'user-2', CLIENT, 'team-1')).toBe(true);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    const [membership, params] = mockQueryOne.mock.calls[0];
+    expect(sqlOf([membership])).toMatch(/^SELECT role FROM "team_members" WHERE "userId" = \$1 AND "teamId" = \$2 FOR SHARE$/);
+    expect(params).toEqual(['manager-1', 'team-1']);
+    expect(mockHasTeamPermission).toHaveBeenLastCalledWith('member', 'curator', 'settings.integrations');
+    // the connection ended is the other member's
+    expect(mockQueryRows.mock.calls[0][1]).toEqual(['user-2', CLIENT, 'team-1']);
+  });
+
+  it('who does not hold the permission in the team ends nothing: a plain member, a non-member whatever the app role', async () => {
+    for (const [appRole, membership] of [['member', { role: 'member' }], ['member', { role: 'admin' }], ['developer', null]] as const) {
+      jest.clearAllMocks();
+      mockQueryOne.mockResolvedValueOnce(membership);
+      expect(await disconnectManaged('actor', appRole, 'user-2', CLIENT, 'team-1')).toBe(false);
+      expect(mockQueryRows).not.toHaveBeenCalled();
+      expect(mockQuery).not.toHaveBeenCalled();
+    }
   });
 });

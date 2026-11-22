@@ -6,9 +6,10 @@
  * the role on every request), but the grant, the token and the list of connected applications would name a
  * permission the user never had.
  */
-import type { BetterAuthPlugin } from 'better-auth'
+import { APIError, type BetterAuthPlugin } from 'better-auth'
 import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { validateScopesForUser } from '../../api/auth'
+import { queryOne } from '../../db'
 import { entityScope } from './scope-names'
 import { isAuthorizationKey, selectedTeam } from './team-selection'
 
@@ -19,6 +20,20 @@ import { isAuthorizationKey, selectedTeam } from './team-selection'
  */
 export function consentedScopes(requested: readonly string[], accepted: readonly string[] | undefined, heldByRole: readonly string[]): string[] {
   return requested.filter(scope => (!accepted || accepted.includes(scope)) && (!entityScope(scope) || heldByRole.includes(scope)))
+}
+
+/**
+ * Refuses an authorization for a client that is set to skip consent. The consent is where the user chooses the
+ * permissions of the connection and the row every refresh token is held to (migration 048): a client that skips it
+ * would be handed every scope it asked for, and its tokens could not be written. A first-party client is a client
+ * like any other here.
+ */
+export async function refuseConsentSkippingClient(clientId: string | null | undefined): Promise<void> {
+  if (!clientId) return
+  const client = await queryOne<{ skipConsent: boolean | null }>('SELECT "skipConsent" FROM "oauthClient" WHERE "clientId" = $1', [clientId])
+  if (client?.skipConsent) {
+    throw new APIError('BAD_REQUEST', { error: 'access_denied', error_description: 'this server asks the user for consent: a client that skips it is not accepted' })
+  }
 }
 
 const scopeList = (value: unknown): string[] | undefined =>

@@ -71,7 +71,11 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
 }
 
 // Words that name a secret wherever they appear in a key
-const SECRET_WORDS = new Set(['password', 'passwd', 'passphrase', 'secret', 'secrets', 'authorization', 'credential', 'credentials', 'bearer', 'otp', 'pin', 'cvv', 'cvc', 'ssn'])
+const SECRET_WORDS = new Set([
+  'password', 'passwd', 'passphrase', 'secret', 'secrets', 'authorization', 'credential', 'credentials', 'bearer', 'otp', 'pin', 'cvv', 'cvc', 'ssn',
+  // written as one lower-case word, which has no boundary to split at
+  'apikey', 'apikeys', 'accesskey', 'privatekey', 'secretkey', 'accesstoken', 'refreshtoken', 'idtoken', 'authtoken', 'clientsecret',
+])
 // `key` and `token` name a secret by their place: `apiKey`, `privateKey`, `accessToken`, `token`, but not
 // `tokenCount` or `keyResults`
 const KEY_QUALIFIERS = new Set(['api', 'private', 'access', 'secret', 'signing', 'encryption', 'auth', 'session'])

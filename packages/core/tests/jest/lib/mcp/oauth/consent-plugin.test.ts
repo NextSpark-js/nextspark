@@ -7,6 +7,8 @@ jest.mock('better-auth/api', () => ({
   createAuthMiddleware: (handler: unknown) => handler,
   getSessionFromCtx: (...args: unknown[]) => mockGetSession(...args),
 }));
+const mockQueryOne = jest.fn();
+jest.mock('@/core/lib/db', () => ({ queryOne: (...args: unknown[]) => mockQueryOne(...args) }));
 const mockValidateScopes = jest.fn();
 jest.mock('@/core/lib/api/auth', () => ({ validateScopesForUser: (...args: unknown[]) => mockValidateScopes(...args) }));
 const mockSelectedTeam = jest.fn();
@@ -15,7 +17,7 @@ jest.mock('@/core/lib/mcp/oauth/team-selection', () => ({
   selectedTeam: (...args: unknown[]) => mockSelectedTeam(...args),
 }));
 
-import { consentedScopes, consentWithinRolePlugin } from '@/core/lib/mcp/oauth/consent-plugin';
+import { consentedScopes, consentWithinRolePlugin, refuseConsentSkippingClient } from '@/core/lib/mcp/oauth/consent-plugin';
 
 const CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
 const REQUESTED = 'openid offline_access tasks:read tasks:write tasks:delete customers:read';
@@ -84,5 +86,22 @@ describe('the consent endpoint, before Better Auth handles it', () => {
     expect(await consent({ accept: false, oauth_query: signedQuery() })).toBeUndefined();
     expect(await consent({ accept: true, scope: 'tasks:read' })).toBeUndefined();
     expect(mockGetSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('a client that skips consent', () => {
+  it('is refused: the consent is where the user chooses the permissions', async () => {
+    mockQueryOne.mockResolvedValueOnce({ skipConsent: true });
+    await expect(refuseConsentSkippingClient('first-party')).rejects.toMatchObject({ body: { error: 'access_denied' } });
+    expect(mockQueryOne).toHaveBeenCalledWith(expect.stringContaining('"skipConsent" FROM "oauthClient"'), ['first-party']);
+  });
+
+  it('a client that asks for consent, one not registered yet and a request that names none go on', async () => {
+    mockQueryOne.mockResolvedValueOnce({ skipConsent: false }).mockResolvedValueOnce({ skipConsent: null }).mockResolvedValueOnce(null);
+    await expect(refuseConsentSkippingClient('a')).resolves.toBeUndefined();
+    await expect(refuseConsentSkippingClient('b')).resolves.toBeUndefined();
+    await expect(refuseConsentSkippingClient('c')).resolves.toBeUndefined();
+    await expect(refuseConsentSkippingClient(undefined)).resolves.toBeUndefined();
+    expect(mockQueryOne).toHaveBeenCalledTimes(3);
   });
 });

@@ -305,29 +305,46 @@ BEGIN
 END $$;
 
 -- ============================================
--- A refresh token only for a connection that is consented to
+-- A refresh token only for a connection that is consented to, and only within its consent
 -- ============================================
--- Ending a connection (lib/mcp/oauth/connections, and the function above) removes its consent and its refresh
--- tokens. A refresh in flight at that moment has already replaced its old token and is about to write the new one:
--- written after the tokens were removed, it would be a live token for a connection that was ended. This makes the
--- two exclude each other. The new token takes a share lock on the consent row, which the removal of that row waits
--- for (the token is then written first and removed with the rest), or which waits for the removal and then finds
--- no consent (the token is refused). A token with no team is not an MCP grant and is left alone.
+-- The consent row of a connection (client, user, team) says what the connection may do: Better Auth rewrites its
+-- scopes every time the user consents. Two rules hang on it.
+--
+-- 1. A refresh token is written only while that consent exists and covers the token's scopes. Ending a connection
+--    (lib/mcp/oauth/connections, and the function above) removes its consent and its refresh tokens. A refresh in
+--    flight at that moment has already replaced its old token and is about to write the new one: written after the
+--    tokens were removed, it would be a live token for a connection that was ended. This makes the two exclude each
+--    other. The new token takes a share lock on the consent row, which the removal of that row waits for (the token
+--    is then written first and removed with the rest), or which waits for the removal and then finds no consent
+--    (the token is refused). The same lock orders it against a consent being narrowed.
+-- 2. When the user consents again to less, the refresh tokens of that connection that hold more are removed, and
+--    with them (the trigger further up records the revocation) the access tokens already issued. Without this a
+--    token issued before would keep, and renew, permissions the user has just taken away.
+--
+-- A token with no team is not an MCP grant and is left alone. A client that skips consent has no consent row: MCP
+-- browser sign-in does not accept one (lib/mcp/oauth/consent-plugin), since the consent is where the user chooses
+-- the permissions.
 CREATE OR REPLACE FUNCTION public.require_oauth_consent_for_refresh_token()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  consented JSONB;
 BEGIN
   IF NEW."referenceId" IS NULL THEN
     RETURN NEW;
   END IF;
-  PERFORM 1 FROM public."oauthConsent"
+  SELECT scopes INTO consented FROM public."oauthConsent"
     WHERE "userId" = NEW."userId" AND "clientId" = NEW."clientId" AND "referenceId" = NEW."referenceId"
     FOR SHARE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'oauth connection ended: no consent for client % in team %', NEW."clientId", NEW."referenceId"
+      USING ERRCODE = 'check_violation';
+  END IF;
+  IF NOT (NEW.scopes <@ consented) THEN
+    RAISE EXCEPTION 'oauth consent narrowed: client % in team % no longer holds every scope of this token', NEW."clientId", NEW."referenceId"
       USING ERRCODE = 'check_violation';
   END IF;
   RETURN NEW;
@@ -338,6 +355,26 @@ CREATE TRIGGER oauth_refresh_token_requires_consent
   BEFORE INSERT ON public."oauthRefreshToken"
   FOR EACH ROW
   EXECUTE FUNCTION public.require_oauth_consent_for_refresh_token();
+
+CREATE OR REPLACE FUNCTION public.narrow_oauth_tokens_to_consent()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  DELETE FROM public."oauthRefreshToken"
+   WHERE "userId" = NEW."userId" AND "clientId" = NEW."clientId" AND "referenceId" = NEW."referenceId"
+     AND NOT (scopes <@ NEW.scopes);
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS oauth_consent_narrowed ON public."oauthConsent";
+CREATE TRIGGER oauth_consent_narrowed
+  AFTER UPDATE OF scopes ON public."oauthConsent"
+  FOR EACH ROW
+  WHEN (OLD.scopes IS DISTINCT FROM NEW.scopes)
+  EXECUTE FUNCTION public.narrow_oauth_tokens_to_consent();
 
 DROP TRIGGER IF EXISTS oauth_revoke_on_password_change ON public."account";
 CREATE TRIGGER oauth_revoke_on_password_change
