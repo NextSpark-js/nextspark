@@ -2,14 +2,24 @@
  * The scopes of MCP browser sign-in (#541): the vocabulary API keys already use, `<entity>:read|write|delete`.
  */
 import { ScopeService } from '../../services/scope.service'
+import { mcpToolScopes } from './tool-scopes'
 
-/** Every scope a team role can hold. Wildcards are never offered. */
+/**
+ * The scopes of the resource: every scope a team role can hold that some tool of the MCP server needs. Wildcards
+ * are never offered.
+ *
+ * It is what the authorization server publishes (`scopes_supported`) and accepts, and what the consent screen
+ * offers. A scope no tool needs (an entity kept out of MCP, an operation an entity's `mcp.ts` excludes) is not in
+ * it, so no client can ask for it and no connection can hold it: it does not depend on what a client chooses to
+ * request.
+ */
 export function mcpOAuthResourceScopes(): string[] {
   const scopes = new Set<string>(ScopeService.getBaseScopes())
   for (const role of ScopeService.getRoles()) {
     for (const scope of ScopeService.getRoleScopes(role)) scopes.add(scope)
   }
-  return [...scopes].filter(scope => !scope.includes('*')).sort()
+  const usedByTools = new Set(mcpToolScopes())
+  return [...scopes].filter(scope => !scope.includes('*') && usedByTools.has(scope)).sort()
 }
 
 /**
@@ -20,9 +30,8 @@ export function mcpOAuthResourceScopes(): string[] {
  * Asking is not getting: the consent screen lists them per entity and the user decides (isPreselectedScope). The
  * request has to carry them all because consent can only take scopes away from what was asked for.
  *
- * `usedByTools`: the scopes some tool of this server needs. A scope no tool needs is not asked for, so the consent
- * screen does not offer a permission that would do nothing (an entity kept out of MCP, an operation an entity's
- * `mcp.ts` excludes).
+ * `usedByTools`: the scopes some tool of the engine at hand needs, to narrow the list further. The resource's
+ * scopes are already the ones the tools of the default route need (`mcpToolScopes`).
  */
 export function mcpOAuthDefaultScopes(usedByTools?: readonly string[]): string[] {
   const resource = mcpOAuthResourceScopes()

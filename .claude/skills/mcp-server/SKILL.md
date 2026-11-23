@@ -30,6 +30,8 @@ src/routes/api/mcp/route.ts            # POST /api/mcp: picks the credential pat
 src/lib/mcp/
 ├── engine.ts                          # createMcpEngine: tools from the registry, handleJsonRpc,
 │                                      #   requiredScopesFor, toolScopes, auditRefused
+├── exposure.ts                        # which entities and operations get a tool (exposedEntities), and the
+│                                      #   scopes they need (toolScopesOf): shared by the engine and sign-in
 ├── tool-generator.ts                  # the five tools of an entity, tool names, withData
 ├── schema-builder.ts                  # tool input schemas from the entity's fields
 ├── executor.ts                        # runs a tool by calling the generic entity handler in process
@@ -86,7 +88,11 @@ fills from the generated `MCP_OVERRIDES` registry (`@nextsparkjs/registries/mcp-
 
 - Every entity that is `enabled` and has `access.api` gets `list`, `get`, `create`, `update`, `delete`. When
   `access.api` is an object, only the operations it enables (`isApiOperationEnabled`; `list` and `get` are reads).
-- `patterns` is excluded by default (`DEFAULT_EXCLUDED_SLUGS`; `options.excludeSlugs` replaces the list).
+- `patterns` is excluded by default (`DEFAULT_EXCLUDED_SLUGS` in `exposure.ts`; `options.excludeSlugs` replaces
+  the list). An excluded entity has no tools and, with browser sign-in, no permissions either.
+- Which entities and operations are exposed is decided in one function, `exposedEntities` (`lib/mcp/exposure.ts`).
+  The engine builds its tools from it and browser sign-in takes its scopes from it. Change the rule there, never
+  in the engine alone.
 - `entities/<slug>/mcp.ts` (default export of type `McpEntityOverride`, a sibling of `<slug>.config.ts`, not
   under `api/`) is discovered by `scripts/build/registry/discovery/mcp-overrides.mjs`. It can: `exclude` the
   entity, `excludeOperations`, `relaxRequired`, `describe`, add `errorHints`, `transformInput`,
@@ -116,8 +122,9 @@ fills from the generated `MCP_OVERRIDES` registry (`@nextsparkjs/registries/mcp-
 | generated `delete` | `<entity>:delete` |
 | hand-written (`extraTools`, `utilityTools`) | what it declares in `meta.requiredScopes`; none if it declares nothing |
 
-`engine.toolScopes` is the sorted union over all tools. Both feed the OAuth path: the up-front 403 and what a
-connecting client is told to ask for.
+`engine.toolScopes` is the sorted union over all tools; `toolScopesOf(registry, options)` (`exposure.ts`) gives
+the same list without building the engine, and a test holds the two equal. They feed the OAuth path: the up-front
+403, and the scopes the server publishes, offers and grants.
 
 ## Two credentials, never mixed
 
@@ -208,12 +215,22 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
 
 ## Permissions
 
-- Scopes are the entity scopes API keys use: `<entity>:read|write|delete` (`mcpOAuthResourceScopes()`; wildcards
-  are never offered). `offline_access` and the identity scopes (`OIDC_SCOPES`) are not permissions.
+- Scopes are the entity scopes API keys use: `<entity>:read|write|delete`; wildcards are never offered.
+  `offline_access` and the identity scopes (`OIDC_SCOPES`) are not permissions.
+- **Only the scopes some tool needs**: `mcpOAuthResourceScopes()` is what a team role can hold ∩
+  `mcpToolScopes()` (`lib/mcp/oauth/tool-scopes.ts`: `toolScopesOf` over the entity registry and `MCP_OVERRIDES`,
+  once per process). That one list is the `scopes_supported` of both metadata documents, what the authorization
+  server accepts (anything else is `invalid_scope`) and what the consent screen offers. It does not depend on
+  the client: Claude asks for the scopes of the 401 challenge, ChatGPT for all of `scopes_supported`. A
+  hand-written tool that needs a scope no generated tool uses must declare it in `meta.requiredScopes`, or no
+  connection can hold it. A custom route with other `excludeSlugs`, `defaultOperations` or `utilityTools` is not
+  what this list follows.
 - **What the challenge asks for**: the 401 tells a connecting client to request `offline_access` plus every
-  scope some tool of this server uses: `mcpOAuthDefaultScopes(engine.toolScopes)`. Without `offline_access`
-  there is no refresh token and the connection ends with its first access token. A scope no tool needs is not
-  asked for, so the consent screen offers nothing that would do nothing.
+  scope of the resource (`mcpOAuthDefaultScopes`). Without `offline_access` there is no refresh token and the
+  connection ends with its first access token.
+- **Retiring a scope** (excluding an operation or an entity later): a connection that holds it keeps renewing
+  while the client's `oauthClient` row carries the earlier list; once that row is refreshed the renewal is
+  refused with `invalid_scope` and the user connects again.
 - **The user chooses** on the consent screen (`OAuthConsent.tsx`): one row per entity with read, write,
   delete. First connection: read and write ticked, delete not (`isPreselectedScope`). A permission the role
   cannot hold is shown disabled (`allowed` from `/api/internal/oauth-team`). An application already connected

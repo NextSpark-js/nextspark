@@ -952,6 +952,25 @@ declare module '@nextsparkjs/registries/scope-registry' {
 }
 
 // ============================================================================
+// MCP Override Registry
+//
+// One entry per `entities/<slug>/mcp.ts` of the project. The shape is
+// McpEntityOverride (src/lib/mcp/types.ts), declared loosely here like the
+// other registries (no imports in this file): lib/mcp/oauth/tool-scopes.ts
+// reads it as McpEntityOverride.
+// ============================================================================
+declare module '@nextsparkjs/registries/mcp-registry' {
+  export interface McpOverrideEntry {
+    exclude?: boolean
+    excludeOperations?: string[]
+    extraTools?: (api: any) => any[]
+    [key: string]: any
+  }
+
+  export const MCP_OVERRIDES: Record<string, McpOverrideEntry>
+}
+
+// ============================================================================
 // Scheduled Actions Registry
 //
 // Keyed by theme name, not a flat array like the old ambient declaration

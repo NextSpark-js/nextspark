@@ -23,13 +23,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { JSONRPCMessageSchema, type JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
-import { isApiOperationEnabled } from '../entities/api-access'
 import { StatelessJsonRpcTransport } from './transport'
 import { errorResult, errorStatusOf, generateEntityTools, normalizeDateFields } from './tool-generator'
 import { buildEntitySchemas } from './schema-builder'
 import { executeEntityOperation } from './executor'
 import { auditToolCall } from './audit'
 import { translateApiError } from './errors'
+import { DEFAULT_TIMEZONE, exposedEntities, handWrittenToolFactories, scopesOfToolMeta } from './exposure'
 import type {
   EngineApi,
   EntityExecutor,
@@ -39,10 +39,6 @@ import type {
   McpToolResult,
   ToolExecutionContext,
 } from './types'
-
-const DEFAULT_OPERATIONS: McpOperation[] = ['list', 'get', 'create', 'update', 'delete']
-const DEFAULT_EXCLUDED_SLUGS = ['patterns']
-const DEFAULT_TIMEZONE = 'UTC'
 
 export interface McpEngine {
   tools: McpToolDefinition[]
@@ -65,8 +61,6 @@ export function createMcpEngine(
 ): McpEngine {
   const executor = options.executor ?? executeEntityOperation
   const audit = options.audit ?? auditToolCall
-  const excluded = new Set(options.excludeSlugs ?? DEFAULT_EXCLUDED_SLUGS)
-  const defaultOperations = options.defaultOperations ?? DEFAULT_OPERATIONS
   const overrides = options.overrides ?? {}
 
   /**
@@ -112,22 +106,9 @@ export function createMcpEngine(
 
   const tools: McpToolDefinition[] = []
 
-  for (const [slug, entityConfig] of Object.entries(registry)) {
-    if (excluded.has(slug)) continue
-    if (!entityConfig?.enabled) continue
-    if (!entityConfig.access?.api) continue
-
-    const override = overrides[slug]
-    if (override?.exclude) continue
-
-    // `access.api` as an object serves only the operations it enables (#376): list/get are reads, the rest map 1:1
-    const operations = defaultOperations.filter(
-      (op) =>
-        !override?.excludeOperations?.includes(op) &&
-        isApiOperationEnabled(entityConfig, op === 'list' || op === 'get' ? 'read' : op)
-    )
-    if (!operations.length) continue
-
+  // Which entities and operations get a tool is decided in ./exposure, shared with MCP browser sign-in: the scopes
+  // it publishes, offers and grants are the ones these tools need.
+  for (const { slug, entityConfig, override, operations } of exposedEntities(registry, options)) {
     tools.push(
       ...generateEntityTools(entityConfig, operations, override, {
         executor: normalizingExecutor,
@@ -138,14 +119,8 @@ export function createMcpEngine(
     )
   }
 
-  for (const [slug, override] of Object.entries(overrides)) {
-    if (!override.extraTools) continue
-    if (excluded.has(slug)) continue
-    tools.push(...override.extraTools(api))
-  }
-
-  if (options.utilityTools) {
-    tools.push(...options.utilityTools(api))
+  for (const factory of handWrittenToolFactories(options)) {
+    tools.push(...factory(api))
   }
 
   assertUniqueNames(tools)
@@ -236,11 +211,7 @@ export function createMcpEngine(
    * unknown name.
    */
   function requiredScopesFor(toolName: string): string[] {
-    const meta = tools.find(tool => tool.name === toolName)?.meta
-    if (meta?.requiredScopes) return [...meta.requiredScopes]
-    if (!meta?.entitySlug || !meta.operation || meta.operation === 'workflow') return []
-    const action = meta.operation === 'list' || meta.operation === 'get' ? 'read' : meta.operation === 'delete' ? 'delete' : 'write'
-    return [`${meta.entitySlug}:${action}`]
+    return scopesOfToolMeta(tools.find(tool => tool.name === toolName)?.meta)
   }
 
   /**

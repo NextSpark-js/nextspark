@@ -228,10 +228,32 @@ The scopes are the entity scopes API keys use: `<entity>:read`, `<entity>:write`
 never offered or accepted. `offline_access` and the identity scopes (`openid`, `profile`, `email`) are part of
 sign-in and are not MCP permissions.
 
-The `401` challenge tells a connecting client to ask for `offline_access` plus every scope that some tool of the
-server uses (`mcpOAuthDefaultScopes(engine.toolScopes)` in `lib/mcp/oauth/scopes.ts`). A scope no tool needs is not
-asked for, so the consent screen does not offer a permission that would do nothing. Asking is not getting: the
-request carries them all because a consent can only take scopes away from what was asked.
+**Only the scopes some tool needs.** The scopes of the resource are the ones a team role can hold *and* some tool
+of the MCP server needs (`mcpOAuthResourceScopes()` in `lib/mcp/oauth/scopes.ts`, over `mcpToolScopes()` in
+`lib/mcp/oauth/tool-scopes.ts`). An entity kept out of MCP (`patterns`, by default) and an operation an entity's
+`mcp.ts` excludes have no tool, and so no permission. That one list is:
+
+- what the server publishes as `scopes_supported`, in the protected resource metadata and in the authorization
+  server metadata;
+- what the authorization server accepts: a client that asks for any other scope is refused with `invalid_scope`;
+- what the consent screen offers (`allowed` of `/api/internal/oauth-team`).
+
+It does not depend on what a client chooses to request. Claude asks for the scopes of the `401` challenge; ChatGPT
+asks for everything in `scopes_supported`; both are offered the same rows. The list is computed from the entity
+registry and the `entities/<slug>/mcp.ts` overrides, the registries the default `/api/mcp` route builds its tools
+from, with the function the engine itself uses (`lib/mcp/exposure.ts`). A hand-written tool adds the scopes it
+declares in `meta.requiredScopes`: one that needs a scope no generated tool uses has to declare it, or no
+connection can ever hold that scope.
+
+The `401` challenge tells a connecting client to ask for `offline_access` plus every scope of the resource
+(`mcpOAuthDefaultScopes`). Asking is not getting: the request carries them all because a consent can only take
+scopes away from what was asked.
+
+**When a scope is retired.** Excluding an operation later (or an entity) takes its scope out of the list. A
+connection that already holds it keeps working while the application's client record still carries the server's
+earlier list, and the scope does nothing: there is no tool for it. Once that record is refreshed, the renewal of
+a token that holds the retired scope is refused with `invalid_scope`, and the user connects again; the new
+connection does not carry it.
 
 ### The consent screen and its defaults
 

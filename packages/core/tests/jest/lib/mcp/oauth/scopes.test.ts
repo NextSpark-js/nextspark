@@ -6,11 +6,24 @@ jest.mock('@/core/lib/services/scope.service', () => ({
   },
 }));
 
+const toolScopes = { current: ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read', 'pages:read'] };
+jest.mock('@/core/lib/mcp/oauth/tool-scopes', () => ({ mcpToolScopes: () => toolScopes.current }));
+
 import { entityScope, isPreselectedScope, mcpOAuthDefaultScopes, mcpOAuthResourceScopes, mcpOAuthStepUpScopes } from '@/core/lib/mcp/oauth/scopes';
 
 describe('the scopes of MCP browser sign-in (#541)', () => {
   it('are the ones a team role can hold, without wildcards', () => {
     expect(mcpOAuthResourceScopes()).toEqual(['customers:read', 'tasks:delete', 'tasks:read', 'tasks:write']);
+  });
+
+  it('and only the ones some tool of the server needs: a permission that would do nothing is not published, offered or granted', () => {
+    toolScopes.current = ['tasks:read', 'tasks:write', 'pages:read'];
+    try {
+      expect(mcpOAuthResourceScopes()).toEqual(['tasks:read', 'tasks:write']);
+      expect(mcpOAuthDefaultScopes()).toEqual(['offline_access', 'tasks:read', 'tasks:write']);
+    } finally {
+      toolScopes.current = ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read', 'pages:read'];
+    }
   });
 
   it('a connecting client is told to ask for every scope and a refresh token; the consent screen decides', () => {
