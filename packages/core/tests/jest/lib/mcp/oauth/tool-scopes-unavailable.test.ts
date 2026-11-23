@@ -25,4 +25,14 @@ describe('the scopes some tool of the app needs, where the overrides cannot be l
     expect(warn.mock.calls[0][0]).toMatch(/overrides could not be loaded/);
     warn.mockRestore();
   });
+
+  it('an override that fails to load for any other reason is not hidden', () => {
+    jest.resetModules();
+    jest.doMock('@nextsparkjs/registries/mcp-registry', () => {
+      throw new ReferenceError("Cannot access 'auth' before initialization");
+    });
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fresh = require('@/core/lib/mcp/oauth/tool-scopes') as typeof import('@/core/lib/mcp/oauth/tool-scopes');
+    expect(() => fresh.mcpToolScopes()).toThrow(/before initialization/);
+  });
 });

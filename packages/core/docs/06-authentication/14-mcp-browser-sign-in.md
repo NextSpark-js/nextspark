@@ -258,8 +258,10 @@ by `/api/mcp` only, as before.
 
 **Outside the app.** `nextspark worker` runs core's built modules without a bundler, and the overrides cannot be
 loaded late there. When a handler of the project imports `lib/auth` in that process, the list is computed without
-the overrides (the scopes of every generated tool) and a warning says so. Sign-in is not served from the worker,
-so nothing is published or granted from that list.
+the overrides and a warning says so: it is the scopes of the generated tools by default, not what the app serves
+(an operation an override excludes is back, a declared `extraToolScopes` is missing). Sign-in is not served from
+the worker, so nothing is published or granted from that list. Only the missing `require` is tolerated: an
+`mcp.ts` that fails to load for any other reason still fails loudly.
 
 **A declaration is trusted.** A scope left in `extraToolScopes` after its tool is gone is published and offered
 again, and nothing warns about it: remove the scope with the tool. A scope no team role can hold (a typo such as

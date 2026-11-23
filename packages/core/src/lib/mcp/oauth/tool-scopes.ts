@@ -38,10 +38,13 @@ function appOverrides(): Record<string, McpEntityOverride> {
     // Core declares the registries loosely (nextspark-registries.d.ts); their real types exist in the host app
     return MCP_OVERRIDES as unknown as Record<string, McpEntityOverride>
   } catch (error) {
-    // A runtime that runs core's built ES modules as they are has no `require`: `nextspark worker` (Node, tsx and
-    // the registry preload), when a handler of the project imports `lib/auth`. Sign-in is not served from there,
-    // so the list only has to exist: without the overrides it is the scopes of every generated tool, wider than
-    // what the app serves and never an access (a scope with no tool does nothing). Auth still loads.
+    // Only where `require` itself does not exist: a runtime that runs core's built ES modules as they are, which
+    // is `nextspark worker` (Node, tsx and the registry preload) when a handler of the project imports `lib/auth`.
+    // Any other error is the project's own (an `mcp.ts` that fails to load) and is not hidden.
+    if (!(error instanceof ReferenceError && /\brequire is not defined\b/.test(error.message))) throw error
+    // Sign-in is not served from there, so the list only has to exist. Without the overrides it is the scopes of
+    // the generated tools by default: not what the app serves (an excluded operation is back, a declared
+    // `extraToolScopes` is missing), and never an access, since a scope with no tool does nothing. Auth loads.
     if (!warned) {
       warned = true
       console.warn('[mcp] The MCP overrides could not be loaded here, so the scopes of sign-in are computed without them:', error)
