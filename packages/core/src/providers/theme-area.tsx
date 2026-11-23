@@ -9,7 +9,7 @@ const STORAGE_KEY = "theme"
 
 const noSubscription = () => () => {}
 /** As in the root provider: the browser bundle of a Next.js app carries none of the inline script's code (#546) */
-const inlineScriptCode = typeof window === "undefined" || process.env.NEXT_RUNTIME === undefined
+const inlineScriptCode = process.env.NEXT_RUNTIME !== ""
 
 /**
  * Wraps an area with a session (dashboard, devtools, superadmin): inside it `useTheme()` answers without the public
@@ -33,11 +33,13 @@ export function ThemeArea({ children }: React.PropsWithChildren) {
   const serverHtml = React.useSyncExternalStore(noSubscription, () => false, () => true)
   React.useLayoutEffect(() => {
     if (!value || !area) return
-    // The same steps as the inline script (a client navigation never ran it); the provider stores and applies it
+    // The stored theme, or the account's as the inline script stores it: a client navigation never ran that script, and
+    // on a streamed page the root provider can hydrate before it runs; the provider follows, stores and applies it
     if (!value.forcedTheme) {
       try {
         const saved = ("; " + document.cookie).split("; " + COOKIE + "=")[1]?.split(";")[0]
-        if (!localStorage.getItem(STORAGE_KEY) && saved && value.themes.includes(saved)) value.setTheme(saved)
+        const stored = localStorage.getItem(STORAGE_KEY) || (saved && value.themes.includes(saved) ? saved : null)
+        if (stored && stored !== value.theme) value.setTheme(stored)
       } catch {
         // localStorage can throw (blocked storage)
       }

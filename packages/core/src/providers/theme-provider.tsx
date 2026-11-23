@@ -111,11 +111,12 @@ const DEFAULT_THEMES = ["light", "dark"]
 const isServer = typeof window === "undefined"
 /**
  * Whether this render writes the code of the inline script: on the server, and outside a Next.js build (tests). Next
- * replaces `typeof window` and `process.env.NEXT_RUNTIME` in each bundle, so the browser bundle drops that code: the
- * script runs from the server HTML only, and the client renders it empty (#546). ThemeArea holds the same line: a
- * value imported from another module is not replaced.
+ * defines `process.env.NEXT_RUNTIME` in every bundle, node_modules included, with Turbopack and webpack alike ("" in
+ * the browser, "nodejs" or "edge" on the server), so the browser bundle drops that code: the script runs from the
+ * server HTML only, and the client renders it empty (#546). ThemeArea holds the same line: a value imported from
+ * another module is not replaced.
  */
-const inlineScriptCode = isServer || process.env.NEXT_RUNTIME === undefined
+const inlineScriptCode = process.env.NEXT_RUNTIME !== ""
 
 export const ThemeContext = React.createContext<(UseThemeProps & { area?: AreaTheme }) | undefined>(undefined)
 /** What ThemeArea (providers/theme-area, the only reader: public pages load none of its code) takes from the value: the forced theme prop, and how to say it is mounted */

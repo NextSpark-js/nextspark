@@ -1,7 +1,7 @@
 /**
  * #546: the inline theme scripts (the root provider's and ThemeArea's account theme) run from the server HTML only, so
- * the browser bundle of a Next.js app carries none of their code: Next replaces `typeof window` and
- * `process.env.NEXT_RUNTIME` in each bundle, and the client renders the scripts empty. Hydrating the server HTML with
+ * the browser bundle of a Next.js app carries none of their code: Next defines `process.env.NEXT_RUNTIME` in each
+ * bundle ("" in the browser, with Turbopack and webpack alike), and the client renders the scripts empty. Hydrating the server HTML with
  * that client changes nothing and warns about nothing.
  */
 import type * as ReactNS from 'react'
