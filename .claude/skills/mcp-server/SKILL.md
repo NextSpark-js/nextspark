@@ -175,7 +175,7 @@ are in `src/lib/mcp/oauth/config.ts`. Use the second for anything that serves a 
 | `/api/auth/oauth2/authorize`, `/token`, `/revoke`, `/userinfo`, `/consent`, `/continue` | Better Auth's OAuth endpoints |
 | `/api/auth/jwks` | Signing keys (public half) |
 | `/oauth/select-team`, `/oauth/consent` | Team picker and consent pages |
-| `/api/internal/oauth-team` | GET: teams, `selected`, `allowed`, `granted`. POST: choose the team. Session only |
+| `/api/internal/oauth-team` | GET: teams, `selected`, `allowed`, `granted`, `offered` (the active scopes). POST: choose the team. Session only |
 | `/api/internal/oauth-connections` | GET list, PATCH narrow, DELETE disconnect. Session only |
 
 `src/routes/manifest.json` lists the routes; `OPT_IN_CORE_ROUTES.mcpOAuth` in
@@ -464,6 +464,12 @@ pnpm test:node          # every node test
   authentication, asks for all of `scopes_supported` and keeps the list of the day the connector was created,
   renews before almost every call, and shows a 403 for a missing scope as "connection expired, reconnect".
   Step-up completed with Claude only.
+- The policy that cuts tokens to the active scopes (`oauthResource`, `resourceSeedMode: 'merge'`) is written by
+  every instance at start, with no version: last start wins. In a gradual deployment an instance of the earlier
+  version that starts late writes the earlier list back until one of the new version starts again. A change to
+  the active list has to be deployed all at once, or with the earlier version drained.
+- A renewal retried within the 30 seconds of the replay window across a deployment that changed the active list
+  is refused with `invalid_grant`; the client has to authorize again.
 - Removing a team does not end its connections: the resource server refuses them, the rows stay.
 - Hand-written tools get the up-front 403 only if they declare `meta.requiredScopes`.
 - `tools/list` shows every tool, including those the connection cannot use.

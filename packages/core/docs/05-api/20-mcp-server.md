@@ -534,7 +534,7 @@ The request carries an API key (`x-api-key`, or a bearer starting with `sk_`) an
 A client configured with a static `x-api-key` header that also signed in through the browser does this.
 
 **`429`**
-A JSON-RPC error "Request limit reached..." means the credential is over the `credential` tier; remember that a
+A JSON-RPC error "Rate limit reached for this credential..." means the credential is over the `credential` tier; remember that a
 generated tool costs two charges, the request and the API handler it calls. A plain JSON body with `"code": "RATE_LIMIT_EXCEEDED"` and "Too many requests"
 means the client address is over the `api` tier. Both carry `Retry-After`. See [Rate Limits](#rate-limits).
 

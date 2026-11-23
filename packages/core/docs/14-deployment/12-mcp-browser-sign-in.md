@@ -219,6 +219,8 @@ Known limits, as of this version:
 
 - Run against Claude and ChatGPT only. With ChatGPT, widening a connection's permissions after a refused call has not been run.
 - Removing a tool does not cut connections off: its scope stays accepted and stops being offered and issued. It is not a revocation; to take a permission away from existing connections, narrow them.
+- A change to the tools that changes the permissions on offer has to reach every instance at once. Each instance writes the policy that cuts tokens down to those permissions when it starts, with no version check, so in a gradual deployment an instance of the earlier version that starts late puts the earlier list back until an instance of the new version starts again. Deploy such a change all at once, or drain the earlier version first.
+- A client that renews its token, loses the answer and retries within 30 seconds across such a deployment is refused with `invalid_grant` and has to authorize again.
 - Deleting a team does not remove its connections: `/api/mcp` refuses them, and their rows stay.
 - `tools/list` shows every tool, including the ones the connection has no permission to call.
 - A tool written by hand gets the up-front `403 insufficient_scope` only if it declares `meta.requiredScopes`.

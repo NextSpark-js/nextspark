@@ -584,6 +584,14 @@ screens' APIs, not a public surface.
   list between the two, the retry no longer matches and is refused with `invalid_grant`; the client must
   authorize again. Whether it does so by itself depends on the client and has not been verified across this
   race. The window is the 30 seconds after a renewal that straddles the deployment.
+- **A deployment that changes the active list, while instances of two versions run.** The policy that cuts tokens
+  down to the active scopes is a row in the database (`oauthResource`), and every instance writes it from its own
+  configuration when it starts (`resourceSeedMode: 'merge'`). Nothing compares versions: the last instance to start
+  wins. In a gradual deployment, an instance of the earlier version that starts after one of the new version writes
+  the earlier list back, and tokens are cut to that list until an instance of the new version starts again. What
+  the consent screen offers and what a consent can hold do not read that row: each instance computes them from
+  its own version. Deploy
+  a change to the list all at once, or drain the earlier version first.
 - **Removing a team does not end its connections.** The resource server refuses them, but their rows stay.
 - **Hand-written tools get the up-front `403` only if they declare `meta.requiredScopes`.** Without it each API call
   the tool makes is checked where it is made.

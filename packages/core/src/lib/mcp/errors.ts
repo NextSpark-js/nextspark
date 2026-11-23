@@ -14,9 +14,14 @@ interface ErrorContext {
   hints?: string[]
 }
 
-/** What an MCP client is told when its API key is over its request limit. */
+/**
+ * What an MCP client is told when its credential (an API key or an OAuth connection) is over the `credential` tier.
+ * The tier is counted in charges, not in requests of the client, and the message says so: a model that reads it
+ * has to know that one tool call costs more than one. The time to wait is in `Retry-After`; the window is a
+ * minute unless the project changed the tier.
+ */
 export const RATE_LIMIT_MESSAGE =
-  'Request limit reached. Wait a minute before retrying; for large loads use the batch tools if the entity exposes them.'
+  'Rate limit reached for this credential. It is counted in charges: one per request, and one more for each API call a tool makes. Wait before retrying (a minute, by default); for large loads use the batch tools if the entity exposes them.'
 
 export function translateApiError(result: EntityApiResult, context: ErrorContext): string {
   const { status, body } = result
@@ -52,7 +57,7 @@ export function translateApiError(result: EntityApiResult, context: ErrorContext
     case 409:
       return `Cannot complete: the record for ${context.slug} has related records that depend on it${detail}. Delete or reassign the dependent records first.`
     case 429:
-      return 'Request limit reached. Wait a minute before retrying.'
+      return 'Rate limit reached. Wait before retrying.'
     case 500: {
       const hints = context.hints?.length
         ? ` Known possible causes: ${context.hints.join(' · ')}.`
