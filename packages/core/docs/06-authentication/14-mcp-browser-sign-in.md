@@ -265,12 +265,17 @@ declarations imports the overrides, and importing a module evaluates its module 
 auth route would fail to load. Do that work inside the tool handlers. With sign-in off the overrides are loaded
 by `/api/mcp` only, as before.
 
-**Outside the app.** `nextspark worker` runs core's built modules without a bundler, and the overrides cannot be
-loaded late there. When a handler of the project imports `lib/auth` in that process, the list is computed without
-the overrides and a warning says so: it is the scopes of the generated tools by default, not what the app serves
-(an operation an override excludes is back, a declared `extraToolScopes` is missing). Sign-in is not served from
-the worker, so nothing is published or granted from that list. Only the missing `require` is tolerated: an
-`mcp.ts` that fails to load for any other reason still fails loudly.
+**Outside the app.** `nextspark worker` runs core's built modules without a bundler, and the two registries the
+list comes from (the entities and the overrides) cannot be loaded late there. When a handler of the project
+imports `lib/auth` in that process, it has no list: `mcpToolScopes()` is empty, `mcpToolScopesKnown()` is false
+and a warning says so. Sign-in is not served from the worker, so nothing is published or granted from it, and it
+does not write its empty list over the stored policy of the resource: it only inserts the row when it is missing
+(`resourceSeedMode: 'insertOnly'`), and the app brings it to its own list when it starts. Only the missing
+`require` is tolerated: a registry or an `mcp.ts` that fails to load for any other reason still fails loudly.
+
+The registries are loaded late, and not imported at the top of the module, for two reasons. `lib/auth` is
+reached by every route, and the entity registry imports the config of every entity, which core keeps out of the
+per-entity routes. And the registry of overrides evaluates every `mcp.ts`, as the paragraph above says.
 
 **A declaration is trusted.** A scope left in `extraToolScopes` after its tool is gone is published and offered
 again, and nothing warns about it: remove the scope with the tool. A scope no team role can hold (a typo such as

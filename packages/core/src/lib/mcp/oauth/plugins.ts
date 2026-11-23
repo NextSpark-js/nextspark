@@ -19,6 +19,7 @@ import { isClientAllowed } from './allowed-clients'
 import { consentWithinRolePlugin, refuseConsentSkippingClient, refuseUnlistedClient } from './consent-plugin'
 import { purgeExpiredOAuthIfDue } from './purge'
 import { mcpOAuthAcceptedScopes, mcpOAuthResourceScopes } from './scopes'
+import { mcpToolScopesKnown } from './tool-scopes'
 import { APIError } from 'better-auth'
 import { isSuspendedRole } from '../../auth/suspension'
 import { tryGetCurrentAuthEndpointContext } from '@better-auth/core/context'
@@ -96,7 +97,12 @@ export function mcpOAuthPlugins() {
       // default only inserts a missing row: a database that already has the row (every app that ran sign-in before
       // this list existed, and every later change of the tools) would keep its old policy and the cut would never
       // apply. `merge` updates the fields named here and nothing else.
-      resourceSeedMode: 'merge',
+      //
+      // Except from a process that could not read the registries the list comes from (`nextspark worker`, see
+      // mcpToolScopesKnown): its list is empty, and written over the row it would strip every token the app issues
+      // of its permissions until an instance of the app started again. There the row is only inserted when it is
+      // missing, as the provider does by default, and the app brings it to its own list when it starts.
+      resourceSeedMode: mcpToolScopesKnown() ? 'merge' : 'insertOnly',
       // A token for /api/mcp is always a user's in a team: no client_credentials
       grantTypes: ['authorization_code', 'refresh_token'],
       accessTokenExpiresIn: 600,

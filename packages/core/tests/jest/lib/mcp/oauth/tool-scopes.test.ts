@@ -20,7 +20,7 @@ jest.mock('@nextsparkjs/registries/mcp-registry', () => ({
   MCP_OVERRIDES: { tasks: { excludeOperations: ['delete'] } },
 }));
 
-import { mcpToolScopes } from '@/core/lib/mcp/oauth/tool-scopes';
+import { mcpToolScopes, mcpToolScopesKnown } from '@/core/lib/mcp/oauth/tool-scopes';
 
 describe('the scopes some tool of the app needs (#541)', () => {
   it('come from the entity registry and the MCP overrides of the app', () => {
@@ -29,5 +29,9 @@ describe('the scopes some tool of the app needs (#541)', () => {
 
   it('are computed once', () => {
     expect(mcpToolScopes()).toBe(mcpToolScopes());
+  });
+
+  it('are known: the registries were read', () => {
+    expect(mcpToolScopesKnown()).toBe(true);
   });
 });

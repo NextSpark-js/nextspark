@@ -402,12 +402,16 @@ Details (Redis, fail-open, `DISABLE_RATE_LIMITING`): see the `rate-limiting` ski
 - **A scope only hand-written tools need goes in `extraToolScopes`** of the entity's `mcp.ts` (plain list, next
   to `extraTools`), or in `utilityToolScopes`. Sign-in grants only the scopes of generated tools plus those.
 - **With sign-in enabled, never read `lib/auth` in the module scope of an `mcp.ts`** (directly or through a
-  helper). The overrides are loaded while `lib/auth` is configured (`appOverrides()` in `tool-scopes.ts`, a lazy
+  helper). The overrides are loaded while `lib/auth` is configured (`appRegistries()` in `tool-scopes.ts`, a lazy
   `require`), `auth` is not initialized yet and every auth route would fail to load. Do the work inside the tool
-  handlers. With sign-in off the overrides are loaded by `/api/mcp` only. In `nextspark worker` (built ES
-  modules, no `require`) the lazy load fails and only that failure is caught: the list is computed without the
-  overrides (generated tools by default, not what the app serves), with a warning; sign-in is not served from
-  there. Any other error loading an `mcp.ts` propagates.
+  handlers. With sign-in off the overrides are loaded by `/api/mcp` only.
+- **`tool-scopes.ts` never imports a registry at the top.** It is in the graph of `lib/auth`, which every route
+  reaches: a static import of the entity registry puts every entity's config in each per-entity route
+  (`tests/node/core-routes.test.ts` fails), and one of the overrides evaluates every `mcp.ts` with auth. Both are
+  read with the same lazy `require`. In `nextspark worker` (built ES modules, no `require`) that load fails and
+  only that failure is caught: the list is empty, `mcpToolScopesKnown()` is false, a warning is logged, and
+  `mcpOAuthPlugins` uses `resourceSeedMode: 'insertOnly'` so the worker never writes its empty list over the
+  policy the app stored. Any other error loading a registry or an `mcp.ts` propagates.
 - **Remove a scope from `extraToolScopes` with its tool.** The list is trusted: a leftover scope is offered again
   with no warning, and a scope no role can hold (a typo) is dropped silently.
 - **A hand-written tool calls `api.execute` and `api.entitySchemas`**, the engine's wired versions, never the
