@@ -123,7 +123,7 @@ describe('ending a connection (#541)', () => {
     expect(await disconnect('user-1', CLIENT, 'team-1')).toBe(true);
     expect(mockTransaction).toHaveBeenCalledTimes(1);
     const [consent, tokens] = mockQueryRows.mock.calls;
-    // the consent first: a renewal in flight needs it to write its new token (migration 048), so it either wrote
+    // the consent first: a renewal in flight needs it to write its new token (migration 049), so it either wrote
     // the token already, and the next statement removes it, or it is refused
     expect(sqlOf(consent)).toMatch(/^DELETE FROM "oauthConsent" WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3/);
     expect(sqlOf(tokens)).toMatch(/^DELETE FROM "oauthRefreshToken" WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3 RETURNING/);
@@ -131,12 +131,12 @@ describe('ending a connection (#541)', () => {
     expect(sqlOf(tokens)).not.toMatch(/UPDATE/);
     expect(consent[1]).toEqual(['user-1', CLIENT, 'team-1']);
     expect(tokens[1]).toEqual(['user-1', CLIENT, 'team-1']);
-    // the trigger of migration 048 recorded the revocation for the live token deleted: none is written here
+    // the trigger of migration 049 recorded the revocation for the live token deleted: none is written here
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
   it('removing the consent is what ends the connection: the database records it, and nothing is written here', async () => {
-    // the consent went and its tokens with it (migration 048), so the second statement finds none
+    // the consent went and its tokens with it (migration 049), so the second statement finds none
     mockQueryRows.mockResolvedValueOnce([{ id: 'consent-1' }]).mockResolvedValueOnce([]);
     expect(await disconnect('user-1', CLIENT, 'team-1')).toBe(true);
     expect(mockQuery).not.toHaveBeenCalled();
@@ -204,7 +204,7 @@ describe('taking permissions away from a connection (#541)', () => {
     // the consent row is locked: a renewal in flight waits for this, as it does for a disconnection
     expect(sqlOf(mockQueryOne.mock.calls[0])).toMatch(/^SELECT id, scopes FROM "oauthConsent" WHERE "userId" = \$1 AND "clientId" = \$2 AND "referenceId" = \$3 FOR UPDATE$/);
     // one statement: the database cuts the live tokens down and records the revocation when the consent narrows
-    // (migration 048, exercised in tests/node/oauth-connections-pg.test.ts)
+    // (migration 049, exercised in tests/node/oauth-connections-pg.test.ts)
     expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(sqlOf(mockQuery.mock.calls[0])).toMatch(/^UPDATE "oauthConsent" SET scopes = \$2::jsonb, "updatedAt" = now\(\) WHERE id = \$1$/);
     expect(mockQuery.mock.calls[0][1]).toEqual(['consent-1', JSON.stringify(['openid', 'offline_access', 'tasks:read', 'customers:read'])]);

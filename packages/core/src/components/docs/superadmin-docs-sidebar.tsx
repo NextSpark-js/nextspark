@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '../../lib/utils'
-import { ChevronRight, FileText, Folder, Shield } from 'lucide-react'
+import { ChevronRight, FileText, Folder } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { DocSectionMeta } from '@nextsparkjs/registries/docs-registry'
@@ -55,16 +55,6 @@ export function SuperadminDocsSidebar({ sections }: SuperadminDocsSidebarProps) 
       aria-label={t('navigation')}
       data-cy="superadmin-docs-sidebar"
     >
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Shield className="h-5 w-5 text-red-600" />
-          <h2 className="text-lg font-semibold">{t('sidebarTitle')}</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {t('sidebarSubtitle')}
-        </p>
-      </div>
-
       <div className="space-y-2">
         {sections.map((section) => {
           const isExpanded = expandedSections.has(section.slug)

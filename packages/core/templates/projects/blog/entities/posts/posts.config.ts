@@ -25,6 +25,7 @@ export const postEntityConfig: EntityConfig = {
   // ==========================================
   access: {
     public: true,           // Published posts are publicly accessible
+    basePath: '/posts',     // where the post pages live: the sitemap lists /posts/<slug> from it
     api: true,              // API access enabled
     metadata: true,         // Supports metadata (SEO, custom fields)
     shared: false           // Personal posts, filtered by userId

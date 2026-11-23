@@ -754,6 +754,11 @@
     }
   },
   {
+    "kind": "not-found",
+    "target": "devtools/not-found.tsx",
+    "specifier": "@nextsparkjs/core/routes/devtools/not-found"
+  },
+  {
     "kind": "page",
     "target": "devtools/page.tsx",
     "specifier": "@nextsparkjs/core/routes/devtools/page"
@@ -831,6 +836,11 @@
       "handler": "withSuperadminRouteAccess",
       "specifier": "@nextsparkjs/core/routes/_internal/area-access"
     }
+  },
+  {
+    "kind": "not-found",
+    "target": "superadmin/not-found.tsx",
+    "specifier": "@nextsparkjs/core/routes/superadmin/not-found"
   },
   {
     "kind": "page",

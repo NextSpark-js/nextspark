@@ -2,7 +2,8 @@
  * Business metrics for the superadmin home (#267), computed live from Postgres on the service connection.
  *
  * No access check here: the service is called only by `/superadmin` (a page under the area, rendered only after
- * `requireAreaAccess('superadmin')`, see routes/_internal/area-access). Do not expose it from any other route.
+ * `requireAreaAccess('superadmin')`, see routes/_internal/area-access) and by `/api/superadmin/subscriptions`, which
+ * checks the role itself, so the MRR of both screens is one definition (#517). Do not expose it from any other route.
  *
  * Definitions (billing is team-based: a team has at most one active/trialing/past_due subscription):
  * - Total users: rows of `users`.
@@ -28,6 +29,8 @@ export interface BusinessMetrics {
   signupsPerDay: Array<{ day: string; count: number }>
   payingUsers: number
   payingTeams: number
+  /** Paying subscriptions: the ones MRR is made of. */
+  payingSubscriptions: number
   /** Monthly recurring revenue per currency (lowercase ISO code), in cents. Empty when nothing is paying. */
   mrr: Array<{ currency: string; cents: number }>
 }
@@ -64,25 +67,35 @@ export const QUERIES = {
     ) c ON c.day = d::date
     ORDER BY d`,
   paying: `${PAYING}
-    SELECT count(DISTINCT "teamId")::int AS teams, count(DISTINCT "payerId")::int AS users FROM paying WHERE price > 0`,
+    SELECT count(DISTINCT "teamId")::int AS teams, count(DISTINCT "payerId")::int AS users, count(*)::int AS subscriptions FROM paying WHERE price > 0`,
   mrr: `${PAYING}
     SELECT currency,
            round(sum(CASE "interval" WHEN 'yearly' THEN price / 12.0 ELSE price END))::bigint AS cents
     FROM paying WHERE price > 0 GROUP BY currency ORDER BY currency`,
 }
 
+export type RecurringRevenue = Pick<BusinessMetrics, 'payingUsers' | 'payingTeams' | 'payingSubscriptions' | 'mrr'>
+
+/** Paying teams, users and subscriptions and the MRR per currency: one definition for every screen that shows them. */
+export async function getRecurringRevenue(run: SqlRunner = queryRows as SqlRunner): Promise<RecurringRevenue> {
+  const [paying, mrr] = await Promise.all([run(QUERIES.paying), run(QUERIES.mrr)])
+  return {
+    payingUsers: Number(paying[0]?.users ?? 0),
+    payingTeams: Number(paying[0]?.teams ?? 0),
+    payingSubscriptions: Number(paying[0]?.subscriptions ?? 0),
+    mrr: mrr.map(r => ({ currency: String(r.currency), cents: Number(r.cents) })),
+  }
+}
+
 export async function getBusinessMetrics(run: SqlRunner = queryRows as SqlRunner): Promise<BusinessMetrics> {
-  const [users, signups, paying, mrr] = await Promise.all([
+  const [users, signups, revenue] = await Promise.all([
     run(QUERIES.totalUsers),
     run(QUERIES.signups, [SIGNUP_DAYS]),
-    run(QUERIES.paying),
-    run(QUERIES.mrr),
+    getRecurringRevenue(run),
   ])
   return {
     totalUsers: Number(users[0]?.n ?? 0),
     signupsPerDay: signups.map(r => ({ day: String(r.day), count: Number(r.count) })),
-    payingUsers: Number(paying[0]?.users ?? 0),
-    payingTeams: Number(paying[0]?.teams ?? 0),
-    mrr: mrr.map(r => ({ currency: String(r.currency), cents: Number(r.cents) })),
+    ...revenue,
   }
 }

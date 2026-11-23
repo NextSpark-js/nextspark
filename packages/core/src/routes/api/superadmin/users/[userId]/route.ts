@@ -18,6 +18,7 @@ interface UserResult {
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
+  lastSessionAt: string | null;
 }
 
 interface TeamMembershipResult {
@@ -90,7 +91,8 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
         "roleBeforeSuspension",
         "emailVerified",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        (SELECT MAX(s."createdAt") FROM "session" s WHERE s."userId" = "users".id) AS "lastSessionAt"
       FROM "users"
       WHERE id = $1
     `;
@@ -166,7 +168,10 @@ export const GET = withRateLimitTier(async (request: NextRequest, { params }: Ro
       roleBeforeSuspension: user.role === 'suspended' ? user.roleBeforeSuspension : null,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
-      updatedAt: user.updatedAt
+      updatedAt: user.updatedAt,
+      // The newest session on record: sessions are deleted when they expire or the user signs out, so it is the last
+      // sign-in that is still kept, null when there is none
+      lastSessionAt: user.lastSessionAt ?? null
     };
 
     // Format team memberships

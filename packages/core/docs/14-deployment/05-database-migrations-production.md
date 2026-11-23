@@ -78,20 +78,21 @@ core/migrations/
 ├── 005_api_audit_log.sql
 ├── ...
 ├── 047_users_role_before_suspension.sql
-├── 048_oauth_provider.sql        # tables and triggers of MCP browser sign-in
+├── 048_scheduled_actions_retry_of.sql
+├── 049_oauth_provider.sql        # tables and triggers of MCP browser sign-in
 └── 090_sample_data.sql           # sample data, not for production
 ```
 
 Core's migrations are applied to every project by `pnpm db:migrate`, whether or not the project uses the feature
-they belong to. `048_oauth_provider.sql` is an example: it adds the tables and triggers of MCP browser sign-in,
+they belong to. `049_oauth_provider.sql` is an example: it adds the tables and triggers of MCP browser sign-in,
 which nothing reads or writes until a project turns the feature on (see
-[MCP Browser Sign-In Deployment](./12-mcp-browser-sign-in.md#3-migration-048)).
+[MCP Browser Sign-In Deployment](./12-mcp-browser-sign-in.md#3-migration-049)).
 
 ### Creating New Migrations
 
 ```bash
-# 1. Create new file with the next number (core is at 048; 090 is the sample data)
-core/migrations/049_new_feature.sql
+# 1. Create new file with the next number (core is at 049; 090 is the sample data)
+core/migrations/050_new_feature.sql
 
 # 2. Write migration SQL
 # - Include CREATE TABLE IF NOT EXISTS
@@ -110,7 +111,7 @@ A migration file may change only while no database outside your own machine has 
 
 - **While a feature is unpublished, keep it in one migration file.** Edit that file as the feature changes, and
   recreate the development databases that ran an earlier version of it. The MCP browser sign-in work (#541) did
-  this: everything it needs is in `048_oauth_provider.sql`. It adds no other migration and edits no existing one.
+  this: everything it needs is in `049_oauth_provider.sql`. It adds no other migration and edits no existing one.
 - **Once the file is published** (released in a version, or applied to a shared, staging or production database),
   **never edit it. Add a new migration** with the next number.
 

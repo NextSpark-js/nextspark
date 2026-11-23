@@ -15,6 +15,7 @@ import { useTranslations } from 'next-intl'
 import { sel } from '../../../lib/test'
 import type { AuthType } from './types'
 import { TeamSelector } from './TeamSelector'
+import { ActAsUserPicker } from '../api-explorer/ActAsUserPicker'
 
 interface AuthSelectorProps {
   authType: AuthType
@@ -23,11 +24,17 @@ interface AuthSelectorProps {
   selectedTeamId: string | null
   /** Optional. The act-as input renders only when onActAsUserChange is provided. */
   actAsUserId?: string
+  /** What to show for `actAsUserId` (the user's email). */
+  actAsLabel?: string
+  /** The server ignores act-as here: the picker is disabled and says why. */
+  actAsDisabled?: boolean
+  /** Raised after a send with no team (see TeamSelector). */
+  showTeamError?: boolean
   onAuthTypeChange: (type: AuthType) => void
   onApiKeyChange: (key: string) => void
   onBypassModeChange: (enabled: boolean) => void
   onTeamChange: (teamId: string | null) => void
-  onActAsUserChange?: (userId: string) => void
+  onActAsUserChange?: (userId: string, label: string) => void
 }
 
 export function AuthSelector({
@@ -36,6 +43,9 @@ export function AuthSelector({
   bypassMode,
   selectedTeamId,
   actAsUserId,
+  actAsLabel,
+  actAsDisabled = false,
+  showTeamError,
   onAuthTypeChange,
   onApiKeyChange,
   onBypassModeChange,
@@ -105,6 +115,7 @@ export function AuthSelector({
         selectedTeamId={selectedTeamId}
         onTeamChange={onTeamChange}
         bypassMode={bypassMode}
+        showError={showTeamError}
       />
 
       {/* Act as user — optional request override (the server strictly gates it).
@@ -112,7 +123,7 @@ export function AuthSelector({
       {onActAsUserChange && (
         <div className="space-y-1.5 pt-2 border-t">
           <div className="flex items-center gap-2">
-            <Label htmlFor="act-as-user" className="text-sm cursor-pointer">
+            <Label className="text-sm">
               {t('actAsUser')}
             </Label>
             <TooltipProvider>
@@ -126,14 +137,8 @@ export function AuthSelector({
               </Tooltip>
             </TooltipProvider>
           </div>
-          <Input
-            id="act-as-user"
-            placeholder={t("actAsUserPlaceholder")}
-            value={actAsUserId ?? ''}
-            onChange={(e) => onActAsUserChange(e.target.value)}
-            className="font-mono text-sm"
-            data-cy="devtools-api-auth-act-as-user"
-          />
+          <ActAsUserPicker userId={actAsUserId ?? ''} label={actAsLabel ?? ''} onChange={onActAsUserChange} disabled={actAsDisabled} />
+          {actAsDisabled && <p className="text-xs text-muted-foreground" data-cy="devtools-api-act-as-disabled">{t('actAsUserDisabled')}</p>}
         </div>
       )}
     </div>

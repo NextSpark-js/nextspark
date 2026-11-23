@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useState } from "react";
 import { sel } from "@nextsparkjs/core/lib/selectors";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import {
   Card,
   CardContent,
@@ -28,7 +28,6 @@ import {
   SelectValue,
 } from "@nextsparkjs/core/components/ui/select";
 import {
-  ArrowLeft,
   CreditCard,
   DollarSign,
   TrendingUp,
@@ -40,15 +39,20 @@ import {
   AlertTriangle,
   RefreshCw,
   ExternalLink,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@nextsparkjs/core/components/ui/tooltip";
 import { useLocale, useTranslations } from "next-intl";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path";
 import { formatLocaleDate, formatLocaleDollars, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
+import { formatPrice } from "@nextsparkjs/core/lib/billing/helpers";
 import {
   SearchInput,
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
+import { RefreshButton } from "@nextsparkjs/core/components/superadmin/misc/RefreshButton";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
 
 interface SubscriptionPlan {
   id: string;
@@ -85,6 +89,11 @@ interface Subscription {
   createdAt: string;
 }
 
+interface Money {
+  currency: string;
+  cents: number;
+}
+
 interface PlanDistribution {
   slug: string;
   name: string;
@@ -102,8 +111,11 @@ interface SubscriptionsData {
     paid: number;
     monthly: number;
     yearly: number;
-    mrr: number;
-    arr: number;
+    payingSubscriptions: number;
+    /** Cents per currency: the definition of the superadmin dashboard (business metrics service) */
+    mrr: Money[];
+    /** MRR x 12 */
+    arr: Money[];
   };
   planDistribution: PlanDistribution[];
   subscriptions: Subscription[];
@@ -160,6 +172,16 @@ const statusConfig = {
   },
 };
 
+/** What the screen keeps in the URL (#519); a value outside these falls back to the default. */
+const URL_STATE = {
+  search: { default: "" },
+  status: { default: "all", allowed: ["all", "active", "trialing", "past_due", "canceled"] },
+  plan: { default: "all", allowed: ["all", "free", "pro", "enterprise"] },
+  interval: { default: "all", allowed: ["all", "monthly", "yearly"] },
+  page: { default: "1", allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+  limit: { default: "20", allowed: ["10", "20", "50", "100"] },
+} as const;
+
 /**
  * Subscriptions Management Page
  *
@@ -171,12 +193,14 @@ function SubscriptionsPage() {
   const tErrors = useTranslations("superadmin.errors");
   const tShared = useTranslations("superadmin.shared");
   const locale = useLocale();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [planFilter, setPlanFilter] = useState<string>("all");
-  const [intervalFilter, setIntervalFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const statusFilter = url.status;
+  const planFilter = url.plan;
+  const intervalFilter = url.interval;
+  const searchQuery = url.search;
+  const page = Number(url.page);
+  const limit = Number(url.limit);
+  const setPage = (next: number) => setUrl({ page: String(next) });
 
   // Build query params
   const getQueryParams = () => {
@@ -190,41 +214,16 @@ function SubscriptionsPage() {
     return params.toString();
   };
 
-  // Handle filter changes
-  const handleStatusChange = (status: string) => {
-    setStatusFilter(status);
-    setPage(1);
-  };
-
-  const handlePlanChange = (plan: string) => {
-    setPlanFilter(plan);
-    setPage(1);
-  };
-
-  const handleIntervalChange = (interval: string) => {
-    setIntervalFilter(interval);
-    setPage(1);
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    setPage(1);
-  };
-
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1);
-  };
+  // Every change that narrows the list goes back to page 1
+  const handleStatusChange = (status: string) => setUrl({ status, page: "1" });
+  const handlePlanChange = (plan: string) => setUrl({ plan, page: "1" });
+  const handleIntervalChange = (interval: string) => setUrl({ interval, page: "1" });
+  const handleSearchChange = (value: string) => setUrl({ search: value, page: "1" });
+  const handleLimitChange = (newLimit: number) => setUrl({ limit: String(newLimit), page: "1" });
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || planFilter !== "all" || intervalFilter !== "all";
 
-  const clearAllFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-    setPlanFilter("all");
-    setIntervalFilter("all");
-    setPage(1);
-  };
+  const clearAllFilters = () => setUrl({ search: "", status: "all", plan: "all", interval: "all", page: "1" });
 
   // Fetch subscriptions data
   const { data, isLoading, isFetching, error, refetch } = useQuery<SubscriptionsData>({
@@ -243,22 +242,29 @@ function SubscriptionsPage() {
     placeholderData: keepPreviousData,
   });
 
+  // One line per currency (plans carry their own); a currency code Intl does not know is shown as a code
+  const money = ({ cents, currency }: Money) => {
+    try {
+      return formatPrice(cents, currency, locale);
+    } catch {
+      return `${formatLocaleNumber(cents / 100, locale)} ${currency.toUpperCase()}`;
+    }
+  };
+  const moneyLines = (amounts: Money[] | undefined) =>
+    (amounts?.length ? amounts : [{ currency: "usd", cents: 0 }]).map((m) => (
+      <div key={m.currency}>{money(m)}</div>
+    ));
+
   // Loading state
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {tShared("backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-            <p className="text-muted-foreground">{t("loading")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={CreditCard}
+          tone="red"
+          title={t("title")}
+          subtitle={t("loading")}
+        />
 
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -271,18 +277,12 @@ function SubscriptionsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {tShared("backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-            <p className="text-muted-foreground">{tShared("errorLoadingData")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={CreditCard}
+          tone="red"
+          title={t("title")}
+          subtitle={tShared("errorLoadingData")}
+        />
 
         <Card>
           <CardHeader>
@@ -315,44 +315,42 @@ function SubscriptionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {tShared("backToSuperAdmin")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground">
-            {t("subtitle")}
-          </p>
-        </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {tShared("refresh")}
-        </Button>
-      </div>
+      <AreaPageHeader
+        icon={CreditCard}
+        tone="red"
+        title={t("title")}
+        subtitle={t("subtitle")}
+        actions={
+          <RefreshButton onRefresh={() => refetch()} metadata={data?.metadata} />
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4" data-cy={sel('superadmin.subscriptions.container')}>
         {/* MRR Card */}
         <Card className="border-green-200 bg-green-50/50" data-cy={sel('superadmin.subscriptions.stats.mrr')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("stats.mrr")}</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
+              {t("stats.mrr")}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" aria-label={t("stats.mrrHelpLabel")} className="text-muted-foreground" data-cy="mrr-help">
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">{t("stats.mrrHelp")}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              {formatLocaleDollars(stats?.mrr ?? 0, locale)}
+              {moneyLines(stats?.mrr)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("stats.fromMonthly", { count: stats?.monthly || 0 })}
+              {t("stats.fromPaying", { count: stats?.payingSubscriptions || 0 })}
             </p>
           </CardContent>
         </Card>
@@ -365,10 +363,10 @@ function SubscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700">
-              {formatLocaleDollars(stats?.arr ?? 0, locale)}
+              {moneyLines(stats?.arr)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("stats.fromYearly", { count: stats?.yearly || 0 })}
+              {t("stats.arrFormula")}
             </p>
           </CardContent>
         </Card>
@@ -594,6 +592,19 @@ function SubscriptionsPage() {
                                 {t("viewTeam")}
                               </Link>
                             </Button>
+                            {!sub.providerDashboardUrl && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0} className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground/40" data-cy="subscription-no-provider-link">
+                                      <ExternalLink className="h-4 w-4" />
+                                      <span className="sr-only">{t("noProviderLink")}</span>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t("noProviderLink")}</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             {sub.providerDashboardUrl && (
                                 <Button
                                   variant="ghost"
@@ -637,20 +648,6 @@ function SubscriptionsPage() {
         </CardContent>
       </Card>
 
-      {/* Metadata Footer */}
-      {data?.metadata && (
-        <Card className="bg-muted/30">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                {tShared("footer.lastUpdated", { date: formatLocaleDate(data.metadata.requestedAt, locale, "dateTime") })}
-              </p>
-              <p>{tShared("footer.requestedBy", { name: data.metadata.requestedBy })}</p>
-              <p>{tShared("footer.source", { source: data.metadata.source })}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

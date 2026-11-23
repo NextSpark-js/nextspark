@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { useListBackHref } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -12,7 +13,18 @@ import {
 } from "@nextsparkjs/core/components/ui/card";
 import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
+import { Progress } from "@nextsparkjs/core/components/ui/progress";
+import { Skeleton } from "@nextsparkjs/core/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@nextsparkjs/core/components/ui/avatar";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@nextsparkjs/core/components/ui/breadcrumb";
+import { RefreshButton } from "@nextsparkjs/core/components/superadmin/misc/RefreshButton";
 import {
   Table,
   TableBody,
@@ -22,11 +34,9 @@ import {
   TableRow,
 } from "@nextsparkjs/core/components/ui/table";
 import {
-  ArrowLeft,
   Users,
   User,
   Calendar,
-  Loader2,
   AlertTriangle,
   RefreshCw,
   Crown,
@@ -44,6 +54,7 @@ import {
 import Link from "next/link";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path"
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format"
+import { formatUsagePeriod } from "@nextsparkjs/core/lib/billing/helpers"
 
 interface TeamOwner {
   id: string;
@@ -111,6 +122,11 @@ interface UsageData {
   [key: string]: {
     current: number;
     periodKey: string;
+    /** The limit of the team's plan: -1 unlimited, null when the plan does not define it */
+    limit: number | null;
+    unit: string | null;
+    /** i18n key of the limit's name, from the billing registry */
+    name: string | null;
   };
 }
 
@@ -149,6 +165,7 @@ const roleColors = {
 function TeamDetailPage() {
   const t = useTranslations("superadmin");
   const tTeams = useTranslations("teams");
+  const tAll = useTranslations();
   const locale = useLocale();
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
   // a status the catalog does not know (a provider's own) is shown as it comes
@@ -158,6 +175,8 @@ function TeamDetailPage() {
     t.has(`teamDetail.billingStatuses.${status}`) ? t(`teamDetail.billingStatuses.${status}`) : status.charAt(0).toUpperCase() + status.slice(1);
   const params = useParams()!;
   const teamId = params.teamId as string;
+  // the list with the search, filters and page it had (#519)
+  const listHref = useListBackHref("/superadmin/teams");
 
   // Fetch team data from API
   const { data: teamData, isLoading, error, refetch } = useQuery<TeamDetailData>({
@@ -185,25 +204,60 @@ function TeamDetailPage() {
     return name.slice(0, 2).toUpperCase();
   };
 
+  // "Back" is a breadcrumb: the sidebar already links to the list, this says where the page is under it
+  const breadcrumb = (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href={listHref}>{t("teamsPage.title")}</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>{teamData?.team.name ?? t("teamDetail.title")}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+
   // Loading state
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin/teams" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("teamDetail.backToTeams")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
-            <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
-          </div>
+        <div className="space-y-2">
+          {breadcrumb}
+          <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+          <p className="text-muted-foreground">{t("teamDetail.subtitle")}</p>
         </div>
 
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="space-y-6" role="status" aria-busy="true" aria-label={t("teamsPage.loading")} data-cy="team-detail-skeleton">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-16 w-16 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton className="h-12" />
+              <Skeleton className="h-12" />
+              <Skeleton className="h-12" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -213,17 +267,10 @@ function TeamDetailPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin/teams" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("teamDetail.backToTeams")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
-            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
-          </div>
+        <div className="space-y-2">
+          {breadcrumb}
+          <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+          <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
         </div>
 
         <Card>
@@ -253,32 +300,23 @@ function TeamDetailPage() {
 
   const team = teamData?.team;
   const members = teamData?.members || [];
+  // the Actions column exists only when some event has an invoice or a receipt to open
+  const hasBillingLinks = !!teamData?.billingHistory?.some((event) => event.invoiceUrl || event.receiptUrl);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin/teams" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {t("teamDetail.backToTeams")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("teamDetail.subtitle")}
-          </p>
+      <div className="space-y-2">
+        {breadcrumb}
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold tracking-tight">{t("teamDetail.title")}</h1>
+            <p className="text-muted-foreground">
+              {t("teamDetail.subtitle")}
+            </p>
+          </div>
+          <RefreshButton onRefresh={() => refetch()} metadata={teamData?.metadata} />
         </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {t("shared.refresh")}
-        </Button>
       </div>
 
       {/* Team Info Card */}
@@ -314,7 +352,13 @@ function TeamDetailPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">{team?.owner.name}</div>
+                  <div className="font-medium">
+                    {team ? (
+                      <Link href={`/superadmin/users/${team.owner.id}`} className="hover:underline">
+                        {team.owner.name}
+                      </Link>
+                    ) : null}
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     {team?.owner.email}
                   </div>
@@ -397,7 +441,11 @@ function TeamDetailPage() {
                                 {member.name?.[0]?.toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="font-medium">{member.name}</div>
+                            <div className="font-medium">
+                              <Link href={`/superadmin/users/${member.userId}`} className="hover:underline">
+                                {member.name}
+                              </Link>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -576,7 +624,7 @@ function TeamDetailPage() {
                     <TableHead>{t("teamDetail.billingColumns.type")}</TableHead>
                     <TableHead>{t("teamDetail.billingColumns.status")}</TableHead>
                     <TableHead className="text-right">{t("teamDetail.billingColumns.amount")}</TableHead>
-                    <TableHead>{t("teamDetail.billingColumns.actions")}</TableHead>
+                    {hasBillingLinks && <TableHead>{t("teamDetail.billingColumns.actions")}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -610,7 +658,7 @@ function TeamDetailPage() {
                       <TableCell className="text-right font-mono">
                         {event.amountFormatted}
                       </TableCell>
-                      <TableCell>
+                      {hasBillingLinks && <TableCell>
                         <div className="flex items-center gap-2">
                           {event.invoiceUrl && (
                             <a
@@ -633,7 +681,7 @@ function TeamDetailPage() {
                             </a>
                           )}
                         </div>
-                      </TableCell>
+                      </TableCell>}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -657,38 +705,44 @@ function TeamDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Object.entries(teamData.usage).map(([limitSlug, usage]) => (
-                <div key={limitSlug} className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-sm font-medium text-muted-foreground capitalize">
-                    {limitSlug.replace(/_/g, ' ')}
+              {Object.entries(teamData.usage).map(([limitSlug, usage]) => {
+                // the registry's name key (billing.limits.*, or a project's own); the slug in words when it has no translation
+                const name = usage.name && tAll.has(usage.name)
+                  ? tAll(usage.name)
+                  : limitSlug.charAt(0).toUpperCase() + limitSlug.replace(/_/g, " ").slice(1);
+                const amount = (value: number) =>
+                  usage.unit === "bytes" ? t("planMatrix.gigabytes", { value: formatLocaleNumber(value, locale) }) : formatLocaleNumber(value, locale);
+                const unlimited = usage.limit === -1;
+                // a limit of 0 is a plan without it: "—", as in the plan matrix, and no bar
+                const notIncluded = usage.limit === 0;
+                const bounded = usage.limit != null && usage.limit > 0;
+                const percent = bounded ? Math.min(100, (usage.current / usage.limit!) * 100) : 0;
+                return (
+                  <div key={limitSlug} className="p-4 bg-muted/50 rounded-lg" data-cy={`usage-${limitSlug}`}>
+                    <div className="text-sm font-medium text-muted-foreground">{name}</div>
+                    <div className="text-2xl font-bold mt-1">
+                      {bounded
+                        ? `${formatLocaleNumber(usage.current, locale)} / ${amount(usage.limit!)}`
+                        : notIncluded
+                          ? `${amount(usage.current)} / —`
+                          : unlimited
+                          ? `${amount(usage.current)} / ${t("planMatrix.unlimited")}`
+                          : amount(usage.current)}
+                    </div>
+                    {bounded && (
+                      <Progress value={percent} aria-label={name} className={`h-2 mt-2 ${percent >= 100 ? "[&>div]:bg-destructive" : ""}`} />
+                    )}
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {t("teamDetail.usagePeriod", { period: formatUsagePeriod(usage.periodKey, locale, t("teamDetail.usageAllTime")) })}
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold mt-1">
-                    {formatLocaleNumber(usage.current, locale)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {t("teamDetail.usagePeriod", { period: usage.periodKey })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Metadata Footer */}
-      {teamData?.metadata && (
-        <Card className="bg-muted/30">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                {t("shared.footer.lastUpdated", { date: formatLocaleDate(teamData.metadata.requestedAt, locale, "dateTime") })}
-              </p>
-              <p>{t("shared.footer.requestedBy", { name: teamData.metadata.requestedBy })}</p>
-              <p>{t("shared.footer.source", { source: teamData.metadata.source })}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

@@ -81,7 +81,7 @@ names, and a connection never does.
    The default is `false`. `nextspark prepare` generates the routes of the feature only when it is `true`; without
    it the host has none of them, the authorization server is not registered, and `/api/mcp` takes an API key only.
 
-2. Apply the migrations. `migrations/048_oauth_provider.sql` adds the tables and the database rules described in
+2. Apply the migrations. `migrations/049_oauth_provider.sql` adds the tables and the database rules described in
    [Security model](#security-model). The tables exist whether or not the feature is on; nothing reads or writes
    them while it is off.
 
@@ -451,7 +451,7 @@ Each guarantee, and what enforces it.
 | What one connection may send is limited | The `credential` rate limit tier, shared between instances only with Redis configured |
 | What an application did, and what it was refused for lack of a permission, is recorded | `api_audit_log`, best effort: a call rejected before its handler for malformed arguments leaves no row, and a failed audit write does not stop the call |
 
-### Rules that live in the database (migration 048)
+### Rules that live in the database (migration 049)
 
 These rules are **triggers**, not application code, because Better Auth changes these rows from several endpoints
 and in separate statements. A rule written in the app would hold only for the paths the app wrote; a trigger holds
@@ -477,7 +477,7 @@ Also in the migration:
 - Every OAuth table, `jwks` and `oauthRevocation` included, has RLS enabled with a service-only policy. `jwks` holds
   the signing private key and the token tables hold credentials.
 
-Everything is in the single file `048_oauth_provider.sql`: the feature has no other migration and changes no
+Everything is in the single file `049_oauth_provider.sql`: the feature has no other migration and changes no
 existing one. Once it is released, changes go in new migrations.
 
 ### The revocation number

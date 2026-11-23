@@ -12,7 +12,8 @@ import { renderToString } from 'react-dom/server'
 
 jest.mock('next/navigation', () => ({ usePathname: () => window.location.pathname }))
 
-import { ThemeArea, ThemeProvider, useTheme, type UseThemeProps } from '@nextsparkjs/core/providers/theme-provider'
+import { ThemeProvider, useTheme, type UseThemeProps } from '@nextsparkjs/core/providers/theme-provider'
+import { ThemeArea } from '@nextsparkjs/core/providers/theme-area'
 
 const originalMatchMedia = window.matchMedia
 let prefersDark = true

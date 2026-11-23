@@ -84,7 +84,7 @@ Adding *another* user as the acting owner or admin passes RLS under the actor's 
 - **`users.role`** changes on the app pool only for a caller that passes `can_bypass_rls()`, and never on the
   caller's own row: migration 037's `users_rls_role_guard` trigger. On the service pool it does nothing.
 
-- **The OAuth tables of MCP browser sign-in** (migration `048_oauth_provider.sql`: `jwks`,
+- **The OAuth tables of MCP browser sign-in** (migration `049_oauth_provider.sql`: `jwks`,
   `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`,
   `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`) are
   **service-only**: every policy is `can_bypass_rls()`, because the authorization server reads and

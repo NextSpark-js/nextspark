@@ -302,15 +302,15 @@ BEFORE UPDATE ON public."entity"
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 ```
 
-## Authorization Invariants as Triggers (the lesson of migration 048)
+## Authorization Invariants as Triggers (the lesson of migration 049)
 
-`packages/core/migrations/048_oauth_provider.sql` adds the tables of the OAuth authorization server behind MCP
+`packages/core/migrations/049_oauth_provider.sql` adds the tables of the OAuth authorization server behind MCP
 browser sign-in (see the `mcp-server` skill). Those rows are written by a library, Better Auth, from several of
 its own endpoints and in separate statements (a token renewal reads the old token, marks it replaced, then
 writes the new one). Core's code is not on those paths.
 
 **Rule: when a library writes the rows, an authorization invariant over them is a trigger with a row lock, not
-application code.** A check in a service or a route holds only for the paths you wrote. Examples from 048:
+application code.** A check in a service or a route holds only for the paths you wrote. Examples from 049:
 
 | Invariant | How |
 |-----------|-----|
@@ -346,7 +346,7 @@ CREATE TRIGGER oauth_refresh_token_requires_consent
 - `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`,
   `DROP TRIGGER IF EXISTS` + `CREATE TRIGGER`, `DROP POLICY IF EXISTS` + `CREATE POLICY`.
 - Narrow the trigger with `UPDATE OF <column>` and a `WHEN (...)` clause so it does not fire on unrelated writes.
-- Know how the library reacts to a raised exception before you raise: 048 cuts a token down instead of refusing
+- Know how the library reacts to a raised exception before you raise: 049 cuts a token down instead of refusing
   it because refusing after the old token was marked replaced would leave the connection with no token.
 - **Service-only RLS on library-owned tables.** The library reads and writes them with no user context, so every
   policy is `FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls())`.
@@ -357,7 +357,7 @@ CREATE TRIGGER oauth_refresh_token_requires_consent
 
 ### One migration file per feature, until it is published
 
-While a feature is unreleased, everything it needs stays in its one migration file: 048 was rewritten several
+While a feature is unreleased, everything it needs stays in its one migration file: 049 was rewritten several
 times before its release, and the feature has no other migration and changes no existing one. Once a migration is published
 (merged and released, so projects may have applied it), **never edit it**: a change goes in a new migration.
 Editing a published file changes nothing on databases that already ran it.

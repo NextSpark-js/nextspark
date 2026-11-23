@@ -1,19 +1,19 @@
 /**
  * #495: the account theme is mounted by the layouts of the areas with a session (dashboard, devtools, superadmin),
- * not by DashboardProviders, which a public page can load too (the upgrade link of /403 wraps it).
+ * not by DashboardProviders, which a public page can load too (the upgrade link of /403 wraps it). ThemeArea applies
+ * it (#546), so each area renders one ThemeArea, outside DashboardProviders.
  */
 import React from 'react'
 import { renderToString } from 'react-dom/server'
 
 const Passthrough = ({ children }: { children?: React.ReactNode }) => <>{children}</>
 
-jest.mock('@/core/providers/account-theme', () => ({ AccountTheme: () => <i data-testid="account-theme" /> }))
-jest.mock('@nextsparkjs/core/providers/account-theme', () => ({ AccountTheme: () => <i data-testid="account-theme" /> }))
 // #510: each area is wrapped in ThemeArea, where the visitor's theme applies
-jest.mock('@/core/providers/theme-provider', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
-jest.mock('@nextsparkjs/core/providers/theme-provider', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
-jest.mock('@/core/providers/DashboardProviders', () => ({ DashboardProviders: Passthrough }))
-jest.mock('@nextsparkjs/core/providers/DashboardProviders', () => ({ DashboardProviders: Passthrough }))
+jest.mock('@/core/providers/theme-area', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
+jest.mock('@nextsparkjs/core/providers/theme-area', () => ({ ThemeArea: ({ children }: { children?: React.ReactNode }) => <b data-testid="theme-area">{children}</b> }))
+const Dashboard = ({ children }: { children?: React.ReactNode }) => <u data-testid="dashboard-providers">{children}</u>
+jest.mock('@/core/providers/DashboardProviders', () => ({ DashboardProviders: Dashboard }))
+jest.mock('@nextsparkjs/core/providers/DashboardProviders', () => ({ DashboardProviders: Dashboard }))
 jest.mock('@nextsparkjs/core/components/app/guards/SuperAdminGuard', () => ({ SuperAdminGuard: Passthrough }))
 jest.mock('@nextsparkjs/core/components/app/guards/DeveloperGuard', () => ({ DeveloperGuard: Passthrough }))
 jest.mock('@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar', () => ({ SuperadminSidebar: () => null }))
@@ -35,9 +35,9 @@ const ProjectLayout = ({ children }: { children?: React.ReactNode }) => <main>{c
 const GuardedDevtools = guardDevtoolsLayout(ProjectLayout)
 const GuardedSuperadmin = guardSuperadminLayout(ProjectLayout)
 
-const count = (html: string, id = 'account-theme') => html.split(`data-testid="${id}"`).length - 1
+const count = (html: string, id: string) => html.split(`data-testid="${id}"`).length - 1
 
-describe('the areas with a session mount the account theme once, inside one ThemeArea', () => {
+describe('the areas with a session mount one ThemeArea, around DashboardProviders', () => {
   it.each([
     ['the dashboard', <AuthenticatedDashboardLayout key="d">page</AuthenticatedDashboardLayout>],
     ['devtools', <DevLayout key="dt">page</DevLayout>],
@@ -46,8 +46,8 @@ describe('the areas with a session mount the account theme once, inside one Them
     ['superadmin around a project layout', <GuardedSuperadmin key="gs">page</GuardedSuperadmin>],
   ])('%s', (_area, element) => {
     const html = renderToString(element)
-    expect(count(html)).toBe(1)
     expect(count(html, 'theme-area')).toBe(1)
-    expect(html.indexOf('data-testid="theme-area"')).toBeLessThan(html.indexOf('data-testid="account-theme"'))
+    expect(count(html, 'dashboard-providers')).toBe(1)
+    expect(html.indexOf('data-testid="theme-area"')).toBeLessThan(html.indexOf('data-testid="dashboard-providers"'))
   })
 })

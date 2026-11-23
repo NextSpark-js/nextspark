@@ -33,7 +33,7 @@ The application maintains a conceptual separation between two types of data:
 - Tables: `users`, `session`, `account`, `verification`
 - Hardened per-user / service-only RLS policies (beta.167; see [RLS Policies](./03-rls-policies.md#enforcement-layer-beta167)). Better Auth reads these via the **service connection** (RLS-bypass) during login/verification.
 - User-facing access is RLS-scoped (self + staff); writes are managed by Better Auth on the service connection
-- Migration `048_oauth_provider.sql` adds the tables of the OAuth authorization server behind MCP browser sign-in (`jwks`, `oauthClient`, `oauthConsent`, `oauthRefreshToken`, `oauthAccessToken`, `oauthRevocation` and four more). They exist in every project, are used only when a project turns on `features.mcpOAuth`, and are **service-only**: no user role reads them. See [Migration 048](./02-migrations.md#migration-048-mcp-browser-sign-in).
+- Migration `049_oauth_provider.sql` adds the tables of the OAuth authorization server behind MCP browser sign-in (`jwks`, `oauthClient`, `oauthConsent`, `oauthRefreshToken`, `oauthAccessToken`, `oauthRevocation` and four more). They exist in every project, are used only when a project turns on `features.mcpOAuth`, and are **service-only**: no user role reads them. See [Migration 049](./02-migrations.md#migration-049-mcp-browser-sign-in).
 
 **2. Application Data**
 - Business logic tables and entities

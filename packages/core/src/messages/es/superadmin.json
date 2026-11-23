@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Panel de Control de Super Administrador",
     "restrictedAccess": "Área de Acceso Restringido - Solo Superadmin y Developer",
-    "systemStatus": "Estado del Sistema",
-    "systemVersion": "Versión de la Plataforma",
-    "securityLevel": "Nivel de Seguridad",
-    "quickActions": {
-      "userManagement": {
-        "title": "Gestión de Usuarios",
-        "description": "Ver y gestionar todos los usuarios y superadministradores"
-      },
-      "styleGallery": {
-        "title": "Galería de Estilos",
-        "description": "Previsualizar componentes y elementos del sistema de diseño"
-      },
-      "analytics": {
-        "title": "Analíticas",
-        "description": "Estadísticas de la plataforma y métricas de uso"
-      },
-      "systemConfig": {
-        "title": "Configuración del Sistema",
-        "description": "Configuraciones y ajustes de la aplicación"
-      }
-    },
-    "status": {
-      "online": "En línea",
-      "active": "Activo",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Usuarios totales",
       "payingUsers": "Usuarios que pagan",
@@ -47,12 +21,11 @@
         "title": "Registros, últimos 30 días",
         "description": "{count, plural, one {# usuario nuevo} other {# usuarios nuevos}} en los últimos 30 días (UTC)"
       },
-      "unavailable": "Métricas no disponibles"
+      "unavailable": "Métricas no disponibles",
+      "mrrHelpLabel": "Cómo se calcula el MRR",
+      "mrrHelp": "Ingreso mensual recurrente de las suscripciones activas en un plan de pago, de equipos que siguen existiendo. Los planes anuales cuentan una doceava parte de su precio. No se cuentan pruebas, pagos vencidos, canceladas ni gratuitas. Suscripciones muestra el mismo número."
     },
-    "panelTitle": "Panel de Super Admin",
-    "soon": "Pronto",
-    "accessSection": "Acceder a la sección →",
-    "overview": "Resumen actual de la plataforma"
+    "panelTitle": "Panel de Super Admin"
   },
   "users": {
     "title": "Gestión de Usuarios",
@@ -61,7 +34,6 @@
     "superadmins": "Superadmins",
     "totalUsers": "Total de Usuarios",
     "allRegisteredUsers": "Todos los usuarios registrados",
-    "membersCollaboratorsAdmins": "Miembros, colaboradores, administradores",
     "systemAdministrators": "Administradores del sistema",
     "roleDistribution": "Distribución de Roles",
     "roles": "roles",
@@ -86,7 +58,11 @@
       "noSuperadmins": "No se encontraron superadmins",
       "noSuperadminsDescription": "Esto es inusual - debería haber al menos un superadmin.",
       "you": "Tú",
-      "id": "ID: {id}"
+      "id": "ID: {id}",
+      "active": "Activo",
+      "suspended": "Suspendido",
+      "teams": "Equipos",
+      "moreTeams": "+{count} más"
     },
     "actions": {
       "openMenu": "Abrir menú",
@@ -108,7 +84,7 @@
       "adminActions": "Acciones de administrador"
     },
     "descriptions": {
-      "regularUsersDescription": "Todos los usuarios excluyendo superadministradores. Incluye miembros, colaboradores y administradores.",
+      "regularUsersDescription": "Todos los usuarios excepto superadministradores: miembros, desarrolladores y cuentas suspendidas.",
       "superadminsDescription": "Usuarios con acceso completo al sistema y privilegios administrativos. Manejar con extrema precaución."
     },
     "security": {
@@ -130,17 +106,31 @@
       "unsuspendDescription": "¿Seguro que quieres reactivar a {name}? Recuperará el acceso a la aplicación como {role}.",
       "verifyEmailTitle": "Verificar correo electrónico",
       "verifyEmailDescription": "¿Seguro que quieres verificar manualmente el correo electrónico de {name}?",
-      "delete": "Eliminar"
+      "changeRoleTitle": "Cambiar rol",
+      "changeRoleDescription": "¿Cambiar a {name} de {from} a {to}?",
+      "changeRoleDeveloperDescription": "¿Cambiar a {name} de {from} a {to}? Un desarrollador está por encima de los superadmins y puede actuar sobre cualquier cuenta, incluidos otros desarrolladores.",
+      "suspendAction": "Suspender usuario",
+      "unsuspendAction": "Reactivar usuario",
+      "verifyEmailAction": "Verificar correo",
+      "deleteAction": "Eliminar usuario",
+      "changeRoleAction": "Cambiar a {role}"
     },
     "toast": {
-      "success": "Correcto",
       "error": "Error",
-      "actionCompleted": "Acción completada correctamente",
       "deleteFailed": "No se pudo eliminar",
       "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo en {minutes, plural, one {# minuto} other {# minutos}}.",
       "lastSuperadmin": "No se puede degradar, suspender ni eliminar al último superadmin. Primero haz superadmin a otro usuario.",
-      "deleted": "Usuario eliminado",
-      "deletedDescription": "El usuario se eliminó correctamente"
+      "suspended": "Usuario suspendido: {name}",
+      "suspendedDescription": "{sessions, plural, one {# sesión cerrada} other {# sesiones cerradas}} y {apiKeys, plural, one {# clave de API desactivada} other {# claves de API desactivadas}}.",
+      "unsuspended": "Usuario reactivado: {name}",
+      "unsuspendedDescription": "Vuelve como {role}.",
+      "verified": "Correo verificado: {name}",
+      "verifiedDescription": "{email} figura ahora como verificado.",
+      "deletedNamed": "Usuario eliminado: {name}",
+      "deletedNamedDescription": "Se eliminaron sus datos, equipos y membresías.",
+      "roleChanged": "Rol: {from} → {to}",
+      "undo": "Deshacer",
+      "undone": "Cambio deshecho"
     }
   },
   "style": {
@@ -244,7 +234,6 @@
     "error": "Error"
   },
   "shared": {
-    "backToSuperAdmin": "Volver a Super Admin",
     "errorLoadingData": "Error al cargar los datos",
     "refresh": "Actualizar",
     "id": "ID: {id}",
@@ -255,7 +244,9 @@
       "lastUpdated": "Última actualización: {date}",
       "requestedBy": "Solicitado por: {name}",
       "source": "Fuente: {source}"
-    }
+    },
+    "copyId": "Copiar ID",
+    "copied": "Copiado"
   },
   "layout": {
     "mobileTitle": "Super Admin",
@@ -308,18 +299,19 @@
     "exit": {
       "title": "Salir de Super Admin",
       "tooltip": "Volver al panel principal",
-      "label": "Salir de Super Admin y volver al panel principal",
-      "description": "Volver al panel"
+      "label": "Salir de Super Admin y volver al panel principal"
     },
     "restricted": {
       "title": "Área restringida",
       "description": "Acceso solo para superadmin"
+    },
+    "devtools": {
+      "title": "DevTools",
+      "tooltip": "Abrir las herramientas de desarrollo"
     }
   },
   "docs": {
     "navigation": "Navegación de la documentación de administración",
-    "sidebarTitle": "Documentación de admin",
-    "sidebarSubtitle": "Documentación para administradores",
     "pageNotFound": "Página no encontrada",
     "metaTitle": "{title} | Documentación de admin",
     "metaDescription": "Documentación de administración de {title}",
@@ -352,16 +344,47 @@
       "owner": "Propietario",
       "members": "Miembros",
       "created": "Creado",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "plan": "Plan"
     },
     "id": "ID: {id}",
     "memberWord": "{count, plural, one {miembro} other {miembros}}",
     "unknown": "Desconocido",
-    "viewDetails": "Ver detalles"
+    "viewDetails": "Ver detalles",
+    "noPlan": "Sin plan"
   },
   "rolesMatrix": {
     "permission": "Permiso",
-    "dangerous": "peligroso"
+    "dangerous": "peligroso",
+    "searchPlaceholder": "Buscar permisos por clave o descripción...",
+    "differencesOnly": "Solo diferencias",
+    "showing": "Mostrando {shown} de {total}",
+    "noMatches": "Ningún permiso coincide.",
+    "corePermissions": {
+      "teams": {
+        "invite": "Puede enviar invitaciones a nuevos miembros del equipo",
+        "remove_member": "Puede quitar miembros del equipo",
+        "change_roles": "Puede cambiar el rol de otros miembros",
+        "settings": "Puede modificar el nombre, el slug y la configuración del equipo",
+        "delete": "Puede eliminar el equipo completo"
+      },
+      "settings": {
+        "billing": "Acceso a la configuración de facturación y a los pagos",
+        "api_keys": "Puede crear y gestionar las claves de API del equipo",
+        "integrations": "Puede conectar y configurar integraciones externas"
+      },
+      "media": {
+        "read": "Puede explorar y ver los archivos de la biblioteca de medios",
+        "upload": "Puede subir imágenes, videos y otros archivos multimedia",
+        "update": "Puede editar los metadatos, las etiquetas y los pies de los archivos",
+        "delete": "Puede eliminar archivos multimedia de forma permanente"
+      }
+    },
+    "coreCategories": {
+      "Team": "Equipo",
+      "Settings": "Configuración",
+      "Media": "Medios"
+    }
   },
   "planMatrix": {
     "featureOrLimit": "Función / Límite",
@@ -408,7 +431,10 @@
     "clearFilters": "Borrar filtros",
     "regularUsersTab": "Usuarios regulares ({count})",
     "superadminsTab": "Superadmins ({count})",
-    "superadministrators": "Superadministradores"
+    "superadministrators": "Superadministradores",
+    "activeLabel": "Activos:",
+    "suspendedLabel": "Suspendidos:",
+    "matchCount": "{matching} de {total} coinciden"
   },
   "userDetail": {
     "title": "Detalles del usuario",
@@ -448,7 +474,9 @@
       "public": "Público",
       "searchable": "Con búsqueda",
       "updated": "Actualizado"
-    }
+    },
+    "lastSession": "Última sesión",
+    "noSession": "Sin sesión registrada"
   },
   "teamsPage": {
     "title": "Gestión de equipos",
@@ -470,7 +498,6 @@
   "teamDetail": {
     "title": "Detalles del equipo",
     "subtitle": "Consulta la información del equipo y sus miembros (solo lectura)",
-    "backToTeams": "Volver a Equipos",
     "errorTitle": "Error al cargar el equipo",
     "notFound": "Equipo no encontrado",
     "fetchFailed": "No se pudieron obtener los datos del equipo",
@@ -525,7 +552,8 @@
     "receipt": "Recibo",
     "usage": "Uso actual",
     "usageDescription": "Uso de recursos durante el período de facturación actual.",
-    "usagePeriod": "Período: {period}"
+    "usagePeriod": "Período: {period}",
+    "usageAllTime": "Todo el tiempo"
   },
   "teamRoles": {
     "title": "Roles, permisos y planes",
@@ -610,14 +638,16 @@
     "stats": {
       "mrr": "Ingresos recurrentes mensuales",
       "arr": "Ingresos recurrentes anuales",
-      "fromMonthly": "{count, plural, one {De # suscripción mensual} other {De # suscripciones mensuales}}",
-      "fromYearly": "{count, plural, one {De # suscripción anual} other {De # suscripciones anuales}}",
       "active": "Suscripciones activas",
       "inTrial": "{count} en prueba",
       "total": "Suscripciones en total",
       "freeAndPaid": "{free} gratuitas, {paid} de pago",
       "needsAttention": "Requiere atención",
-      "pastDue": "Pagos vencidos"
+      "pastDue": "Pagos vencidos",
+      "mrrHelpLabel": "Cómo se calcula el MRR",
+      "mrrHelp": "Ingreso mensual recurrente de las suscripciones activas en un plan de pago, de equipos que siguen existiendo. Los planes anuales cuentan una doceava parte de su precio. No se cuentan pruebas, pagos vencidos, canceladas ni gratuitas. El panel principal muestra el mismo número.",
+      "fromPaying": "{count, plural, one {De # suscripción de pago} other {De # suscripciones de pago}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Distribución de planes",
     "planDistributionDescription": "Suscripciones activas por plan",
@@ -664,7 +694,8 @@
     "pricePerMonth": "{price}/mes",
     "pricePerYear": "{price}/año",
     "trialEnds": "La prueba termina el {date}",
-    "viewTeam": "Ver equipo"
+    "viewTeam": "Ver equipo",
+    "noProviderLink": "Sin suscripción de Stripe vinculada: plan gratuito o asignado manualmente"
   },
   "guard": {
     "title": "Acceso denegado",
@@ -674,5 +705,10 @@
     "signIn": "Iniciar sesión",
     "goBack": "Volver",
     "dashboard": "Panel"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "Esta página no existe en el panel de Super Admin.",
+    "back": "Volver a Super Admin"
   }
 }

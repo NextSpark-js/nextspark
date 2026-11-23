@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, Send, X } from 'lucide-react'
+import { Check, ChevronRight, Copy, Send, UserRound, X } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { Badge } from '../../ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs'
@@ -15,7 +15,8 @@ import { PathParamsEditor } from '../api-tester/PathParamsEditor'
 import { KeyValueEditor } from '../api-tester/KeyValueEditor'
 import { AuthSelector } from '../api-tester/AuthSelector'
 import { PayloadEditor } from '../api-tester/PayloadEditor'
-import { countFilledRows } from './explorer-helpers'
+import { countFilledRows, type RecentRequest } from './explorer-helpers'
+import { RecentRequests } from './RecentRequests'
 import { buildUrl, validatePathParams, validateJsonBody } from '../api-tester/utils/url-builder'
 import type { HttpMethod, AuthType, KeyValuePair, PathParam, RequestStatus } from '../api-tester/types'
 import type { ApiRouteEntry } from '../../../lib/services/api-routes.service'
@@ -45,6 +46,10 @@ interface ApiRequestPanelProps {
   bypassMode: boolean
   selectedTeamId: string | null
   actAsUserId: string
+  actAsLabel: string
+  /** Off: the server ignores act-as here, so the picker is disabled (with the reason) and nothing mentions it. */
+  actAsEnabled?: boolean
+  showTeamError?: boolean
   body: string
   status: RequestStatus
   onMethodChange: (method: HttpMethod) => void
@@ -55,10 +60,15 @@ interface ApiRequestPanelProps {
   onApiKeyChange: (key: string) => void
   onBypassModeChange: (enabled: boolean) => void
   onTeamChange: (teamId: string | null) => void
-  onActAsUserChange: (userId: string) => void
+  onActAsUserChange: (userId: string, label: string) => void
   onBodyChange: (body: string) => void
   onSend: () => void
   onCancel: () => void
+  /** The request as a cURL command (API key masked). */
+  onCopyCurl: () => string
+  recentRequests: readonly RecentRequest[]
+  onOpenRecent: (item: RecentRequest) => void
+  onClearRecent: () => void
   // Presets & Docs
   endpointPresets?: ApiEndpointPresets | null
   endpointDoc?: { path: string; title: string } | null
@@ -80,6 +90,9 @@ export function ApiRequestPanel({
   bypassMode,
   selectedTeamId,
   actAsUserId,
+  actAsLabel,
+  actAsEnabled = true,
+  showTeamError,
   body,
   status,
   onMethodChange,
@@ -94,6 +107,10 @@ export function ApiRequestPanel({
   onBodyChange,
   onSend,
   onCancel,
+  onCopyCurl,
+  recentRequests,
+  onOpenRecent,
+  onClearRecent,
   endpointPresets,
   endpointDoc,
   onApplyPreset,
@@ -117,6 +134,22 @@ export function ApiRequestPanel({
 
   const showPayloadEditor = ['POST', 'PATCH', 'PUT'].includes(method)
 
+  // "Copied" shows for two seconds after the cURL is on the clipboard.
+  const [curlCopied, setCurlCopied] = useState(false)
+  useEffect(() => {
+    if (!curlCopied) return
+    const timer = setTimeout(() => setCurlCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [curlCopied])
+  const copyCurl = async () => {
+    try {
+      await navigator.clipboard.writeText(onCopyCurl())
+      setCurlCopied(true)
+    } catch {
+      // clipboard access can be refused (insecure origin, permissions): nothing to confirm then
+    }
+  }
+
   // Folded state of the session block, remembered: someone who works with it closed should not
   // reopen it on every visit. Read after mount so the server render matches the client's.
   const [sessionOpen, setSessionOpen] = useState(true)
@@ -132,9 +165,9 @@ export function ApiRequestPanel({
     const parts = [authType === 'apiKey' ? t('summary.apiKey') : t('summary.session')]
     if (bypassMode) parts.push(t('summary.crossTeam'))
     if (selectedTeamId) parts.push(selectedTeamId)
-    if (actAsUserId.trim()) parts.push(t('summary.actingAs', { user: actAsUserId.trim() }))
+    if (actAsUserId.trim()) parts.push(t('summary.actingAs', { user: actAsLabel || actAsUserId.trim() }))
     return parts.join(' · ')
-  }, [authType, bypassMode, selectedTeamId, actAsUserId, t])
+  }, [authType, bypassMode, selectedTeamId, actAsUserId, actAsLabel, t])
 
   // Handlers that clear preset indicators when user modifies manually
   const handlePathParamsChange = (params: PathParam[]) => {
@@ -169,7 +202,7 @@ export function ApiRequestPanel({
           >
             {method}
           </Badge>
-          <code className="font-mono text-sm font-medium flex-1 truncate">{basePath}</code>
+          <code className="font-mono text-sm font-medium flex-1 truncate" title={basePath}>{basePath}</code>
           {route.source && (
             <Badge variant="secondary" className="text-xs shrink-0">
               {route.source}
@@ -201,17 +234,41 @@ export function ApiRequestPanel({
         </div>
 
         {/* Method Selector */}
-        <MethodSelector
-          methods={route.methods}
-          selected={method}
-          onSelect={onMethodChange}
-        />
+        <div className="flex items-center gap-3">
+          <MethodSelector
+            methods={route.methods}
+            selected={method}
+            onSelect={onMethodChange}
+          />
+          {/* Acting as: the override lives in the session block, which is often folded, so it is also here, on the
+              row of the method, where it can be dropped in one click. */}
+          {actAsUserId.trim() && (
+            <button
+              type="button"
+              onClick={() => onActAsUserChange('', '')}
+              className="ml-auto flex min-w-0 max-w-[14rem] items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1 text-xs text-amber-700 hover:bg-amber-500/25 dark:text-amber-400"
+              title={t('auth.actAsUserClear')}
+              data-cy="devtools-api-acting-as-chip"
+            >
+              <UserRound className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t('summary.actingAsChip', { user: actAsLabel || actAsUserId.trim() })}</span>
+              <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            </button>
+          )}
+        </div>
 
         {/* URL Preview */}
         <div className="bg-background rounded-md border p-2">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">
-            {t('urlPreview')}
-          </p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t('urlPreview')}</p>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={copyCurl} data-cy="devtools-api-copy-curl">
+                {curlCopied ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                {curlCopied ? t('curlCopied') : t('copyCurl')}
+              </Button>
+              <RecentRequests items={recentRequests} onOpen={onOpenRecent} onClear={onClearRecent} />
+            </div>
+          </div>
           <code className="font-mono text-xs break-all text-foreground">{previewUrl}</code>
         </div>
 
@@ -235,6 +292,9 @@ export function ApiRequestPanel({
           bypassMode={bypassMode}
           selectedTeamId={selectedTeamId}
           actAsUserId={actAsUserId}
+          actAsLabel={actAsLabel}
+          actAsDisabled={!actAsEnabled}
+          showTeamError={showTeamError}
           onAuthTypeChange={onAuthTypeChange}
           onApiKeyChange={onApiKeyChange}
           onBypassModeChange={onBypassModeChange}
@@ -246,7 +306,13 @@ export function ApiRequestPanel({
 
       {/* Tabs for params/headers/body */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <Tabs defaultValue="params" className="flex-1 flex flex-col min-h-0">
+        {/* An endpoint that opens with a body (a preset's or its required fields) opens on the Body tab, so the payload is
+            seen before it is sent. Remounted per method and path: defaultValue is read once, and each endpoint decides again. */}
+        <Tabs
+          key={`${method} ${basePath}`}
+          defaultValue={showPayloadEditor && body.trim() ? 'body' : 'params'}
+          className="flex-1 flex flex-col min-h-0"
+        >
           <div className="border-b px-4">
             <TabsList className="h-9 bg-transparent p-0 border-0">
               <TabsTrigger

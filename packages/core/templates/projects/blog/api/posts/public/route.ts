@@ -68,7 +68,7 @@ const getHandler = async (request: NextRequest) => {
       FROM posts p
       INNER JOIN users u ON p."userId" = u.id
       WHERE p.status = 'published'
-        AND p."publishedAt" <= NOW()
+        AND (p."publishedAt" IS NULL OR p."publishedAt" <= NOW())
     `
 
     const params: unknown[] = []
@@ -89,7 +89,7 @@ const getHandler = async (request: NextRequest) => {
     }
 
     // Order by published date (newest first)
-    query += ` ORDER BY p."publishedAt" DESC`
+    query += ` ORDER BY p."publishedAt" DESC NULLS LAST`
 
     // Add pagination
     paramCount++
@@ -108,7 +108,7 @@ const getHandler = async (request: NextRequest) => {
       SELECT COUNT(*) as total
       FROM posts p
       WHERE p.status = 'published'
-        AND p."publishedAt" <= NOW()
+        AND (p."publishedAt" IS NULL OR p."publishedAt" <= NOW())
     `
 
     const countParams: unknown[] = []

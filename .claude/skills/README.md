@@ -93,7 +93,7 @@ This directory contains **54 skills** that provide Claude Code with specialized 
 | `zod-validation` | Input validation | API/form validation |
 | `scheduled-actions` | Background tasks, webhooks | Async processing |
 | `rate-limiting` | Distributed rate limiting (Redis) | New/secured endpoints |
-| `mcp-server` | The app's MCP server, MCP browser sign-in (OAuth) | Changing `/api/mcp`, `lib/mcp/`, OAuth consent/connections, migration 048 |
+| `mcp-server` | The app's MCP server, MCP browser sign-in (OAuth) | Changing `/api/mcp`, `lib/mcp/`, OAuth consent/connections, migration 049 |
 | `media-library` | Media management system | File upload/browse/select |
 
 ### Database

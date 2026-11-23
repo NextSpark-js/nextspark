@@ -6,6 +6,8 @@ import { parseMarkdownFile } from '@nextsparkjs/core/lib/docs/parser'
 import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcrumbs'
 import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { SuperadminDocsSidebar } from '@nextsparkjs/core/components/docs/superadmin-docs-sidebar'
+import { BookOpen } from 'lucide-react'
+import { AreaPageHeader } from '@nextsparkjs/core/components/area/AreaPageHeader'
 import path from 'path'
 import type { Metadata } from 'next'
 
@@ -68,30 +70,33 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
   const t = await getTranslations('superadmin.docs')
 
   return (
-    <div className="flex gap-8" data-cy="superadmin-docs-page">
-      <aside className="hidden lg:block w-64 shrink-0">
-        <SuperadminDocsSidebar sections={DOCS_REGISTRY.superadmin} />
-      </aside>
+    <div className="space-y-6" data-cy="superadmin-docs-page">
+      <AreaPageHeader icon={BookOpen} tone="red" title={t('indexTitle')} subtitle={t('indexIntro')} />
+      <div className="flex gap-8">
+        <aside className="hidden lg:block w-64 shrink-0">
+          <SuperadminDocsSidebar sections={DOCS_REGISTRY.superadmin} />
+        </aside>
 
-      <div className="flex-1 max-w-4xl">
-        <DocsBreadcrumbs
-          label={tCommon('a11y.breadcrumb')}
-          items={[
-            { label: t('breadcrumbSuperAdmin'), href: '/superadmin' },
-            { label: t('breadcrumbDocs'), href: '/superadmin/docs' },
-            { label: section.title },
-            { label: metadata.title }
-          ]}
-        />
+        <div className="flex-1 max-w-4xl">
+          <DocsBreadcrumbs
+            label={tCommon('a11y.breadcrumb')}
+            items={[
+              { label: t('breadcrumbSuperAdmin'), href: '/superadmin' },
+              { label: t('breadcrumbDocs'), href: '/superadmin/docs' },
+              { label: section.title },
+              { label: metadata.title }
+            ]}
+          />
 
-        <article className="mt-8 prose prose-slate dark:prose-invert max-w-none">
-          <h1 className="text-4xl font-bold mb-2">{metadata.title}</h1>
-          {metadata.description && (
-            <p className="text-xl text-muted-foreground mb-8">{metadata.description}</p>
-          )}
+          <article className="mt-8 prose prose-slate dark:prose-invert max-w-none">
+            <h2 className="text-4xl font-bold mb-2">{metadata.title}</h2>
+            {metadata.description && (
+              <p className="text-xl text-muted-foreground mb-8">{metadata.description}</p>
+            )}
 
-          <DocsContent html={html} />
-        </article>
+            <DocsContent html={html} />
+          </article>
+        </div>
       </div>
     </div>
   )

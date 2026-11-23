@@ -800,7 +800,7 @@ EMAIL_FROM=noreply@yourdomain.com
 |---|------------------------|---------------------|
 | The app is | the OAuth **client** of Google | the OAuth **authorization server** and the resource server |
 | Configured in | `socialProviders` | `mcpOAuthPlugins()` in `lib/mcp/oauth/plugins.ts`, spread into `plugins` of `lib/auth.ts` |
-| On when | the provider is enabled | `features: { mcpOAuth: true }` in `nextspark.config.ts` and migration `048_oauth_provider.sql`; `MCP_OAUTH_ENABLED=false` turns it off at runtime |
+| On when | the provider is enabled | `features: { mcpOAuth: true }` in `nextspark.config.ts` and migration `049_oauth_provider.sql`; `MCP_OAUTH_ENABLED=false` turns it off at runtime |
 
 ### Versions
 
@@ -808,7 +808,7 @@ EMAIL_FROM=noreply@yourdomain.com
 are all `~1.7.27` in `packages/core/package.json`, and `@better-fetch/fetch` is `1.3.3` (the exact version
 `better-auth` pins). The CLI wizard (`packages/cli/src/wizard/generators/index.ts`) and
 `packages/create-nextspark-app/src/create.ts` write the same versions into new projects: change them together.
-Migration 048's columns are the ones Better Auth 1.7.27 expects; an upgrade means re-checking them.
+Migration 049's columns are the ones Better Auth 1.7.27 expects; an upgrade means re-checking them.
 
 ### The plugins
 
@@ -847,7 +847,7 @@ Better Auth mutates consents and tokens directly, from several endpoints, withou
 
 So an invariant such as "a refresh token exists only while its consent does, and holds no more than it" cannot
 live in application code: it would hold for core's paths and for none of these. It is enforced in the database,
-by the triggers and row locks of migration `048_oauth_provider.sql` (see `mcp-server` and `database-migrations`).
+by the triggers and row locks of migration `049_oauth_provider.sql` (see `mcp-server` and `database-migrations`).
 Before adding a Better Auth plugin or option that writes `oauthConsent` or `oauthRefreshToken`, or upgrading
 Better Auth, check the new write path against those triggers.
 
@@ -908,7 +908,7 @@ if (authResult.oauth) { /* client: authResult.oauth.clientId */ }
 // NEVER: Enforce an invariant over rows Better Auth writes in a hook or in a route only
 // (it renews tokens in separate statements, from its own endpoints)
 
-// CORRECT: A trigger with a row lock in a migration (048_oauth_provider.sql)
+// CORRECT: A trigger with a row lock in a migration (049_oauth_provider.sql)
 ```
 
 ## Checklist
@@ -926,13 +926,13 @@ Before finalizing authentication code:
 - [ ] Rate limiting implemented for sensitive endpoints
 - [ ] OAuth profile mapping configured correctly
 - [ ] Code that branches on `type === 'api-key'` is right for an MCP OAuth connection too (`authResult.oauth`)
-- [ ] A new write path to `oauthConsent` / `oauthRefreshToken` was checked against the triggers of migration 048
+- [ ] A new write path to `oauthConsent` / `oauthRefreshToken` was checked against the triggers of migration 049
 - [ ] Better Auth version changed in `packages/core/package.json`, the CLI wizard and `create-nextspark-app` together
 - [ ] Test users documented and working
 
 ## Related Skills
 
-- `mcp-server` - `/api/mcp`, MCP browser sign-in: consent, teams, scopes, connections, migration 048
+- `mcp-server` - `/api/mcp`, MCP browser sign-in: consent, teams, scopes, connections, migration 049
 - `cypress-e2e` - UAT testing with session authentication
 - `cypress-api` - API testing with API key authentication
 - `nextjs-api-development` - API route patterns

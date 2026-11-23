@@ -50,6 +50,8 @@ export interface ScheduledAction {
    * Default: 'fixed'
    */
   recurrenceType: RecurrenceType | null
+  /** The failed action this one retries; null for an action that is not a retry. */
+  retryOf?: string | null
   /**
    * Lock group key for parallel execution control.
    * Actions with the same lockGroup will be processed sequentially.
@@ -125,6 +127,12 @@ export interface ScheduleOptions {
    * // If scheduled at 12:00 but runs at 12:15, next is 12:45
    */
   recurrenceType?: RecurrenceType
+  /**
+   * The failed action this one retries (the devtools Retry sets it). It is stored in `retryOf`, which is unique: an
+   * action can be retried once, and a second insert for the same one fails with a unique violation (23505). A retry
+   * is never deduplicated against a pending action.
+   */
+  retryOf?: string
   /**
    * Enqueue inside the caller's transaction instead of a transaction of its own: the INSERT goes through
    * this client, and `scheduleAction` neither commits nor rolls back, so the action is visible only after

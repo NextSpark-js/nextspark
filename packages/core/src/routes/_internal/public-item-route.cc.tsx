@@ -15,6 +15,7 @@
  *   `revalidateTag` when a caller needs to publish a change at once.
  * - A read that fails throws inside the cached function, so a failure is never cached as "not found".
  */
+import { publishedAtClause } from '@nextsparkjs/core/lib/entities/published-at'
 import { cacheLife, cacheTag } from 'next/cache'
 import { query } from '@nextsparkjs/core/lib/db'
 import { PatternsResolverService } from '@nextsparkjs/core/lib/blocks/patterns-resolver.service'
@@ -58,7 +59,7 @@ export async function readPublishedItem(entitySlug: string, slug: string): Promi
   if (!isPublicEntity(entity) || !IDENTIFIER.test(tableName)) return null
   cacheTag(`entity:${entitySlug}`, `public-item:${entitySlug}:${slug}`)
 
-  const result = await query<PublishedItem>(`SELECT ${buildPublicSelectClause(entity)} FROM "${tableName}" WHERE slug = $1 AND status = 'published'`, [slug])
+  const result = await query<PublishedItem>(`SELECT ${buildPublicSelectClause(entity)} FROM "${tableName}" WHERE slug = $1 AND status = 'published'${publishedAtClause(entity)}`, [slug])
   return result.rows[0] || null
 }
 

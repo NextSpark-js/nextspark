@@ -49,11 +49,11 @@ The application uses a robust migration system to manage database schema changes
 ├── 004_api_key.sql                     # API keys table
 ├── 005_api_audit_log.sql               # Audit logging
 ├── ...
-├── 048_oauth_provider.sql              # MCP browser sign-in: OAuth tables and triggers
+├── 049_oauth_provider.sql              # MCP browser sign-in: OAuth tables and triggers
 └── 090_sample_data.sql                 # Sample data (dev only)
 ```
 
-The listing is an excerpt: core ships migrations `001` to `048`, and the sample data as `090`.
+The listing is an excerpt: core ships migrations `001` to `049`, and the sample data as `090`.
 
 **Theme Migrations:**
 ```text
@@ -440,17 +440,17 @@ The rule above has a counterpart for work in progress:
 
 - **While a feature is unpublished**, keep its schema in **one** migration file and edit that file as the feature
   changes. No database but the developers' own has run it, so they recreate theirs. A branch that piles up
-  `049_fix`, `050_fix_again` for a table nobody has yet ships its own false starts to every project.
+  `050_fix`, `051_fix_again` for a table nobody has yet ships its own false starts to every project.
 - **Once the file is published** (part of a released version, or applied to a database other people use), it is
   **never edited**. A change is a new migration with the next number.
 
-MCP browser sign-in (#541) followed it: the whole feature is `048_oauth_provider.sql`. The work added no other
+MCP browser sign-in (#541) followed it: the whole feature is `049_oauth_provider.sql`. The work added no other
 migration and changed no existing one, although the file was rewritten several times while the feature was being
 built. From the release that carries it, a change to those tables or triggers is a new migration.
 
-### Migration 048: MCP browser sign-in
+### Migration 049: MCP browser sign-in
 
-`048_oauth_provider.sql` creates what the OAuth 2.1 authorization server of the MCP endpoint needs (see
+`049_oauth_provider.sql` creates what the OAuth 2.1 authorization server of the MCP endpoint needs (see
 [MCP server](../05-api/20-mcp-server.md)). It runs on every project, with the feature on or off; while it is off
 nothing reads or writes these tables.
 

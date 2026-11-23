@@ -27,7 +27,7 @@ export function consentedScopes(requested: readonly string[], accepted: readonly
 
 /**
  * Refuses an authorization for a client that is set to skip consent. The consent is where the user chooses the
- * permissions of the connection and the row every refresh token is held to (migration 048): a client that skips it
+ * permissions of the connection and the row every refresh token is held to (migration 049): a client that skips it
  * would be handed every scope it asked for, and its tokens could not be written. A first-party client is a client
  * like any other here.
  */

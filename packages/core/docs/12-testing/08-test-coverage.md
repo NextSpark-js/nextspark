@@ -161,7 +161,7 @@ case of MCP browser sign-in:
 
 | Code | Jest (in the report) | What checks the database rule |
 | --- | --- | --- |
-| `src/lib/mcp/oauth/connection-store.ts`, `purge.ts` | `tests/jest/lib/mcp/oauth/connections.test.ts`, `purge.test.ts`, with the queries mocked | `tests/node/oauth-connections-pg.test.ts`: 18 cases against a real PostgreSQL with migration 048 applied |
+| `src/lib/mcp/oauth/connection-store.ts`, `purge.ts` | `tests/jest/lib/mcp/oauth/connections.test.ts`, `purge.test.ts`, with the queries mocked | `tests/node/oauth-connections-pg.test.ts`: 18 cases against a real PostgreSQL with migration 049 applied |
 | `src/lib/api/rate-limit.ts` (`credentialRateLimitResponse`) | `tests/jest/lib/api/credential-rate-limit.test.ts`, with the shared store mocked | A run against a deployment with a real Redis, by hand |
 
 Read a coverage number for these modules as "the TypeScript was executed", not as "the rule holds". See

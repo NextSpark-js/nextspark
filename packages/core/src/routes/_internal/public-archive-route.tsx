@@ -2,7 +2,8 @@
  * The public archive page of an entity, for the generated host (#203).
  *
  * A builder entity with a basePath and an archive page gets `(public)<basePath>`; a public entity with an
- * archive page and no builder basePath gets `(public)/<entity>` at any depth (as the catch-all served it).
+ * archive page and no builder basePath gets `(public)/<entity>` at any depth (`[[...rest]]`, as the catch-all served it), or at
+ * `(public)/<entity>` only when a project or plugin page is a dynamic route under that URL (#540).
  * See public-item-route.tsx for how these routes are made.
  */
 

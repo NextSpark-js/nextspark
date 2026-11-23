@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Super Administrator Control Panel",
     "restrictedAccess": "Restricted Access Area - Superadmin and Developer Only",
-    "systemStatus": "System Status",
-    "systemVersion": "Platform Version",
-    "securityLevel": "Security Level",
-    "quickActions": {
-      "userManagement": {
-        "title": "User Management",
-        "description": "View and manage all users and superadministrators"
-      },
-      "styleGallery": {
-        "title": "Style Gallery",
-        "description": "Preview components and design system elements"
-      },
-      "analytics": {
-        "title": "Analytics",
-        "description": "Platform statistics and usage metrics"
-      },
-      "systemConfig": {
-        "title": "System Config",
-        "description": "Application settings and configurations"
-      }
-    },
-    "status": {
-      "online": "Online",
-      "active": "Active",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Total users",
       "payingUsers": "Paying users",
@@ -47,12 +21,11 @@
         "title": "Sign-ups, last 30 days",
         "description": "{count, plural, one {# new user} other {# new users}} in the last 30 days (UTC)"
       },
-      "unavailable": "Metrics unavailable"
+      "unavailable": "Metrics unavailable",
+      "mrrHelpLabel": "How MRR is calculated",
+      "mrrHelp": "Monthly recurring revenue of the subscriptions that are active on a paid plan, for teams that still exist. Yearly plans count a twelfth of their price. Trials, past-due, canceled and free subscriptions are not counted. Subscriptions shows the same number."
     },
-    "panelTitle": "Super Admin Panel",
-    "soon": "Soon",
-    "accessSection": "Access Section →",
-    "overview": "Current platform overview"
+    "panelTitle": "Super Admin Panel"
   },
   "users": {
     "title": "User Management",
@@ -61,7 +34,6 @@
     "superadmins": "Superadmins",
     "totalUsers": "Total Users",
     "allRegisteredUsers": "All registered users",
-    "membersCollaboratorsAdmins": "Members, colaborators, admins",
     "systemAdministrators": "System administrators",
     "roleDistribution": "Role Distribution",
     "roles": "roles",
@@ -86,7 +58,11 @@
       "noSuperadmins": "No superadmins found",
       "noSuperadminsDescription": "This is unusual - there should be at least one superadmin.",
       "you": "You",
-      "id": "ID: {id}"
+      "id": "ID: {id}",
+      "active": "Active",
+      "suspended": "Suspended",
+      "teams": "Teams",
+      "moreTeams": "+{count} more"
     },
     "actions": {
       "openMenu": "Open menu",
@@ -108,7 +84,7 @@
       "adminActions": "Admin Actions"
     },
     "descriptions": {
-      "regularUsersDescription": "All users excluding superadministrators. Includes members, colaborators, and admins.",
+      "regularUsersDescription": "All users excluding superadministrators: members, developers and suspended accounts.",
       "superadminsDescription": "Users with full system access and administrative privileges. Handle with extreme caution."
     },
     "security": {
@@ -130,17 +106,31 @@
       "unsuspendDescription": "Are you sure you want to unsuspend {name}? They will regain access to the application as {role}.",
       "verifyEmailTitle": "Verify Email",
       "verifyEmailDescription": "Are you sure you want to manually verify the email for {name}?",
-      "delete": "Delete"
+      "changeRoleTitle": "Change role",
+      "changeRoleDescription": "Change {name} from {from} to {to}?",
+      "changeRoleDeveloperDescription": "Change {name} from {from} to {to}? A developer outranks superadmins and can act on any account, including other developers.",
+      "suspendAction": "Suspend user",
+      "unsuspendAction": "Unsuspend user",
+      "verifyEmailAction": "Verify email",
+      "deleteAction": "Delete user",
+      "changeRoleAction": "Change to {role}"
     },
     "toast": {
-      "success": "Success",
       "error": "Error",
-      "actionCompleted": "Action completed successfully",
       "deleteFailed": "Delete failed",
       "rateLimited": "Too many requests. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
       "lastSuperadmin": "The last superadmin cannot be demoted, suspended or deleted. Make another user a superadmin first.",
-      "deleted": "User Deleted",
-      "deletedDescription": "User has been deleted successfully"
+      "suspended": "{name} suspended",
+      "suspendedDescription": "{sessions, plural, one {# session} other {# sessions}} closed and {apiKeys, plural, one {# API key} other {# API keys}} deactivated.",
+      "unsuspended": "{name} unsuspended",
+      "unsuspendedDescription": "Back as {role}.",
+      "verified": "{name} verified",
+      "verifiedDescription": "{email} is now marked as verified.",
+      "deletedNamed": "{name} deleted",
+      "deletedNamedDescription": "Their data, teams and memberships were removed.",
+      "roleChanged": "Role: {from} → {to}",
+      "undo": "Undo",
+      "undone": "Change undone"
     }
   },
   "style": {
@@ -244,7 +234,6 @@
     "error": "Error"
   },
   "shared": {
-    "backToSuperAdmin": "Back to Super Admin",
     "errorLoadingData": "Error loading data",
     "refresh": "Refresh",
     "id": "ID: {id}",
@@ -255,7 +244,9 @@
       "lastUpdated": "Last updated: {date}",
       "requestedBy": "Requested by: {name}",
       "source": "Source: {source}"
-    }
+    },
+    "copyId": "Copy ID",
+    "copied": "Copied"
   },
   "layout": {
     "mobileTitle": "Super Admin",
@@ -308,18 +299,19 @@
     "exit": {
       "title": "Exit Super Admin",
       "tooltip": "Return to main dashboard",
-      "label": "Exit Super Admin and return to main dashboard",
-      "description": "Return to dashboard"
+      "label": "Exit Super Admin and return to main dashboard"
     },
     "restricted": {
       "title": "Restricted Area",
       "description": "Superadmin access only"
+    },
+    "devtools": {
+      "title": "DevTools",
+      "tooltip": "Open the developer tools"
     }
   },
   "docs": {
     "navigation": "Admin documentation navigation",
-    "sidebarTitle": "Admin Docs",
-    "sidebarSubtitle": "Documentation for administrators",
     "pageNotFound": "Page Not Found",
     "metaTitle": "{title} | Admin Docs",
     "metaDescription": "Admin documentation for {title}",
@@ -352,16 +344,47 @@
       "owner": "Owner",
       "members": "Members",
       "created": "Created",
-      "actions": "Actions"
+      "actions": "Actions",
+      "plan": "Plan"
     },
     "id": "ID: {id}",
     "memberWord": "{count, plural, one {member} other {members}}",
     "unknown": "Unknown",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "noPlan": "No plan"
   },
   "rolesMatrix": {
     "permission": "Permission",
-    "dangerous": "dangerous"
+    "dangerous": "dangerous",
+    "searchPlaceholder": "Search permissions by key or description...",
+    "differencesOnly": "Differences only",
+    "showing": "Showing {shown} of {total}",
+    "noMatches": "No permissions match.",
+    "corePermissions": {
+      "teams": {
+        "invite": "Can send invitations to new team members",
+        "remove_member": "Can remove members from the team",
+        "change_roles": "Can change the role of other members",
+        "settings": "Can modify team name, slug and configuration",
+        "delete": "Can delete the entire team"
+      },
+      "settings": {
+        "billing": "Access to billing configuration and payments",
+        "api_keys": "Can create and manage team API keys",
+        "integrations": "Can connect and configure external integrations"
+      },
+      "media": {
+        "read": "Can browse and view media files in the library",
+        "upload": "Can upload images, videos, and other media files",
+        "update": "Can edit media metadata, tags, and captions",
+        "delete": "Can permanently delete media files"
+      }
+    },
+    "coreCategories": {
+      "Team": "Team",
+      "Settings": "Settings",
+      "Media": "Media"
+    }
   },
   "planMatrix": {
     "featureOrLimit": "Feature / Limit",
@@ -408,7 +431,10 @@
     "clearFilters": "Clear filters",
     "regularUsersTab": "Regular Users ({count})",
     "superadminsTab": "Superadmins ({count})",
-    "superadministrators": "Superadministrators"
+    "superadministrators": "Superadministrators",
+    "activeLabel": "Active:",
+    "suspendedLabel": "Suspended:",
+    "matchCount": "{matching} of {total} match"
   },
   "userDetail": {
     "title": "User Details",
@@ -448,7 +474,9 @@
       "public": "Public",
       "searchable": "Searchable",
       "updated": "Updated"
-    }
+    },
+    "lastSession": "Last session",
+    "noSession": "No session on record"
   },
   "teamsPage": {
     "title": "Team Management",
@@ -470,7 +498,6 @@
   "teamDetail": {
     "title": "Team Details",
     "subtitle": "View team information and members (read-only)",
-    "backToTeams": "Back to Teams",
     "errorTitle": "Error Loading Team",
     "notFound": "Team not found",
     "fetchFailed": "Failed to fetch team data",
@@ -525,7 +552,8 @@
     "receipt": "Receipt",
     "usage": "Current Usage",
     "usageDescription": "Resource usage for the current billing period.",
-    "usagePeriod": "Period: {period}"
+    "usagePeriod": "Period: {period}",
+    "usageAllTime": "All time"
   },
   "teamRoles": {
     "title": "Roles, Permissions & Plans",
@@ -610,14 +638,16 @@
     "stats": {
       "mrr": "Monthly Recurring Revenue",
       "arr": "Annual Recurring Revenue",
-      "fromMonthly": "{count, plural, one {From # monthly subscription} other {From # monthly subscriptions}}",
-      "fromYearly": "{count, plural, one {From # yearly subscription} other {From # yearly subscriptions}}",
       "active": "Active Subscriptions",
       "inTrial": "{count} in trial",
       "total": "Total Subscriptions",
       "freeAndPaid": "{free} free, {paid} paid",
       "needsAttention": "Needs Attention",
-      "pastDue": "Past due payments"
+      "pastDue": "Past due payments",
+      "mrrHelpLabel": "How MRR is calculated",
+      "mrrHelp": "Monthly recurring revenue of the subscriptions that are active on a paid plan, for teams that still exist. Yearly plans count a twelfth of their price. Trials, past-due, canceled and free subscriptions are not counted. The dashboard shows the same number.",
+      "fromPaying": "{count, plural, one {From # paying subscription} other {From # paying subscriptions}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Plan Distribution",
     "planDistributionDescription": "Active subscriptions by plan",
@@ -664,7 +694,8 @@
     "pricePerMonth": "{price}/mo",
     "pricePerYear": "{price}/yr",
     "trialEnds": "Trial ends {date}",
-    "viewTeam": "View Team"
+    "viewTeam": "View Team",
+    "noProviderLink": "No Stripe subscription linked: a free or manually assigned plan"
   },
   "guard": {
     "title": "Access Denied",
@@ -674,5 +705,10 @@
     "signIn": "Sign In",
     "goBack": "Go Back",
     "dashboard": "Dashboard"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This page does not exist in the Super Admin panel.",
+    "back": "Back to Super Admin"
   }
 }

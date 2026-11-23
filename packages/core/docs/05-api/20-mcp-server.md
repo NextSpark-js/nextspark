@@ -187,7 +187,7 @@ export const POST = withRateLimitTier(handleMcpPost, 'api')
 `entities/<slug>/mcp.ts` file, and every `access.api` entity is exposed automatically.
 
 **Browser sign-in needs more**: the build flag `features: { mcpOAuth: true }` in `nextspark.config.ts`, migration
-`048_oauth_provider.sql`, and correct `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL`. For production, also a list of
+`049_oauth_provider.sql`, and correct `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL`. For production, also a list of
 accepted applications and Redis. See [Browser Sign-in](#browser-sign-in-experimental).
 
 ---
@@ -278,7 +278,7 @@ export default defineConfig({
 })
 ```
 
-Run the migrations (`048_oauth_provider.sql` adds the tables). `MCP_ENABLED` still has to allow the endpoint, and
+Run the migrations (`049_oauth_provider.sql` adds the tables). `MCP_ENABLED` still has to allow the endpoint, and
 `MCP_OAUTH_ENABLED=false` switches browser sign-in off at runtime without a build. Without the build flag the host
 has none of the feature's routes.
 

@@ -12,32 +12,6 @@
     "title": "Superadmin",
     "subtitle": "Super-Administrator-Kontrollzentrum",
     "restrictedAccess": "Zugangsbeschränkter Bereich - Nur für Superadmin und Developer",
-    "systemStatus": "Systemstatus",
-    "systemVersion": "Plattformversion",
-    "securityLevel": "Sicherheitsstufe",
-    "quickActions": {
-      "userManagement": {
-        "title": "Benutzerverwaltung",
-        "description": "Alle Benutzer und Superadministratoren anzeigen und verwalten"
-      },
-      "styleGallery": {
-        "title": "Stil-Galerie",
-        "description": "Komponenten und Designsystem-Elemente in der Vorschau anzeigen"
-      },
-      "analytics": {
-        "title": "Analysen",
-        "description": "Plattformstatistiken und Nutzungsmetriken"
-      },
-      "systemConfig": {
-        "title": "Systemkonfiguration",
-        "description": "Anwendungskonfigurationen und Einstellungen"
-      }
-    },
-    "status": {
-      "online": "Online",
-      "active": "Aktiv",
-      "version": "v1.0.0"
-    },
     "metrics": {
       "totalUsers": "Benutzer gesamt",
       "payingUsers": "Zahlende Benutzer",
@@ -47,12 +21,11 @@
         "title": "Registrierungen, letzte 30 Tage",
         "description": "{count, plural, one {# neuer Benutzer} other {# neue Benutzer}} in den letzten 30 Tagen (UTC)"
       },
-      "unavailable": "Kennzahlen nicht verfügbar"
+      "unavailable": "Kennzahlen nicht verfügbar",
+      "mrrHelpLabel": "So wird der MRR berechnet",
+      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife werden mit einem Zwölftel ihres Preises berücksichtigt. Testphasen, überfällige, gekündigte und kostenlose Abonnements werden nicht berücksichtigt. Abonnements zeigt dieselbe Zahl."
     },
-    "panelTitle": "Super-Admin-Bereich",
-    "soon": "Bald",
-    "accessSection": "Bereich öffnen →",
-    "overview": "Aktueller Überblick über die Plattform"
+    "panelTitle": "Super-Admin-Bereich"
   },
   "users": {
     "title": "Benutzerverwaltung",
@@ -61,7 +34,6 @@
     "superadmins": "Superadmins",
     "totalUsers": "Benutzer gesamt",
     "allRegisteredUsers": "Alle registrierten Benutzer",
-    "membersCollaboratorsAdmins": "Mitglieder, Mitarbeiter, Administratoren",
     "systemAdministrators": "Systemadministratoren",
     "roleDistribution": "Rollenverteilung",
     "roles": "Rollen",
@@ -86,7 +58,11 @@
       "noSuperadmins": "Keine Superadmins gefunden",
       "noSuperadminsDescription": "Das ist ungewöhnlich - es sollte mindestens einen Superadmin geben.",
       "you": "Sie",
-      "id": "ID: {id}"
+      "id": "ID: {id}",
+      "active": "Aktiv",
+      "suspended": "Gesperrt",
+      "teams": "Teams",
+      "moreTeams": "+{count} weitere"
     },
     "actions": {
       "openMenu": "Menü öffnen",
@@ -108,7 +84,7 @@
       "adminActions": "Administratoraktionen"
     },
     "descriptions": {
-      "regularUsersDescription": "Alle Benutzer außer Superadministratoren. Beinhaltet Mitglieder, Mitarbeiter und Administratoren.",
+      "regularUsersDescription": "Alle Benutzer außer Superadministratoren: Mitglieder, Entwickler und gesperrte Konten.",
       "superadminsDescription": "Benutzer mit vollständigem Systemzugriff und Administratorrechten. Mit äußerster Vorsicht behandeln."
     },
     "security": {
@@ -130,17 +106,31 @@
       "unsuspendDescription": "Möchten Sie {name} wirklich entsperren? Der Benutzer erhält mit der Rolle {role} wieder Zugriff auf die Anwendung.",
       "verifyEmailTitle": "E-Mail verifizieren",
       "verifyEmailDescription": "Möchten Sie die E-Mail-Adresse von {name} wirklich manuell verifizieren?",
-      "delete": "Löschen"
+      "changeRoleTitle": "Rolle ändern",
+      "changeRoleDescription": "{name} von {from} zu {to} ändern?",
+      "changeRoleDeveloperDescription": "{name} von {from} zu {to} ändern? Ein Entwickler steht über den Superadmins und kann auf jedes Konto zugreifen, auch auf andere Entwickler.",
+      "suspendAction": "Benutzer sperren",
+      "unsuspendAction": "Benutzer entsperren",
+      "verifyEmailAction": "E-Mail verifizieren",
+      "deleteAction": "Benutzer löschen",
+      "changeRoleAction": "Zu {role} ändern"
     },
     "toast": {
-      "success": "Erfolg",
       "error": "Fehler",
-      "actionCompleted": "Aktion erfolgreich abgeschlossen",
       "deleteFailed": "Löschen fehlgeschlagen",
       "rateLimited": "Zu viele Anfragen. Versuchen Sie es in {minutes, plural, one {# Minute} other {# Minuten}} erneut.",
       "lastSuperadmin": "Der letzte Superadmin kann nicht herabgestuft, gesperrt oder gelöscht werden. Machen Sie zuerst einen anderen Benutzer zum Superadmin.",
-      "deleted": "Benutzer gelöscht",
-      "deletedDescription": "Der Benutzer wurde erfolgreich gelöscht"
+      "suspended": "Benutzer gesperrt: {name}",
+      "suspendedDescription": "{sessions, plural, one {# Sitzung} other {# Sitzungen}} beendet und {apiKeys, plural, one {# API-Schlüssel} other {# API-Schlüssel}} deaktiviert.",
+      "unsuspended": "Benutzer entsperrt: {name}",
+      "unsuspendedDescription": "Zurück als {role}.",
+      "verified": "E-Mail verifiziert: {name}",
+      "verifiedDescription": "{email} gilt jetzt als verifiziert.",
+      "deletedNamed": "Benutzer gelöscht: {name}",
+      "deletedNamedDescription": "Seine Daten, Teams und Mitgliedschaften wurden entfernt.",
+      "roleChanged": "Rolle: {from} → {to}",
+      "undo": "Rückgängig",
+      "undone": "Änderung rückgängig gemacht"
     }
   },
   "style": {
@@ -244,7 +234,6 @@
     "error": "Fehler"
   },
   "shared": {
-    "backToSuperAdmin": "Zurück zu Super Admin",
     "errorLoadingData": "Fehler beim Laden der Daten",
     "refresh": "Aktualisieren",
     "id": "ID: {id}",
@@ -255,7 +244,9 @@
       "lastUpdated": "Zuletzt aktualisiert: {date}",
       "requestedBy": "Angefordert von: {name}",
       "source": "Quelle: {source}"
-    }
+    },
+    "copyId": "ID kopieren",
+    "copied": "Kopiert"
   },
   "layout": {
     "mobileTitle": "Super Admin",
@@ -308,18 +299,19 @@
     "exit": {
       "title": "Super Admin verlassen",
       "tooltip": "Zurück zum Haupt-Dashboard",
-      "label": "Super Admin verlassen und zum Haupt-Dashboard zurückkehren",
-      "description": "Zurück zum Dashboard"
+      "label": "Super Admin verlassen und zum Haupt-Dashboard zurückkehren"
     },
     "restricted": {
       "title": "Eingeschränkter Bereich",
       "description": "Nur für Superadmins"
+    },
+    "devtools": {
+      "title": "DevTools",
+      "tooltip": "Entwicklerwerkzeuge öffnen"
     }
   },
   "docs": {
     "navigation": "Navigation der Admin-Dokumentation",
-    "sidebarTitle": "Admin-Dokumentation",
-    "sidebarSubtitle": "Dokumentation für Administratoren",
     "pageNotFound": "Seite nicht gefunden",
     "metaTitle": "{title} | Admin-Dokumentation",
     "metaDescription": "Admin-Dokumentation zu {title}",
@@ -352,16 +344,47 @@
       "owner": "Eigentümer",
       "members": "Mitglieder",
       "created": "Erstellt",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "plan": "Tarif"
     },
     "id": "ID: {id}",
     "memberWord": "{count, plural, one {Mitglied} other {Mitglieder}}",
     "unknown": "Unbekannt",
-    "viewDetails": "Details anzeigen"
+    "viewDetails": "Details anzeigen",
+    "noPlan": "Kein Tarif"
   },
   "rolesMatrix": {
     "permission": "Berechtigung",
-    "dangerous": "gefährlich"
+    "dangerous": "gefährlich",
+    "searchPlaceholder": "Berechtigungen nach Schlüssel oder Beschreibung suchen...",
+    "differencesOnly": "Nur Unterschiede",
+    "showing": "{shown} von {total} angezeigt",
+    "noMatches": "Keine Berechtigung passt.",
+    "corePermissions": {
+      "teams": {
+        "invite": "Kann neue Teammitglieder einladen",
+        "remove_member": "Kann Mitglieder aus dem Team entfernen",
+        "change_roles": "Kann die Rolle anderer Mitglieder ändern",
+        "settings": "Kann Teamnamen, Slug und Konfiguration ändern",
+        "delete": "Kann das gesamte Team löschen"
+      },
+      "settings": {
+        "billing": "Zugriff auf die Abrechnungskonfiguration und Zahlungen",
+        "api_keys": "Kann API-Schlüssel des Teams erstellen und verwalten",
+        "integrations": "Kann externe Integrationen verbinden und konfigurieren"
+      },
+      "media": {
+        "read": "Kann Mediendateien in der Bibliothek durchsuchen und ansehen",
+        "upload": "Kann Bilder, Videos und andere Mediendateien hochladen",
+        "update": "Kann Metadaten, Tags und Beschriftungen von Medien bearbeiten",
+        "delete": "Kann Mediendateien dauerhaft löschen"
+      }
+    },
+    "coreCategories": {
+      "Team": "Team",
+      "Settings": "Einstellungen",
+      "Media": "Medien"
+    }
   },
   "planMatrix": {
     "featureOrLimit": "Funktion / Limit",
@@ -408,7 +431,10 @@
     "clearFilters": "Filter zurücksetzen",
     "regularUsersTab": "Reguläre Benutzer ({count})",
     "superadminsTab": "Superadmins ({count})",
-    "superadministrators": "Superadministratoren"
+    "superadministrators": "Superadministratoren",
+    "activeLabel": "Aktiv:",
+    "suspendedLabel": "Gesperrt:",
+    "matchCount": "{matching} von {total} passen"
   },
   "userDetail": {
     "title": "Benutzerdetails",
@@ -448,7 +474,9 @@
       "public": "Öffentlich",
       "searchable": "Durchsuchbar",
       "updated": "Aktualisiert"
-    }
+    },
+    "lastSession": "Letzte Sitzung",
+    "noSession": "Keine Sitzung gespeichert"
   },
   "teamsPage": {
     "title": "Teamverwaltung",
@@ -470,7 +498,6 @@
   "teamDetail": {
     "title": "Teamdetails",
     "subtitle": "Teaminformationen und Mitglieder ansehen (nur Lesezugriff)",
-    "backToTeams": "Zurück zu Teams",
     "errorTitle": "Fehler beim Laden des Teams",
     "notFound": "Team nicht gefunden",
     "fetchFailed": "Teamdaten konnten nicht abgerufen werden",
@@ -525,7 +552,8 @@
     "receipt": "Beleg",
     "usage": "Aktuelle Nutzung",
     "usageDescription": "Ressourcennutzung im aktuellen Abrechnungszeitraum.",
-    "usagePeriod": "Zeitraum: {period}"
+    "usagePeriod": "Zeitraum: {period}",
+    "usageAllTime": "Gesamter Zeitraum"
   },
   "teamRoles": {
     "title": "Rollen, Berechtigungen und Tarife",
@@ -610,14 +638,16 @@
     "stats": {
       "mrr": "Monatlich wiederkehrender Umsatz",
       "arr": "Jährlich wiederkehrender Umsatz",
-      "fromMonthly": "{count, plural, one {Aus # Monatsabonnement} other {Aus # Monatsabonnements}}",
-      "fromYearly": "{count, plural, one {Aus # Jahresabonnement} other {Aus # Jahresabonnements}}",
       "active": "Aktive Abonnements",
       "inTrial": "{count} in der Testphase",
       "total": "Abonnements insgesamt",
       "freeAndPaid": "{free} kostenlos, {paid} kostenpflichtig",
       "needsAttention": "Handlungsbedarf",
-      "pastDue": "Überfällige Zahlungen"
+      "pastDue": "Überfällige Zahlungen",
+      "mrrHelpLabel": "So wird der MRR berechnet",
+      "mrrHelp": "Monatlich wiederkehrender Umsatz der aktiven Abonnements auf einem kostenpflichtigen Tarif, für Teams, die noch existieren. Jahrestarife werden mit einem Zwölftel ihres Preises berücksichtigt. Testphasen, überfällige, gekündigte und kostenlose Abonnements werden nicht berücksichtigt. Das Dashboard zeigt dieselbe Zahl.",
+      "fromPaying": "{count, plural, one {Aus # zahlendem Abonnement} other {Aus # zahlenden Abonnements}}",
+      "arrFormula": "MRR x 12"
     },
     "planDistribution": "Tarifverteilung",
     "planDistributionDescription": "Aktive Abonnements nach Tarif",
@@ -664,7 +694,8 @@
     "pricePerMonth": "{price}/Monat",
     "pricePerYear": "{price}/Jahr",
     "trialEnds": "Testphase endet am {date}",
-    "viewTeam": "Team ansehen"
+    "viewTeam": "Team ansehen",
+    "noProviderLink": "Kein Stripe-Abonnement verknüpft: kostenloser oder manuell zugewiesener Tarif"
   },
   "guard": {
     "title": "Zugriff verweigert",
@@ -674,5 +705,10 @@
     "signIn": "Anmelden",
     "goBack": "Zurück",
     "dashboard": "Dashboard"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Diese Seite gibt es im Super-Admin-Bereich nicht.",
+    "back": "Zurück zu Super Admin"
   }
 }

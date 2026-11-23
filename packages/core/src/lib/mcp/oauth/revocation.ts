@@ -2,7 +2,7 @@
  * Ending an MCP connection before its access token expires (#541).
  *
  * An access token is a signed JWT that lives ten minutes. The database records every event that ends a connection
- * (migration 048, by triggers) as a numbered row for the user: with the client and the team when one connection
+ * (migration 049, by triggers) as a numbered row for the user: with the client and the team when one connection
  * ended (a live refresh token revoked or deleted), with neither when all of the user's did (a changed password, a
  * suspension).
  *

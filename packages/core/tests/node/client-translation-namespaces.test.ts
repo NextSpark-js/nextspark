@@ -139,6 +139,11 @@ const DYNAMIC_TRANSLATION_ALLOWLIST: Record<string, { groups: TranslationGroup[]
     namespaces: 'every ENTITY_REGISTRY key',
     reason: 'entityName resolves to every registered entity namespace in dashboard.',
   },
+  'packages/core/src/routes/superadmin/teams/[teamId]/page.tsx:168': {
+    groups: ['superadmin'],
+    namespaces: 'billing (a limit\'s name key is billing.limits.<slug>, or a project\'s own)',
+    reason: 'the usage counters of the team detail read the i18n key the billing registry gives each limit, and the superadmin group provides billing.',
+  },
   'packages/core/src/lib/role-helpers.ts:19': {
     groups: ['superadmin'],
     namespaces: 'top-level APP_CONFIG_MERGED.userRoles.displayNames keys',

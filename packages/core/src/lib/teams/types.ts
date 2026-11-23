@@ -201,6 +201,8 @@ export interface TeamWithOwner {
     email: string
   }
   memberCount: number
+  /** The team's newest subscription; null when it has none */
+  plan?: { name: string | null; slug: string | null; status: string | null } | null
   createdAt: string
   updatedAt: string
 }
@@ -236,6 +238,9 @@ export interface AdminTeamsResponse {
 export interface AdminTeamsParams {
   search?: string
   type?: 'user' | 'system'
+  /** The column to sort by; the API defaults to createdAt, newest first */
+  sort?: 'name' | 'members' | 'createdAt'
+  order?: 'asc' | 'desc'
   page?: number
   limit?: number
 }

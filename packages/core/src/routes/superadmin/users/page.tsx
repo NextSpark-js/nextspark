@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -19,7 +19,6 @@ import {
 } from "@nextsparkjs/core/components/ui/tabs";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
 import {
-  ArrowLeft,
   Users,
   Users2,
   Shield,
@@ -28,19 +27,22 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { UsersTable } from "@nextsparkjs/core/components/users/tables/UsersTable";
+import { UsersTable, type UserSortKey } from "@nextsparkjs/core/components/users/tables/UsersTable";
 import { SuperAdminsTable } from "@nextsparkjs/core/components/users/tables/SuperAdminsTable";
 import { rateLimitedMessage } from "@nextsparkjs/core/components/users/tables/action-error";
 import { useSession } from "@nextsparkjs/core/lib/auth-client";
 import type { User } from "@nextsparkjs/core/types/user.types";
+import type { SortState } from "@nextsparkjs/core/components/users/tables/SortableHead";
 import {
   SearchInput,
   PaginationControls,
   FilterDropdown,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/lib/selectors";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 import { formatLocaleDate } from "@nextsparkjs/core/lib/i18n/format"
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
 
 interface UsersData {
   regularUsers: User[];
@@ -49,6 +51,7 @@ interface UsersData {
     total: number;
     regularUsers: number;
     superadmins: number;
+    matching: { total: number; regularUsers: number; superadmins: number };
     workTeams: number;
     byRole: Record<string, number>;
     statusDistribution: Record<string, number>;
@@ -74,6 +77,18 @@ interface UsersData {
   };
 }
 
+/** What the screen keeps in the URL (#519); a value outside these falls back to the default. */
+const URL_STATE = {
+  tab: { default: "users", allowed: ["users", "superadmins"] },
+  search: { default: "" },
+  role: { default: "", allowed: ["member", "developer"] },
+  status: { default: "", allowed: ["active", "suspended", "unverified"] },
+  sort: { default: "createdAt", allowed: ["name", "email", "createdAt"] },
+  order: { default: "desc", allowed: ["asc", "desc"] },
+  page: { default: "1", allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+  limit: { default: "20", allowed: ["10", "20", "50", "100"] },
+} as const;
+
 /**
  * Users Management Page
  *
@@ -90,18 +105,22 @@ function UsersPage() {
   const roleOptions = [
     { value: "member", label: t("usersPage.roles.member") },
     { value: "developer", label: t("usersPage.roles.developer") },
-    { value: "suspended", label: t("usersPage.roles.suspended") },
   ];
+  // Active and Suspended are the account; Unverified is the email
   const statusOptions = [
-    { value: "verified", label: t("users.table.verified") },
+    { value: "active", label: t("users.table.active") },
+    { value: "suspended", label: t("users.table.suspended") },
     { value: "unverified", label: t("users.table.unverified") },
   ];
-  const [activeTab, setActiveTab] = useState<"users" | "superadmins">("users");
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const activeTab = url.tab as "users" | "superadmins";
+  const search = url.search;
+  const roleFilter = url.role;
+  const statusFilter = url.status;
+  const page = Number(url.page);
+  const limit = Number(url.limit);
+  const sort = useMemo<SortState<UserSortKey>>(() => ({ key: url.sort as UserSortKey, order: url.order as "asc" | "desc" }), [url.sort, url.order]);
+  const setPage = (next: number) => setUrl({ page: String(next) });
   const { data: session } = useSession();
 
   // Build query params
@@ -111,10 +130,12 @@ function UsersPage() {
     if (roleFilter && roleFilter !== "__all__") params.set("role", roleFilter);
     if (statusFilter && statusFilter !== "__all__") params.set("status", statusFilter);
     params.set("tab", activeTab);
+    params.set("sort", sort.key);
+    params.set("order", sort.order);
     params.set("page", String(page));
     params.set("limit", String(limit));
     return params.toString();
-  }, [search, roleFilter, statusFilter, activeTab, page, limit]);
+  }, [search, roleFilter, statusFilter, activeTab, page, limit, sort]);
 
   // Fetch users data from API
   const {
@@ -123,7 +144,7 @@ function UsersPage() {
     error,
     refetch,
   } = useQuery<UsersData>({
-    queryKey: ["superadmin-users", search, roleFilter, statusFilter, activeTab, page, limit],
+    queryKey: ["superadmin-users", search, roleFilter, statusFilter, activeTab, page, limit, sort],
     queryFn: async () => {
       const queryString = getQueryParams();
       const response = await fetch(withBasePath(`/api/superadmin/users?${queryString}`));
@@ -134,6 +155,7 @@ function UsersPage() {
     },
     retry: 2,
     staleTime: 30000,
+    placeholderData: keepPreviousData,
   });
 
   // Transform users data to add fullName property
@@ -155,42 +177,14 @@ function UsersPage() {
       }
     : undefined;
 
-  // Handle tab change - reset page
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab as "users" | "superadmins");
-    setPage(1);
-  };
-
-  // Handle search change - reset page
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
-
-  // Handle filter change - reset page
-  const handleRoleFilterChange = (value: string) => {
-    setRoleFilter(value === "__all__" ? "" : value);
-    setPage(1);
-  };
-
-  const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value === "__all__" ? "" : value);
-    setPage(1);
-  };
-
-  // Handle limit change - reset page
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1);
-  };
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSearch("");
-    setRoleFilter("");
-    setStatusFilter("");
-    setPage(1);
-  };
+  // Every change that narrows or reorders the list goes back to page 1
+  const handleTabChange = (tab: string) => setUrl({ tab, page: "1" });
+  const handleSearchChange = (value: string) => setUrl({ search: value, page: "1" });
+  const handleRoleFilterChange = (value: string) => setUrl({ role: value === "__all__" ? "" : value, page: "1" });
+  const handleStatusFilterChange = (value: string) => setUrl({ status: value === "__all__" ? "" : value, page: "1" });
+  const handleSortChange = (next: SortState<UserSortKey>) => setUrl({ sort: next.key, order: next.order, page: "1" });
+  const handleLimitChange = (newLimit: number) => setUrl({ limit: String(newLimit), page: "1" });
+  const clearFilters = () => setUrl({ search: "", role: "", status: "", page: "1" });
 
   const hasActiveFilters = search || roleFilter || statusFilter;
 
@@ -198,20 +192,12 @@ function UsersPage() {
   if (isLoading && !usersData) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {t("users.title")}
-            </h1>
-            <p className="text-muted-foreground">{t("usersPage.loading")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users}
+          tone="red"
+          title={t("users.title")}
+          subtitle={t("usersPage.loading")}
+        />
 
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -224,20 +210,12 @@ function UsersPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {t("users.title")}
-            </h1>
-            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users}
+          tone="red"
+          title={t("users.title")}
+          subtitle={t("shared.errorLoadingData")}
+        />
 
         <Card>
           <CardHeader>
@@ -269,29 +247,23 @@ function UsersPage() {
   return (
     <div className="space-y-6" data-cy={sel('superadmin.users.container')}>
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {t("shared.backToSuperAdmin")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("users.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("users.subtitle")}
-          </p>
-        </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {t("users.refresh")}
-        </Button>
-      </div>
+      <AreaPageHeader
+        icon={Users}
+        tone="red"
+        title={t("users.title")}
+        subtitle={t("users.subtitle")}
+        actions={
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {t("users.refresh")}
+          </Button>
+        }
+      />
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -304,11 +276,16 @@ function UsersPage() {
             <div className="text-2xl font-bold">
               {usersData?.counts.total || 0}
             </div>
-            <p className="text-xs text-muted-foreground">{t("users.allRegisteredUsers")}</p>
+            <p className="text-xs text-muted-foreground" data-cy="users-total-note">
+              {hasActiveFilters && usersData
+                ? t("usersPage.matchCount", { matching: usersData.counts.matching.total, total: usersData.counts.total })
+                : t("users.allRegisteredUsers")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Link href="/superadmin/teams" className="block" data-cy="users-work-teams-link">
+        <Card className="h-full transition-colors hover:bg-muted/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t("usersPage.workTeams")}</CardTitle>
             <Users2 className="h-4 w-4 text-primary" />
@@ -322,6 +299,7 @@ function UsersPage() {
             </p>
           </CardContent>
         </Card>
+        </Link>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -332,7 +310,11 @@ function UsersPage() {
             <div className="text-2xl font-bold text-red-600">
               {usersData?.counts.superadmins || 0}
             </div>
-            <p className="text-xs text-muted-foreground">{t("users.systemAdministrators")}</p>
+            <p className="text-xs text-muted-foreground">
+              {hasActiveFilters && usersData
+                ? t("usersPage.matchCount", { matching: usersData.counts.matching.superadmins, total: usersData.counts.superadmins })
+                : t("users.systemAdministrators")}
+            </p>
           </CardContent>
         </Card>
 
@@ -356,8 +338,20 @@ function UsersPage() {
               <TabsContent value="status" className="mt-2">
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span>{t("usersPage.verifiedLabel")}</span>
+                    <span>{t("usersPage.activeLabel")}</span>
                     <span className="font-medium text-green-600">
+                      {usersData?.counts.statusDistribution?.active || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span>{t("usersPage.suspendedLabel")}</span>
+                    <span className="font-medium text-red-600">
+                      {usersData?.counts.statusDistribution?.suspended || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span>{t("usersPage.verifiedLabel")}</span>
+                    <span className="font-medium">
                       {usersData?.counts.statusDistribution?.verified || 0}
                     </span>
                   </div>
@@ -439,11 +433,11 @@ function UsersPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            {t("usersPage.regularUsersTab", { count: usersData?.counts.regularUsers || 0 })}
+            {t("usersPage.regularUsersTab", { count: usersData?.counts.matching.regularUsers || 0 })}
           </TabsTrigger>
           <TabsTrigger value="superadmins" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            {t("usersPage.superadminsTab", { count: usersData?.counts.superadmins || 0 })}
+            {t("usersPage.superadminsTab", { count: usersData?.counts.matching.superadmins || 0 })}
           </TabsTrigger>
         </TabsList>
 
@@ -460,6 +454,8 @@ function UsersPage() {
                 users={usersData?.regularUsers || []}
                 isLoading={isLoading}
                 onRefresh={() => refetch()}
+                sort={sort}
+                onSortChange={handleSortChange}
               />
               {usersData?.pagination && (
                 <PaginationControls

@@ -28,10 +28,8 @@
   },
   "exitToDashboard": "Exit DevTools",
   "exitToDashboardDescription": "Return to main dashboard",
-  "returnToDashboard": "Return to dashboard",
   "goToSuperadmin": "Super Admin Panel",
   "goToSuperadminDescription": "Go to super admin area",
-  "superAdminArea": "Super admin area",
   "restrictedArea": "Developer Area",
   "developerAccessOnly": "Developer access only",
   "home": {
@@ -148,6 +146,9 @@
     "backToList": "Back to list",
     "selectFile": "Select a file",
     "selectFileDescription": "Choose a test file from the tree to view its content",
+    "folder": "Folder",
+    "folderItems": "{count, plural, one {# item} other {# items}}",
+    "folderEmpty": "This folder has no test documentation",
     "error": "Error loading file",
     "dashboard": {
       "title": "Test Coverage Dashboard",
@@ -265,7 +266,14 @@
       "adminBypassTooltip": "Enable to access data from any team. Requires membership in NextSpark Team.",
       "actAsUser": "Act as user",
       "actAsUserHelp": "Developer-only. Resolves session-scoped endpoints (e.g. /me/*) as the given user without switching your session. Requires the developer role, a non-production environment, and ALLOW_ACT_AS_USER=true. Leave empty to use your own session.",
-      "actAsUserPlaceholder": "user id (empty = your own session)"
+      "actAsUserPlaceholder": "Your own session (search a user to act as)",
+      "actAsUserClear": "Stop acting as this user",
+      "actAsUserSearch": "Search by email or name...",
+      "actAsUserSearching": "Searching users...",
+      "actAsUserNone": "No users found",
+      "actAsUserUnavailable": "Users could not be loaded. Type an id to use it as is.",
+      "actAsUserUseId": "Use \"{id}\" as the user id",
+      "actAsUserDisabled": "Off on this server: set ALLOW_ACT_AS_USER=true in a non-production environment. Requests use your own session."
     },
     "editor": {
       "keyPlaceholder": "Key",
@@ -294,7 +302,8 @@
       "apiKey": "API key",
       "session": "session",
       "crossTeam": "cross-team",
-      "actingAs": "as {user}"
+      "actingAs": "as {user}",
+      "actingAsChip": "Acting as {user}"
     },
     "source": "Source: {source}",
     "sourceWithCategory": "Source: {source} | Category: {category}",
@@ -312,6 +321,23 @@
       "tryOther": "Try a different search term",
       "crossTeamHint": "Access data from all teams without filtering",
       "members": "{count, plural, one {# member} other {# members}}"
+    },
+    "context": {
+      "session": "Session",
+      "apiKey": "API key",
+      "team": "Team: {team}",
+      "noTeam": "No team",
+      "crossTeam": "Cross-team",
+      "crossTeamIn": "Cross-team, filtered to {team}",
+      "actingAs": "As {user}"
+    },
+    "copyCurl": "Copy cURL",
+    "curlCopied": "Copied",
+    "recent": {
+      "title": "Recent",
+      "clear": "Clear",
+      "empty": "Requests you send appear here",
+      "failed": "failed"
     }
   },
   "features": {
@@ -507,13 +533,17 @@
       "payload": "Payload",
       "error": "Error",
       "actions": "Actions",
-      "noTeam": "Global"
+      "noTeam": "Global",
+      "expandRow": "Show details",
+      "collapseRow": "Hide details"
     },
     "retry": {
       "button": "Retry",
       "success": "Action scheduled for retry",
       "error": "Failed to retry action: {message}",
-      "fallback": "Failed to retry"
+      "fallback": "Failed to retry",
+      "retried": "Retried",
+      "retryOf": "Retry of"
     },
     "run": {
       "button": "Run Now",
@@ -525,7 +555,8 @@
       "pending": "Pending",
       "running": "Running",
       "completed": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "overdue": "Overdue"
     },
     "pagination": {
       "previous": "Previous",
@@ -533,7 +564,9 @@
       "page": "Page {page} of {total}"
     },
     "fetchFailed": "Failed to fetch scheduled actions",
-    "errorMessage": "Error: {message}"
+    "errorMessage": "Error: {message}",
+    "refresh": "Refresh",
+    "updated": "Updated {when}"
   },
   "gallery": {
     "theme": {
@@ -1025,5 +1058,10 @@
     "failed": "Could not copy to the clipboard",
     "tag": "Copy tag",
     "testCommand": "Copy test command"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This page does not exist in DevTools.",
+    "back": "Back to DevTools"
   }
 }

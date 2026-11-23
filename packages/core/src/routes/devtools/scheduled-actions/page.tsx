@@ -14,16 +14,26 @@
 
 'use client'
 
-import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@nextsparkjs/core/components/ui/button'
-import { ChevronLeftIcon, ChevronRightIcon, Clock } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, Clock, RefreshCw } from 'lucide-react'
 import { sel } from '@nextsparkjs/core/lib/selectors'
 import { Filters } from '@nextsparkjs/core/components/devtools/scheduled-actions/filters'
 import { ActionsTable } from '@nextsparkjs/core/components/devtools/scheduled-actions/actions-table'
 import type { ScheduledActionsFilters, ScheduledActionsResponse } from '@nextsparkjs/core/components/devtools/scheduled-actions/types'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { useAreaUrlState } from '@nextsparkjs/core/hooks/useAreaUrlState'
+import { AreaPageHeader } from '@nextsparkjs/core/components/area/AreaPageHeader'
+import { formatLocaleRelative } from '@nextsparkjs/core/lib/i18n/format'
+
+/** What the screen keeps in the URL (#519): the filters and the page. */
+const URL_STATE = {
+  status: { default: '', allowed: ['pending', 'running', 'completed', 'failed'] },
+  type: { default: '' },
+  page: { default: '1', allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+} as const
 
 async function fetchScheduledActions(
   filters: ScheduledActionsFilters,
@@ -55,18 +65,53 @@ async function fetchScheduledActions(
 
 export default function ScheduledActionsPage() {
   const t = useTranslations('devtools.scheduledActions')
-  const [filters, setFilters] = useState<ScheduledActionsFilters>({})
-  const [page, setPage] = useState(1)
+  const locale = useLocale()
+  const [url, setUrl] = useAreaUrlState(URL_STATE)
+  const filters = useMemo<ScheduledActionsFilters>(
+    () => ({ status: (url.status || undefined) as ScheduledActionsFilters['status'], actionType: url.type || undefined }),
+    [url.status, url.type],
+  )
+  const page = Number(url.page)
+  const setPage = (update: (prev: number) => number) => setUrl({ page: String(update(page)) })
   const limit = 20
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ['scheduled-actions', filters, page, limit],
     queryFn: () => fetchScheduledActions(filters, page, limit, t('fetchFailed')),
   })
 
+  // A type that is not registered (a stale link) lists nothing: it is no filter
+  const registeredTypes = data?.data.meta.registeredActionTypes
+  useEffect(() => {
+    if (url.type && registeredTypes && !registeredTypes.includes(url.type)) setUrl({ type: '', page: '1' })
+  }, [url.type, registeredTypes, setUrl])
+
+  // "Updated 12 seconds ago", ticking, so the list says how stale it is instead of passing for live.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // The action a "Retried" / "retry of" link points at: shown straight away when it is on this page, else the
+  // filters are cleared and the first page (the newest, where a retry is) is loaded to find it.
+  const [focusId, setFocusId] = useState<string | null>(null)
+  const handleViewRelated = (id: string) => {
+    setFocusId(id)
+    if (!data?.data.actions.some((action) => action.id === id)) {
+      setUrl({ status: '', type: '', page: '1' })
+    }
+  }
+  // The focus is a moment, not a state: cleared so a refresh later does not scroll back to it.
+  useEffect(() => {
+    if (!focusId) return
+    const timer = setTimeout(() => setFocusId(null), 5000)
+    return () => clearTimeout(timer)
+  }, [focusId])
+
   const handleFiltersChange = (newFilters: ScheduledActionsFilters) => {
-    setFilters(newFilters)
-    setPage(1) // Reset to first page when filters change
+    // Back to the first page when the filters change
+    setUrl({ status: newFilters.status ?? '', type: newFilters.actionType ?? '', page: '1' })
   }
 
   const handlePreviousPage = () => {
@@ -84,22 +129,31 @@ export default function ScheduledActionsPage() {
       className="space-y-6"
       data-cy={sel('devtools.scheduledActions.page')}
     >
-      {/* Header: the same icon, title and description as the other devtools pages */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-12 h-12 bg-violet-100 dark:bg-violet-950 rounded-lg shrink-0">
-          <Clock className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground">{t('description')}</p>
-        </div>
-      </div>
+      <AreaPageHeader
+        icon={Clock}
+        title={t('title')}
+        subtitle={t('description')}
+        actions={
+          <>
+            {dataUpdatedAt > 0 && (
+              <span className="text-sm text-muted-foreground" data-cy="scheduled-actions-updated">
+                {t('updated', { when: formatLocaleRelative(dataUpdatedAt, locale, now) })}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} data-cy="scheduled-actions-refresh">
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {t('refresh')}
+            </Button>
+          </>
+        }
+      />
 
       {/* Filters */}
       <Filters
         filters={filters}
         onFiltersChange={handleFiltersChange}
         registeredActionTypes={data?.data.meta.registeredActionTypes || []}
+        statusCounts={data?.data.meta.statusCounts}
       />
 
       {/* Loading State */}
@@ -119,7 +173,7 @@ export default function ScheduledActionsPage() {
       {/* Actions Table */}
       {data && !isLoading && (
         <>
-          <ActionsTable actions={data.data.actions} />
+          <ActionsTable actions={data.data.actions} focusId={focusId} onViewRelated={handleViewRelated} />
 
           {/* Pagination */}
           {data.data.pagination.totalPages > 1 && (

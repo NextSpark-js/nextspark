@@ -17,11 +17,12 @@ export const MAX_ITEM_SLUG_LENGTH = 200
 
 /** Whether the public item route of an entity answers `slug` rather than not found. */
 export function isServableSlug(
-  entity: { access?: { basePath?: string; allowNestedSlugs?: boolean }; builder?: { public?: { basePath?: string } } },
+  entity: { access?: { basePath?: string; allowNestedSlugs?: boolean }; builder?: { enabled?: boolean; public?: { basePath?: string } } },
   slug: unknown
 ): slug is string {
   if (typeof slug !== 'string' || slug.length > MAX_ITEM_SLUG_LENGTH || !ITEM_SLUG.test(slug) || STATIC_FILE_EXTENSION.test(slug)) return false
   const basePath = entity.access?.basePath ?? entity.builder?.public?.basePath
-  // `[slug]` (one segment) serves the site root unless nested slugs are on; every other base path is `[...slug]`
-  return !slug.includes('/') || basePath !== '/' || entity.access?.allowNestedSlugs === true
+  // `[slug]` (one segment) serves the site root unless nested slugs are on; a builder entity at any other base path is `[...slug]`.
+  // An entity with no builder has a page of its own (`<basePath>/[slug]`, #551): one segment, unless nested slugs are on.
+  return !slug.includes('/') || (basePath !== '/' && entity.builder?.enabled === true) || entity.access?.allowNestedSlugs === true
 }

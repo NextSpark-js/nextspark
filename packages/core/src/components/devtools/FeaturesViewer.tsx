@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -10,10 +10,9 @@ import { useTranslations } from "next-intl";
 import { FEATURE_REGISTRY, COVERAGE_SUMMARY, type FeatureEntry } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
 import { TagCopyActions } from './TagCopyActions';
+import { useViewerFilters } from './use-viewer-filters';
 import { useScrollToHash } from "./use-scroll-to-hash";
 
-type CategoryFilter = "all" | FeatureEntry["category"];
-type CoverageFilter = "all" | "covered" | "uncovered";
 
 const CATEGORY_COLORS: Record<FeatureEntry["category"], string> = {
   core: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
@@ -38,11 +37,15 @@ const CATEGORY_COLORS: Record<FeatureEntry["category"], string> = {
 export function FeaturesViewer() {
   const t = useTranslations("devtools.features");
   useScrollToHash();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
 
   const features = useMemo(() => Object.values(FEATURE_REGISTRY), []);
+
+  const categories = useMemo(() => {
+    const cats = new Set(features.map((f) => f.category));
+    return Array.from(cats).sort();
+  }, [features]);
+
+  const { searchQuery, categoryFilter, coverageFilter, setSearchQuery, setCategoryFilter, setCoverageFilter } = useViewerFilters(categories);
 
   const filteredFeatures = useMemo(() => {
     return features.filter((feature) => {
@@ -71,11 +74,6 @@ export function FeaturesViewer() {
       return true;
     });
   }, [features, searchQuery, categoryFilter, coverageFilter]);
-
-  const categories = useMemo(() => {
-    const cats = new Set(features.map((f) => f.category));
-    return Array.from(cats).sort();
-  }, [features]);
 
   return (
     <div className="space-y-6" data-cy={sel("devtools.features.viewer")}>
@@ -144,7 +142,7 @@ export function FeaturesViewer() {
               key={cat}
               variant={categoryFilter === cat ? "default" : "outline"}
               size="sm"
-              onClick={() => setCategoryFilter(cat as CategoryFilter)}
+              onClick={() => setCategoryFilter(cat)}
               data-cy={sel("devtools.features.filterCategory", { category: cat })}
             >
               {t(`categories.${cat}`)}

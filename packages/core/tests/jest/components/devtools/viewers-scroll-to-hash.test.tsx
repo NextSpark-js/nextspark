@@ -7,6 +7,8 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals'
 import { render } from '@testing-library/react'
 
+// the screens keep their state in the URL (#519)
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn(), push: jest.fn() }), usePathname: () => '/area', useSearchParams: () => new URLSearchParams() }))
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
 jest.mock('@nextsparkjs/registries/testing-registry', () => {
   const entry = (key: string) => ({ key, name: key, description: 'd', category: 'core', tag: `feat-${key}`, testing: { hasTests: false, testCount: 0 } })

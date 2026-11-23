@@ -1,4 +1,4 @@
--- Migration: 048_oauth_provider.sql
+-- Migration: 049_oauth_provider.sql
 -- Description: tables of the OAuth 2.1 authorization server that signs MCP clients in
 --              through the browser (Better Auth `jwt()`, `@better-auth/mcp`, `@better-auth/cimd`),
 --              and the rules that keep a connection's tokens in step with its consent.

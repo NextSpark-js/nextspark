@@ -4,8 +4,7 @@ import { Suspense, useEffect } from 'react'
 import { loadLoginPage } from '../../../lib/auth/load-login-page'
 import { useAuth } from '../../../hooks/useAuth'
 import { DashboardProviders } from '../../../providers/DashboardProviders'
-import { AccountTheme } from '../../../providers/account-theme'
-import { ThemeArea } from '../../../providers/theme-provider'
+import { ThemeArea } from '../../../providers/theme-area'
 import { DashboardTranslationPreloader } from '../../../lib/i18n/DashboardTranslationPreloader'
 import { TranslationDebugger } from '../../../utils/dev/TranslationDebugger'
 import { useEnsureUserMetadata } from '../../../hooks/useEnsureUserMetadata'
@@ -54,8 +53,6 @@ export function AuthenticatedDashboardLayout({ children }: { children: React.Rea
   return (
     <ThemeArea>
       <DashboardProviders>
-        {/* The theme saved to the account, before the area paints (#495) */}
-        <AccountTheme />
         <DashboardLayoutContent>{children}</DashboardLayoutContent>
       </DashboardProviders>
     </ThemeArea>

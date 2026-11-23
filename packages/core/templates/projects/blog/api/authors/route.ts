@@ -36,7 +36,7 @@ const getHandler = async (request: NextRequest) => {
       INNER JOIN posts p ON p."userId" = u.id
       WHERE u.username IS NOT NULL
         AND p.status = 'published'
-        AND p."publishedAt" <= NOW()
+        AND (p."publishedAt" IS NULL OR p."publishedAt" <= NOW())
       GROUP BY u.id, u.name, u.username, u.bio, u.image
       HAVING COUNT(p.id) > 0
       ORDER BY COUNT(p.id) DESC, u.name ASC

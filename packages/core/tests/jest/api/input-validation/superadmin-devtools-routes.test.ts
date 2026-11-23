@@ -230,6 +230,59 @@ describe('/api/v1/devtools/scheduled-actions', () => {
     expect((await list(query)).status).toBe(200)
   })
 
+  describe('POST retry (#522)', () => {
+    const retry = (actionId: string) => retryScheduled(makeReq('POST', '/api/v1/devtools/scheduled-actions', asJson({ actionId })) as never)
+    const failed = { id: 'f1', actionType: 'webhook:send', status: 'failed', payload: { n: 1 }, teamId: 'team-a', lockGroup: null }
+
+    // the read of the failed action answers the row; the twin lookup answers `twins`
+    const queries = (twins: unknown[]) => mocks.queryWithRLS.mockImplementation(async (sql: string) => (/payload @>/.test(sql) ? twins : [failed]))
+
+    test('creates the retry with retryOf set to the failed action', async () => {
+      queries([])
+      mockSchedule.mockResolvedValue('new-id')
+      const res = await retry('f1')
+      expect(res.status).toBe(200)
+      expect(mockSchedule).toHaveBeenCalledWith('webhook:send', { n: 1 }, expect.objectContaining({ retryOf: 'f1', teamId: 'team-a' }))
+    })
+
+    test('a pending twin of the same type, payload and team is a 409 ACTION_ALREADY_PENDING and nothing is scheduled', async () => {
+      queries([{ id: 'twin-1' }])
+      const res = await retry('f1')
+      expect(res.status).toBe(409)
+      const body = await res.json()
+      expect(body.code).toBe('ACTION_ALREADY_PENDING')
+      expect(mockSchedule).not.toHaveBeenCalled()
+    })
+
+    test('the twin lookup is keyed on the failed action\'s team', async () => {
+      queries([])
+      await retry('f1')
+      const twinCall = (mocks.queryWithRLS.mock.calls as Array<[string, unknown[]]>).find(([sql]) => /payload @>/.test(sql))!
+      expect(twinCall[0]).toMatch(/"teamId" IS NOT DISTINCT FROM \$3/)
+      expect(twinCall[1][2]).toBe('team-a')
+    })
+
+    test('a second retry (unique violation on retryOf) is a 409 ACTION_ALREADY_RETRIED, not a 500', async () => {
+      queries([])
+      mockSchedule.mockRejectedValue(Object.assign(new Error('duplicate key'), { code: '23505' }))
+      const res = await retry('f1')
+      expect(res.status).toBe(409)
+      expect((await res.json()).code).toBe('ACTION_ALREADY_RETRIED')
+    })
+
+    test('any other failure stays a 500', async () => {
+      queries([])
+      mockSchedule.mockRejectedValue(Object.assign(new Error('boom'), { code: '08006' }))
+      expect((await retry('f1')).status).toBe(500)
+    })
+
+    test('an action that did not fail is refused before anything is scheduled', async () => {
+      mocks.queryWithRLS.mockResolvedValue([{ ...failed, status: 'pending' }])
+      expect((await retry('f1')).status).toBe(400)
+      expect(mockSchedule).not.toHaveBeenCalled()
+    })
+  })
+
   test('GET reads each action\'s team name in the same query as the actions, not one lookup per row (#501)', async () => {
     const rows = [
       { id: 'a1', teamId: 't1', teamName: 'Team One' },
@@ -240,7 +293,10 @@ describe('/api/v1/devtools/scheduled-actions', () => {
     expect((await res.json()).data.actions).toEqual(rows)
     const calls = (mocks.queryWithRLS.mock.calls as Array<[string, unknown[]]>).map(([sql]) => sql)
     const listSql = calls.find((sql) => /LIMIT \$\d+\s+OFFSET/.test(sql))!
-    expect(listSql).toMatch(/\bFROM "teams"[\s\S]*"teamName"/)
+    // a join over teams.id, not a subquery per row: the name and the retry link come with the page
+    expect(listSql).toMatch(/LEFT JOIN "teams" t ON t\.id = sa\."teamId"[\s\S]*"teamName"|"teamName"[\s\S]*LEFT JOIN "teams" t ON t\.id = sa\."teamId"/)
+    expect(listSql).toMatch(/LEFT JOIN "scheduled_actions" r ON r\."retryOf" = sa\.id/)
+    expect(listSql).not.toMatch(/\(\s*SELECT/)
     expect(calls.filter((sql) => /"teams"/.test(sql))).toHaveLength(1)
   })
 

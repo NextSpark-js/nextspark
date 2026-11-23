@@ -1,8 +1,8 @@
 import type { ComponentType } from 'react'
 import { DeveloperGuard } from "@nextsparkjs/core/components/app/guards/DeveloperGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
-import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
-import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
+import { AreaToastPosition } from "@nextsparkjs/core/providers/area-toast-position";
+import { ThemeArea } from "@nextsparkjs/core/providers/theme-area";
 import { DevtoolsSidebar } from "@nextsparkjs/core/components/devtools/DevtoolsSidebar";
 import { DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools/DevtoolsMobileHeader";
 import { Metadata } from "next";
@@ -43,8 +43,7 @@ function DevLayoutBody({ children, serverChecked }: GuardedProps) {
   return (
     <ThemeArea>
       <DashboardProviders>
-        {/* The theme saved to the account, before the area paints (#495) */}
-        <AccountTheme />
+        <AreaToastPosition />
         <DeveloperGuard serverChecked={serverChecked}>
           <div className="flex h-screen bg-background">
           {/* Sidebar - Hidden on mobile, visible on desktop */}
@@ -61,7 +60,7 @@ function DevLayoutBody({ children, serverChecked }: GuardedProps) {
             {/* `relative` so a full-bleed child route (the API Explorer) can fill this area
                 without measuring the sidebar itself. */}
             <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="container mx-auto p-6 max-w-7xl">
+              <div className="w-full p-6">
                 {children}
               </div>
             </main>
@@ -119,7 +118,7 @@ export function guardDevtoolsLayout<P extends DevLayoutProps>(ProjectLayout: Com
     return (
       <ThemeArea>
         <DashboardProviders>
-          <AccountTheme />
+          <AreaToastPosition />
           <DeveloperGuard serverChecked={serverChecked}>
             <ProjectLayout {...props} />
           </DeveloperGuard>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -12,7 +12,6 @@ import {
 import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@nextsparkjs/core/components/ui/tabs";
 import {
-  ArrowLeft,
   Users,
   Shield,
   Users2,
@@ -20,15 +19,27 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
-import Link from "next/link";
-import { TeamsTable } from "@nextsparkjs/core/components/superadmin/tables/TeamsTable";
+import { TeamsTable, type TeamSortKey } from "@nextsparkjs/core/components/superadmin/tables/TeamsTable";
+import type { SortState } from "@nextsparkjs/core/components/users/tables/SortableHead";
 import {
   SearchInput,
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/lib/selectors";
-import { useAdminTeams } from "@nextsparkjs/core/hooks/teams";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
+import { useSuperadminTeams } from "@nextsparkjs/core/hooks/superadmin/useSuperadminTeams";
 import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n/format";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
+
+/** What the screen keeps in the URL (#519); a value outside these falls back to the default. */
+const URL_STATE = {
+  tab: { default: "user", allowed: ["user", "system"] },
+  search: { default: "" },
+  sort: { default: "createdAt", allowed: ["name", "members", "createdAt"] },
+  order: { default: "desc", allowed: ["asc", "desc"] },
+  page: { default: "1", allowed: (v: string) => /^[1-9]\d{0,5}$/.test(v) },
+  limit: { default: "20", allowed: ["10", "20", "50", "100"] },
+} as const;
 
 /**
  * Teams Management Page
@@ -39,28 +50,19 @@ import { formatLocaleDate, formatLocaleNumber } from "@nextsparkjs/core/lib/i18n
 function TeamsPage() {
   const t = useTranslations("superadmin");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<"user" | "system">("user");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const activeTab = url.tab as "user" | "system";
+  const searchQuery = url.search;
+  const page = Number(url.page);
+  const limit = Number(url.limit);
+  const sort = useMemo<SortState<TeamSortKey>>(() => ({ key: url.sort as TeamSortKey, order: url.order as "asc" | "desc" }), [url.sort, url.order]);
+  const setPage = (next: number) => setUrl({ page: String(next) });
 
-  // Handle tab change - reset page
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab as "user" | "system");
-    setPage(1);
-  };
-
-  // Handle search change - reset page
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    setPage(1);
-  };
-
-  // Handle limit change - reset page
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1);
-  };
+  // Every change that narrows or reorders the list goes back to page 1
+  const handleSortChange = (next: SortState<TeamSortKey>) => setUrl({ sort: next.key, order: next.order, page: "1" });
+  const handleTabChange = (tab: string) => setUrl({ tab, page: "1" });
+  const handleSearchChange = (value: string) => setUrl({ search: value, page: "1" });
+  const handleLimitChange = (newLimit: number) => setUrl({ limit: String(newLimit), page: "1" });
 
   // Fetch teams data using the shared hook
   const {
@@ -71,9 +73,11 @@ function TeamsPage() {
     isLoading,
     error,
     refetch,
-  } = useAdminTeams({
+  } = useSuperadminTeams({
     search: searchQuery || undefined,
     type: activeTab,
+    sort: sort.key,
+    order: sort.order,
     page,
     limit,
   });
@@ -82,18 +86,12 @@ function TeamsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
-            <p className="text-muted-foreground">{t("teamsPage.loading")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users2}
+          tone="red"
+          title={t("teamsPage.title")}
+          subtitle={t("teamsPage.loading")}
+        />
 
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -106,18 +104,12 @@ function TeamsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/superadmin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {t("shared.backToSuperAdmin")}
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
-            <p className="text-muted-foreground">{t("shared.errorLoadingData")}</p>
-          </div>
-        </div>
+        <AreaPageHeader
+          icon={Users2}
+          tone="red"
+          title={t("teamsPage.title")}
+          subtitle={t("shared.errorLoadingData")}
+        />
 
         <Card>
           <CardHeader>
@@ -147,29 +139,23 @@ function TeamsPage() {
   return (
     <div className="space-y-6" data-cy={sel('superadmin.teams.container')}>
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {t("shared.backToSuperAdmin")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("teamsPage.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("teamsPage.subtitle")}
-          </p>
-        </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {t("shared.refresh")}
-        </Button>
-      </div>
+      <AreaPageHeader
+        icon={Users2}
+        tone="red"
+        title={t("teamsPage.title")}
+        subtitle={t("teamsPage.subtitle")}
+        actions={
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {t("shared.refresh")}
+          </Button>
+        }
+      />
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -198,10 +184,7 @@ function TeamsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setSearchQuery("");
-              setPage(1);
-            }}
+            onClick={() => handleSearchChange("")}
             data-cy={sel('superadmin.teams.filters.clearButton')}
           >
             {t("teamsPage.clear")}
@@ -238,7 +221,7 @@ function TeamsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <TeamsTable teams={filteredTeams} isLoading={isLoading} />
+              <TeamsTable teams={filteredTeams} isLoading={isLoading} sort={sort} onSortChange={handleSortChange} />
               {pagination && (
                 <PaginationControls
                   page={pagination.page}
@@ -266,7 +249,7 @@ function TeamsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <TeamsTable teams={filteredTeams} isLoading={isLoading} />
+              <TeamsTable teams={filteredTeams} isLoading={isLoading} sort={sort} onSortChange={handleSortChange} />
               {pagination && (
                 <PaginationControls
                   page={pagination.page}

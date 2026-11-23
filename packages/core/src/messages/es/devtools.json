@@ -28,10 +28,8 @@
   },
   "exitToDashboard": "Salir de DevTools",
   "exitToDashboardDescription": "Volver al panel principal",
-  "returnToDashboard": "Volver al panel",
   "goToSuperadmin": "Panel Super Admin",
   "goToSuperadminDescription": "Ir al área de super administrador",
-  "superAdminArea": "Área de super administrador",
   "restrictedArea": "Área de Desarrollador",
   "developerAccessOnly": "Solo acceso de desarrollador",
   "config": {
@@ -67,6 +65,9 @@
     "backToList": "Volver a la lista",
     "selectFile": "Selecciona un archivo",
     "selectFileDescription": "Elige un archivo de test del árbol para ver su contenido",
+    "folder": "Carpeta",
+    "folderItems": "{count, plural, one {# elemento} other {# elementos}}",
+    "folderEmpty": "Esta carpeta no tiene documentación de tests",
     "error": "Error cargando archivo",
     "dashboard": {
       "title": "Panel de Cobertura de Tests",
@@ -184,7 +185,14 @@
       "adminBypassTooltip": "Habilitar para acceder datos de cualquier equipo. Requiere membresía en NextSpark Team.",
       "actAsUser": "Actuar como usuario",
       "actAsUserHelp": "Solo para desarrolladores. Resuelve los endpoints de sesión (p. ej. /me/*) como el usuario indicado sin cambiar tu sesión. Requiere el rol developer, un entorno que no sea de producción y ALLOW_ACT_AS_USER=true. Déjalo vacío para usar tu propia sesión.",
-      "actAsUserPlaceholder": "ID de usuario (vacío = tu propia sesión)"
+      "actAsUserPlaceholder": "Tu propia sesión (busca un usuario para actuar como él)",
+      "actAsUserClear": "Dejar de actuar como este usuario",
+      "actAsUserSearch": "Buscar por email o nombre...",
+      "actAsUserSearching": "Buscando usuarios...",
+      "actAsUserNone": "No se encontraron usuarios",
+      "actAsUserUnavailable": "No se pudieron cargar los usuarios. Escribe un id para usarlo tal cual.",
+      "actAsUserUseId": "Usar \"{id}\" como id de usuario",
+      "actAsUserDisabled": "Desactivado en este servidor: define ALLOW_ACT_AS_USER=true en un entorno que no sea producción. Las peticiones usan tu propia sesión."
     },
     "editor": {
       "keyPlaceholder": "Clave",
@@ -213,7 +221,8 @@
       "apiKey": "clave de API",
       "session": "sesión",
       "crossTeam": "cross-team",
-      "actingAs": "como {user}"
+      "actingAs": "como {user}",
+      "actingAsChip": "Actuando como {user}"
     },
     "source": "Origen: {source}",
     "sourceWithCategory": "Origen: {source} | Categoría: {category}",
@@ -231,6 +240,23 @@
       "tryOther": "Prueba con otro término de búsqueda",
       "crossTeamHint": "Accede a los datos de todos los equipos sin filtrar",
       "members": "{count, plural, one {# miembro} other {# miembros}}"
+    },
+    "context": {
+      "session": "Sesión",
+      "apiKey": "API key",
+      "team": "Equipo: {team}",
+      "noTeam": "Sin equipo",
+      "crossTeam": "Cross-team",
+      "crossTeamIn": "Cross-team, filtrado a {team}",
+      "actingAs": "Como {user}"
+    },
+    "copyCurl": "Copiar cURL",
+    "curlCopied": "Copiado",
+    "recent": {
+      "title": "Recientes",
+      "clear": "Borrar",
+      "empty": "Las peticiones que envíes aparecen aquí",
+      "failed": "falló"
     }
   },
   "features": {
@@ -424,13 +450,17 @@
       "payload": "Datos",
       "error": "Error",
       "actions": "Acciones",
-      "noTeam": "Global"
+      "noTeam": "Global",
+      "expandRow": "Mostrar detalles",
+      "collapseRow": "Ocultar detalles"
     },
     "retry": {
       "button": "Reintentar",
       "success": "Acción programada para reintentar",
       "error": "Error al reintentar acción: {message}",
-      "fallback": "No se pudo reintentar"
+      "fallback": "No se pudo reintentar",
+      "retried": "Reintentada",
+      "retryOf": "Reintento de"
     },
     "run": {
       "button": "Ejecutar",
@@ -444,7 +474,8 @@
       "pending": "Pendiente",
       "running": "Ejecutando",
       "completed": "Completado",
-      "failed": "Fallido"
+      "failed": "Fallido",
+      "overdue": "Vencida"
     },
     "pagination": {
       "previous": "Anterior",
@@ -452,7 +483,9 @@
       "page": "Página {page} de {total}"
     },
     "fetchFailed": "No se pudieron obtener las acciones programadas",
-    "errorMessage": "Error: {message}"
+    "errorMessage": "Error: {message}",
+    "refresh": "Actualizar",
+    "updated": "Actualizado {when}"
   },
   "gallery": {
     "theme": {
@@ -1025,5 +1058,10 @@
     "failed": "No se pudo copiar al portapapeles",
     "tag": "Copiar tag",
     "testCommand": "Copiar comando de test"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "Esta página no existe en DevTools.",
+    "back": "Volver a DevTools"
   }
 }

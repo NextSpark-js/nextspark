@@ -11,8 +11,12 @@ import { ThemePreview } from "@nextsparkjs/core/components/superadmin/misc/Theme
 import { FieldTypesGallery } from "@nextsparkjs/core/components/superadmin/misc/FieldTypesGallery";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@nextsparkjs/core/components/ui/dropdown-menu";
 import { COLOR_TOKENS, buildTokensExport, readToken, type TokensFormat } from "@nextsparkjs/core/components/superadmin/misc/theme-tokens";
-import { useState } from "react";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
 import { useTranslations } from "next-intl";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
+
+/** The tab is kept in the URL (#519). */
+const URL_STATE = { tab: { default: "components", allowed: ["components", "field-types", "theme", "guidelines"] } } as const;
 
 /**
  * Style Gallery Page - Developer Area
@@ -22,7 +26,8 @@ import { useTranslations } from "next-intl";
  */
 export default function DevStylePage() {
   const t = useTranslations("devtools.style");
-  const [activeTab, setActiveTab] = useState("components");
+  const [{ tab: activeTab }, setUrl] = useAreaUrlState(URL_STATE);
+  const setActiveTab = (tab: string) => setUrl({ tab });
 
   // Downloads the color tokens as they resolve now (the current light or dark mode).
   const exportTokens = (format: TokensFormat) => {
@@ -39,31 +44,29 @@ export default function DevStylePage() {
   return (
     <div className="space-y-6" data-cy="devtools-style-page">
       {/* Header */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center justify-center w-12 h-12 bg-violet-100 dark:bg-violet-950 rounded-lg">
-          <Palette className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-        </div>
-        <div className="min-w-[12rem] flex-1">
-          <h1 className="text-3xl font-bold">{t("title")}</h1>
-          <p className="text-muted-foreground">{t("subtitle")}</p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="flex items-center gap-2" data-cy="devtools-style-export-tokens">
-              <Download className="h-4 w-4" />
-              {t("exportTokens")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => exportTokens("css")} data-cy="devtools-style-export-css">
-              {t("exportCss")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => exportTokens("json")} data-cy="devtools-style-export-json">
-              {t("exportJson")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <AreaPageHeader
+        icon={Palette}
+        title={t("title")}
+        subtitle={t("subtitle")}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2" data-cy="devtools-style-export-tokens">
+                <Download className="h-4 w-4" />
+                {t("exportTokens")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => exportTokens("css")} data-cy="devtools-style-export-css">
+                {t("exportCss")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => exportTokens("json")} data-cy="devtools-style-export-json">
+                {t("exportJson")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

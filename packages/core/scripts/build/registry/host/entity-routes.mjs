@@ -12,7 +12,8 @@
  *   nested slugs included, as the catch-all served them; `[slug]` / `[...slug]` at the root for basePath
  *   `/`) and, with an archive page, `(public)<basePath>`. A public entity with an archive page and no
  *   builder basePath gets `(public)/<entity>/[[...rest]]` (the catch-all's archive fallback answered any
- *   depth under the entity's slug).
+ *   depth under the entity's slug), or `(public)/<entity>` when the project or a plugin has a dynamic page under that
+ *   URL (`posts/[slug]`): both would match its URLs, and the router could prefetch the archive for them (#540).
  *
  * What decides the routes (`enabled`, `ui.dashboard.showInMenu`, `access.basePath`, `builder.enabled`,
  * `ui.public.hasArchivePage`, ...) is read from the entity config's source, as literals: a value the
@@ -385,7 +386,8 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
           default: { factory: factory('createPublicArchiveRoute', modules.publicArchive), args: [config] },
           named: [{ name: 'generateMetadata', factory: factory('createPublicArchiveMetadata', modules.publicArchive), args: [config] }],
           literals: [],
-        })
+        // planHost serves it at `(public)/<entity>/page.tsx` instead when a project or plugin page is a dynamic route under it (#540)
+        }, { listOnlyUnderDynamic: true })
       )
     }
   }

@@ -89,10 +89,7 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
         >
           <ArrowLeft className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && (
-            <div className="flex-1">
-              <div className="text-sm font-medium">{t('exitToDashboard')}</div>
-              <p className="text-xs text-muted-foreground">{t('returnToDashboard')}</p>
-            </div>
+            <div className="flex-1 text-sm font-medium">{t('exitToDashboard')}</div>
           )}
         </Link>
 
@@ -110,10 +107,7 @@ export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?
         >
           <Shield className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && (
-            <div className="flex-1">
-              <div className="text-sm font-medium">{t('goToSuperadmin')}</div>
-              <p className="text-xs text-muted-foreground">{t('superAdminArea')}</p>
-            </div>
+            <div className="flex-1 text-sm font-medium">{t('goToSuperadmin')}</div>
           )}
         </Link>}
 

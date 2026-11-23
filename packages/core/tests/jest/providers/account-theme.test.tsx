@@ -1,6 +1,6 @@
 /**
- * The account theme in the areas with a session (#495). The dashboard, superadmin and devtools layouts mount
- * AccountTheme inside ThemeArea (#510); public and auth pages never load it. Precedence: a forced theme, then the browser's stored
+ * The account theme in the areas with a session (#495). The dashboard, superadmin and devtools layouts wrap their pages
+ * in ThemeArea (#510), which applies it (#546); public and auth pages never load it. Precedence: a forced theme, then the browser's stored
  * choice, then the account theme cookie, then the default.
  */
 
@@ -11,8 +11,8 @@ import { renderToString } from 'react-dom/server'
 
 jest.mock('next/navigation', () => ({ usePathname: () => '/dashboard' }))
 
-import { ThemeArea, ThemeProvider, useTheme, type UseThemeProps } from '@nextsparkjs/core/providers/theme-provider'
-import { AccountTheme } from '@nextsparkjs/core/providers/account-theme'
+import { ThemeProvider, useTheme, type UseThemeProps } from '@nextsparkjs/core/providers/theme-provider'
+import { ThemeArea } from '@nextsparkjs/core/providers/theme-area'
 
 const originalMatchMedia = window.matchMedia
 
@@ -46,9 +46,9 @@ afterEach(() => {
 
 const toggle = { attribute: 'class' as const, defaultTheme: 'system', enableSystem: true, disableTransitionOnChange: true }
 
-/** The server HTML of the area: the root provider's script and AccountTheme's */
+/** The server HTML of the area: the root provider's script and ThemeArea's */
 function serverScripts(props: React.ComponentProps<typeof ThemeProvider> = toggle): string[] {
-  const html = renderToString(<ThemeProvider {...props}><ThemeArea><AccountTheme /></ThemeArea></ThemeProvider>)
+  const html = renderToString(<ThemeProvider {...props}><ThemeArea><span /></ThemeArea></ThemeProvider>)
   return [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1])
 }
 
@@ -58,7 +58,7 @@ function loadPage(props?: React.ComponentProps<typeof ThemeProvider>) {
   return document.documentElement.className
 }
 
-describe('AccountTheme on a full page load of the area', () => {
+describe('The account theme on a full page load of the area', () => {
   it.each([
     ['no cookie and no stored choice: the default', undefined, undefined, 'light', null],
     ['the account cookie and no stored choice: the account theme, stored', 'dark', undefined, 'dark', 'dark'],
@@ -99,7 +99,7 @@ describe('AccountTheme on a full page load of the area', () => {
       seen.push(useTheme().theme ?? '')
       return null
     }
-    const tree = <ThemeProvider {...toggle}><ThemeArea><AccountTheme /><Probe /></ThemeArea></ThemeProvider>
+    const tree = <ThemeProvider {...toggle}><ThemeArea><Probe /></ThemeArea></ThemeProvider>
     const container = document.createElement('div')
     container.innerHTML = renderToString(tree)
     seen.length = 0
@@ -118,7 +118,7 @@ describe('AccountTheme on a full page load of the area', () => {
   })
 })
 
-describe('AccountTheme on a client navigation into the area', () => {
+describe('The account theme on a client navigation into the area', () => {
   function mountArea(props: React.ComponentProps<typeof ThemeProvider> = toggle) {
     let api: UseThemeProps | undefined
     function Grab() {
@@ -129,7 +129,7 @@ describe('AccountTheme on a client navigation into the area', () => {
     const { rerender, container } = render(<ThemeProvider {...props}><Grab /></ThemeProvider>)
     expect(document.documentElement.className).not.toBe('dark')
     document.cookie = 'nextspark.account_theme=dark; Path=/'
-    rerender(<ThemeProvider {...props}><ThemeArea><Grab /><AccountTheme /></ThemeArea></ThemeProvider>)
+    rerender(<ThemeProvider {...props}><ThemeArea><Grab /></ThemeArea></ThemeProvider>)
     return { api: () => api!, container }
   }
 

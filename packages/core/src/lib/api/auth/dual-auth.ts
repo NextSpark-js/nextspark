@@ -5,6 +5,7 @@
  * Used by the unified /api/v1/ endpoints.
  */
 
+import { isActAsEnabled } from './act-as-flag'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../../teams/active-team-cookie'
 import { getUserDefaultTeamId } from '../../teams/dashboard-team'
 import { repairMissingPersonalTeam } from '../../auth/personal-team-repair'
@@ -195,16 +196,6 @@ export async function authenticateRequest(
 }
 
 /**
- * True when running in a production runtime. On Vercel this keys on VERCEL_ENV
- * (which separates production from preview); elsewhere it falls back to
- * NODE_ENV. Act-as is hard-blocked whenever this is true.
- */
-function isProductionRuntime(): boolean {
-  if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV === 'production'
-  return process.env.NODE_ENV === 'production'
-}
-
-/**
  * Development-only override: resolve the request AS a different user when the
  * real (already-authenticated) caller is a developer and sends x-act-as-user.
  *
@@ -226,11 +217,10 @@ async function applyActAsOverride(
   // VERCEL_ENV (which separates production from preview — NODE_ENV is
   // 'production' on previews too), so a preview deploy can still opt in while
   // production is always blocked. Off Vercel it falls back to NODE_ENV.
-  if (isProductionRuntime()) return authResult
   // GATE 1b: explicit opt-in flag. Enable only in non-production environments,
   // never in production. Even if it leaked to prod, GATE 1a still blocks
-  // (defense in depth).
-  if (process.env.ALLOW_ACT_AS_USER !== 'true') return authResult
+  // (defense in depth). Both gates are isActAsEnabled().
+  if (!isActAsEnabled()) return authResult
 
   // GATE 2: header must be present (cheap check first)
   const targetUserId = request.headers.get(ACT_AS_USER_HEADER)

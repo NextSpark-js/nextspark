@@ -28,10 +28,8 @@
   },
   "exitToDashboard": "Quitter DevTools",
   "exitToDashboardDescription": "Retourner au panneau principal",
-  "returnToDashboard": "Retour au panneau",
   "goToSuperadmin": "Panneau Super Admin",
   "goToSuperadminDescription": "Aller à la zone super administrateur",
-  "superAdminArea": "Zone super administrateur",
   "restrictedArea": "Zone développeur",
   "developerAccessOnly": "Accès développeur uniquement",
   "config": {
@@ -67,6 +65,9 @@
     "backToList": "Retour à la liste",
     "selectFile": "Sélectionnez un fichier",
     "selectFileDescription": "Choisissez un fichier de test de l'arborescence pour voir son contenu",
+    "folder": "Dossier",
+    "folderItems": "{count, plural, one {# élément} other {# éléments}}",
+    "folderEmpty": "Ce dossier ne contient aucune documentation de test",
     "error": "Erreur lors du chargement du fichier",
     "dashboard": {
       "title": "Tableau de Bord Couverture Tests",
@@ -184,7 +185,14 @@
       "adminBypassTooltip": "Activer pour accéder aux données de n'importe quelle équipe. Nécessite l'appartenance à l'équipe NextSpark.",
       "actAsUser": "Agir en tant qu’utilisateur",
       "actAsUserHelp": "Réservé aux développeurs. Résout les endpoints liés à la session (p. ex. /me/*) en tant qu’utilisateur indiqué, sans changer votre session. Nécessite le rôle developer, un environnement hors production et ALLOW_ACT_AS_USER=true. Laissez vide pour utiliser votre propre session.",
-      "actAsUserPlaceholder": "ID utilisateur (vide = votre propre session)"
+      "actAsUserPlaceholder": "Votre propre session (cherchez un utilisateur pour agir comme lui)",
+      "actAsUserClear": "Ne plus agir en tant que cet utilisateur",
+      "actAsUserSearch": "Rechercher par e-mail ou nom...",
+      "actAsUserSearching": "Recherche des utilisateurs...",
+      "actAsUserNone": "Aucun utilisateur trouvé",
+      "actAsUserUnavailable": "Impossible de charger les utilisateurs. Saisissez un identifiant pour l’utiliser tel quel.",
+      "actAsUserUseId": "Utiliser \"{id}\" comme identifiant d’utilisateur",
+      "actAsUserDisabled": "Désactivé sur ce serveur : définissez ALLOW_ACT_AS_USER=true dans un environnement hors production. Les requêtes utilisent votre propre session."
     },
     "editor": {
       "keyPlaceholder": "Clé",
@@ -213,7 +221,8 @@
       "apiKey": "clé d'API",
       "session": "session",
       "crossTeam": "inter-équipes",
-      "actingAs": "en tant que {user}"
+      "actingAs": "en tant que {user}",
+      "actingAsChip": "Agit en tant que {user}"
     },
     "source": "Source : {source}",
     "sourceWithCategory": "Source : {source} | Catégorie : {category}",
@@ -231,6 +240,23 @@
       "tryOther": "Essayez un autre terme de recherche",
       "crossTeamHint": "Accédez aux données de toutes les équipes sans filtre",
       "members": "{count, plural, one {# membre} other {# membres}}"
+    },
+    "context": {
+      "session": "Session",
+      "apiKey": "Clé API",
+      "team": "Équipe : {team}",
+      "noTeam": "Aucune équipe",
+      "crossTeam": "Inter-équipes",
+      "crossTeamIn": "Inter-équipes, filtré sur {team}",
+      "actingAs": "En tant que {user}"
+    },
+    "copyCurl": "Copier le cURL",
+    "curlCopied": "Copié",
+    "recent": {
+      "title": "Récentes",
+      "clear": "Effacer",
+      "empty": "Les requêtes envoyées apparaissent ici",
+      "failed": "échec"
     }
   },
   "features": {
@@ -426,13 +452,17 @@
       "payload": "Données",
       "error": "Erreur",
       "actions": "Actions",
-      "noTeam": "Global"
+      "noTeam": "Global",
+      "expandRow": "Afficher les détails",
+      "collapseRow": "Masquer les détails"
     },
     "retry": {
       "button": "Réessayer",
       "success": "Action programmée pour réessai",
       "error": "Échec du réessai de l'action: {message}",
-      "fallback": "Échec de la nouvelle tentative"
+      "fallback": "Échec de la nouvelle tentative",
+      "retried": "Relancée",
+      "retryOf": "Nouvelle tentative de"
     },
     "run": {
       "button": "Exécuter maintenant",
@@ -444,7 +474,8 @@
       "pending": "En attente",
       "running": "En cours",
       "completed": "Terminé",
-      "failed": "Échoué"
+      "failed": "Échoué",
+      "overdue": "En retard"
     },
     "pagination": {
       "previous": "Précédent",
@@ -452,7 +483,9 @@
       "page": "Page {page} sur {total}"
     },
     "fetchFailed": "Impossible de récupérer les actions planifiées",
-    "errorMessage": "Erreur : {message}"
+    "errorMessage": "Erreur : {message}",
+    "refresh": "Actualiser",
+    "updated": "Actualisé {when}"
   },
   "gallery": {
     "theme": {
@@ -1025,5 +1058,10 @@
     "failed": "Impossible de copier dans le presse-papiers",
     "tag": "Copier le tag",
     "testCommand": "Copier la commande de test"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "Cette page n'existe pas dans DevTools.",
+    "back": "Retour à DevTools"
   }
 }

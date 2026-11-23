@@ -73,16 +73,8 @@ describe('Admin - Superadmin Dashboard', {
       // 1. Visit Admin dashboard
       superadmin.visitDashboard()
 
-      // 2. Validate stats cards (if they exist)
-      cy.get(superadmin.selectors.dashboard.container).then(($container) => {
-        // Check for quick actions or system status (defensive)
-        if ($container.find(superadmin.selectors.dashboard.quickActions.container).length > 0) {
-          cy.get(superadmin.selectors.dashboard.quickActions.container).should('be.visible')
-          cy.log('✅ Quick actions displayed')
-        } else {
-          cy.log('⚠️ Quick actions not found - dashboard uses different layout')
-        }
-      })
+      // 2. The business metrics are the content of the page (the sections are in the sidebar)
+      cy.get(superadmin.selectors.dashboard.metrics.container).should('be.visible')
 
       cy.log('✅ Dashboard stats section checked')
     })

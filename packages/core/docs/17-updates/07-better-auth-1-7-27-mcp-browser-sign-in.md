@@ -1,4 +1,4 @@
-# Better Auth 1.7.27, migration 048 and MCP browser sign-in
+# Better Auth 1.7.27, migration 049 and MCP browser sign-in
 
 > **Unreleased.** These changes are in core after `0.1.0-beta.205` (issue [#541](https://github.com/NextSpark-js/nextspark/issues/541)) and have no release number yet. "The release that carries them" below is the first release after `0.1.0-beta.205`. When it is published, its changelog entry is the authoritative list.
 
@@ -12,7 +12,7 @@ project that does not turn the feature on has two things to do: move two depende
 | `better-auth` | `~1.7.7` | `~1.7.27` |
 | `@better-fetch/fetch` | `1.3.2` | `1.3.3`, the exact version Better Auth 1.7.27 pins |
 | Core's own dependencies | | `@better-auth/oauth-provider`, `@better-auth/mcp`, `@better-auth/cimd` and `@better-auth/core`, all `~1.7.27`. They come with `@nextsparkjs/core`: a project does not declare them |
-| Migrations | Up to `047` | `048_oauth_provider.sql`: ten service-only tables and seven triggers for the OAuth authorization server. No existing table is altered |
+| Migrations | Up to `048` | `049_oauth_provider.sql`: ten service-only tables and seven triggers for the OAuth authorization server. No existing table is altered |
 | MCP endpoint (`/api/mcp`) | API key only | API key, and, only when the project turns it on, an OAuth access token obtained by signing in through the browser |
 | Rate limit tiers | `auth`, `authIdentifier`, `api`, `strict`, `read`, `write`, `webhook`, `ingest` | The same plus `credential`: 1000 charges a minute per API key or MCP connection |
 | `features` of `nextspark.config.ts` | `billing`, `superadmin` (both on by default) | The same plus `mcpOAuth`, **off** by default |
@@ -55,7 +55,7 @@ A test that asserted the `415` of an empty sign-out, or the verification email o
    pnpm db:migrate
    ```
 
-   `048_oauth_provider.sql` is applied to every project, with the feature on or off. Nothing reads or writes its
+   `049_oauth_provider.sql` is applied to every project, with the feature on or off. Nothing reads or writes its
    tables while the feature is off. It adds two triggers to existing tables, on `account` (a changed password) and
    on `users` (a suspension); with no OAuth connection they find nothing to do. Like every core migration it has
    no down step: take a backup first if you need to be able to go back.
@@ -110,7 +110,7 @@ Two things to know for project code and clients:
 - `scripts/test/throwaway-postgres.cjs`: `HAS_POSTGRES` now requires the `postgres` binary as well as `initdb`
   and `pg_ctl`. A machine with the client tools only (Homebrew's `libpq`) used to try to start a cluster and fail;
   its PostgreSQL suites are now skipped. A project's `db` Jest project uses the same helper.
-- New: `tests/node/oauth-connections-pg.test.ts`, 18 cases on the rules migration 048 keeps in the database. See
+- New: `tests/node/oauth-connections-pg.test.ts`, 18 cases on the rules migration 049 keeps in the database. See
   [Integration Testing](../12-testing/07-integration-testing.md#postgresql-integration-tests-in-core-testsnode).
 
 ## Not done
@@ -118,5 +118,5 @@ Two things to know for project code and clients:
 - No production gate: the feature does not refuse to start with a database connection that owns the tables (RLS
   without effect) or without Redis.
 - Run against Claude (web, desktop, mobile) and ChatGPT (web). Not run against other clients.
-- Migration 048 is the only migration of the feature. From the release that carries it, a change to its tables or
+- Migration 049 is the only migration of the feature. From the release that carries it, a change to its tables or
   triggers is a new migration; the file is not edited.

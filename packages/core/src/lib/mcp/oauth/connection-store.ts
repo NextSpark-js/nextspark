@@ -4,7 +4,7 @@
  *
  * A connection is a client acting for a user in one team. It is alive while it has a refresh token that is neither
  * revoked nor expired; rotation replaces that token, so the newest live one says what the connection can do and when
- * it last renewed. Its consent row says what it may do; the rules of migration 048 hold every refresh token to it.
+ * it last renewed. Its consent row says what it may do; the rules of migration 049 hold every refresh token to it.
  *
  * Service connection: these are the authorization server's tables, which no user role reads. Nothing here imports
  * the project's configuration, so it runs against a database with nothing else around it (tests/node).
@@ -130,7 +130,7 @@ export async function grantedScopes(userId: string, clientId: string, teamId: st
  * Removes the consent and the refresh tokens of a connection. Inside a service transaction (see disconnect).
  *
  * Removing the consent is what ends the connection: the database records the revocation and removes the refresh
- * tokens with it (migration 048, end_oauth_connection_of_consent). What is left for here is a connection that has
+ * tokens with it (migration 049, end_oauth_connection_of_consent). What is left for here is a connection that has
  * tokens and no consent, which only data older than that rule can be.
  */
 async function endConnection(userId: string, clientId: string, teamId: string): Promise<boolean> {
@@ -159,7 +159,7 @@ async function endConnection(userId: string, clientId: string, teamId: string): 
  * to end.
  *
  * In one transaction, the consent first. A refresh token can only be written for a connection that has its consent
- * (migration 048, require_oauth_consent_for_refresh_token, which locks the consent row): a renewal in flight either
+ * (migration 049, require_oauth_consent_for_refresh_token, which locks the consent row): a renewal in flight either
  * writes its new token before the consent goes, and the token is removed with the rest, or finds no consent and is
  * refused. No renewal that races with this leaves a live token behind.
  *
@@ -207,7 +207,7 @@ export type NarrowResult = 'narrowed' | 'unchanged' | 'nothing-left' | 'not-foun
  * disconnect does), `not-found` when there is no such connection.
  *
  * The consent is what is written, with its row locked. The database does the rest in the same statement (migration
- * 048, narrow_oauth_tokens_to_consent): the live refresh tokens of the connection are cut down to the new consent
+ * 049, narrow_oauth_tokens_to_consent): the live refresh tokens of the connection are cut down to the new consent
  * and a revocation is recorded, so the access tokens already issued are refused at once and the application renews
  * with the token it has, which now holds less. A renewal in flight is ordered by the same row: the token it writes
  * holds no more than the consent it finds, whichever of the two got there first.

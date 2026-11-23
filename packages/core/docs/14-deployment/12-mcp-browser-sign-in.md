@@ -20,7 +20,7 @@ A project that does not turn the feature on needs nothing from this page: `/api/
 | --- | --- | --- |
 | 1 | Build flag `features.mcpOAuth`, and a build that runs `nextspark prepare` | `nextspark.config.ts` |
 | 2 | `MCP_ENABLED=true`; `MCP_OAUTH_ENABLED` unset or not `false` | Environment |
-| 3 | Migration `048_oauth_provider.sql` applied | `pnpm db:migrate` |
+| 3 | Migration `049_oauth_provider.sql` applied | `pnpm db:migrate` |
 | 4 | App URL and issuer URL are the public https URLs | `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_URL` |
 | 5 | Redis for the shared per-credential limit | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
 | 6 | The runtime database role is not the table owner, so RLS is in effect | `DATABASE_URL`, `DATABASE_SERVICE_URL` |
@@ -59,14 +59,14 @@ OAuth route answers `404` and `/api/mcp` takes an API key only. Like any environ
 server process, so on a platform that builds on every deployment it takes a redeploy. It deletes nothing: the
 rows of the existing connections stay in the database.
 
-### 3. Migration 048
+### 3. Migration 049
 
 ```bash
 pnpm db:migrate --dry-run --expect-database <name> --expect-host <host>
 pnpm db:migrate --expect-database <name> --expect-host <host>
 ```
 
-`048_oauth_provider.sql` is a core migration, so `db:migrate` applies it to every project, with the feature on or
+`049_oauth_provider.sql` is a core migration, so `db:migrate` applies it to every project, with the feature on or
 off. It adds ten tables (`jwks`, `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`,
 `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`), all
 service-only under RLS, and seven triggers. It changes no existing table; two of the triggers are on existing
@@ -84,7 +84,7 @@ SELECT tgname FROM pg_trigger WHERE tgname LIKE 'oauth_%' ORDER BY tgname;
 
 The triggers are part of the security of the feature, not a convenience: they are what refuses a token for a
 connection that was ended, and what cuts a token down when its consent is narrowed. See
-[Migrations](../10-backend/02-migrations.md#migration-048-mcp-browser-sign-in) and
+[Migrations](../10-backend/02-migrations.md#migration-049-mcp-browser-sign-in) and
 [Database Migrations in Production](./05-database-migrations-production.md).
 
 ### 4. The app URL and the issuer URL
@@ -241,9 +241,9 @@ than the ten minutes an access token lives. A key created before rotation was co
 rotate by itself.
 
 **Rolling back.** To stop the feature, set `MCP_OAUTH_ENABLED=false`. To remove it, build without the flag.
-Migration 048 has no down step: its tables can stay, unused. Dropping them signs every MCP client out.
+Migration 049 has no down step: its tables can stay, unused. Dropping them signs every MCP client out.
 
-**Updating later.** Migration 048 is the only migration of the feature. Once a release carries it, it is never
+**Updating later.** Migration 049 is the only migration of the feature. Once a release carries it, it is never
 edited: a later change to these tables or triggers comes as a new migration, applied by `pnpm db:migrate`.
 
 ---
@@ -255,7 +255,7 @@ edited: a later change to these tables or triggers comes as a new migration, app
 - [Environment Configuration](./02-environment-configuration.md) - the variables
 - [Vercel Deployment](./03-vercel-deployment.md) - the Upstash variable names on Vercel
 - [Verifying the shared rate limit with Redis](../12-testing/12-shared-rate-limit-verification.md)
-- [Integration Testing](../12-testing/07-integration-testing.md) - the PostgreSQL test of the rules of migration 048
+- [Integration Testing](../12-testing/07-integration-testing.md) - the PostgreSQL test of the rules of migration 049
 - [RLS Policies](../10-backend/03-rls-policies.md) - the runtime role and the cutover
 
 ---

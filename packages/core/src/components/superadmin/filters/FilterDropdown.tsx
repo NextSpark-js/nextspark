@@ -64,7 +64,7 @@ export function FilterDropdown({
       )}
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger
-          className="h-9 w-[150px]"
+          className="h-9 w-auto min-w-[11rem]"
           data-cy={dataCy}
         >
           {showIcon && <Filter className="h-4 w-4 mr-2 text-muted-foreground" />}

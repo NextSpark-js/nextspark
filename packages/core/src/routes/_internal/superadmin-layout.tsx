@@ -7,8 +7,8 @@ import { getConfiguredClientNamespaces, selectMessages } from '@nextsparkjs/core
 import { AreaMessagesCheck } from '@nextsparkjs/core/providers/area-messages-check'
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
-import { AccountTheme } from "@nextsparkjs/core/providers/account-theme";
-import { ThemeArea } from "@nextsparkjs/core/providers/theme-provider";
+import { AreaToastPosition } from "@nextsparkjs/core/providers/area-toast-position";
+import { ThemeArea } from "@nextsparkjs/core/providers/theme-area";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Loader2 } from 'lucide-react'
 import { Metadata } from "next";
@@ -45,8 +45,7 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
   return (
     <ThemeArea>
       <DashboardProviders>
-        {/* The theme saved to the account, before the area paints (#495) */}
-        <AccountTheme />
+        <AreaToastPosition />
         <SuperAdminGuard serverChecked={serverChecked}>
             <div className="flex h-screen bg-background" data-cy="superadmin-container">
               {/* Sidebar - Hidden on mobile, visible on desktop */}
@@ -71,7 +70,7 @@ function SuperadminContent({ children, serverChecked }: GuardedProps) {
 
                 {/* Content area with scrolling */}
                 <main className="flex-1 overflow-y-auto">
-                  <div className="container mx-auto p-6 max-w-7xl">
+                  <div className="w-full p-6">
                     {children}
                   </div>
                 </main>
@@ -149,7 +148,7 @@ export function guardSuperadminLayout<P extends SuperadminLayoutProps>(ProjectLa
       }>
         <ThemeArea>
           <DashboardProviders>
-            <AccountTheme />
+            <AreaToastPosition />
             <SuperAdminGuard serverChecked={serverChecked}>
               <ProjectLayout {...props} />
             </SuperAdminGuard>

@@ -97,18 +97,6 @@ export const SUPERADMIN_SELECTORS = {
       signups: 'superadmin-metric-signups',
       unavailable: 'superadmin-metrics-unavailable',
     },
-    quickActions: {
-      container: 'superadmin-quick-actions',
-      users: 'superadmin-quick-users',
-      analytics: 'superadmin-quick-analytics',
-      config: 'superadmin-quick-config',
-    },
-    systemStatus: {
-      container: 'superadmin-system-status',
-      online: 'superadmin-status-online',
-      version: 'superadmin-status-version',
-      security: 'superadmin-status-security',
-    },
   },
 
   // =========================================================================
@@ -256,7 +244,6 @@ export const SUPERADMIN_SELECTORS = {
   subscriptions: {
     container: 'superadmin-subscriptions',
     header: {
-      backButton: 'superadmin-subscriptions-back',
       title: 'superadmin-subscriptions-title',
       refreshButton: 'superadmin-subscriptions-refresh',
     },
@@ -298,7 +285,6 @@ export const SUPERADMIN_SELECTORS = {
   teamRoles: {
     container: 'superadmin-team-roles',
     header: {
-      backButton: 'superadmin-team-roles-back',
       title: 'superadmin-team-roles-title',
     },
     tabs: {

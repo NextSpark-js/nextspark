@@ -85,7 +85,7 @@ turn off the per-credential limit, which is a safety cap. Remove the variable wh
 
 ### 3. Deploy
 
-Deploy with both changes. The feature has to be on for an MCP connection: `features.mcpOAuth`, migration 048,
+Deploy with both changes. The feature has to be on for an MCP connection: `features.mcpOAuth`, migration 049,
 `MCP_ENABLED=true` in production (see
 [MCP browser sign-in deployment](../14-deployment/12-mcp-browser-sign-in.md)).
 

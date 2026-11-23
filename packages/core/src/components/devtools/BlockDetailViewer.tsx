@@ -24,6 +24,7 @@ import { sel } from '../../lib/test';
 import type { FieldDefinition } from '../../types/blocks';
 import { groupFieldsByTab } from './block-field-utils';
 import { BlockThumbnail } from './BlockThumbnail'
+import { useAreaUrlState, useListBackHref } from '../../hooks/useAreaUrlState';
 
 interface BlockDetailViewerProps {
   slug: string;
@@ -161,12 +162,20 @@ export function FieldRows({ field, depth }: { field: FieldDefinition; depth: num
  * - Fields tab with complete field definitions
  * - Preview tab with thumbnail if available
  */
+/** The tab and the example are kept in the URL (#519). */
+const URL_STATE = {
+  tab: { default: "preview", allowed: ["preview", "fields", "overview"] },
+  example: { default: "0", allowed: (v: string) => /^\d{1,2}$/.test(v) },
+} as const;
+
 export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
   const t = useTranslations("devtools.blocks.detail");
   const text = useLocalizedText();
 
-  // State for selected example
-  const [selectedExampleIndex, setSelectedExampleIndex] = useState(0);
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
+  const setSelectedExampleIndex = (i: number) => setUrl({ example: String(i) });
+  // "Back" returns to the list with the filters it had
+  const listHref = useListBackHref("/devtools/blocks");
 
   const block = useMemo(() => BLOCK_REGISTRY[slug], [slug]);
 
@@ -184,6 +193,8 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
 
   // Get examples from block registry
   const examples = useMemo(() => block?.examples || [], [block]);
+  // an example that does not exist (a stale link) is the first
+  const selectedExampleIndex = Number(url.example) < examples.length ? Number(url.example) : 0;
   const currentExample = useMemo(() => examples[selectedExampleIndex], [examples, selectedExampleIndex]);
 
   // Get the block component for preview
@@ -203,7 +214,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
           <p className="text-sm text-muted-foreground mb-4">
             {t("notFoundDescription", { slug })}
           </p>
-          <Link href="/devtools/blocks">
+          <Link href={listHref}>
             <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
               {t("back")}
@@ -218,7 +229,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
     <div className="space-y-6" data-cy={sel("devtools.blocks.detail.page", { slug })}>
       {/* Back link */}
       <Link
-        href="/devtools/blocks"
+        href={listHref}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
@@ -267,7 +278,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="preview" className="space-y-4">
+      <Tabs value={url.tab} onValueChange={(tab) => setUrl({ tab })} className="space-y-4">
         <TabsList>
           <TabsTrigger value="preview" data-cy={sel("devtools.blocks.detail.tabPreview")}>
             <Eye className="h-4 w-4 mr-1" />

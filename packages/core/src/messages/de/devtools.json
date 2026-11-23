@@ -28,10 +28,8 @@
   },
   "exitToDashboard": "DevTools verlassen",
   "exitToDashboardDescription": "Zurück zur Hauptübersicht",
-  "returnToDashboard": "Zurück zur Übersicht",
   "goToSuperadmin": "Super-Admin-Bereich",
   "goToSuperadminDescription": "Zum Super-Administrator-Bereich gehen",
-  "superAdminArea": "Super-Administrator-Bereich",
   "restrictedArea": "Entwicklerbereich",
   "developerAccessOnly": "Nur Entwicklerzugang",
   "config": {
@@ -67,6 +65,9 @@
     "backToList": "Zurück zur Liste",
     "selectFile": "Datei auswählen",
     "selectFileDescription": "Wählen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
+    "folder": "Ordner",
+    "folderItems": "{count, plural, one {# Eintrag} other {# Einträge}}",
+    "folderEmpty": "Dieser Ordner enthält keine Testdokumentation",
     "error": "Fehler beim Laden der Datei",
     "dashboard": {
       "title": "Übersicht der Testabdeckung",
@@ -184,7 +185,14 @@
       "adminBypassTooltip": "Aktivieren Sie den Zugriff auf Daten aller Teams. Erfordert NextSpark-Team-Mitgliedschaft.",
       "actAsUser": "Als Benutzer handeln",
       "actAsUserHelp": "Nur für Entwickler. Löst sitzungsbezogene Endpunkte (z. B. /me/*) als der angegebene Benutzer auf, ohne Ihre Sitzung zu wechseln. Erfordert die Rolle „developer“, eine Nicht-Produktionsumgebung und ALLOW_ACT_AS_USER=true. Leer lassen, um Ihre eigene Sitzung zu verwenden.",
-      "actAsUserPlaceholder": "Benutzer-ID (leer = Ihre eigene Sitzung)"
+      "actAsUserPlaceholder": "Ihre eigene Sitzung (Benutzer suchen, als der gehandelt wird)",
+      "actAsUserClear": "Nicht mehr als dieser Benutzer handeln",
+      "actAsUserSearch": "Nach E-Mail oder Name suchen...",
+      "actAsUserSearching": "Benutzer werden gesucht...",
+      "actAsUserNone": "Keine Benutzer gefunden",
+      "actAsUserUnavailable": "Die Benutzer konnten nicht geladen werden. Geben Sie eine ID ein, um sie unverändert zu verwenden.",
+      "actAsUserUseId": "\"{id}\" als Benutzer-ID verwenden",
+      "actAsUserDisabled": "Auf diesem Server aus: ALLOW_ACT_AS_USER=true in einer Nicht-Produktionsumgebung setzen. Anfragen nutzen Ihre eigene Sitzung."
     },
     "editor": {
       "keyPlaceholder": "Schlüssel",
@@ -213,7 +221,8 @@
       "apiKey": "API-Schlüssel",
       "session": "Sitzung",
       "crossTeam": "teamübergreifend",
-      "actingAs": "als {user}"
+      "actingAs": "als {user}",
+      "actingAsChip": "Handelt als {user}"
     },
     "source": "Quelle: {source}",
     "sourceWithCategory": "Quelle: {source} | Kategorie: {category}",
@@ -231,6 +240,23 @@
       "tryOther": "Versuchen Sie einen anderen Suchbegriff",
       "crossTeamHint": "Zugriff auf die Daten aller Teams ohne Filter",
       "members": "{count, plural, one {# Mitglied} other {# Mitglieder}}"
+    },
+    "context": {
+      "session": "Sitzung",
+      "apiKey": "API-Schlüssel",
+      "team": "Team: {team}",
+      "noTeam": "Kein Team",
+      "crossTeam": "Team-übergreifend",
+      "crossTeamIn": "Team-übergreifend, gefiltert auf {team}",
+      "actingAs": "Als {user}"
+    },
+    "copyCurl": "cURL kopieren",
+    "curlCopied": "Kopiert",
+    "recent": {
+      "title": "Zuletzt",
+      "clear": "Leeren",
+      "empty": "Gesendete Anfragen erscheinen hier",
+      "failed": "fehlgeschlagen"
     }
   },
   "features": {
@@ -426,13 +452,17 @@
       "payload": "Daten",
       "error": "Fehler",
       "actions": "Aktionen",
-      "noTeam": "Global"
+      "noTeam": "Global",
+      "expandRow": "Details anzeigen",
+      "collapseRow": "Details ausblenden"
     },
     "retry": {
       "button": "Wiederholen",
       "success": "Aktion zur Wiederholung geplant",
       "error": "Fehler beim Wiederholen der Aktion: {message}",
-      "fallback": "Wiederholung fehlgeschlagen"
+      "fallback": "Wiederholung fehlgeschlagen",
+      "retried": "Wiederholt",
+      "retryOf": "Wiederholung von"
     },
     "run": {
       "button": "Jetzt ausführen",
@@ -444,7 +474,8 @@
       "pending": "Ausstehend",
       "running": "Wird ausgeführt",
       "completed": "Abgeschlossen",
-      "failed": "Fehlgeschlagen"
+      "failed": "Fehlgeschlagen",
+      "overdue": "Überfällig"
     },
     "pagination": {
       "previous": "Zurück",
@@ -452,7 +483,9 @@
       "page": "Seite {page} von {total}"
     },
     "fetchFailed": "Die geplanten Aktionen konnten nicht abgerufen werden",
-    "errorMessage": "Fehler: {message}"
+    "errorMessage": "Fehler: {message}",
+    "refresh": "Aktualisieren",
+    "updated": "Aktualisiert {when}"
   },
   "gallery": {
     "theme": {
@@ -1025,5 +1058,10 @@
     "failed": "Kopieren in die Zwischenablage fehlgeschlagen",
     "tag": "Tag kopieren",
     "testCommand": "Testbefehl kopieren"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Diese Seite gibt es in DevTools nicht.",
+    "back": "Zurück zu DevTools"
   }
 }

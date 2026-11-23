@@ -49,6 +49,7 @@ it('renders every metric, with MRR per currency and a bar for each of the 30 day
   expect(screen.getByText('€3,667.00')).toBeInTheDocument()
   expect(screen.getByText('signups.description:5')).toBeInTheDocument()
   expect(screen.getAllByRole('listitem')).toHaveLength(30)
+  expect(screen.getByLabelText('mrrHelpLabel')).toBeInTheDocument() // the card explains the definition (#517)
 })
 
 it('shows a zero MRR when nothing is paying', async () => {
@@ -85,7 +86,10 @@ it('keeps the rest of the page when the metrics fail', async () => {
   await renderPage()
   expect(screen.getByText('unavailable')).toBeInTheDocument()
   expect(screen.getByText('Super Admin Panel')).toBeInTheDocument()
-  expect(screen.getByText('User Management')).toBeInTheDocument()
+  // the sections are in the sidebar: no repeated cards, no "Soon", no fixed version (#530)
+  expect(screen.queryByText('User Management')).not.toBeInTheDocument()
+  expect(screen.queryByText('Soon')).not.toBeInTheDocument()
+  expect(screen.queryByText('v1.0.0')).not.toBeInTheDocument()
 })
 
 describe('access to the page', () => {
@@ -109,10 +113,10 @@ describe('access to the page', () => {
     expect(page.type).toBe(SuperadminDashboard)
   })
 
-  it('puts the metrics before the quick actions', async () => {
+  it('ends with the metrics: no cards after them repeating the sidebar (#530)', async () => {
     await renderPage()
     const metrics = document.querySelector('[data-cy="superadmin-metrics"]')!
     expect(metrics).not.toBeNull()
-    expect(metrics.compareDocumentPosition(screen.getByText('User Management')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(metrics.nextElementSibling).toBeNull()
   })
 })

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
@@ -13,7 +12,6 @@ import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Badge } from "@nextsparkjs/core/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@nextsparkjs/core/components/ui/tabs";
 import {
-  ArrowLeft,
   Shield,
   Users,
   Lock,
@@ -30,6 +28,15 @@ import { getFullBillingMatrix } from "@nextsparkjs/core/lib/billing/queries";
 import { RolesPermissionsMatrix } from "@nextsparkjs/core/components/superadmin/tables/RolesPermissionsMatrix";
 import { PlanFeaturesMatrix } from "@nextsparkjs/core/components/superadmin/tables/PlanFeaturesMatrix";
 import { formatLocaleDollars } from "@nextsparkjs/core/lib/i18n/format";
+import { useAreaUrlState } from "@nextsparkjs/core/hooks/useAreaUrlState";
+import { AreaPageHeader } from "@nextsparkjs/core/components/area/AreaPageHeader";
+
+/** What the screen keeps in the URL (#519): the tab and the roles matrix search. */
+const URL_STATE = {
+  tab: { default: "rbac", allowed: ["rbac", "plans"] },
+  search: { default: "" },
+  diff: { default: "", allowed: ["1"] },
+} as const;
 
 /**
  * Team Roles & Permissions Page
@@ -43,8 +50,8 @@ import { formatLocaleDollars } from "@nextsparkjs/core/lib/i18n/format";
 function TeamRolesPage() {
   const t = useTranslations("superadmin.teamRoles");
   const tTeams = useTranslations("teams");
-  const tShared = useTranslations("superadmin.shared");
   const locale = useLocale();
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
   const teamRoleLabel = (role: string) => (tTeams.has(`roles.${role}`) ? tTeams(`roles.${role}`) : role);
   const planTypeLabel = (type: string) => (t.has(`planTypes.${type}`) ? t(`planTypes.${type}`) : type);
   const teamRolesConfig = APP_CONFIG_MERGED.teams.roles;
@@ -70,6 +77,12 @@ function TeamRolesPage() {
       .map(p => p.id);
   }
 
+  // The total and its parts come from the same list, so they add up: the registry's own counts leave the team permissions
+  // out, and the generated list drops duplicates and disabled ones. Entity permissions are what is left.
+  const core = permissions.filter(p => p.source === "core").length;
+  const features = Math.min(PERMISSIONS_METADATA.teamPermissions + PERMISSIONS_METADATA.featurePermissions, permissions.length - core);
+  const entity = permissions.length - core - features;
+
   // All permission IDs
   const allPermissions = permissions.map(p => p.id);
 
@@ -94,25 +107,15 @@ function TeamRolesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            {tShared("backToSuperAdmin")}
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-muted-foreground">
-            {t("subtitle")}
-          </p>
-        </div>
-      </div>
+      <AreaPageHeader
+        icon={Shield}
+        tone="red"
+        title={t("title")}
+        subtitle={t("subtitle")}
+      />
 
       {/* Tabs for switching between matrices */}
-      <Tabs defaultValue="rbac" className="space-y-6">
+      <Tabs value={url.tab} onValueChange={(tab) => setUrl({ tab })} className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="rbac" className="flex items-center gap-2" data-cy="tab-rbac">
             <Shield className="h-4 w-4" />
@@ -145,12 +148,12 @@ function TeamRolesPage() {
                 <Key className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{PERMISSIONS_METADATA.totalPermissions}</div>
+                <div className="text-2xl font-bold">{permissions.length}</div>
                 <p className="text-xs text-muted-foreground">
                   {t("rbac.permissionBreakdown", {
-                    core: PERMISSIONS_METADATA.corePermissions,
-                    features: PERMISSIONS_METADATA.featurePermissions,
-                    entity: PERMISSIONS_METADATA.entityPermissions,
+                    core,
+                    features,
+                    entity,
                   })}
                 </p>
               </CardContent>
@@ -228,6 +231,10 @@ function TeamRolesPage() {
                 permissions={rolePermissions}
                 allPermissions={allPermissions}
                 permissionsData={permissions}
+                query={url.search}
+                onQueryChange={(search) => setUrl({ search })}
+                differencesOnly={url.diff === "1"}
+                onDifferencesOnlyChange={(on) => setUrl({ diff: on ? "1" : "" })}
               />
             </CardContent>
           </Card>
@@ -379,7 +386,7 @@ function TeamRolesPage() {
                           : plan.price
                           ? t("plans.perMonth", { price: formatLocaleDollars(plan.price.monthly, locale, { whole: true }) })
                           : t("plans.contactSales")}
-                        {plan.trialDays && plan.trialDays > 0 && (
+                        {plan.trialDays != null && plan.trialDays > 0 && (
                           <span className="ml-1 text-green-600">
                             {t("plans.trialDays", { days: plan.trialDays })}
                           </span>

@@ -5,7 +5,12 @@
 import type { ScheduledAction, ScheduledActionStatus } from '../../../lib/scheduled-actions/types'
 
 /** A listed action: the team's name comes with the row (read in the same query), so the table needs no lookup per row. */
-export type ScheduledActionRow = ScheduledAction & { teamName?: string | null }
+export type ScheduledActionRow = ScheduledAction & {
+  teamName?: string | null
+  /** The action that retried this failed one, and the failed action this one retried ("retryOf" is a column, migration 048; "retriedBy" is the action whose retryOf is this one). */
+  retriedBy?: string | null
+  retryOf?: string | null
+}
 
 export interface ScheduledActionsFilters {
   status?: ScheduledActionStatus
@@ -25,6 +30,8 @@ export interface ScheduledActionsResponse {
     meta: {
       registeredActionTypes: string[]
       failedCount: number
+      /** Actions per status under the action type filter. */
+      statusCounts?: Record<string, number>
     }
   }
 }

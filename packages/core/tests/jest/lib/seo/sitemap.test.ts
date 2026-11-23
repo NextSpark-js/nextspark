@@ -157,6 +157,14 @@ describe('readPublishedEntries', () => {
     expect(params).toEqual([10])
   })
 
+  it('leaves out a scheduled row of an entity with a publishing date, and asks nothing more of one without (#542)', async () => {
+    const run = jest.fn().mockResolvedValue({ rows: [] })
+    await readPublishedEntries(entity({ fields: [{ name: 'publishedAt', type: 'datetime' }] }), run)
+    expect(run.mock.calls[0][0]).toContain(`WHERE status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW()) GROUP BY slug`)
+    await readPublishedEntries(entity({ fields: [{ name: 'title', type: 'text' }] }), run)
+    expect(run.mock.calls[1][0]).not.toContain('publishedAt')
+  })
+
   it('drops slugs the public route answers not found for', async () => {
     const rows = ['ok', 'v1.0', 'logo.png', 'robots.txt', '-leading', 'with space', 'nested/slug', 'x'.repeat(201)].map(row)
     const run = jest.fn().mockResolvedValue({ rows })
@@ -182,5 +190,29 @@ describe('readPublishedEntries', () => {
 
     await expect(readPublishedEntries(entity({ tableName: 'posts"; DROP TABLE users; --' }), run)).resolves.toEqual([])
     expect(run).not.toHaveBeenCalled()
+  })
+})
+
+describe('the blog template posts (#551)', () => {
+  // the entity as the project declares it: a public entity with its own post page, not a builder entity
+  const { postEntityConfig } = jest.requireActual('../../../../templates/projects/blog/entities/posts/posts.config')
+
+  it('is listed with /posts and /posts/<slug>, as the page answers', async () => {
+    expect(isSitemapEntity(postEntityConfig)).toBe(true)
+    const run = jest.fn().mockResolvedValue({ rows: [{ slug: 'hello', updatedAt: '2026-01-01' }] })
+    const rows = await readPublishedEntries(postEntityConfig, run)
+
+    expect(run.mock.calls[0][0]).toContain(`status = 'published' AND ("publishedAt" IS NULL OR "publishedAt" <= NOW())`)
+    expect(urls(buildSitemap({ ...BASE, entities: [{ config: postEntityConfig, rows }] }))).toEqual(['https://example.com/posts', 'https://example.com/posts/hello'])
+  })
+
+  it('drops a nested slug: the post page is one `[slug]` segment, unlike the builder\'s `[...slug]`', async () => {
+    const run = jest.fn().mockResolvedValue({ rows: [{ slug: 'hello' }, { slug: 'a/b' }] })
+    expect((await readPublishedEntries(postEntityConfig, run)).map(r => r.slug)).toEqual(['hello'])
+    expect((await readPublishedEntries(entity(), run)).map(r => r.slug)).toEqual(['hello', 'a/b'])
+  })
+
+  it('an entity with no page of its own is still left out without the builder', () => {
+    expect(isSitemapEntity(entity({ builder: undefined, ui: { public: { hasSinglePage: false } } }))).toBe(false)
   })
 })

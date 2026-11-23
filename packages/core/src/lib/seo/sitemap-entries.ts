@@ -11,6 +11,7 @@
 import { RESERVED_SLUGS } from '../constants/reserved-slugs'
 import { isServableSlug } from '../entities/public-item-slug'
 import type { EntityConfig } from '../entities/types'
+import { publishedAtClause } from '../entities/published-at'
 import { isSitemapEntity, type SitemapEntity, type SitemapRow } from './sitemap'
 
 export const SITEMAP_MAX_URLS = 50_000
@@ -23,7 +24,7 @@ export async function readPublishedEntries(config: EntityConfig, run: RunQuery, 
   const table = config.tableName || config.slug
   if (!IDENTIFIER.test(table)) return []
   const { rows } = await run(
-    `SELECT slug, MAX("updatedAt") AS "updatedAt" FROM "${table}" WHERE status = 'published' GROUP BY slug ORDER BY slug LIMIT $1`,
+    `SELECT slug, MAX("updatedAt") AS "updatedAt" FROM "${table}" WHERE status = 'published'${publishedAtClause(config)} GROUP BY slug ORDER BY slug LIMIT $1`,
     [limit]
   )
   // an entity at the site root is shadowed by core's routes for these first segments (a row written before the slug rule)

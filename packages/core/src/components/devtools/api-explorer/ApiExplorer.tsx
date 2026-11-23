@@ -21,7 +21,21 @@ import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
 import { loadState, saveState, draftKey } from './explorer-storage'
-import { defaultMethod } from './explorer-helpers'
+import {
+  BODY_METHODS,
+  buildCurl,
+  buildRequestHeaders,
+  createEmptyRows,
+  defaultMethod,
+  initialBody,
+  pickDefaultTeamId,
+  pushRecent,
+  queryToSearch,
+  searchToRows,
+  type RecentRequest,
+  type RequestContext,
+} from './explorer-helpers'
+import { useUserTeams } from '../../../hooks/teams'
 import {
   createPresetPlaceholderValues,
   readPresetRunToken,
@@ -47,6 +61,10 @@ interface EndpointDraft {
 interface ApiExplorerProps {
   routes: Record<RouteCategory, ApiRouteEntry[]>
   initialEndpoint?: { method: string; path: string } | null
+  /** Required-field JSON for creating each entity, by collection path (built on the server from the entity configs). */
+  bodySkeletons?: Record<string, Record<string, unknown>>
+  /** Whether the server honours `x-act-as-user` here (not production, ALLOW_ACT_AS_USER set). Off: the picker is disabled and no act-as is sent or shown. */
+  actAsEnabled?: boolean
 }
 
 /** Find a route by path in the routes registry */
@@ -61,20 +79,10 @@ function findRouteByPath(
   return null
 }
 
-/** Create empty key-value rows for query params and headers */
-function createEmptyRows(count = 2): KeyValuePair[] {
-  return Array.from({ length: count }, () => ({
-    id: crypto.randomUUID(),
-    key: '',
-    value: '',
-    enabled: true,
-  }))
-}
-
-export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
+export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabled = true }: ApiExplorerProps) {
   const t = useTranslations('devtools.api')
   // Sidebar state (collapse persisted)
-  const [isCollapsed, setIsCollapsed] = useState(() => loadState<boolean>('sidebarCollapsed') ?? false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Selected endpoint
@@ -86,20 +94,46 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   const [queryParams, setQueryParams] = useState<KeyValuePair[]>(() => createEmptyRows())
   const [headers, setHeaders] = useState<KeyValuePair[]>(() => createEmptyRows())
   // Session/auth config is persisted (see effect below) so it survives reloads.
-  const [authType, setAuthType] = useState<AuthType>(() => loadState<AuthType>('authType') ?? 'session')
-  const [apiKey, setApiKey] = useState(() => loadState<string>('apiKey') ?? '')
-  const [bypassMode, setBypassMode] = useState(() => loadState<boolean>('bypassMode') ?? false)
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(() => {
-    const saved = loadState<string>('selectedTeamId')
-    if (saved) return saved
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('activeTeamId')
-    }
-    return null
-  })
+  const [authType, setAuthType] = useState<AuthType>('session')
+  const [apiKey, setApiKey] = useState('')
+  const [bypassMode, setBypassMode] = useState(false)
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [body, setBody] = useState('')
+  // Raised by a send with no team, not by loading the screen (see handleSend and the effect below).
+  const [teamErrorShown, setTeamErrorShown] = useState(false)
   // Optional act-as-user override for the request (persisted; the server strictly gates it)
-  const [actAsUserId, setActAsUserId] = useState(() => loadState<string>('actAsUserId') ?? '')
+  const [actAsUserId, setActAsUserId] = useState('')
+  // What to show for that id (the user's email), kept with it so the chip and the response can name the user.
+  const [actAsLabel, setActAsLabel] = useState('')
+  // What the rest of the screen uses: with act-as off, a remembered user counts for nothing (the server ignores the
+  // header), so it is neither sent nor shown as the identity of a request.
+  const activeActAsId = actAsEnabled ? actAsUserId : ''
+  const activeActAsLabel = actAsEnabled ? actAsLabel : ''
+  const handleActAsChange = useCallback((id: string, label: string) => {
+    setActAsUserId(id)
+    setActAsLabel(label)
+  }, [])
+  // The saved session, sidebar and recent requests come from localStorage, which the server render cannot see:
+  // they are read after mount (reading them in the initializers made the first client render differ from the
+  // server HTML, a hydration mismatch). Nothing is written back, and no default team is picked, until this ran.
+  // Declared before every effect that reads or writes that state.
+  const [restored, setRestored] = useState(false)
+  useEffect(() => {
+    setIsCollapsed(loadState<boolean>('sidebarCollapsed') ?? false)
+    setAuthType(loadState<AuthType>('authType') ?? 'session')
+    setApiKey(loadState<string>('apiKey') ?? '')
+    setBypassMode(loadState<boolean>('bypassMode') ?? false)
+    setSelectedTeamId(loadState<string>('selectedTeamId') || localStorage.getItem('activeTeamId'))
+    setActAsUserId(loadState<string>('actAsUserId') ?? '')
+    setActAsLabel(loadState<string>('actAsLabel') ?? '')
+    setRecent(loadState<RecentRequest[]>('recent') ?? [])
+    setRestored(true)
+  }, [])
+  // How the last request was made, captured at send time (see handleSend).
+  const [requestContext, setRequestContext] = useState<RequestContext | null>(null)
+  // The last requests sent from this browser (20), and the one in flight, which joins the list when it answers.
+  const [recent, setRecent] = useState<RecentRequest[]>([])
+  const sentRef = useRef<RecentRequest | null>(null)
 
   // How the request/response split is divided, as a percentage of the row. Persisted, because a
   // layout someone chose for the work they are doing should survive a reload of that same work.
@@ -152,28 +186,51 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     useApiExplorerNavigation({ basePath: '/devtools/api' })
 
   // Load an endpoint's persisted request draft (or sensible defaults) into state.
-  const applyEndpointState = useCallback((endpointMethod: HttpMethod, path: string) => {
+  // `fromUrl`: the endpoint came from the address bar, so the query string it carries wins over the saved draft.
+  const applyEndpointState = useCallback((endpointMethod: HttpMethod, path: string, fromUrl = false) => {
     const draft = loadState<EndpointDraft>(draftKey(endpointMethod, path))
+    const urlRows = fromUrl && typeof window !== 'undefined' ? searchToRows(window.location.search) : []
     setPathParams(draft?.pathParams ?? extractPathParams(path))
-    setQueryParams(draft?.queryParams ?? createEmptyRows())
+    setQueryParams(urlRows.length ? [...urlRows, ...createEmptyRows()] : draft?.queryParams ?? createEmptyRows())
     setHeaders(draft?.headers ?? createEmptyRows())
-    setBody(draft?.body ?? '')
+    // An endpoint opened with nothing typed starts from its first preset or its required fields, not blank.
+    setBody(
+      draft?.body?.trim()
+        ? draft.body
+        : initialBody(endpointMethod, ApiPresetsService.getByEndpoint(path)?.presets, bodySkeletons?.[path])
+    )
     setTabsModifiedByPreset(new Set())
-  }, [])
+  }, [bodySkeletons])
 
   // Persist session/auth config so it survives reloads.
   useEffect(() => {
+    if (!restored) return
     saveState('authType', authType)
     saveState('apiKey', apiKey)
     saveState('bypassMode', bypassMode)
     saveState('selectedTeamId', selectedTeamId)
     saveState('actAsUserId', actAsUserId)
-  }, [authType, apiKey, bypassMode, selectedTeamId, actAsUserId])
+    saveState('actAsLabel', actAsLabel)
+  }, [restored, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, actAsLabel])
+
+  // A team is preselected: the last one used (restored above), else the dashboard's active team, else
+  // the user's only team. Read-only for a team already set, and not applied in cross-team mode, where
+  // "no team" is a choice.
+  const { teams: userTeams, isLoading: teamsLoading } = useUserTeams()
+  useEffect(() => {
+    if (!restored || bypassMode || selectedTeamId || teamsLoading) return
+    const active = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
+    const picked = pickDefaultTeamId(userTeams, selectedTeamId, active)
+    if (picked) setSelectedTeamId(picked)
+  }, [restored, bypassMode, selectedTeamId, teamsLoading, userTeams])
+  useEffect(() => {
+    if (selectedTeamId || bypassMode) setTeamErrorShown(false)
+  }, [selectedTeamId, bypassMode])
 
   // Persist whether the sidebar is collapsed.
   useEffect(() => {
-    saveState('sidebarCollapsed', isCollapsed)
-  }, [isCollapsed])
+    if (restored) saveState('sidebarCollapsed', isCollapsed)
+  }, [restored, isCollapsed])
 
   // Handle endpoint selection - updates URL and local state
   const handleSelectEndpoint = useCallback(
@@ -204,44 +261,107 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     const url = buildUrl(selectedEndpoint.path, pathParams, queryParams)
     const fullUrl = (typeof window !== 'undefined' ? window.location.origin : '') + withBasePath(url)
 
-    const customHeaders: Record<string, string> = {}
+    // Team context is only complained about here, once a request goes out without one.
+    setTeamErrorShown(!bypassMode && !selectedTeamId)
 
-    // Inject bypass header if enabled
-    if (bypassMode) {
-      customHeaders['x-admin-bypass'] = 'confirm-cross-team-access'
-      // In bypass mode, team is optional (for filtering specific team)
-      if (selectedTeamId) {
-        customHeaders['x-team-id'] = selectedTeamId
-      }
-    } else {
-      // Normal mode: use selected team from dropdown
-      if (selectedTeamId) {
-        customHeaders['x-team-id'] = selectedTeamId
-      }
+    // Bypass (cross-team: the team is then an optional filter), team, and the act-as override (the Core
+    // auth layer gates it strictly: developer role + non-prod + flag), then the user's own headers on top.
+    const customHeaders = buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId: activeActAsId, headers })
+    sentRef.current = {
+      method,
+      path: selectedEndpoint.path,
+      pathParams: Object.fromEntries(pathParams.map((p) => [p.name, p.value])),
+      query: queryParams.filter((row) => row.enabled && row.key && row.value).map((row) => ({ key: row.key, value: row.value })),
+      body: BODY_METHODS.includes(method) ? body : '',
+      status: null,
+      at: Date.now(),
     }
 
-    // Optional act-as-user override (the Core auth layer gates it strictly —
-    // developer role + non-prod + flag). No-op otherwise.
-    if (actAsUserId.trim()) {
-      customHeaders['x-act-as-user'] = actAsUserId.trim()
-    }
-
-    // User-defined headers can override the auto-injected ones
-    for (const h of headers) {
-      if (h.enabled && h.key) {
-        customHeaders[h.key] = h.value
-      }
-    }
+    const teamName = selectedTeamId ? userTeams.find((team) => team.id === selectedTeamId)?.name ?? selectedTeamId : null
+    setRequestContext({
+      auth: authType,
+      team: teamName,
+      crossTeam: bypassMode,
+      actingAs: activeActAsId.trim() ? activeActAsLabel || activeActAsId.trim() : null,
+    })
 
     await execute({
       url: fullUrl,
       method,
       headers: customHeaders,
-      body: ['POST', 'PATCH', 'PUT'].includes(method) ? body : undefined,
+      body: BODY_METHODS.includes(method) ? body : undefined,
       authType,
       apiKey: authType === 'apiKey' ? apiKey : undefined,
     })
-  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, execute])
+  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, activeActAsId, activeActAsLabel, userTeams, execute])
+
+  // Switching to a method that sends a body on an empty editor fills it the same way opening the endpoint does.
+  const handleMethodChange = useCallback(
+    (next: HttpMethod) => {
+      setMethod(next)
+      if (selectedEndpoint && !body.trim()) {
+        setBody(initialBody(next, endpointPresets?.presets, bodySkeletons?.[selectedEndpoint.path]))
+      }
+    },
+    [selectedEndpoint, body, endpointPresets, bodySkeletons]
+  )
+
+  // A request joins "Recent" when it gets an answer (with its status), or fails with none; a cancel does not.
+  useEffect(() => {
+    const sent = sentRef.current
+    if (!sent || status === 'idle' || status === 'loading') return
+    sentRef.current = null
+    if (status === 'cancelled') return
+    setRecent((prev) => {
+      const next = pushRecent(prev, { ...sent, status: status === 'success' ? response?.status ?? null : null })
+      saveState('recent', next)
+      return next
+    })
+  }, [status, response])
+
+  const handleClearRecent = useCallback(() => {
+    setRecent([])
+    saveState('recent', [])
+  }, [])
+
+  // Reopen a recent request: its endpoint, then its params and body over the endpoint's own draft.
+  const handleOpenRecent = useCallback(
+    (item: RecentRequest) => {
+      const route = findRouteByPath(routes, item.path)
+      if (!route) return
+      handleSelectEndpoint(item.path, item.method as HttpMethod, route)
+      setPathParams(extractPathParams(item.path).map((p) => ({ ...p, value: item.pathParams[p.name] ?? '' })))
+      setQueryParams([
+        ...item.query.map((q) => ({ id: crypto.randomUUID(), key: q.key, value: q.value, enabled: true })),
+        ...createEmptyRows(),
+      ])
+      if (item.body) setBody(item.body)
+    },
+    [routes, handleSelectEndpoint]
+  )
+
+  // The request as a cURL command, built from the same inputs a send uses (the API key masked).
+  const handleCopyCurl = useCallback(() => {
+    const url = selectedEndpoint ? buildUrl(selectedEndpoint.path, pathParams, queryParams) : ''
+    return buildCurl({
+      method,
+      url: (typeof window !== 'undefined' ? window.location.origin : '') + withBasePath(url),
+      headers: buildRequestHeaders({ bypassMode, selectedTeamId, actAsUserId: activeActAsId, headers }),
+      body,
+      authType,
+      apiKey,
+    })
+  }, [selectedEndpoint, pathParams, queryParams, method, bypassMode, selectedTeamId, activeActAsId, headers, body, authType, apiKey])
+
+  // The query params live in the address bar too, so a link to this screen reopens the same request. Replaced,
+  // not pushed: typing a character is not a page to go back to. The path part is the navigation hook's.
+  useEffect(() => {
+    if (!selectedEndpoint || typeof window === 'undefined') return
+    const next = window.location.pathname + queryToSearch(queryParams) + window.location.hash
+    if (next !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(window.history.state, '', next)
+    }
+  }, [selectedEndpoint, queryParams])
 
   // Handle applying a preset
   const handleApplyPreset = useCallback((rawPreset: ApiPreset) => {
@@ -333,7 +453,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         // URL changed, update local state (restoring this endpoint's draft)
         setSelectedEndpoint({ path: urlPath, method: urlMethod, route })
         setMethod(urlMethod)
-        applyEndpointState(urlMethod, urlPath)
+        applyEndpointState(urlMethod, urlPath, true)
       }
     }
   }, [urlPath, urlMethod, routes, selectedEndpoint, applyEndpointState])
@@ -360,7 +480,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         hasInitialized.current = true
         setSelectedEndpoint({ path: urlPath, method: urlMethod, route })
         setMethod(urlMethod)
-        applyEndpointState(urlMethod, urlPath)
+        applyEndpointState(urlMethod, urlPath, true)
         return
       }
     }
@@ -373,7 +493,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         const endpointMethod = initialEndpoint.method as HttpMethod
         setSelectedEndpoint({ path: initialEndpoint.path, method: endpointMethod, route })
         setMethod(endpointMethod)
-        applyEndpointState(endpointMethod, initialEndpoint.path)
+        applyEndpointState(endpointMethod, initialEndpoint.path, true)
         // Navigate to update URL if not already there
         if (!urlPath) {
           navigateToEndpoint(endpointMethod, initialEndpoint.path)
@@ -487,10 +607,13 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 apiKey={apiKey}
                 bypassMode={bypassMode}
                 selectedTeamId={selectedTeamId}
-                actAsUserId={actAsUserId}
+                actAsUserId={activeActAsId}
+                actAsLabel={activeActAsLabel}
+                actAsEnabled={actAsEnabled}
+                showTeamError={teamErrorShown}
                 body={body}
                 status={status}
-                onMethodChange={setMethod}
+                onMethodChange={handleMethodChange}
                 onPathParamsChange={setPathParams}
                 onQueryParamsChange={setQueryParams}
                 onHeadersChange={setHeaders}
@@ -498,10 +621,14 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 onApiKeyChange={setApiKey}
                 onBypassModeChange={setBypassMode}
                 onTeamChange={setSelectedTeamId}
-                onActAsUserChange={setActAsUserId}
+                onActAsUserChange={handleActAsChange}
                 onBodyChange={setBody}
                 onSend={handleSend}
                 onCancel={cancel}
+                onCopyCurl={handleCopyCurl}
+                recentRequests={recent}
+                onOpenRecent={handleOpenRecent}
+                onClearRecent={handleClearRecent}
                 endpointPresets={endpointPresets}
                 endpointDoc={endpointDoc}
                 onApplyPreset={handleApplyPreset}
@@ -529,6 +656,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 status={status}
                 response={response}
                 error={error}
+                context={requestContext}
               />
             </div>
           </>

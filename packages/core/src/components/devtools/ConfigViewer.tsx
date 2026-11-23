@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { sel } from '../../lib/test';
 import { useCopy } from './use-copy';
 import { withBasePath } from '../../lib/base-path'
+import { useAreaUrlState } from '../../hooks/useAreaUrlState';
 
 interface EntityInfo {
   slug: string;
@@ -120,8 +121,12 @@ const JsonViewer = memo(function JsonViewer({ data, fontSize = "0.875rem" }: Jso
  * - JSON syntax highlighting (using Shiki - ~25KB vs 296KB)
  * - Copy to clipboard for each section
  */
+/** The tab is kept in the URL (#519). */
+const URL_STATE = { tab: { default: 'theme', allowed: ['theme', 'entities'] } } as const;
+
 export function ConfigViewer() {
   const t = useTranslations('devtools.config');
+  const [url, setUrl] = useAreaUrlState(URL_STATE);
   const [themeConfig, setThemeConfig] = useState<Record<string, unknown> | null>(null);
   const [entities, setEntities] = useState<EntityInfo[]>([]);
   const [isLoadingTheme, setIsLoadingTheme] = useState(true);
@@ -188,7 +193,7 @@ export function ConfigViewer() {
   }
 
   return (
-    <Tabs defaultValue="theme" className="space-y-6" data-cy={sel('devtools.config.viewer')}>
+    <Tabs value={url.tab} onValueChange={(tab) => setUrl({ tab })} className="space-y-6" data-cy={sel('devtools.config.viewer')}>
       <TabsList>
         <TabsTrigger value="theme" data-cy={sel('devtools.config.tabTheme')}>
           <Settings className="h-4 w-4 mr-2" />

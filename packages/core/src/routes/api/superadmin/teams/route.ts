@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiError, searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response';
 import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils/like-pattern';
 import { parsePaginationParams } from '@nextsparkjs/core/lib/api/pagination';
+import { parseSort } from '@nextsparkjs/core/lib/api/list-sort';
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { SYSTEM_ADMIN_TEAM_ID } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
+
+// The columns the list sorts by (`sort=name|members|createdAt`, `order=asc|desc`)
+const SORT_COLUMNS = {
+  name: 'LOWER(t.name)',
+  members: 'COUNT(tm.id)',
+  createdAt: 't."createdAt"'
+};
 
 interface TeamWithStats {
   id: string;
@@ -15,6 +23,9 @@ interface TeamWithStats {
   ownerName: string;
   ownerEmail: string;
   memberCount: number;
+  planName: string | null;
+  planSlug: string | null;
+  subscriptionStatus: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +38,7 @@ interface TeamWithStats {
  *
  * Query params:
  * - search: Filter by team name or owner email
+ * - sort: name, members or createdAt (default createdAt); order: asc or desc (default desc)
  * - type: "user" (exclude system admin team) or "system" (only system admin team)
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 20)
@@ -56,6 +68,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const search = searchParams.get('search') || '';
     const type = searchParams.get('type') as 'user' | 'system' | null;
     const { page, limit, offset } = parsePaginationParams(request, 20);
+    const sort = parseSort(request, SORT_COLUMNS, { key: 'createdAt', order: 'desc' }, 't.id');
 
     const tooLong = searchTermTooLongError(search);
     if (tooLong) return tooLong;
@@ -95,14 +108,26 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
         COALESCE(u."firstName" || ' ' || u."lastName", u.email) as "ownerName",
         u.email as "ownerEmail",
         COUNT(tm.id)::int as "memberCount",
+        sub."planName",
+        sub."planSlug",
+        sub."subscriptionStatus",
         t."createdAt",
         t."updatedAt"
       FROM "teams" t
       LEFT JOIN "users" u ON t."ownerId" = u.id
       LEFT JOIN "team_members" tm ON t.id = tm."teamId"
+      LEFT JOIN LATERAL (
+        SELECT p.name AS "planName", p.slug AS "planSlug", s.status AS "subscriptionStatus"
+        FROM "subscriptions" s
+        LEFT JOIN "plans" p ON s."planId" = p.id
+        WHERE s."teamId" = t.id
+        ORDER BY s."createdAt" DESC
+        LIMIT 1
+      ) sub ON true
       ${whereClause}
-      GROUP BY t.id, t.name, t."ownerId", u."firstName", u."lastName", u.email, t."createdAt", t."updatedAt"
-      ORDER BY t."createdAt" DESC
+      GROUP BY t.id, t.name, t."ownerId", u."firstName", u."lastName", u.email, t."createdAt", t."updatedAt",
+               sub."planName", sub."planSlug", sub."subscriptionStatus"
+      ORDER BY ${sort.orderBy}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
@@ -154,6 +179,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
           email: team.ownerEmail
         },
         memberCount: team.memberCount,
+        // The team's newest subscription, null when it has none
+        plan: team.planSlug || team.planName ? { name: team.planName, slug: team.planSlug, status: team.subscriptionStatus } : null,
         createdAt: team.createdAt,
         updatedAt: team.updatedAt
       })),

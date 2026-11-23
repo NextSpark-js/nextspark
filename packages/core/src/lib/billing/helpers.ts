@@ -40,6 +40,25 @@ export function getPeriodKey(resetPeriod: LimitDefinition['resetPeriod']): strin
 }
 
 /**
+ * A usage period key (the inverse of getPeriodKey) in words: "All time", "2026", "November 2026" or a date, in the locale.
+ * A key of another shape is returned as it is.
+ */
+export function formatUsagePeriod(periodKey: string, locale: string, allTimeLabel: string): string {
+  if (periodKey === 'all_time') return allTimeLabel
+  const [year, month, day] = periodKey.split('-').map(Number)
+  const valid = /^\d{4}(-\d{2}){0,2}$/.test(periodKey)
+  if (!valid) return periodKey
+  const date = new Date(Date.UTC(year, (month || 1) - 1, day || 1))
+  if (isNaN(date.getTime()) || (month !== undefined && (month < 1 || month > 12))) return periodKey
+  const options: Intl.DateTimeFormatOptions = day
+    ? { dateStyle: 'medium', timeZone: 'UTC' }
+    : month
+      ? { month: 'long', year: 'numeric', timeZone: 'UTC' }
+      : { year: 'numeric', timeZone: 'UTC' }
+  return new Intl.DateTimeFormat(locale, options).format(date)
+}
+
+/**
  * Calculate next reset date based on period
  *
  * @param resetPeriod - The reset period for the limit

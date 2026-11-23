@@ -1,6 +1,6 @@
 /**
  * The rules of MCP browser sign-in that live in the database (#541), against a real PostgreSQL with core's
- * migrations applied from nothing: migration 048's triggers and locks, and the code that relies on them
+ * migrations applied from nothing: migration 049's triggers and locks, and the code that relies on them
  * (lib/mcp/oauth/connection-store, lib/mcp/oauth/purge). The Jest suites of those modules mock the queries, so they
  * run no trigger and take no lock: what two connections do to each other is only seen here.
  *
@@ -82,7 +82,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     )).rows[0].count)
   const reset = () => owner.query(`DELETE FROM "oauthRefreshToken"; DELETE FROM "oauthConsent"; DELETE FROM "oauthRevocation"`)
 
-  await t.test('048 applies on a database with nothing in it, and applying it again changes nothing', async () => {
+  await t.test('049 applies on a database with nothing in it, and applying it again changes nothing', async () => {
     const before = (await owner.query(`SELECT tgname FROM pg_trigger WHERE tgname LIKE 'oauth_%' ORDER BY tgname`)).rows.map(r => r.tgname)
     assert.deepEqual(before, [
       'oauth_consent_narrowed',
@@ -93,7 +93,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
       'oauth_revoke_on_password_change',
       'oauth_revoke_on_suspension',
     ])
-    await owner.query(fs.readFileSync(path.join(CORE, 'migrations', '048_oauth_provider.sql'), 'utf8'))
+    await owner.query(fs.readFileSync(path.join(CORE, 'migrations', '049_oauth_provider.sql'), 'utf8'))
     const after = (await owner.query(`SELECT tgname FROM pg_trigger WHERE tgname LIKE 'oauth_%' ORDER BY tgname`)).rows.map(r => r.tgname)
     assert.deepEqual(after, before)
   })

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Search, ChevronRight, ChevronDown, Code, Database, Layers, Puzzle, PanelLeftClose, PanelLeft, Folder, FolderOpen } from 'lucide-react'
 import { loadState, saveState } from './explorer-storage'
-import { splitRoutePath } from './explorer-helpers'
+import { groupKeyForPath, splitRoutePath } from './explorer-helpers'
 import { Input } from '../../ui/input'
 import { Badge } from '../../ui/badge'
 import { Button } from '../../ui/button'
@@ -78,30 +78,44 @@ export function ApiEndpointsSidebar({
   const t = useTranslations('devtools.api.sidebar')
   const [searchQuery, setSearchQuery] = useState('')
   // Expand/collapse state is persisted, so the chosen layout
-  // (e.g. Core/Entities collapsed but Theme open) survives reloads.
-  const [expandedCategories, setExpandedCategories] = useState<Set<RouteCategory>>(() => {
-    const saved = loadState<RouteCategory[]>('sidebar:expandedCategories')
-    return new Set(saved ?? ['core', 'entity', 'theme', 'plugin'])
-  })
-  // The theme's own groups start OPEN, and only the theme's: they are what someone opens this
-  // screen to reach, while core and entity routes are the framework's furniture. Closed by
-  // default they read as empty — the endpoint is two clicks down a group whose name gives no
-  // hint that it is hiding anything, which is where people gave up looking.
-  const [expandedPrefixes, setExpandedPrefixes] = useState<Set<string>>(() => {
-    const saved = loadState<string[]>('sidebar:expandedPrefixes')
-    if (saved) return new Set(saved)
-    return new Set(
-      groupByPathPrefix(routes.theme ?? []).map((group) => `theme:${group.prefix}`)
-    )
-  })
+  // (e.g. Core/Entities collapsed but Theme open) survives reloads. It is read after mount, not in the
+  // initializer: localStorage does not exist on the server, so reading it while rendering makes the
+  // first client render differ from the server HTML (a hydration mismatch).
+  const [expandedCategories, setExpandedCategories] = useState<Set<RouteCategory>>(
+    () => new Set<RouteCategory>(['core', 'entity', 'theme', 'plugin'])
+  )
+  // Groups start closed, and the one that holds the selected endpoint opens by itself (see the effect
+  // below), so the sidebar always shows where you are and never favours one category over another.
+  const [expandedPrefixes, setExpandedPrefixes] = useState<Set<string>>(() => new Set())
+  // Nothing is written back until the saved state has been read, or the defaults would overwrite it.
+  const [restored, setRestored] = useState(false)
+  // Declared before the effect that opens the selected group, so that one applies on top of the restored sets.
+  useEffect(() => {
+    const categories = loadState<RouteCategory[]>('sidebar:expandedCategories')
+    if (categories) setExpandedCategories(new Set(categories))
+    const prefixes = loadState<string[]>('sidebar:expandedPrefixes')
+    if (prefixes) setExpandedPrefixes(new Set(prefixes))
+    setRestored(true)
+  }, [])
+
+  // Open the category and group of the selected endpoint, whether it was picked, deep-linked or restored.
+  const selectedPath = selectedEndpoint?.path
+  useEffect(() => {
+    if (!selectedPath) return
+    const key = groupKeyForPath(routes, selectedPath)
+    if (!key) return
+    const category = key.split(':')[0] as RouteCategory
+    setExpandedCategories((prev) => (prev.has(category) ? prev : new Set(prev).add(category)))
+    setExpandedPrefixes((prev) => (prev.has(key) ? prev : new Set(prev).add(key)))
+  }, [selectedPath, routes])
 
   useEffect(() => {
-    saveState('sidebar:expandedCategories', Array.from(expandedCategories))
-  }, [expandedCategories])
+    if (restored) saveState('sidebar:expandedCategories', Array.from(expandedCategories))
+  }, [restored, expandedCategories])
 
   useEffect(() => {
-    saveState('sidebar:expandedPrefixes', Array.from(expandedPrefixes))
-  }, [expandedPrefixes])
+    if (restored) saveState('sidebar:expandedPrefixes', Array.from(expandedPrefixes))
+  }, [restored, expandedPrefixes])
 
   // Filter routes by search query
   const filteredRoutes = useMemo(() => {
@@ -361,6 +375,7 @@ function EndpointItem({ route, selectedEndpoint, onSelect }: EndpointItemProps) 
           <button
             key={`${route.path}-${method}`}
             onClick={() => onSelect(route.path, method as HttpMethod, route)}
+            title={`${method} ${route.path}`}
             className={cn(
               'flex items-center gap-2 w-full px-2 py-1 rounded-md text-xs',
               'hover:bg-muted/50 transition-colors text-left',

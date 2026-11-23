@@ -6,7 +6,7 @@
  * What is removed is what has expired, a day after it did. A refresh token goes by its own expiry only: one that was
  * replaced or revoked is kept until then, because the authorization server needs that row to recognise a token
  * presented again. A refresh token that is alive is never touched, so no connection ends here; the trigger of
- * migration 048 that records a revocation only acts on a live token.
+ * migration 049 that records a revocation only acts on a live token.
  *
  * It runs from where tokens are issued (lib/mcp/oauth/plugins), at most once an hour per process, so a deployment
  * needs no job set up for it. Each run removes a bounded number of rows of each kind and skips the rows another

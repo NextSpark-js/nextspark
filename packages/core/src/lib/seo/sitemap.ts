@@ -71,9 +71,12 @@ function lastModified(value: SitemapRow['updatedAt']): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date
 }
 
-/** The sitemap lists only builder entities with a base path and `access.public: true`. */
+/**
+ * The sitemap lists only entities with a base path and `access.public: true` whose items have a public page: a builder
+ * entity, or one that says so with `ui.public.hasSinglePage` (a project's own page at `<basePath>/<slug>`, #551).
+ */
 export function isSitemapEntity(config: EntityConfig): boolean {
-  return config.builder?.enabled === true && config.access?.public === true && getEntityItemPath(config, 'x') !== undefined
+  return (config.builder?.enabled === true || config.ui?.public?.hasSinglePage === true) && config.access?.public === true && getEntityItemPath(config, 'x') !== undefined
 }
 
 export function buildSitemap(input: BuildSitemapInput): MetadataRoute.Sitemap {

@@ -195,7 +195,7 @@ Jest only, and they are not counted in the Jest coverage report.
 ### MCP browser sign-in: `oauth-connections-pg.test.ts`
 
 `tests/node/oauth-connections-pg.test.ts` checks the rules of MCP browser sign-in that the database holds:
-the triggers, the unique index and the locks of migration `048_oauth_provider.sql`, and the two modules that rely
+the triggers, the unique index and the locks of migration `049_oauth_provider.sql`, and the two modules that rely
 on them, `src/lib/mcp/oauth/connection-store.ts` and `src/lib/mcp/oauth/purge.ts`.
 
 **Why it exists.** The Jest suites of those modules (`tests/jest/lib/mcp/oauth/`) mock the queries. They check the
@@ -209,7 +209,7 @@ project configuration so that this is possible.
 
 | # | Case |
 | --- | --- |
-| 1 | Migration 048 applies on a database with nothing in it, leaves exactly the seven `oauth_*` triggers, and applying it again changes nothing |
+| 1 | Migration 049 applies on a database with nothing in it, leaves exactly the seven `oauth_*` triggers, and applying it again changes nothing |
 | 2 | A refresh token is written only for a connection that has a consent, and holding no more than the consent: a wider token is cut down, and the consent of another team or another client does not count |
 | 3 | A connection has one consent: a second row for the same user, client and team is refused (`uq_oauth_consent_connection`) |
 | 4 | `disconnect` removes the consent and the tokens and records the revocation; the same client in another team is untouched |

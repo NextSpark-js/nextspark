@@ -50,7 +50,7 @@ function releaseLocaleRefresh() {
  *
  * The account's theme is not looked up here any more: public pages have one theme
  * (#510), and the areas with a session apply it from the cookie the server writes
- * when it issues a session (#495, providers/account-theme).
+ * when it issues a session (#495, providers/theme-area).
  */
 export function useAccountPreferencesSync() {
   const router = useRouter()

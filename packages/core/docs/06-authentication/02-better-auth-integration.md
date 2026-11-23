@@ -437,7 +437,7 @@ mounted and no table is touched. When it is on it returns four:
   list of accepted applications.
 
 They add the endpoints under `/api/auth/oauth2/*` and `/api/auth/jwks`, and they need migration
-`048_oauth_provider.sql`. This is the app acting as an authorization server; it is unrelated to
+`049_oauth_provider.sql`. This is the app acting as an authorization server; it is unrelated to
 `socialProviders`, where the app is a client of Google and others. See
 [MCP Browser Sign-in](./14-mcp-browser-sign-in.md).
 

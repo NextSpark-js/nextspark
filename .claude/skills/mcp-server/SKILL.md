@@ -4,7 +4,7 @@ description: |
   The app's own MCP server (`/api/mcp`): tools generated from the entity registry, the two credentials
   it accepts (API key, OAuth access token) and MCP browser sign-in (OAuth 2.1 with Better Auth as the
   authorization server): one team per connection, per-entity consent bound to the role, connected
-  applications, the allow-list of applications, the rules migration 048 keeps in the database, audit
+  applications, the allow-list of applications, the rules migration 049 keeps in the database, audit
   and rate limit.
   Use this skill when changing anything under `lib/mcp/`, the `/api/mcp` route, an `entities/<slug>/mcp.ts`
   override, the OAuth consent or team pages, `/api/internal/oauth-*`, or the OAuth tables and triggers.
@@ -59,7 +59,7 @@ src/routes/api/internal/oauth-team/route.ts
 src/routes/api/internal/oauth-connections/route.ts
 src/components/auth/OAuthConsent.tsx
 src/components/settings/ConnectedApps.tsx
-migrations/048_oauth_provider.sql      # tables, RLS, triggers
+migrations/049_oauth_provider.sql      # tables, RLS, triggers
 ```
 
 ## When to Use This Skill
@@ -69,7 +69,7 @@ migrations/048_oauth_provider.sql      # tables, RLS, triggers
 - Touching the OAuth flow: plugins, consent, team picker, resource server, allow-list
 - Adding any code path that writes or deletes a consent, a refresh token or a revocation
 - Debugging a 401 / 403 / 429 from `/api/mcp`
-- Changing migration 048's tables or triggers (see the checklist first)
+- Changing migration 049's tables or triggers (see the checklist first)
 
 ## The endpoint: `/api/mcp`
 
@@ -159,7 +159,7 @@ hand-written tool that needs a scope outside `toolScopesOf`.
 1. `features: { mcpOAuth: true }` in `nextspark.config.ts` (opt-in, default `false`). `nextspark prepare` then
    generates the routes. Without it the host has none of them, no plugin is registered, and `/api/mcp` takes
    an API key only.
-2. Apply migration `migrations/048_oauth_provider.sql`.
+2. Apply migration `migrations/049_oauth_provider.sql`.
 3. `MCP_ENABLED` must allow the endpoint. `MCP_OAUTH_ENABLED=false` switches browser sign-in off at runtime
    without a build.
 
@@ -312,7 +312,7 @@ The list applies in four places; a change must keep all four:
 4. On every request to `/api/mcp` (`principalFromClaims`), so a token issued before the list changed counts
    no more.
 
-## Rules that live in the database (migration 048)
+## Rules that live in the database (migration 049)
 
 Better Auth changes these rows from several endpoints (`/oauth2/consent`, `/oauth2/update-consent`,
 `/oauth2/delete-consent`, `/oauth2/revoke`, `/oauth2/token`) and renews a token in separate statements (it
@@ -340,7 +340,7 @@ paths core wrote and for none of Better Auth's. So the rules are triggers:
   consent per connection.
 - **RLS**: every OAuth table is service-only (`can_bypass_rls()`), `jwks` included. All code that reads them
   uses the service connection (`query`, `queryOne`, `queryRows`), never `queryWithRLS` with a user id.
-- **Single migration file.** Everything is in `048_oauth_provider.sql`, written to be applied again without
+- **Single migration file.** Everything is in `049_oauth_provider.sql`, written to be applied again without
   effect (`CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`, `DROP TRIGGER IF EXISTS`). Until the
   branch is published a change goes in that file; once published, in a new migration.
 
@@ -421,7 +421,7 @@ Details (Redis, fail-open, `DISABLE_RATE_LIMITING`): see the `rate-limiting` ski
   permission registry goes in `connections.ts`.
 - **Anything involving two statements or two connections** (a race, a lock, a trigger) gets a case in
   `tests/node/oauth-connections-pg.test.ts`. A Jest test with mocked queries proves nothing about it.
-- **A Better Auth upgrade**: re-read the column list at the top of migration 048 against the new version's
+- **A Better Auth upgrade**: re-read the column list at the top of migration 049 against the new version's
   schema, and run both node suites below.
 
 ## How to test
@@ -525,7 +525,7 @@ DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenc
 - [ ] Session-only routes use `getAuthorizationSession`, never `authenticateRequest`
 - [ ] Hand-written tool declares `meta.requiredScopes` and uses `api.execute`; a scope no generated tool uses is in `extraToolScopes`
 - [ ] Consent scopes are bound on the server, not only in `OAuthConsent.tsx`
-- [ ] A write or delete of a consent or a refresh token was checked against the triggers of migration 048
+- [ ] A write or delete of a consent or a refresh token was checked against the triggers of migration 049
 - [ ] Multi-statement work on OAuth tables runs inside `withServiceTransaction`, consent row first
 - [ ] OAuth tables are read on the service connection
 - [ ] The allow-list is still applied in its four places

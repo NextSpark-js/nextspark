@@ -23,6 +23,9 @@ import {
 } from '../../ui/dropdown-menu';
 import { Button } from '../../ui/button';
 import { Avatar, AvatarFallback } from '../../ui/avatar';
+import { Badge } from '../../ui/badge';
+import { SortableHead, type SortState } from '../../users/tables/SortableHead';
+import { CopyIdButton } from '../../users/tables/CopyIdButton';
 import {
   MoreHorizontal,
   Users,
@@ -42,13 +45,21 @@ interface Team {
   name: string;
   owner: TeamOwner;
   memberCount: number;
+  /** The team's newest subscription; null when it has none */
+  plan?: { name: string | null; slug: string | null; status: string | null } | null;
   createdAt: string;
   updatedAt: string;
 }
 
+/** The columns the teams list sorts by (the server sorts) */
+export type TeamSortKey = 'name' | 'members' | 'createdAt';
+
 interface TeamsTableProps {
   teams: Team[];
   isLoading?: boolean;
+  /** With both, the team, members and created headers sort the list */
+  sort?: SortState<TeamSortKey>;
+  onSortChange?: (sort: SortState<TeamSortKey>) => void;
 }
 
 /**
@@ -57,9 +68,11 @@ interface TeamsTableProps {
  * Displays all teams in a comprehensive table format for superadmins.
  * Includes team type badges, owner info, member counts, and actions.
  */
-export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
+export function TeamsTable({ teams, isLoading, sort, onSortChange }: TeamsTableProps) {
   const openMenuText = useCommonText('a11y', 'openMenu', 'Open menu');
   const t = useTranslations('superadmin.teamsTable');
+  // the plan's status, in the words of the Subscriptions page
+  const tStatus = useTranslations('superadmin.subscriptions');
   const locale = useLocale();
   const router = useRouter();
 
@@ -67,6 +80,12 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
   const handleRowClick = (teamId: string) => {
     router.push(`/superadmin/teams/${teamId}`);
   };
+
+  // A header that sorts when the page passes the sort state, a plain one otherwise
+  const sortHead = (key: TeamSortKey, label: string, firstOrder: 'asc' | 'desc' = 'asc') =>
+    sort && onSortChange
+      ? <SortableHead label={label} sortKey={key} sort={sort} onSort={onSortChange} firstOrder={firstOrder} />
+      : <TableHead>{label}</TableHead>;
 
   // Generate team initials for avatar
   const getTeamInitials = (name: string) => {
@@ -112,10 +131,11 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columns.team')}</TableHead>
+            {sortHead('name', t('columns.team'))}
             <TableHead>{t('columns.owner')}</TableHead>
-            <TableHead>{t('columns.members')}</TableHead>
-            <TableHead>{t('columns.created')}</TableHead>
+            {sortHead('members', t('columns.members'), 'desc')}
+            <TableHead>{t('columns.plan')}</TableHead>
+            {sortHead('createdAt', t('columns.created'), 'desc')}
             <TableHead className="text-right">{t('columns.actions')}</TableHead>
           </TableRow>
         </TableHeader>
@@ -124,7 +144,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
               <TableRow
                 key={team.id}
                 data-cy={sel('superadmin.teams.table.row', { id: team.id })}
-                className="cursor-pointer hover:bg-muted/50"
+                className="group cursor-pointer hover:bg-muted/50"
                 style={{ cursor: 'pointer' }}
                 onClick={() => handleRowClick(team.id)}
               >
@@ -137,9 +157,14 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{team.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium">
+                        <Link href={`/superadmin/teams/${team.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {team.name}
+                        </Link>
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
                         {t('id', { id: `${team.id.slice(0, 12)}...` })}
+                        <CopyIdButton id={team.id} />
                       </div>
                     </div>
                   </div>
@@ -154,7 +179,11 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="text-sm font-medium">{team.owner.name}</div>
+                      <div className="text-sm font-medium">
+                        <Link href={`/superadmin/users/${team.owner.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {team.owner.name}
+                        </Link>
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {team.owner.email}
                       </div>
@@ -171,6 +200,20 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                       {t('memberWord', { count: team.memberCount })}
                     </span>
                   </div>
+                </TableCell>
+
+                {/* Plan: the newest subscription's, with its status when it is not active */}
+                <TableCell>
+                  {team.plan ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="secondary">{team.plan.name || team.plan.slug}</Badge>
+                      {team.plan.status && team.plan.status !== 'active' && (
+                        <span className="text-xs text-muted-foreground">{tStatus.has(`statuses.${team.plan.status}`) ? tStatus(`statuses.${team.plan.status}`) : team.plan.status}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{t('noPlan')}</span>
+                  )}
                 </TableCell>
 
                 {/* Created Date */}
