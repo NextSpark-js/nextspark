@@ -9,7 +9,7 @@ jest.mock('@/core/lib/services/scope.service', () => ({
 const toolScopes = { current: ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read', 'pages:read'] };
 jest.mock('@/core/lib/mcp/oauth/tool-scopes', () => ({ mcpToolScopes: () => toolScopes.current }));
 
-import { entityScope, isPreselectedScope, mcpOAuthDefaultScopes, mcpOAuthResourceScopes, mcpOAuthStepUpScopes } from '@/core/lib/mcp/oauth/scopes';
+import { activeScopes, entityScope, isPreselectedScope, mcpOAuthAcceptedScopes, mcpOAuthDefaultScopes, mcpOAuthResourceScopes, mcpOAuthStepUpScopes } from '@/core/lib/mcp/oauth/scopes';
 
 describe('the scopes of MCP browser sign-in (#541)', () => {
   it('are the ones a team role can hold, without wildcards', () => {
@@ -32,6 +32,32 @@ describe('the scopes of MCP browser sign-in (#541)', () => {
 
   it('a scope no tool of the server needs is not asked for', () => {
     expect(mcpOAuthDefaultScopes(['tasks:read', 'tasks:write', 'customers:read', 'pages:read'])).toEqual(['offline_access', 'customers:read', 'tasks:read', 'tasks:write']);
+  });
+
+  describe('when the tool of a scope is retired', () => {
+    beforeEach(() => { toolScopes.current = ['tasks:read', 'tasks:write', 'customers:read']; });
+    afterEach(() => { toolScopes.current = ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read', 'pages:read']; });
+
+    it('the server still accepts it, so a client with an older list and a connection that holds it are not cut off', () => {
+      expect(mcpOAuthAcceptedScopes()).toEqual(['customers:read', 'tasks:delete', 'tasks:read', 'tasks:write']);
+    });
+
+    it('it is no longer published, asked for by the challenge or offered', () => {
+      expect(mcpOAuthResourceScopes()).toEqual(['customers:read', 'tasks:read', 'tasks:write']);
+      expect(mcpOAuthDefaultScopes()).toEqual(['offline_access', 'customers:read', 'tasks:read', 'tasks:write']);
+    });
+
+    it('of a list of scopes, the active ones are the entity scopes with a tool and everything that is not an entity scope', () => {
+      expect(activeScopes(['openid', 'offline_access', 'tasks:read', 'tasks:delete', 'patterns:write'])).toEqual(['openid', 'offline_access', 'tasks:read']);
+    });
+
+    it('a step-up challenge does not name it, even when the connection still holds it', () => {
+      expect(mcpOAuthStepUpScopes(['tasks:read', 'tasks:delete'], ['tasks:write'])).toEqual(['offline_access', 'tasks:read', 'tasks:write']);
+    });
+  });
+
+  it('what is accepted is never a wildcard or a scope that is not an entity permission', () => {
+    expect(mcpOAuthAcceptedScopes().every(scope => /^[a-z0-9-]+:(read|write|delete)$/.test(scope))).toBe(true);
   });
 
   it('reading and writing come ticked on the consent screen, deleting does not', () => {

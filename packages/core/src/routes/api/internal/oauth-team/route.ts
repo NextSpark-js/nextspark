@@ -32,7 +32,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   // The consent screen ticks that when the application connects again, so that accepting takes nothing away.
   const clientId = request.nextUrl.searchParams.get('client_id')
   const granted = selected && clientId ? await grantedScopes(session.user.id, clientId, selected) : null
-  return NextResponse.json({ success: true, data: teams, selected: selected ?? null, allowed, granted })
+  // `offered`: the active scopes, whatever the role. The screen shows a permission the role cannot hold as
+  // disabled, and does not show at all one the application asked for that no tool needs any more.
+  return NextResponse.json({ success: true, data: teams, selected: selected ?? null, allowed, offered: mcpOAuthResourceScopes(), granted })
 }, 'read')
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {

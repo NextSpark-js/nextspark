@@ -18,7 +18,7 @@ import { queryOne } from '../../db'
 import { isClientAllowed } from './allowed-clients'
 import { consentWithinRolePlugin, refuseConsentSkippingClient, refuseUnlistedClient } from './consent-plugin'
 import { purgeExpiredOAuthIfDue } from './purge'
-import { mcpOAuthResourceScopes } from './scopes'
+import { mcpOAuthAcceptedScopes, mcpOAuthResourceScopes } from './scopes'
 import { APIError } from 'better-auth'
 import { isSuspendedRole } from '../../auth/suspension'
 import { tryGetCurrentAuthEndpointContext } from '@better-auth/core/context'
@@ -69,7 +69,10 @@ export const SIGNING_KEY_ROTATION_SECONDS = 30 * 24 * 60 * 60
 
 export function mcpOAuthPlugins() {
   if (!isMcpOAuthEnabled()) return []
-  const resourceScopes = mcpOAuthResourceScopes()
+  // Accepted is wider than active on purpose (see mcpOAuthAcceptedScopes): a scope whose tool was retired is
+  // still accepted, so a client that kept an older list and a connection that holds it are not cut off.
+  const acceptedScopes = [...OIDC_SCOPES, ...mcpOAuthAcceptedScopes()]
+  const activeScopes = [...OIDC_SCOPES, ...mcpOAuthResourceScopes()]
   return [
     // No `set-auth-jwt` header on session responses: the key signs OAuth access tokens only.
     // The signing key is replaced every SIGNING_KEY_ROTATION_SECONDS: a key that leaked stops being of use, and
@@ -80,7 +83,15 @@ export function mcpOAuthPlugins() {
       resource: mcpResourceUrl(),
       loginPage: withBasePath('/login'),
       consentPage: withBasePath('/oauth/consent'),
-      scopes: [...OIDC_SCOPES, ...resourceScopes],
+      scopes: acceptedScopes,
+      // What is published is the active list: `scopes_supported` of the authorization server metadata and, without
+      // the identity scopes, of the protected resource metadata. It does not change what the server accepts.
+      advertisedMetadata: { scopes_supported: activeScopes },
+      // What is issued is the active list too: a token for the resource carries only active scopes, whatever the
+      // request or the refresh token it renews holds, so a connection from before a scope was retired loses it at
+      // its next renewal without being refused. The identity scopes are in the list: without `offline_access`
+      // there would be no refresh token.
+      resources: [{ identifier: mcpResourceUrl(), name: 'MCP', allowedScopes: activeScopes }],
       // A token for /api/mcp is always a user's in a team: no client_credentials
       grantTypes: ['authorization_code', 'refresh_token'],
       accessTokenExpiresIn: 600,

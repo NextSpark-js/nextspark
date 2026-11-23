@@ -13,6 +13,11 @@ const mockAllowedHosts = jest.fn<unknown, []>();
 jest.mock('@/core/lib/mcp/oauth/config', () => ({ allowedClientHosts: () => mockAllowedHosts() }));
 const mockValidateScopes = jest.fn();
 jest.mock('@/core/lib/api/auth', () => ({ validateScopesForUser: (...args: unknown[]) => mockValidateScopes(...args) }));
+// The scopes whose tool was retired: accepted when asked for, never granted
+const mockRetired = new Set<string>();
+jest.mock('@/core/lib/mcp/oauth/scopes', () => ({
+  activeScopes: (scopes: string[]) => scopes.filter(scope => !mockRetired.has(scope)),
+}));
 const mockSelectedTeam = jest.fn();
 jest.mock('@/core/lib/mcp/oauth/team-selection', () => ({
   isAuthorizationKey: (value: unknown) => typeof value === 'string' && value.length >= 43,
@@ -68,6 +73,21 @@ describe('the consent endpoint, before Better Auth handles it', () => {
     expect(result?.context.body.scope).toBe('openid offline_access tasks:read');
     expect(mockSelectedTeam).toHaveBeenCalledWith('session-1', CHALLENGE, 'user-1');
     expect(mockValidateScopes).toHaveBeenCalledWith('user-1', 'team-1', ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read']);
+  });
+
+  it('a scope whose tool was retired is taken out too, whatever the role and whatever the browser sent', async () => {
+    mockRetired.add('tasks:write');
+    try {
+      const sent = await consent({ accept: true, scope: 'openid offline_access tasks:read tasks:write', oauth_query: signedQuery() });
+      expect(sent?.context.body.scope).toBe('openid offline_access tasks:read');
+      // and with no scope named, which the endpoint would read as everything that was requested
+      const unnamed = await consent({ accept: true, oauth_query: signedQuery() });
+      expect(unnamed?.context.body.scope).toBe('openid offline_access tasks:read customers:read');
+      // the role is not even asked about it
+      expect(mockValidateScopes).toHaveBeenLastCalledWith('user-1', 'team-1', ['tasks:read', 'tasks:delete', 'customers:read']);
+    } finally {
+      mockRetired.clear();
+    }
   });
 
   it('a consent that names no scope is still held to the role: the endpoint would otherwise grant all that was requested', async () => {
@@ -175,6 +195,18 @@ describe('a consent rewritten directly (the authorization server lets the signed
     expect(result?.context.body.update.scopes).toEqual(['offline_access', 'tasks:read']);
     expect(mockQueryOne).toHaveBeenCalledWith(expect.stringContaining('FROM "oauthConsent" WHERE id = $1'), ['consent-1']);
     expect(mockValidateScopes).toHaveBeenCalledWith('user-1', 'team-9', ['tasks:read', 'tasks:delete']);
+  });
+
+  it('cannot write back a scope whose tool was retired', async () => {
+    mockRetired.add('tasks:read');
+    try {
+      mockQueryOne.mockResolvedValueOnce({ userId: 'user-1', referenceId: 'team-9' });
+      const result = await update.handler({ path: '/oauth2/update-consent', body: { id: 'consent-1', update: { scopes: ['offline_access', 'tasks:read', 'customers:read'] } } });
+      expect(result?.context.body.update.scopes).not.toContain('tasks:read');
+      expect(mockValidateScopes).toHaveBeenLastCalledWith('user-1', 'team-9', ['customers:read']);
+    } finally {
+      mockRetired.clear();
+    }
   });
 
   it('another user\'s consent, one of no team and a body that names no scopes are left to the endpoint', async () => {

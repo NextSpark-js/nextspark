@@ -31,13 +31,17 @@ export function OAuthConsent() {
   const params = useSearchParams()
   const clientId = params.get('client_id') ?? ''
   const scopes = useMemo(() => (params.get('scope') ?? '').split(/\s+/).filter(Boolean), [params])
+  // The entity permissions the server offers, when it has said so: an application may ask for one no tool needs any
+  // more (it kept an older list), and that one is not shown
+  const [offered, setOffered] = useState<Set<string> | null>(null)
   // The entity permissions asked for; anything else (offline_access, identity) is not the user's to untick
-  const requested = useMemo(() => scopes.filter(scope => entityScope(scope)), [scopes])
+  const asked = useMemo(() => scopes.filter(scope => entityScope(scope)), [scopes])
+  const requested = useMemo(() => asked.filter(scope => offered === null || offered.has(scope)), [asked, offered])
   const [client, setClient] = useState<PublicClient | null>(null)
   const [team, setTeam] = useState<string | null>(null)
   // null until the server says which of them the user's role in the team can hold
   const [allowed, setAllowed] = useState<Set<string> | null>(null)
-  const [chosen, setChosen] = useState<Set<string>>(() => new Set(requested.filter(isPreselectedScope)))
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(asked.filter(isPreselectedScope)))
   // The application is already connected to this team: the screen starts from what it holds
   const [connected, setConnected] = useState(false)
   const [pending, setPending] = useState<'accept' | 'deny' | null>(null)
@@ -54,18 +58,20 @@ export function OAuthConsent() {
     const query = new URLSearchParams({ authorization: params.get('code_challenge') ?? '', client_id: clientId })
     fetch(withBasePath(`/api/internal/oauth-team?${query}`), { credentials: 'include' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null; allowed?: string[]; granted?: string[] | null } | null) => {
+      .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null; allowed?: string[]; offered?: string[]; granted?: string[] | null } | null) => {
         setTeam(body?.data?.find(candidate => candidate.id === body.selected)?.name ?? null)
+        const shown = Array.isArray(body?.offered) ? new Set(body.offered) : null
+        setOffered(shown)
         const can = new Set(body?.allowed ?? [])
         setAllowed(can)
         const granted = Array.isArray(body?.granted) ? body.granted : null
         setConnected(granted !== null)
         // Already connected: what it holds. Not yet: the defaults. Either way, only what the role can hold.
-        setChosen(new Set(requested.filter(scope => can.has(scope) && (granted ? granted.includes(scope) : isPreselectedScope(scope)))))
+        setChosen(new Set(asked.filter(scope => (!shown || shown.has(scope)) && can.has(scope) && (granted ? granted.includes(scope) : isPreselectedScope(scope)))))
       })
       // What the role allows could not be read: no entity permission stays ticked, so none is asked for
       .catch(() => { setTeam(null); setAllowed(new Set()); setChosen(new Set()) })
-  }, [params, clientId, requested])
+  }, [params, clientId, asked])
 
   const entities = useMemo(() => [...new Set(requested.map(scope => entityScope(scope)!.entity))].sort(), [requested])
   const toggle = (scope: string, on: boolean) => setChosen(current => {

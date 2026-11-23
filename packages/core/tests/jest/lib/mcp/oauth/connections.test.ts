@@ -248,3 +248,13 @@ describe('taking permissions away from a connection (#541)', () => {
     expect(await grantedScopes('user-1', CLIENT, 'team-2')).toBeNull();
   });
 });
+
+describe('a connection as it is shown (#541)', () => {
+  it('lists the permissions that do something: a scope whose tool was retired is left out', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { withActiveScopes } = require('@/core/lib/mcp/oauth/connections') as typeof import('@/core/lib/mcp/oauth/connections');
+    // the registries of the test have no entity served by MCP, so no entity scope is active
+    const shown = withActiveScopes([{ clientId: 'c', teamId: 't', scopes: ['tasks:read', 'patterns:write'] } as never]);
+    expect(shown).toEqual([{ clientId: 'c', teamId: 't', scopes: [] }]);
+  });
+});

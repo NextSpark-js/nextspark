@@ -828,7 +828,7 @@ matched by `ctx.path`. It is how core puts a rule in front of an endpoint Better
 
 | Path | Rule |
 |------|------|
-| `/oauth2/consent` | The scopes granted are rewritten to requested ∩ accepted ∩ what the user's role can hold in the chosen team |
+| `/oauth2/consent` | The scopes granted are rewritten to requested ∩ ticked by the user ∩ active (a tool needs it) ∩ what the user's role can hold in the chosen team |
 | `/oauth2/update-consent` | The same bound, for the endpoint that lets the signed-in user rewrite a consent's scopes directly |
 | `/oauth2/token`, `/oauth2/userinfo` | With an allow-list of applications (`mcp.oauth.allowedClientHosts`), every client the request names must be accepted |
 

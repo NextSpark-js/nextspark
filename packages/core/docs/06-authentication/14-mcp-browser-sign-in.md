@@ -228,20 +228,29 @@ The scopes are the entity scopes API keys use: `<entity>:read`, `<entity>:write`
 never offered or accepted. `offline_access` and the identity scopes (`openid`, `profile`, `email`) are part of
 sign-in and are not MCP permissions.
 
-**Only the scopes some tool needs.** The scopes of the resource are the ones a team role can hold *and* some tool
-of the MCP server needs (`mcpOAuthResourceScopes()` in `lib/mcp/oauth/scopes.ts`, over `mcpToolScopes()` in
-`lib/mcp/oauth/tool-scopes.ts`). An entity kept out of MCP (`patterns`, by default) and an operation an entity's
-`mcp.ts` excludes have no tool, and so no permission. That one list is:
+**Two lists: what is accepted and what is active.**
+
+- **Accepted** (`mcpOAuthAcceptedScopes()` in `lib/mcp/oauth/scopes.ts`): every entity scope a team role can hold.
+  It is the vocabulary of the authorization server and it does not change when a tool is added or removed. A scope
+  that never was in it is refused with `invalid_scope`.
+- **Active** (`mcpOAuthResourceScopes()`): of the accepted scopes, the ones some tool of the MCP server needs
+  (`mcpToolScopes()` in `lib/mcp/oauth/tool-scopes.ts`). An entity kept out of MCP (`patterns`, by default) and an
+  operation an entity's `mcp.ts` excludes have no tool, and so no active scope.
+
+Everything a user or a client sees or gets goes by the active list:
 
 - what the server publishes as `scopes_supported`, in the protected resource metadata and in the authorization
-  server metadata;
-- what the authorization server accepts from an application it meets for the first time, or whose client record
-  it has refreshed since the list changed: any other scope is refused with `invalid_scope` (see "When a scope is
-  retired" below for an application registered earlier);
-- what the consent screen offers (`allowed` of `/api/internal/oauth-team`).
+  server metadata (`advertisedMetadata.scopes_supported` of the provider);
+- what the `401` challenge asks for and what a step-up challenge names;
+- what the consent screen shows (`offered` of `/api/internal/oauth-team`) and lets the user tick (`allowed`);
+- what a consent can hold: both endpoints that write one, `/oauth2/consent` and `/oauth2/update-consent`, are cut
+  down to it;
+- what a token issued for the resource carries (`allowedScopes` of the resource): an access token and the refresh
+  token issued with it never hold a scope that is not active.
 
-It does not depend on what a client chooses to request. Claude asks for the scopes of the `401` challenge; ChatGPT
-asks for everything in `scopes_supported`; both are offered the same rows. The list is computed from the entity
+None of it depends on what a client chooses to request. Claude asks for the scopes of the `401` challenge; ChatGPT
+asks for everything in `scopes_supported`, and keeps asking for the list of the day its connector was created;
+both are offered the same rows. The list is computed from the entity
 registry and the `entities/<slug>/mcp.ts` overrides, the registries the default `/api/mcp` route builds its tools
 from, with the function the engine itself uses to decide which entities and operations get a tool
 (`exposedEntities` in `lib/mcp/exposure.ts`). For hand-written tools the list takes what the project declares as
@@ -271,13 +280,22 @@ The `401` challenge tells a connecting client to ask for `offline_access` plus e
 (`mcpOAuthDefaultScopes`). Asking is not getting: the request carries them all because a consent can only take
 scopes away from what was asked.
 
-**When a scope is retired.** Excluding an operation later (or an entity) takes its scope out of the list. An
-application the server already knows has a client record that carries the list of the day it was registered, and
-the authorization server checks a request against that record. Until the record is refreshed, that application
-can still ask for the retired scope, be granted it and renew a connection that holds it; the scope does nothing,
-because there is no tool for it. Once the record is refreshed, the renewal of a token that holds the retired
-scope is refused with `invalid_scope`, and the user connects again; the new connection does not carry it.
-Connections are not rewritten when the list changes.
+**When a scope is retired.** Excluding an operation later (or an entity) takes its scope out of the active list
+and leaves it in the accepted one. Nobody is cut off:
+
+- An application that kept an older list (ChatGPT stores the scopes it discovered with the connector) can still
+  authorize. The scope is accepted when asked for and it is not granted: the consent screen does not show it, and
+  the token response names the scopes that were granted, as RFC 6749 section 3.3 has it.
+- A connection that holds the scope keeps renewing. The token it gets no longer carries it, and neither does the
+  refresh token that replaces the old one, so the connection sheds it at its next renewal.
+- Connected applications shows a connection with its active permissions only.
+
+The consent of an earlier connection is not rewritten when the list changes: it still names the scope until the
+user edits the permissions or connects again. That matters in one case. If a tool that needs exactly that scope
+comes back later, a connection whose consent still names it gets the permission back without being asked again.
+Retiring a tool is not a revocation. To take a permission away for good, narrow the connections
+(`narrowConnection`, which records the revocation and cuts the live tokens), and do not give a scope name a
+wider meaning than it had.
 
 ### The consent screen and its defaults
 
@@ -296,8 +314,8 @@ Only what stays ticked is granted.
 The browser is not trusted with that decision. `consentWithinRolePlugin` rewrites the scopes of two Better Auth
 endpoints before they run:
 
-- `/oauth2/consent`: the granted scopes become *requested* ∩ *accepted* ∩ *what the role can hold in the chosen
-  team*.
+- `/oauth2/consent`: the granted scopes become *requested* ∩ *ticked by the user* ∩ *active* ∩ *what the role can
+  hold in the chosen team*.
 - `/oauth2/update-consent`, which lets a signed-in user rewrite the scopes of a consent directly: the same bound,
   for the team of that consent.
 
@@ -533,7 +551,7 @@ screens' APIs, not a public surface.
 
 | Method | Purpose |
 |---|---|
-| `GET ?authorization=<PKCE challenge>&client_id=<client id>` | `data`: the teams the user can connect. `selected`: the team chosen for that authorization, or `null`. `allowed`: of the resource's scopes, the ones the user's role can hold in the selected team. `granted`: what the application already holds in that team, or `null` when it is not connected to it |
+| `GET ?authorization=<PKCE challenge>&client_id=<client id>` | `data`: the teams the user can connect. `selected`: the team chosen for that authorization, or `null`. `allowed`: of the active scopes, the ones the user's role can hold in the selected team. `offered`: the active scopes, whatever the role; the screen does not show a permission the application asks for that is not among them. `granted`: what the application already holds in that team, or `null` when it is not connected to it |
 | `POST { teamId, authorization }` | Chooses the team. `403 NOT_A_MEMBER` when the user is not a member; `409 TEAM_ALREADY_CHOSEN` when another team was already chosen for that authorization |
 
 ### `/api/internal/oauth-connections`
@@ -551,7 +569,13 @@ screens' APIs, not a public surface.
 - **No production gate.** The feature does not refuse to start when the database connection owns the tables, in
   which case RLS has no effect, or when there is no Redis, in which case the rate limit is per process. Both are the
   operator's to check; see [Security Best Practices](./07-security-best-practices.md#mcp-browser-sign-in).
-- **Run against Claude only** (web, desktop and mobile). It has not been run against ChatGPT's hosted client.
+- **Run against Claude** (web, desktop and mobile) **and ChatGPT** (web), with their real hosted clients. Other
+  clients have not been run. What was seen with ChatGPT, which differs from Claude: it authenticates itself to
+  the token endpoint with a signed assertion (`private_key_jwt`) instead of being a public client; it asks for
+  every scope in `scopes_supported` and keeps asking for the list of the day its connector was created; it
+  renews its token before almost every call; and it presents a `403` for a missing scope as "the connection has
+  expired, reconnect". Completing that step-up (ticking the missing permission and repeating the call) has been
+  run with Claude and not with ChatGPT.
 - **Removing a team does not end its connections.** The resource server refuses them, but their rows stay.
 - **Hand-written tools get the up-front `403` only if they declare `meta.requiredScopes`.** Without it each API call
   the tool makes is checked where it is made.

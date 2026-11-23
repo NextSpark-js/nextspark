@@ -12,7 +12,7 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 import { isMcpOAuthEnabled } from '@nextsparkjs/core/lib/mcp/oauth/config'
-import { disconnect, disconnectManaged, managedConnections, narrowConnection, userConnections } from '@nextsparkjs/core/lib/mcp/oauth/connections'
+import { disconnect, disconnectManaged, managedConnections, narrowConnection, userConnections, withActiveScopes } from '@nextsparkjs/core/lib/mcp/oauth/connections'
 
 const notFound = () => createApiError('Not found', 404, undefined, 'NOT_FOUND')
 const signedOut = () => createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_FAILED')
@@ -22,7 +22,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   const session = await getAuthorizationSession(request.headers)
   if (!session) return signedOut()
   const [data, managed] = await Promise.all([userConnections(session.user.id), managedConnections(session.user.id, session.user.role)])
-  return NextResponse.json({ success: true, data, managed })
+  return NextResponse.json({ success: true, data: withActiveScopes(data), managed: withActiveScopes(managed) })
 }, 'read')
 
 export const DELETE = withRateLimitTier(async (request: NextRequest) => {

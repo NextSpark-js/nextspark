@@ -23,6 +23,8 @@ jest.mock('@nextsparkjs/core/lib/mcp/oauth/connections', () => ({
   disconnectManaged: (...args: unknown[]) => connections.disconnectManaged(...args),
   disconnect: (...args: unknown[]) => connections.disconnect(...args),
   narrowConnection: (...args: unknown[]) => connections.narrowConnection(...args),
+  // shown without the scopes whose tool was retired
+  withActiveScopes: (list: Array<{ scopes: string[] }>) => list.map(item => (item.scopes ? { ...item, scopes: item.scopes.filter(scope => scope !== 'patterns:write') } : item)),
 }))
 
 import { DELETE, GET, PATCH } from '../../../src/routes/api/internal/oauth-connections/route'
@@ -60,6 +62,14 @@ describe('/api/internal/oauth-connections', () => {
     expect((await get()).status).toBe(401)
     expect((await del({ clientId: 'client-a', teamId: 'team-1' })).status).toBe(401)
     expect(connections.disconnect).not.toHaveBeenCalled()
+  })
+
+  it('shows a connection with the permissions that do something: a scope whose tool was retired is left out', async () => {
+    connections.userConnections.mockResolvedValueOnce([{ clientId: 'client-a', teamId: 'team-1', scopes: ['tasks:read', 'patterns:write'] }])
+    connections.managedConnections.mockResolvedValueOnce([{ clientId: 'client-b', teamId: 'team-1', userId: 'user-2', scopes: ['patterns:write'] }])
+    const body = await (await get()).json()
+    expect(body.data[0].scopes).toEqual(['tasks:read'])
+    expect(body.managed[0].scopes).toEqual([])
   })
 
   it('lists the user\'s own connections and the ones of the teams they run', async () => {

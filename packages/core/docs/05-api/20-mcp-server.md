@@ -287,8 +287,9 @@ has none of the feature's routes.
 - **A second credential.** See [Authentication](#authentication). An API key keeps working on the same endpoint.
 - **Discovery.** The `401` of `/api/mcp` carries a `WWW-Authenticate` challenge naming
   `/.well-known/oauth-protected-resource/api/mcp` and the scopes to ask for: `offline_access` plus the scopes
-  some tool needs. The same list is what the server publishes as `scopes_supported` and what the consent screen
-  offers: an entity kept out of MCP, or an operation an `mcp.ts` excludes, has no permission to grant.
+  some tool needs. The same list is what the server publishes as `scopes_supported`, what the consent screen
+  offers and what a token carries: an entity kept out of MCP, or an operation an `mcp.ts` excludes, has no
+  permission to grant. A client that asks for such a scope anyway is not refused; it is just not granted it.
 - **One team per connection.** The access token carries the team the user chose. `x-team-id` cannot change it.
 - **The user chooses the permissions.** Scopes are the entity scopes an API key uses. The consent screen lists them
   per entity; the server holds the grant to what the user's role can hold.
@@ -500,8 +501,8 @@ connection. For a connection, read "API key" as "connection".
   is refused when it is made.
 - **A hand-written tool gets the up-front `403` only if it declares `meta.requiredScopes`.** See
   [Scopes a tool needs](#scopes-a-tool-needs).
-- **Browser sign-in has been run against Claude** (web, desktop and mobile), and not against ChatGPT's hosted
-  client.
+- **Browser sign-in has been run against Claude** (web, desktop and mobile) **and ChatGPT** (web). Other clients
+  have not been run; see [what was seen with each](../06-authentication/14-mcp-browser-sign-in.md#known-limits).
 - **No production gate.** Nothing refuses to start when Redis is missing or when the database role makes row-level
   security ineffective. See
   [Security Best Practices](../06-authentication/07-security-best-practices.md#mcp-browser-sign-in).

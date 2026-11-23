@@ -9,6 +9,7 @@
 import { hasTeamPermission } from '../../permissions/app-role-bypass'
 import type { Permission } from '../../permissions/types'
 import { disconnectAs, membershipsOf, othersConnections, type OAuthConnection } from './connection-store'
+import { activeScopes } from './scopes'
 
 export { disconnect, grantedScopes, narrowConnection, userConnections } from './connection-store'
 export type { NarrowResult, OAuthConnection } from './connection-store'
@@ -25,6 +26,15 @@ export async function managedConnections(userId: string, appRole: string | null 
   const memberships = await membershipsOf(userId)
   const teams = memberships.filter(membership => hasTeamPermission(appRole, membership.role, MANAGE_CONNECTIONS)).map(membership => membership.teamId)
   return othersConnections(userId, teams)
+}
+
+/**
+ * A connection as it is shown: with the permissions that do something. One made before a tool was retired may
+ * still hold its scope; that scope is accepted and inert, and listing it would show a permission that is not
+ * there to use. It leaves the connection the next time its permissions are edited or its token is renewed.
+ */
+export function withActiveScopes(connections: OAuthConnection[]): OAuthConnection[] {
+  return connections.map(connection => ({ ...connection, scopes: activeScopes(connection.scopes) }))
 }
 
 /**

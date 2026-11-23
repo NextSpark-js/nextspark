@@ -1,6 +1,6 @@
 # MCP Browser Sign-In Deployment
 
-> **Experimental and opt-in.** MCP browser sign-in (#541) is off unless a project turns it on. It has been run against Claude (web, desktop and mobile) and has not been run against ChatGPT's hosted client. **The framework does not enforce a production gate**: nothing refuses to start when an item of this checklist is missing. The checklist is the gate.
+> **Experimental and opt-in.** MCP browser sign-in (#541) is off unless a project turns it on. It has been run against Claude (web, desktop and mobile) and ChatGPT (web); other clients have not been run. **The framework does not enforce a production gate**: nothing refuses to start when an item of this checklist is missing. The checklist is the gate.
 
 ## Introduction
 
@@ -217,7 +217,8 @@ cases, without refusing:
 
 Known limits, as of this version:
 
-- Not run against ChatGPT's hosted client.
+- Run against Claude and ChatGPT only. With ChatGPT, widening a connection's permissions after a refused call has not been run.
+- Removing a tool does not cut connections off: its scope stays accepted and stops being offered and issued. It is not a revocation; to take a permission away from existing connections, narrow them.
 - Deleting a team does not remove its connections: `/api/mcp` refuses them, and their rows stay.
 - `tools/list` shows every tool, including the ones the connection has no permission to call.
 - A tool written by hand gets the up-front `403 insufficient_scope` only if it declares `meta.requiredScopes`.

@@ -117,6 +117,6 @@ Two things to know for project code and clients:
 
 - No production gate: the feature does not refuse to start with a database connection that owns the tables (RLS
   without effect) or without Redis.
-- Not run against ChatGPT's hosted client. Run against Claude (web, desktop, mobile).
+- Run against Claude (web, desktop, mobile) and ChatGPT (web). Not run against other clients.
 - Migration 048 is the only migration of the feature. From the release that carries it, a change to its tables or
   triggers is a new migration; the file is not edited.

@@ -29,9 +29,9 @@ const checked = (entity: string, action: string) => box(entity, action).getAttri
 const allow = () => document.querySelector('[data-cy=oauth-consent-allow]') as HTMLButtonElement
 const sentScope = () => (consent.mock.calls[0][0] as { scope?: string }).scope
 
-const teamResponse = (allowed: string[], granted: string[] | null = null) => ({
+const teamResponse = (allowed: string[], granted: string[] | null = null, offered?: string[]) => ({
   ok: true,
-  json: async () => ({ data: [{ id: 'team-1', name: 'One' }], selected: 'team-1', allowed, granted }),
+  json: async () => ({ data: [{ id: 'team-1', name: 'One' }], selected: 'team-1', allowed, granted, ...(offered ? { offered } : {}) }),
 })
 
 beforeEach(() => {
@@ -49,6 +49,20 @@ describe('OAuthConsent', () => {
     // customers:read is not among what the role holds: unticked and locked
     expect(checked('customers', 'read')).toBe(false)
     expect(box('customers', 'read').disabled).toBe(true)
+  })
+
+  it('a permission the application asks for that no tool needs any more is not shown, ticked or sent', async () => {
+    // the server offers tasks only: customers:read was asked for (the application kept an older list) and is gone
+    global.fetch = jest.fn().mockResolvedValue(teamResponse(['tasks:read', 'tasks:write'], ['tasks:read', 'customers:read'], ['tasks:read', 'tasks:write', 'tasks:delete'])) as never
+    render(<OAuthConsent />)
+    await waitFor(() => expect(allow().disabled).toBe(false))
+    expect(box('customers', 'read')).toBeNull()
+    expect(document.body.textContent).not.toContain('customers')
+    // what the role cannot hold of what is offered is still shown, locked
+    expect(box('tasks', 'delete').disabled).toBe(true)
+    await act(async () => { fireEvent.click(allow()) })
+    expect(sentScope()).not.toContain('customers:read')
+    expect(sentScope()).toContain('tasks:read')
   })
 
   it('sends exactly what stayed ticked, with the scopes that are not entity permissions', async () => {

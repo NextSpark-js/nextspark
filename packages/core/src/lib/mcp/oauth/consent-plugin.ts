@@ -13,6 +13,7 @@ import { queryOne } from '../../db'
 import { isClientAllowed, isRequestAllowed } from './allowed-clients'
 import { allowedClientHosts } from './config'
 import { entityScope } from './scope-names'
+import { activeScopes } from './scopes'
 import { isAuthorizationKey, selectedTeam } from './team-selection'
 
 /**
@@ -90,7 +91,8 @@ export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
           // Not this user's consent, or not one of a team: the endpoint's to refuse or to handle
           if (!session || !consent?.referenceId || consent.userId !== session.user.id) return
           const named = scopes.filter((scope): scope is string => typeof scope === 'string')
-          const entityScopes = named.filter(scope => entityScope(scope))
+          // Only active scopes can be held from now on: one whose tool was retired is accepted when asked for, not granted
+          const entityScopes = activeScopes(named).filter(scope => entityScope(scope))
           const heldByRole = entityScopes.length ? (await validateScopesForUser(session.user.id, consent.referenceId, entityScopes)).allowedScopes : []
           return { context: { body: { ...body, update: { ...body.update, scopes: consentedScopes(named, undefined, heldByRole) } } } }
         }),
@@ -108,7 +110,8 @@ export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
           // No session or no team chosen: the endpoint refuses the consent itself. Until it does, nothing the role
           // would have to vouch for is let through.
           const teamId = session && isAuthorizationKey(authorization) ? await selectedTeam(session.session.id, authorization, session.user.id) : undefined
-          const entityScopes = requested.filter(scope => entityScope(scope))
+          // Only active scopes are granted: one whose tool was retired is accepted when asked for, not granted
+          const entityScopes = activeScopes(requested).filter(scope => entityScope(scope))
           const heldByRole = session && teamId && entityScopes.length ? (await validateScopesForUser(session.user.id, teamId, entityScopes)).allowedScopes : []
           const scope = consentedScopes(requested, scopeList(body.scope), heldByRole).join(' ')
           return { context: { body: { ...body, scope } } }

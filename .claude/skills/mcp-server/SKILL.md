@@ -221,29 +221,36 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
 
 - Scopes are the entity scopes API keys use: `<entity>:read|write|delete`; wildcards are never offered.
   `offline_access` and the identity scopes (`OIDC_SCOPES`) are not permissions.
-- **Only the scopes some tool needs**: `mcpOAuthResourceScopes()` is what a team role can hold ∩
-  `mcpToolScopes()` (`lib/mcp/oauth/tool-scopes.ts`: `toolScopesOf` over the entity registry and `MCP_OVERRIDES`,
-  once per process). That one list is the `scopes_supported` of both metadata documents, what the authorization
-  server accepts (anything else is `invalid_scope`) and what the consent screen offers. It does not depend on
-  the client: Claude asks for the scopes of the 401 challenge, ChatGPT for all of `scopes_supported`. A
-  hand-written tool that needs a scope no generated tool uses must have it in `extraToolScopes` of its `mcp.ts`,
-  or no connection can hold it. A custom route with other `excludeSlugs`, `defaultOperations` or `utilityTools`
-  is not what this list follows. "Accepts" is checked against the application's `oauthClient` row, which holds
-  the list of the day it was registered: see "Retiring a scope".
+- **Two lists** (`lib/mcp/oauth/scopes.ts`). **Accepted**, `mcpOAuthAcceptedScopes()`: every entity scope a
+  team role can hold; the provider's `scopes`, stable whatever tools exist; anything outside it is
+  `invalid_scope`. **Active**, `mcpOAuthResourceScopes()`: accepted ∩ `mcpToolScopes()`
+  (`lib/mcp/oauth/tool-scopes.ts`: `toolScopesOf` over the entity registry and `MCP_OVERRIDES`, once per
+  process). Everything seen or granted goes by the active list: `scopes_supported` of both metadata documents
+  (`advertisedMetadata.scopes_supported`), the 401 and step-up challenges, the consent screen (`offered` and
+  `allowed` of `/api/internal/oauth-team`), what a consent can hold (both hooks of `consentWithinRolePlugin`,
+  through `activeScopes`), what a token for the resource carries (`resources[].allowedScopes`), and what
+  Connected applications lists (`withActiveScopes`). Never use the accepted list for anything a user sees.
+  A hand-written tool that needs a scope no generated tool uses must have it in `extraToolScopes` of its
+  `mcp.ts`, or it is not active. A custom route with other `excludeSlugs`, `defaultOperations` or
+  `utilityTools` is not what the active list follows.
 - **What the challenge asks for**: the 401 tells a connecting client to request `offline_access` plus every
   scope of the resource (`mcpOAuthDefaultScopes`). Without `offline_access` there is no refresh token and the
   connection ends with its first access token.
-- **Retiring a scope** (excluding an operation or an entity later): while the client's `oauthClient` row carries
-  the earlier list, that application can still ask for the scope, be granted it and renew a connection that
-  holds it (it does nothing: no tool); once the row is refreshed the renewal is refused with `invalid_scope` and
-  the user connects again. Connections are not rewritten when the list changes.
+- **Retiring a scope** (excluding an operation or an entity later) cuts nobody off: the scope stays accepted
+  and stops being active. A client that kept an older list (ChatGPT stores it with the connector) still
+  authorizes and is granted the active part; a connection that holds the scope renews, and its new access and
+  refresh tokens no longer carry it. The stored consent of an earlier connection is not rewritten, so a tool
+  that later needs the same scope gives that connection the permission back unasked: retiring a tool is not a
+  revocation. To revoke, narrow the connections (`narrowConnection`). Never make the two lists one again: the
+  real ChatGPT connector was cut off twice when they were (renewal and authorization, both `invalid_scope`).
 - **The user chooses** on the consent screen (`OAuthConsent.tsx`): one row per entity with read, write,
   delete. First connection: read and write ticked, delete not (`isPreselectedScope`). A permission the role
-  cannot hold is shown disabled (`allowed` from `/api/internal/oauth-team`). An application already connected
+  cannot hold is shown disabled (`allowed` from `/api/internal/oauth-team`); one the application asked for
+  that is not active is not shown at all (`offered`). An application already connected
   to that team comes with exactly what it holds ticked (`granted`).
 - **The server holds the grant to the role** whatever the browser sends: `consentWithinRolePlugin` rewrites
-  the scopes of `/oauth2/consent` and `/oauth2/update-consent` to requested ∩ accepted ∩ what the role can
-  hold in that team (`consentedScopes`, `validateScopesForUser`).
+  the scopes of `/oauth2/consent` and `/oauth2/update-consent` to requested ∩ ticked ∩ active ∩ what the role
+  can hold in that team (`consentedScopes`, `activeScopes`, `validateScopesForUser`).
 - **The consent is the authority and it is read on every request** (`principalFromClaims`): effective scopes =
   token scopes ∩ consent scopes, then cut down to what the user's role in the team allows now. A connection
   with no consent row is refused (401), whatever its token says.
@@ -451,7 +458,10 @@ pnpm test:node          # every node test
 
 - No production gate: the feature does not refuse to start when the database connection owns the tables (RLS
   without effect) or when there is no Redis (the per-credential limit is then per process).
-- Run against Claude (web, desktop, mobile). Not run against ChatGPT's hosted client.
+- Run against Claude (web, desktop, mobile) and ChatGPT (web). ChatGPT differs: `private_key_jwt` client
+  authentication, asks for all of `scopes_supported` and keeps the list of the day the connector was created,
+  renews before almost every call, and shows a 403 for a missing scope as "connection expired, reconnect".
+  Step-up completed with Claude only.
 - Removing a team does not end its connections: the resource server refuses them, the rows stay.
 - Hand-written tools get the up-front 403 only if they declare `meta.requiredScopes`.
 - `tools/list` shows every tool, including those the connection cannot use.

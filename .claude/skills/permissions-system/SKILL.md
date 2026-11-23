@@ -565,7 +565,7 @@ hasTeamPermission(appRole, teamRole, MANAGE_CONNECTIONS)
 A connection's scopes are the entity scopes API keys use (`<entity>:read|write|delete`), and a role caps them the
 same way it caps an API key (`validateScopesForUser(userId, teamId, scopes)` in `lib/api/auth.ts`):
 
-1. **At consent**: whatever the browser sends, the server rewrites the granted scopes to requested ∩ accepted ∩ what
+1. **At consent**: whatever the browser sends, the server rewrites the granted scopes to requested ∩ ticked ∩ active (some tool needs it) ∩ what
    the user's role can hold in that team (`consentWithinRolePlugin`). The consent screen shows a permission the
    role cannot hold as disabled, but the screen is not the check.
 2. **On every request**: effective scopes = token scopes ∩ the connection's consent, then cut down to what the
