@@ -581,8 +581,9 @@ screens' APIs, not a public surface.
   run with Claude and not with ChatGPT.
 - **A deployment that changes the active list, and a renewal retried across it.** A client that renews a token,
   loses the answer and retries within 30 seconds gets the first answer again. If the deployment changed the active
-  list between the two, the retry no longer matches and is refused with `invalid_grant`; the client authorizes
-  again. The window is the 30 seconds after a renewal that straddles the deployment.
+  list between the two, the retry no longer matches and is refused with `invalid_grant`; the client must
+  authorize again. Whether it does so by itself depends on the client and has not been verified across this
+  race. The window is the 30 seconds after a renewal that straddles the deployment.
 - **Removing a team does not end its connections.** The resource server refuses them, but their rows stay.
 - **Hand-written tools get the up-front `403` only if they declare `meta.requiredScopes`.** Without it each API call
   the tool makes is checked where it is made.
