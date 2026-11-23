@@ -65,6 +65,8 @@ function buildRequest(args: ExecuteEntityArgs, ctx: ToolExecutionContext): NextR
   }
 
   const method = METHODS[args.operation]
+  // The team of the context a tool passes. For an OAuth connection the handler refuses any team but the one the
+  // connection was approved for (authenticateRequest), so a tool cannot move a call to another team from here.
   const headers: Record<string, string> = { 'x-team-id': ctx.teamId }
   if (!ctx.principal) headers.authorization = ctx.authHeader
 

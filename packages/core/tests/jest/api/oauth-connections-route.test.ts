@@ -5,7 +5,8 @@
 import { NextRequest } from 'next/server'
 
 jest.mock('@nextsparkjs/core/lib/api/rate-limit', () => ({ withRateLimitTier: (handler: unknown) => handler }))
-jest.mock('@nextsparkjs/core/lib/api/cors-response', () => ({ corsPreflight: jest.fn() }))
+const preflight = jest.fn((_request: unknown) => new Response(null, { status: 204 }))
+jest.mock('@nextsparkjs/core/lib/api/cors-response', () => ({ corsPreflight: (request: unknown) => preflight(request) }))
 const getSession = jest.fn()
 jest.mock('@nextsparkjs/core/lib/auth/authorization-session', () => ({ getAuthorizationSession: (...args: unknown[]) => getSession(...args) }))
 const enabled = jest.fn()
@@ -27,7 +28,8 @@ jest.mock('@nextsparkjs/core/lib/mcp/oauth/connections', () => ({
   withActiveScopes: (list: Array<{ scopes: string[] }>) => list.map(item => (item.scopes ? { ...item, scopes: item.scopes.filter(scope => scope !== 'patterns:write') } : item)),
 }))
 
-import { DELETE, GET, PATCH } from '../../../src/routes/api/internal/oauth-connections/route'
+import { DELETE, GET, OPTIONS, PATCH } from '../../../src/routes/api/internal/oauth-connections/route'
+import { OPTIONS as TEAM_OPTIONS } from '../../../src/routes/api/internal/oauth-team/route'
 
 const URL = 'http://localhost:3000/api/internal/oauth-connections'
 const get = () => GET(new NextRequest(URL), undefined as never)
@@ -153,5 +155,23 @@ describe('/api/internal/oauth-connections', () => {
     enabled.mockReturnValue(false)
     expect((await patch({ clientId: 'client-a', teamId: 'team-1', scopes: ['tasks:read'] })).status).toBe(404)
     expect(connections.narrowConnection).not.toHaveBeenCalled()
+  })
+})
+
+describe('the preflight of the internal OAuth routes (#541)', () => {
+  const options = (url: string) => new NextRequest(url, { method: 'OPTIONS' })
+
+  it('is answered while the feature is on', () => {
+    enabled.mockReturnValue(true)
+    expect(OPTIONS(options(URL)).status).toBe(204)
+    expect(TEAM_OPTIONS(options('http://localhost:3000/api/internal/oauth-team')).status).toBe(204)
+  })
+
+  it('is a 404 like every other method once the feature is turned off at runtime', () => {
+    enabled.mockReturnValue(false)
+    preflight.mockClear()
+    expect(OPTIONS(options(URL)).status).toBe(404)
+    expect(TEAM_OPTIONS(options('http://localhost:3000/api/internal/oauth-team')).status).toBe(404)
+    expect(preflight).not.toHaveBeenCalled()
   })
 })

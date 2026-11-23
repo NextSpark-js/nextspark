@@ -4,8 +4,11 @@
 --              and the rules that keep a connection's tokens in step with its consent.
 -- Issue: #541
 --
--- The tables exist whether or not the project turns the feature on (`features.mcpOAuth`);
--- nothing reads or writes them while it is off. Names and column types are the ones Better Auth 1.7.27 expects for this
+-- The tables exist whether or not the project turns the feature on (`features.mcpOAuth`), and the app neither
+-- reads nor writes them while it is off. The three triggers on existing tables run in every project all the same:
+-- a changed password or a suspension records one row in "oauthRevocation" (the newest of a user is kept), and a
+-- member removed from a team deletes that member's consents for it, of which there are none while the feature is
+-- off. Names and column types are the ones Better Auth 1.7.27 expects for this
 -- instance (`string[]` and `json` are JSONB, `date` is TIMESTAMPTZ, ids are TEXT that Better
 -- Auth generates), with `users` as the physical user table.
 --
@@ -18,8 +21,8 @@
 -- `oauthAccessToken.token` is NOT NULL: Better Auth 1.7.27 declares the field without `required: false`, which is
 -- required, and its migration planner reports a nullable column there as drift.
 --
--- Additive only: no existing table changes; two of its seven triggers are on existing tables (account, users).
--- Undoing it is dropping the seven triggers and the seven functions, then the ten tables (in reverse order of
+-- Additive only: no existing table changes; three of its eight triggers are on existing tables (account, users,
+-- team_members). Undoing it is dropping the eight triggers and the eight functions, then the ten tables (in reverse order of
 -- creation), which signs every MCP client out and makes them authorize again.
 --
 -- This is the only migration of the feature: everything it needs is in this file. Once it has been released it is
@@ -443,6 +446,30 @@ CREATE TRIGGER oauth_consent_removed
   AFTER DELETE ON public."oauthConsent"
   FOR EACH ROW
   EXECUTE FUNCTION public.end_oauth_connection_of_consent();
+
+-- 4. A member who leaves a team, or is removed from it, has no connection to it any more. The resource server
+--    refuses each call of someone who is not a member, but that alone leaves the consent and the refresh tokens:
+--    they would keep renewing, stay listed as connections, and work again if the user joined the team again, on a
+--    consent given for a membership that ended. The consents of that user for that team go, and with each its
+--    connection (end_oauth_connection_of_consent). Deleting a team removes its members (TeamService.delete, and
+--    the cascade when its row is purged), so its connections end here too. A change of role is not this: the row
+--    stays, and a connection is held to the role on every request.
+CREATE OR REPLACE FUNCTION public.end_oauth_connections_of_member()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  DELETE FROM public."oauthConsent" WHERE "userId" = OLD."userId" AND "referenceId" = OLD."teamId";
+  RETURN OLD;
+END $$;
+
+DROP TRIGGER IF EXISTS oauth_end_on_member_removed ON public."team_members";
+CREATE TRIGGER oauth_end_on_member_removed
+  AFTER DELETE ON public."team_members"
+  FOR EACH ROW
+  EXECUTE FUNCTION public.end_oauth_connections_of_member();
 
 DROP TRIGGER IF EXISTS oauth_revoke_on_password_change ON public."account";
 CREATE TRIGGER oauth_revoke_on_password_change

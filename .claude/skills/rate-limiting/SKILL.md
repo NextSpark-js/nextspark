@@ -253,7 +253,7 @@ credential, on top of the per-address limit: `credentialRateLimitResponse(reques
 `packages/core/src/lib/api/rate-limit.ts`. Every call site in core uses it.
 
 - **The key**: an API key is counted by its key id; an MCP connection by `oauthRateLimitKey`
-  (`oauth:<clientId>:<userId>`, `lib/api/auth/in-process-principal.ts`).
+  (`oauth:<clientId>:<userId>:<teamId>`, one count per connection, `lib/api/auth/in-process-principal.ts`).
 - **Two counts**: always in this process, and also in Redis when `UPSTASH_REDIS_REST_URL` and
   `UPSTASH_REDIS_REST_TOKEN` are both set, so every instance shares the count. The request is refused when either
   count is over. In memory alone the limit is per process: on serverless every instance gives a credential its own

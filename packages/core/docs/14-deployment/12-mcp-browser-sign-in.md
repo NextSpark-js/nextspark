@@ -69,9 +69,11 @@ pnpm db:migrate --expect-database <name> --expect-host <host>
 `049_oauth_provider.sql` is a core migration, so `db:migrate` applies it to every project, with the feature on or
 off. It adds ten tables (`jwks`, `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`,
 `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`), all
-service-only under RLS, and seven triggers. It changes no existing table; two of the triggers are on existing
-tables (`account`, for a changed password, and `users`, for a suspension). Nothing reads or writes the new tables
-while the feature is off.
+service-only under RLS, and eight triggers. It changes no existing table; three of the triggers are on existing
+tables (`account`, for a changed password, `users`, for a suspension, and `team_members`, for a member who leaves
+or is removed). The app neither reads nor writes the new tables while the feature is off; those three triggers
+run in every project: the first two record one row in `oauthRevocation`, the third deletes consents that do not
+exist while the feature is off.
 
 To check it:
 
@@ -221,7 +223,6 @@ Known limits, as of this version:
 - Removing a tool does not cut connections off: its scope stays accepted and stops being offered and issued. It is not a revocation; to take a permission away from existing connections, narrow them.
 - A change to the tools that changes the permissions on offer has to reach every instance at once. Each instance writes the policy that cuts tokens down to those permissions when it starts, with no version check, so in a gradual deployment an instance of the earlier version that starts late puts the earlier list back until an instance of the new version starts again. Deploy such a change all at once, or drain the earlier version first.
 - A client that renews its token, loses the answer and retries within 30 seconds across such a deployment is refused with `invalid_grant` and has to authorize again.
-- Deleting a team does not remove its connections: `/api/mcp` refuses them, and their rows stay.
 - `tools/list` shows every tool, including the ones the connection has no permission to call.
 - A tool written by hand gets the up-front `403 insufficient_scope` only if it declares `meta.requiredScopes`.
 - When everything a client asks for is already consented, Better Auth shows no consent screen on reconnect.

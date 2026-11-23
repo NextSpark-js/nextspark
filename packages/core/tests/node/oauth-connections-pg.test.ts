@@ -87,6 +87,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.deepEqual(before, [
       'oauth_consent_narrowed',
       'oauth_consent_removed',
+      'oauth_end_on_member_removed',
       'oauth_refresh_token_deleted',
       'oauth_refresh_token_requires_consent',
       'oauth_refresh_token_revoked',
@@ -368,6 +369,84 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.ok((await revocations('u-bea')) >= 1)
     await assert.rejects(owner.query(tokenSql, tokenArgs('u-bea', 'team-1', [...BASE, READ]).args), /oauth connection ended/, 'a renewal in flight cannot write its token')
     await owner.query(`UPDATE "users" SET role = 'member' WHERE id = 'u-bea'`)
+  })
+
+  await t.test('a member removed from a team loses the connections to it, and they do not come back when the member does', async () => {
+    await reset()
+    await consent('u-bea', 'team-1', [...BASE, READ, WRITE])
+    await consent('u-bea', 'team-1', [...BASE, READ], 'opaque-client')
+    await consent('u-ana', 'team-1', [...BASE, READ])
+    const replaced = await token('u-bea', 'team-1', [...BASE, READ, WRITE], { replaced: true })
+    const live = await token('u-bea', 'team-1', [...BASE, READ, WRITE])
+    const anas = await token('u-ana', 'team-1', [...BASE, READ])
+    const before = await revocations('u-bea', 'team-1')
+
+    await owner.query(`DELETE FROM team_members WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
+    assert.deepEqual(await tokensOf('u-bea', 'team-1'), [], `${replaced} and ${live} went with the membership`)
+    assert.equal(await consentScopes('u-bea', 'team-1'), undefined)
+    assert.equal(Number((await owner.query(`SELECT count(*) FROM "oauthConsent" WHERE "userId" = 'u-bea'`)).rows[0].count), 0, 'every application, not one')
+    assert.ok((await revocations('u-bea', 'team-1')) >= before + 2, 'one revocation for each connection that ended')
+    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [anas], 'another member of the team keeps theirs')
+    // a renewal in flight cannot write its new token: there is no consent left for it
+    await assert.rejects(owner.query(tokenSql, tokenArgs('u-bea', 'team-1', [READ]).args), /oauth connection ended/)
+
+    // back in the team, with whatever role: nothing of the old connections is there
+    await owner.query(`INSERT INTO team_members ("teamId", "userId", role) VALUES ('team-1', 'u-bea', 'admin')`)
+    assert.deepEqual(await tokensOf('u-bea', 'team-1'), [])
+    assert.equal(await consentScopes('u-bea', 'team-1'), undefined)
+    assert.deepEqual((await store.userConnections('u-bea')).map(c => c.teamId), [])
+    await owner.query(`UPDATE team_members SET role = 'member' WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
+  })
+
+  await t.test('a change of role is not a removal: the connection stays', async () => {
+    await reset()
+    await consent('u-bea', 'team-1', [...BASE, READ])
+    const live = await token('u-bea', 'team-1', [...BASE, READ])
+    await owner.query(`UPDATE team_members SET role = 'admin' WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
+    assert.deepEqual(await tokensOf('u-bea', 'team-1'), [live])
+    await owner.query(`UPDATE team_members SET role = 'member' WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
+  })
+
+  await t.test('deleting a team ends every connection to it, and leaves the connections to other teams', async () => {
+    await reset()
+    await owner.query(`INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-3', 'Three', 'three', 'u-ana')`)
+    await owner.query(`INSERT INTO team_members ("teamId", "userId", role) VALUES ('team-3', 'u-ana', 'owner'), ('team-3', 'u-bea', 'member')`)
+    await consent('u-ana', 'team-3', [...BASE, READ])
+    await consent('u-bea', 'team-3', [...BASE, READ])
+    await consent('u-ana', 'team-1', [...BASE, READ])
+    await token('u-ana', 'team-3', [...BASE, READ])
+    await token('u-bea', 'team-3', [...BASE, READ])
+    const elsewhere = await token('u-ana', 'team-1', [...BASE, READ])
+
+    // what TeamService.delete does: the team is marked and its members removed
+    await owner.query(`UPDATE teams SET "deletedAt" = now() WHERE id = 'team-3'`)
+    await owner.query(`DELETE FROM team_members WHERE "teamId" = 'team-3'`)
+    assert.deepEqual(await tokensOf('u-ana', 'team-3'), [])
+    assert.deepEqual(await tokensOf('u-bea', 'team-3'), [])
+    assert.equal(Number((await owner.query(`SELECT count(*) FROM "oauthConsent" WHERE "referenceId" = 'team-3'`)).rows[0].count), 0)
+    assert.ok((await revocations('u-ana', 'team-3')) >= 1)
+    assert.ok((await revocations('u-bea', 'team-3')) >= 1)
+    assert.deepEqual(await tokensOf('u-ana', 'team-1'), [elsewhere])
+
+    // and when the row itself is purged, with members still in it: the cascade ends them the same way
+    await owner.query(`INSERT INTO teams (id, name, slug, "ownerId") VALUES ('team-4', 'Four', 'four', 'u-ana')`)
+    await owner.query(`INSERT INTO team_members ("teamId", "userId", role) VALUES ('team-4', 'u-bea', 'member')`)
+    await consent('u-bea', 'team-4', [...BASE, READ])
+    await token('u-bea', 'team-4', [...BASE, READ])
+    await owner.query(`DELETE FROM teams WHERE id = 'team-4'`)
+    assert.deepEqual(await tokensOf('u-bea', 'team-4'), [])
+    await owner.query(`DELETE FROM teams WHERE id = 'team-3'`)
+  })
+
+  await t.test('a user who is deleted takes their connections with them, and nothing fails on the way', async () => {
+    await reset()
+    await owner.query(`INSERT INTO "users" (id, email, name, role, "emailVerified", "createdAt", "updatedAt") VALUES ('u-gone', 'gone@example.com', 'Gone', 'member', true, now(), now())`)
+    await owner.query(`INSERT INTO team_members ("teamId", "userId", role) VALUES ('team-1', 'u-gone', 'member')`)
+    await consent('u-gone', 'team-1', [...BASE, READ])
+    await token('u-gone', 'team-1', [...BASE, READ])
+    await owner.query(`DELETE FROM "users" WHERE id = 'u-gone'`)
+    assert.deepEqual(await tokensOf('u-gone', 'team-1'), [])
+    assert.equal(Number((await owner.query(`SELECT count(*) FROM "oauthConsent" WHERE "userId" = 'u-gone'`)).rows[0].count), 0)
   })
 
   await t.test('the purge removes what expired and keeps a replaced token until its own expiry', async () => {

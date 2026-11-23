@@ -56,4 +56,5 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   return NextResponse.json({ success: true })
 }, 'write')
 
-export const OPTIONS = corsPreflight
+// The preflight is part of the feature too: turned off at runtime, these routes answer nothing but 404
+export const OPTIONS = (request: NextRequest) => (isMcpOAuthEnabled() ? corsPreflight(request) : notFound())

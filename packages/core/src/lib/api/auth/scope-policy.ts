@@ -27,13 +27,14 @@ export type DualAuthFailureCode =
   | 'AUTHENTICATION_FAILED'
   | 'INSUFFICIENT_SCOPE'
   | 'SCOPE_NOT_DECLARED'
+  | 'TEAM_NOT_IN_CONNECTION'
   | 'RATE_LIMIT_EXCEEDED'
 
 export interface DualAuthFailure {
   code: DualAuthFailureCode
   /**
-   * 401 when no usable credential was presented, 403 when a valid key was rejected on scope, 429 when a valid
-   * key is over its per-key limit.
+   * 401 when no usable credential was presented, 403 when a valid key was rejected on scope or an OAuth connection
+   * was used for a team other than its own, 429 when a valid key is over its per-key limit.
    */
   status: 401 | 403 | 429
   message: string

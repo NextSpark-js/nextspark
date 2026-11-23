@@ -855,7 +855,8 @@ Better Auth, check the new write path against those triggers.
 
 - A client set to skip consent (`skipConsent`) is refused: `refuseConsentSkippingClient`.
 - A suspended account gets no token, new or refreshed (`refuseSuspended` in `plugins.ts`); a suspension and a
-  changed password end every connection of the user (triggers on `users` and `account`).
+  changed password end every connection of the user (triggers on `users` and `account`). A member who leaves or
+  is removed from a team, and the deletion of a team, end the connections to that team (trigger on `team_members`).
 - Signing out of the browser does not disconnect an application.
 - After sign-in (password, Google, magic link) the browser continues an authorization that was in progress:
   `continueOAuthSignIn` and `signInCallbackURL` in `src/hooks/useAuth.ts`, `lib/mcp/oauth/sign-in-continuation.ts`.

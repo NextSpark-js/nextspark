@@ -11,9 +11,12 @@ import type { DualAuthResult } from './dual-auth'
 
 const principals = new WeakMap<Request, DualAuthResult>()
 
-/** The per-credential rate-limit key of an OAuth principal: the client acting for the user. */
+/**
+ * The per-credential rate-limit key of an OAuth principal: one connection, which is a client acting for a user in
+ * a team. The team is part of it so that the same client connected to two teams has two counts, as two API keys do.
+ */
 export function oauthRateLimitKey(principal: DualAuthResult): string {
-  return `oauth:${principal.oauth?.clientId ?? 'unknown'}:${principal.user?.id ?? 'unknown'}`
+  return `oauth:${principal.oauth?.clientId ?? 'unknown'}:${principal.user?.id ?? 'unknown'}:${principal.oauth?.teamId ?? 'unknown'}`
 }
 
 export function attachInProcessPrincipal(request: Request, principal: DualAuthResult): void {

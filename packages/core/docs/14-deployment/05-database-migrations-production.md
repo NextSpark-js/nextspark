@@ -85,7 +85,7 @@ core/migrations/
 
 Core's migrations are applied to every project by `pnpm db:migrate`, whether or not the project uses the feature
 they belong to. `049_oauth_provider.sql` is an example: it adds the tables and triggers of MCP browser sign-in,
-which nothing reads or writes until a project turns the feature on (see
+which the app neither reads nor writes until a project turns the feature on (see
 [MCP Browser Sign-In Deployment](./12-mcp-browser-sign-in.md#3-migration-049)).
 
 ### Creating New Migrations

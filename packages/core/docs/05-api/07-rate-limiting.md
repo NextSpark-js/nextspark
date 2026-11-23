@@ -201,7 +201,7 @@ limit of the route.
   for an API key, and the MCP endpoint for an OAuth access token. A route that authenticates through one of them
   gets the limit without doing anything.
 - **What identifies the credential:** the id of the API key, or for an MCP connection the application and the user
-  (`oauth:<clientId>:<userId>`, `oauthRateLimitKey`).
+  (`oauth:<clientId>:<userId>:<teamId>`, `oauthRateLimitKey`: one count per connection).
 - **Counted once per request**, however many times the request is authenticated.
 - **A safety cap:** `DISABLE_RATE_LIMITING=true` does not turn it off.
 - **Not applied to sessions.** A request authenticated by a session cookie is not counted here.

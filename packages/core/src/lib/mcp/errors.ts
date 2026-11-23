@@ -35,6 +35,8 @@ export function translateApiError(result: EntityApiResult, context: ErrorContext
       return 'Missing team context. Verify that your API key belongs to a user with an active team, or send the x-team-id header.'
     case 'TEAM_ACCESS_DENIED':
       return 'The API key user is not a member of the specified team. Check x-team-id or use the default team.'
+    case 'TEAM_NOT_IN_CONNECTION':
+      return 'This connection was approved for one team and cannot act on another. To work with another team, connect again and choose it.'
     case 'VALIDATION_ERROR':
       return `Invalid data for ${context.slug}.${formatDetails(body.details)} Fix the fields and retry.`
     case 'INVALID_FIELD_VALUE':

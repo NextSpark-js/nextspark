@@ -128,7 +128,7 @@ describe('executeEntityOperation with a verified OAuth principal (#541)', () => 
     const principal = {
       success: true,
       type: 'api-key' as const,
-      oauth: { clientId: 'client-1' },
+      oauth: { clientId: 'client-1', teamId: 'team-1' },
       user: { id: 'user-1', email: 'u@example.test', role: 'member' },
       scopes: ['customers:read'],
     };

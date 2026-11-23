@@ -452,7 +452,8 @@ built. From the release that carries it, a change to those tables or triggers is
 
 `049_oauth_provider.sql` creates what the OAuth 2.1 authorization server of the MCP endpoint needs (see
 [MCP server](../05-api/20-mcp-server.md)). It runs on every project, with the feature on or off; while it is off
-nothing reads or writes these tables.
+the app neither reads nor writes these tables (its three triggers on `account`, `users` and `team_members` run
+all the same, and write at most one row of `oauthRevocation` per user).
 
 | What | Detail |
 | --- | --- |

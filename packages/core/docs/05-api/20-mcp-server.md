@@ -221,7 +221,7 @@ key.
 
 Inside the server both credentials become the same thing: a user, a team and a list of scopes, handed to the
 entity handlers, which run the same checks for both. A handler can tell them apart if it has to: the principal of
-an OAuth call carries `oauth: { clientId, tokenId }`. See
+an OAuth call carries `oauth: { clientId, tokenId, teamId }`. See
 [API Authentication](./02-authentication.md#oauth-access-token-authentication-apimcp-only) for how an OAuth call
 travels to them.
 
@@ -380,7 +380,7 @@ operation, the record id, the team and the arguments.
 A generated entity tool also produces the row of the underlying API request (endpoint `/api/v1/...`), written by
 the generic entity handler. The two are complementary: the `mcp:` row carries what the agent asked for, the other
 what the API answered. A hand-written tool produces one such row per API handler it actually calls: none, one or
-several. The audit write is best effort: when the insert fails the failure is logged and the call goes on.
+several. The audit write is best effort: when the insert fails the failure is logged and the call goes on, and an insert that has not settled after three seconds (`AUDIT_WRITE_DEADLINE_MS`) is no longer waited for, so a call that already ran is not held back and repeated by its client.
 
 ---
 

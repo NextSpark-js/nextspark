@@ -82,8 +82,10 @@ names, and a connection never does.
    it the host has none of them, the authorization server is not registered, and `/api/mcp` takes an API key only.
 
 2. Apply the migrations. `migrations/049_oauth_provider.sql` adds the tables and the database rules described in
-   [Security model](#security-model). The tables exist whether or not the feature is on; nothing reads or writes
-   them while it is off.
+   [Security model](#security-model). The tables exist whether or not the feature is on, and the app neither reads
+   nor writes them while it is off. Three triggers on existing tables run in every project all the same: a changed
+   password or a suspension records one row in `oauthRevocation`, and a member removed from a team deletes that
+   member's consents for it (there are none while the feature is off).
 
 3. Make sure the MCP endpoint itself is on: `MCP_ENABLED=true` in production (in development it is on unless
    `MCP_ENABLED=false`).
@@ -198,8 +200,10 @@ key that was created before rotation was configured has no expiry and does not r
 A connection is **one application acting for one user in one team**: the triple (user, client, team).
 
 - **The team is part of the grant.** It is stored as the consent's `referenceId` and travels in the access token as
-  the `team_id` claim. A request cannot change it: the `x-team-id` header is ignored on this path, and the tools
-  call the entity handlers with the team of the token.
+  the `team_id` claim. A request cannot change it: the `x-team-id` header of the request to `/api/mcp` is ignored,
+  the tools call the entity handlers with the team of the token, and a handler reached with any other team refuses
+  the call (`403 TEAM_NOT_IN_CONNECTION`, in `authenticateRequest`). That last check is what holds a tool the
+  project wrote: one that passes another team to `api.execute` is refused, even when the user is a member of it.
 - **How the team is chosen.** A user in one team gets that team. A user in several picks one on
   `/oauth/select-team` (`lib/mcp/oauth/team-selection.ts`).
 - **How the choice is bound.** It is stored per browser session and per authorization request, identified by the
@@ -446,7 +450,8 @@ Each guarantee, and what enforces it.
 |---|---|
 | A token is accepted only if it was issued by this server, for this resource, and has not expired | `requireMcpAuth` (`@better-auth/mcp`) verifies signature, issuer, audience and expiry in process, in `handleOAuthMcpRequest` |
 | The access token is never presented to another route | The MCP endpoint verifies it once and attaches the resulting principal to the request object it builds for each tool (`lib/api/auth/in-process-principal.ts`, a `WeakMap` keyed by object identity). Nothing sent over HTTP can set it |
-| A connection acts in one team | The `team_id` claim, set from the consent's `referenceId`; `x-team-id` is not read on this path |
+| A connection acts in one team | The `team_id` claim, set from the consent's `referenceId`; `x-team-id` of the request is not read, and `authenticateRequest` refuses an in-process call for any other team (`TEAM_NOT_IN_CONNECTION`) |
+| A connection ends with the membership | The trigger `oauth_end_on_member_removed`: leaving or being removed from a team, and the deletion of the team, delete the consents for it, and with each its connection |
 | A connection never holds more than the user's role | `consentWithinRolePlugin` when the consent is written; `validateScopesForUser` on every request |
 | The consent decides what a connection may do | The consent row is read on every request; the database rules below hold every refresh token to it |
 | A connection that was ended stays ended, at once, on every instance | The revocation number (`oauthRevocation` and the `rev` claim), and the removal of the consent and the refresh tokens |
@@ -469,6 +474,7 @@ for every path, Better Auth's own endpoints included, and on every instance.
 | `oauth_consent_removed` (AFTER DELETE on `oauthConsent`) | Removing a consent, by whatever means, records a revocation and removes the connection's refresh tokens |
 | `oauth_refresh_token_revoked`, `oauth_refresh_token_deleted` | A live refresh token revoked or deleted records a revocation of that connection. A rotation is not one |
 | `oauth_revoke_on_password_change` (on `account`), `oauth_revoke_on_suspension` (on `users`) | End every connection of the user |
+| `oauth_end_on_member_removed` (AFTER DELETE on `team_members`) | A member who leaves or is removed loses the connections to that team, and they do not come back if the member does. Deleting a team removes its members, so its connections end the same way. A change of role is not a removal |
 
 The share lock in the first rule is what makes a renewal and a disconnection exclude each other. A renewal in flight
 either writes its new token before the consent goes, and the token is removed with the rest, or finds no consent and
@@ -597,7 +603,6 @@ screens' APIs, not a public surface.
   the consent screen offers and what a consent can hold do not read that row: each instance computes them from
   its own version. Deploy
   a change to the list all at once, or drain the earlier version first.
-- **Removing a team does not end its connections.** The resource server refuses them, but their rows stay.
 - **Hand-written tools get the up-front `403` only if they declare `meta.requiredScopes`.** Without it each API call
   the tool makes is checked where it is made.
 - **`tools/list` shows every tool**, including those the connection cannot use.

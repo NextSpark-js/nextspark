@@ -149,7 +149,7 @@ hand-written tool that needs a scope outside `toolScopesOf`.
 - The access token goes no further than the resource server. Tools receive a principal, and the executor
   attaches it to the request it builds (`attachInProcessPrincipal`, a `WeakMap<Request, DualAuthResult>`);
   `authenticateRequest` reads it back (`inProcessPrincipal`). Nothing sent over HTTP can set it.
-- That principal has `type: 'api-key'` plus `oauth: { clientId, tokenId }` (`DualAuthResult` in
+- That principal has `type: 'api-key'` plus `oauth: { clientId, tokenId, teamId }` (`DualAuthResult` in
   `src/lib/api/auth/dual-auth.ts`). A route that branches on `type === 'api-key'` treats an OAuth connection
   as a key. It is a bridge, not the final model: do not read `keyId` for such a principal (there is no
   `api_key` row), check `oauth` when the difference matters.
@@ -209,6 +209,14 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
 
 - A connection is a client acting for a user in **one team**: `(userId, clientId, teamId)`. The team is the
   consent's `referenceId` and the access token's `team_id` claim (`TEAM_CLAIM`).
+- **The binding is enforced in `authenticateRequest`, not in the tool layer.** Every handler takes the team from
+  `x-team-id` and checks membership only. For an injected OAuth principal (`oauth.teamId`), a request for any
+  other team is refused with `403 TEAM_NOT_IN_CONNECTION`, and a principal with no `teamId` is refused too. A
+  hand-written tool that hands `api.execute` a context with another team therefore fails, whatever the user is a
+  member of. Never resolve a team for an OAuth call anywhere else.
+- **A connection ends with the membership** (trigger `oauth_end_on_member_removed` on `team_members`): leaving,
+  being removed, and the deletion of the team delete the consents for that team, and each consent takes its
+  connection with it. A change of role is not a removal: the connection stays and is held to the new role.
 - A user in one team gets that team. A user in several picks one on `/oauth/select-team`
   (`oauth/team-selection.ts`, table `oauthTeamSelection`). The choice is stored per browser session and per
   authorization request (its PKCE challenge, `isAuthorizationKey`), is written once (`409 TEAM_ALREADY_CHOSEN`
@@ -326,6 +334,7 @@ paths core wrote and for none of Better Auth's. So the rules are triggers:
 | `oauth_consent_removed` (AFTER DELETE on `oauthConsent`) | Removing a consent records a revocation and removes the connection's refresh tokens, so nothing comes back with the next consent |
 | `oauth_refresh_token_revoked`, `oauth_refresh_token_deleted` | A live refresh token revoked or deleted records a revocation of that connection. A rotation is not one |
 | `oauth_revoke_on_password_change` (on `account`), `oauth_revoke_on_suspension` (on `users`) | End every connection of the user |
+| `oauth_end_on_member_removed` (AFTER DELETE on `team_members`) | A member who leaves or is removed, and every member of a deleted team, loses the connections to that team |
 
 - **The share lock is what orders a renewal against a disconnection or a narrowing.** The new token either is
   written first (and removed or cut down with the rest), or waits and then finds no consent (refused) or a
@@ -377,7 +386,8 @@ action. A project that wants its own schedule calls `purgeExpiredOAuth()`.
 
 - The route's own tier is `api`, per address.
 - On top, the per-credential limit `credentialRateLimitResponse` (tier `credential`, 1000 charges a minute): for an
-  API key by its key id, for an OAuth connection by `oauthRateLimitKey` (`oauth:<clientId>:<userId>`).
+  API key by its key id, for an OAuth connection by `oauthRateLimitKey` (`oauth:<clientId>:<userId>:<teamId>`:
+  one count per connection, so the same client in two teams has two).
 - The charge is per authenticated `Request` object: one charge for the request and one more for each API handler a tool calls in process. A request with one generated entity tool
   costs two; a hand-written tool costs one plus the handlers it calls; a batch pays the outer request once and
   then each handler. Same with an API key.
@@ -474,7 +484,6 @@ pnpm test:node          # every node test
   the active list has to be deployed all at once, or with the earlier version drained.
 - A renewal retried within the 30 seconds of the replay window across a deployment that changed the active list
   is refused with `invalid_grant`; the client has to authorize again.
-- Removing a team does not end its connections: the resource server refuses them, the rows stay.
 - Hand-written tools get the up-front 403 only if they declare `meta.requiredScopes`.
 - `tools/list` shows every tool, including those the connection cannot use.
 - If everything a client asks for is already consented, Better Auth shows no consent screen on reconnect.

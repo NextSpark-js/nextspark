@@ -163,7 +163,7 @@ The limiter of a tier writes under the prefix `ratelimit:<tier>`, followed by th
 
 | Credential | Identifier |
 | --- | --- |
-| MCP connection | `oauth:<client id>:<user id>` |
+| MCP connection | `oauth:<client id>:<user id>:<team id>` |
 | API key | the id of the key |
 
 With Upstash's REST API:
@@ -175,7 +175,7 @@ curl -s "$UPSTASH_REDIS_REST_URL" -H "Authorization: Bearer $UPSTASH_REDIS_REST_
 
 # The value of the counter (the key ends with the window it counts)
 curl -s "$UPSTASH_REDIS_REST_URL" -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN" \
-  -d '["GET", "ratelimit:credential:oauth:<client id>:<user id>:<window>"]'
+  -d '["GET", "ratelimit:credential:oauth:<client id>:<user id>:<team id>:<window>"]'
 ```
 
 The counter of the connection reads the limit (1000) when the count was kept in Redis. The database's dashboard

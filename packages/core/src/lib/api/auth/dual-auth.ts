@@ -83,7 +83,7 @@ export interface DualAuthResult {
    * Set when the scoped credential is an OAuth access token instead of an API key (#541). `type` stays `'api-key'`:
    * every check written for an API key (declared scope, `access.api`, external-caller rules) applies to it as it is.
    */
-  oauth?: { clientId: string; tokenId?: string }
+  oauth?: { clientId: string; tokenId?: string; /** The one team the connection was approved for. */ teamId: string }
   /** The session's id (type 'session' only): the active team cookie counts only for it. */
   sessionId?: string
   /** The 429 to return when a valid API key is over its per-key limit (`success` is false, `error` says 429). */
@@ -116,6 +116,18 @@ export async function authenticateRequest(
   // enforcement as an API key, and no other credential on the request is read.
   const injected = inProcessPrincipal(request)
   if (injected) {
+    // A connection is for one team, and this is where that is held: every handler takes the team from `x-team-id`
+    // and checks only that the user is a member of it, which a user in several teams is. A tool the project wrote
+    // that passes another team to `api.execute` would otherwise act there with a consent given for this one.
+    const boundTeam = injected.oauth?.teamId
+    const askedTeam = request.headers.get('x-team-id') || null
+    if (injected.oauth && (!boundTeam || (askedTeam !== null && askedTeam !== boundTeam))) {
+      return {
+        ...injected,
+        success: false,
+        error: { code: 'TEAM_NOT_IN_CONNECTION', status: 403, message: 'This connection was approved for one team and cannot act on another' },
+      }
+    }
     const failure = resolveApiKeyScopeFailure(injected.scopes, options, describeRoute(request))
     if (failure) return { ...injected, success: false, error: failure }
     // The per-credential limit, counted on this request exactly as an API key's is

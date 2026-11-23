@@ -3,7 +3,7 @@ jest.mock('@/core/lib/db', () => ({
   mutateWithRLS: (...args: unknown[]) => mockMutateWithRLS(...args),
 }));
 
-import { auditToolCall, namesSecret, redactSecrets } from '@/core/lib/mcp/audit';
+import { AUDIT_WRITE_DEADLINE_MS, auditToolCall, namesSecret, redactSecrets } from '@/core/lib/mcp/audit';
 import type { AuditEntry } from '@/core/lib/mcp/types';
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
@@ -90,6 +90,41 @@ describe('auditToolCall', () => {
     mockMutateWithRLS.mockRejectedValueOnce(new Error('db down'));
     await expect(auditToolCall(entry())).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops waiting for a write that does not settle: the tool already ran, and its answer is not held', async () => {
+    jest.useFakeTimers();
+    try {
+      let failLater: (error: Error) => void = () => {};
+      mockMutateWithRLS.mockReturnValueOnce(new Promise((_resolve, reject) => { failLater = reject; }));
+      let answered = false;
+      const call = auditToolCall(entry()).then(() => { answered = true; });
+      await jest.advanceTimersByTimeAsync(AUDIT_WRITE_DEADLINE_MS - 1);
+      expect(answered).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+      await call;
+      expect(answered).toBe(true);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0][0]).toMatch(/was not written within/);
+      // the write that was left running fails later: logged, not an unhandled rejection
+      failLater(new Error('connection lost'));
+      await jest.advanceTimersByTimeAsync(0);
+      expect(errorSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('a write that settles in time leaves no timer behind', async () => {
+    jest.useFakeTimers();
+    try {
+      mockMutateWithRLS.mockResolvedValueOnce(undefined);
+      await auditToolCall(entry());
+      expect(jest.getTimerCount()).toBe(0);
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 

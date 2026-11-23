@@ -5,8 +5,10 @@
  * destructive actions by an autonomous agent are at least reconstructable —
  * same insert shape as `logApiUsage` (packages/core/src/lib/api/helpers.ts),
  * including passing the caller's userId as RLS context. Best effort: a write
- * that fails is logged and the call goes on, and a call the SDK rejects before
- * the handler (wrong shape or type, unknown parameter or tool) never gets here.
+ * that fails is logged and the call goes on, one that does not settle within
+ * AUDIT_WRITE_DEADLINE_MS is no longer waited for, and a call the SDK rejects
+ * before the handler (wrong shape or type, unknown parameter or tool) never
+ * gets here.
  *
  * Since #105 the generic entity handlers also write their own row per
  * request (endpoint `/api/v1/...`, see lib/api/entity/audit-log.ts), so a
@@ -24,6 +26,14 @@ import { mutateWithRLS } from '../db'
 import type { AuditEntry } from './types'
 
 const MAX_SUMMARY_LENGTH = 4000
+
+/**
+ * How long a tool call waits for its audit row. The row is written after the tool ran: a write that never settles
+ * (a pool with no free connection, a network that went quiet) would hold the answer of a call that already
+ * happened, and a client that times out and repeats it would create or delete twice. Past this the call answers
+ * and the write is left to finish, or to fail, on its own.
+ */
+export const AUDIT_WRITE_DEADLINE_MS = 3000
 
 export async function auditToolCall(entry: AuditEntry): Promise<void> {
   if (!entry.apiKeyId && !entry.oauth) {
@@ -49,8 +59,9 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
     ...(entry.oauth ? { credential: 'oauth', oauthClientId: entry.oauth.clientId, oauthTokenId: entry.oauth.tokenId ?? null } : {}),
   }
 
+  let deadline: ReturnType<typeof setTimeout> | undefined
   try {
-    await mutateWithRLS(
+    const write = mutateWithRLS(
       `INSERT INTO "api_audit_log"
        ("apiKeyId", "userId", endpoint, method, "statusCode", "ipAddress", "userAgent", "requestBody", "responseTime")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -67,9 +78,19 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
       ],
       entry.userId
     )
+    const late = new Promise<'late'>(resolve => {
+      deadline = setTimeout(() => resolve('late'), AUDIT_WRITE_DEADLINE_MS)
+    })
+    if ((await Promise.race([write.then(() => 'written' as const), late])) === 'late') {
+      console.error(`[mcp:audit] the api_audit_log entry of ${entry.tool} was not written within ${AUDIT_WRITE_DEADLINE_MS} ms; the call answers without it`)
+      // Still running: its failure, if it comes, is logged and not left as an unhandled rejection
+      write.catch(error => console.error('[mcp:audit] failed to write api_audit_log entry:', error))
+    }
   } catch (error) {
     // Auditing must never break the tool call, but must never fail silently either.
     console.error('[mcp:audit] failed to write api_audit_log entry:', error)
+  } finally {
+    clearTimeout(deadline)
   }
 }
 

@@ -120,7 +120,7 @@ async function principalFromClaims(
     principal: {
       success: true,
       type: 'api-key',
-      oauth: { clientId, tokenId: claimString(claims.jti) },
+      oauth: { clientId, tokenId: claimString(claims.jti), teamId },
       user: { id: userId, email: user.email, role: user.role || 'user', name: user.name, defaultTeamId: teamId },
       scopes: allowedScopes,
     },
@@ -172,7 +172,7 @@ export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, re
       if (resolved instanceof NextResponse) return resolved
       const { principal, teamId, granted } = resolved
 
-      // The per-credential limit API keys have, for this client and user: counted here for the MCP request and,
+      // The per-credential limit API keys have, for this connection (client, user and team): counted here for the MCP request and,
       // as for a key, once more by each API handler a tool calls (authenticateRequest)
       const limited = await credentialRateLimitResponse(request, {
         userId: principal.user!.id,
