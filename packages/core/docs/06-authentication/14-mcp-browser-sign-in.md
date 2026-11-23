@@ -291,8 +291,10 @@ and leaves it in the accepted one. Nobody is cut off:
 - Connected applications shows a connection with its active permissions only.
 
 The consent of an earlier connection is not rewritten when the list changes: it still names the scope until the
-user edits the permissions or connects again. That matters in one case. If a tool that needs exactly that scope
-comes back later, a connection whose consent still names it gets the permission back without being asked again.
+user edits the permissions or connects again. That matters if a tool that needs exactly that scope comes back
+later. A connection that never renewed while the scope was retired still has it in its tokens and can use the
+tool at once. One that renewed lost it from its tokens, so the tool does not work for it by itself; but since the
+consent still names the scope, its next authorization or step-up gets it back without a consent screen.
 Retiring a tool is not a revocation. To take a permission away for good, narrow the connections
 (`narrowConnection`, which records the revocation and cuts the live tokens), and do not give a scope name a
 wider meaning than it had.
@@ -338,8 +340,9 @@ next request, and a connection with no consent row is refused with `401`, whatev
 ### Step-up
 
 A call that needs a scope the connection was not granted is answered `403` before anything runs, with an RFC 6750
-`insufficient_scope` challenge. The `scope` of the challenge is what the connection has plus what is missing
-(`mcpOAuthStepUpScopes`), so a client that authorizes again with exactly that list loses nothing. A batch is refused
+`insufficient_scope` challenge. The `scope` of the challenge is the active scopes the connection has plus the
+active scopes that are missing (`mcpOAuthStepUpScopes`), so a client that authorizes again with exactly that list
+loses nothing that does something. A retired scope the connection still holds is not named. A batch is refused
 whole when any of its calls lacks a scope. The refused calls are written to the audit log.
 
 A scope that *was* granted and that the user's role no longer allows is a different case: the tool refuses it, with
@@ -576,6 +579,10 @@ screens' APIs, not a public surface.
   renews its token before almost every call; and it presents a `403` for a missing scope as "the connection has
   expired, reconnect". Completing that step-up (ticking the missing permission and repeating the call) has been
   run with Claude and not with ChatGPT.
+- **A deployment that changes the active list, and a renewal retried across it.** A client that renews a token,
+  loses the answer and retries within 30 seconds gets the first answer again. If the deployment changed the active
+  list between the two, the retry no longer matches and is refused with `invalid_grant`; the client authorizes
+  again. The window is the 30 seconds after a renewal that straddles the deployment.
 - **Removing a team does not end its connections.** The resource server refuses them, but their rows stay.
 - **Hand-written tools get the up-front `403` only if they declare `meta.requiredScopes`.** Without it each API call
   the tool makes is checked where it is made.

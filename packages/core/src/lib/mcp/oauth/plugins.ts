@@ -92,6 +92,11 @@ export function mcpOAuthPlugins() {
       // its next renewal without being refused. The identity scopes are in the list: without `offline_access`
       // there would be no refresh token.
       resources: [{ identifier: mcpResourceUrl(), name: 'MCP', allowedScopes: activeScopes }],
+      // The row of the resource is brought to this configuration each time the server starts. The provider's
+      // default only inserts a missing row: a database that already has the row (every app that ran sign-in before
+      // this list existed, and every later change of the tools) would keep its old policy and the cut would never
+      // apply. `merge` updates the fields named here and nothing else.
+      resourceSeedMode: 'merge',
       // A token for /api/mcp is always a user's in a team: no client_credentials
       grantTypes: ['authorization_code', 'refresh_token'],
       accessTokenExpiresIn: 600,

@@ -228,7 +228,8 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
   process). Everything seen or granted goes by the active list: `scopes_supported` of both metadata documents
   (`advertisedMetadata.scopes_supported`), the 401 and step-up challenges, the consent screen (`offered` and
   `allowed` of `/api/internal/oauth-team`), what a consent can hold (both hooks of `consentWithinRolePlugin`,
-  through `activeScopes`), what a token for the resource carries (`resources[].allowedScopes`), and what
+  through `activeScopes`), what a token for the resource carries (`resources[].allowedScopes`, kept in the
+  `oauthResource` row; `resourceSeedMode: 'merge'` is what updates that row at startup, never remove it), and what
   Connected applications lists (`withActiveScopes`). Never use the accepted list for anything a user sees.
   A hand-written tool that needs a scope no generated tool uses must have it in `extraToolScopes` of its
   `mcp.ts`, or it is not active. A custom route with other `excludeSlugs`, `defaultOperations` or
@@ -239,8 +240,9 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
 - **Retiring a scope** (excluding an operation or an entity later) cuts nobody off: the scope stays accepted
   and stops being active. A client that kept an older list (ChatGPT stores it with the connector) still
   authorizes and is granted the active part; a connection that holds the scope renews, and its new access and
-  refresh tokens no longer carry it. The stored consent of an earlier connection is not rewritten, so a tool
-  that later needs the same scope gives that connection the permission back unasked: retiring a tool is not a
+  refresh tokens no longer carry it. The stored consent of an earlier connection is not rewritten, so if a tool
+  later needs the same scope again, a connection that never renewed meanwhile can use it at once, and one that
+  renewed gets it back at its next authorization or step-up without a consent screen: retiring a tool is not a
   revocation. To revoke, narrow the connections (`narrowConnection`). Never make the two lists one again: the
   real ChatGPT connector was cut off twice when they were (renewal and authorization, both `invalid_scope`).
 - **The user chooses** on the consent screen (`OAuthConsent.tsx`): one row per entity with read, write,
@@ -256,8 +258,8 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
   with no consent row is refused (401), whatever its token says.
 - **`insufficient_scope` and step-up**: a call that needs a scope the connection was not granted is answered
   `403` before anything runs, with `WWW-Authenticate: Bearer error="insufficient_scope", scope="..."` naming
-  what it has plus what is missing (`mcpOAuthStepUpScopes`), so authorizing again with that list loses
-  nothing. A batch is refused whole. A scope that was granted and the role no longer allows is refused by the
+  the active scopes it has plus the active ones that are missing (`mcpOAuthStepUpScopes`: a retired scope the
+  connection still holds is not named), so authorizing again with that list loses nothing that does something. A batch is refused whole. A scope that was granted and the role no longer allows is refused by the
   tool instead: asking again would not help.
 
 ## Ending and narrowing a connection

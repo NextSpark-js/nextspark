@@ -575,8 +575,8 @@ a request with no credential at all this `401` is the expected first step of sig
 
 **`403` with `WWW-Authenticate: Bearer error="insufficient_scope"` — "This connection was not granted: ..."**
 JSON-RPC error `-32003`. The call needs a scope the user did not approve. Nothing ran. The `scope` of the challenge
-is what the connection has plus what is missing: a client that supports step-up sends the user to the consent
-screen with it. Otherwise the user disconnects and connects again, ticking the permission. If the permission is
+is the active scopes the connection has plus the ones that are missing: a client that supports step-up sends the
+user to the consent screen with it. Otherwise the user disconnects and connects again, ticking the permission. If the permission is
 shown disabled on the consent screen, the user's role in that team cannot hold it.
 
 **`401` "This connection was ended. Connect again." / "This connection was revoked. Connect again."**

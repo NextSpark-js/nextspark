@@ -29,9 +29,11 @@ const checked = (entity: string, action: string) => box(entity, action).getAttri
 const allow = () => document.querySelector('[data-cy=oauth-consent-allow]') as HTMLButtonElement
 const sentScope = () => (consent.mock.calls[0][0] as { scope?: string }).scope
 
-const teamResponse = (allowed: string[], granted: string[] | null = null, offered?: string[]) => ({
+// What the server offers unless a test says otherwise: every entity permission the application asks for
+const ASKED = (SEARCH.get('scope') ?? '').split(' ').filter(scope => scope.includes(':'))
+const teamResponse = (allowed: string[], granted: string[] | null = null, offered: string[] = ASKED) => ({
   ok: true,
-  json: async () => ({ data: [{ id: 'team-1', name: 'One' }], selected: 'team-1', allowed, granted, ...(offered ? { offered } : {}) }),
+  json: async () => ({ data: [{ id: 'team-1', name: 'One' }], selected: 'team-1', allowed, granted, offered }),
 })
 
 beforeEach(() => {
@@ -65,6 +67,18 @@ describe('OAuthConsent', () => {
     expect(sentScope()).toContain('tasks:read')
   })
 
+  it('shows no permission before the server has said what it offers, and none when it cannot say', async () => {
+    let answer: (value: unknown) => void = () => {}
+    global.fetch = jest.fn().mockReturnValue(new Promise(resolve => { answer = resolve })) as never
+    render(<OAuthConsent />)
+    // the application asks for tasks and customers; nothing is drawn until the server answers
+    expect(document.querySelector('[data-cy=oauth-consent-permissions]')).toBeNull()
+    expect(allow().disabled).toBe(true)
+    await act(async () => { answer({ ok: false, json: async () => ({}) }) })
+    expect(document.querySelector('[data-cy=oauth-consent-permissions]')).toBeNull()
+    expect(box('tasks', 'read')).toBeNull()
+  })
+
   it('sends exactly what stayed ticked, with the scopes that are not entity permissions', async () => {
     global.fetch = jest.fn().mockResolvedValue(teamResponse(['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read'])) as never
     render(<OAuthConsent />)
@@ -79,7 +93,8 @@ describe('OAuthConsent', () => {
     global.fetch = jest.fn().mockReturnValue(new Promise(() => {})) as never
     render(<OAuthConsent />)
     expect(allow().disabled).toBe(true)
-    expect(box('tasks', 'read').disabled).toBe(true)
+    // and no permission is drawn yet: which ones the server offers is not known
+    expect(box('tasks', 'read')).toBeNull()
   })
 
   it('an HTTP error reading what the role allows leaves no entity permission to grant', async () => {
@@ -94,7 +109,7 @@ describe('OAuthConsent', () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as never
     render(<OAuthConsent />)
     await waitFor(() => expect(allow().disabled).toBe(false))
-    expect([checked('tasks', 'read'), checked('tasks', 'write')]).toEqual([false, false])
+    expect([box('tasks', 'read'), box('tasks', 'write')]).toEqual([null, null])
     await act(async () => { fireEvent.click(allow()) })
     expect(sentScope()).toBe('openid offline_access')
   })

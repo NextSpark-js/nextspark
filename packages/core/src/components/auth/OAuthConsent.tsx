@@ -31,12 +31,12 @@ export function OAuthConsent() {
   const params = useSearchParams()
   const clientId = params.get('client_id') ?? ''
   const scopes = useMemo(() => (params.get('scope') ?? '').split(/\s+/).filter(Boolean), [params])
-  // The entity permissions the server offers, when it has said so: an application may ask for one no tool needs any
-  // more (it kept an older list), and that one is not shown
+  // The entity permissions the server offers; null until it has said. An application may ask for one no tool needs
+  // any more (it kept an older list): that one is never shown, so no row is shown before the server answers
   const [offered, setOffered] = useState<Set<string> | null>(null)
   // The entity permissions asked for; anything else (offline_access, identity) is not the user's to untick
   const asked = useMemo(() => scopes.filter(scope => entityScope(scope)), [scopes])
-  const requested = useMemo(() => asked.filter(scope => offered === null || offered.has(scope)), [asked, offered])
+  const requested = useMemo(() => asked.filter(scope => offered !== null && offered.has(scope)), [asked, offered])
   const [client, setClient] = useState<PublicClient | null>(null)
   const [team, setTeam] = useState<string | null>(null)
   // null until the server says which of them the user's role in the team can hold
@@ -55,22 +55,28 @@ export function OAuthConsent() {
 
   // The team this connection is for, and what the user's role in it can hold
   useEffect(() => {
+    // An answer that arrives after the parameters changed is not this screen's
+    let current = true
     const query = new URLSearchParams({ authorization: params.get('code_challenge') ?? '', client_id: clientId })
     fetch(withBasePath(`/api/internal/oauth-team?${query}`), { credentials: 'include' })
       .then(response => (response.ok ? response.json() : null))
       .then((body: { data?: Array<{ id: string; name: string }>; selected?: string | null; allowed?: string[]; offered?: string[]; granted?: string[] | null } | null) => {
+        if (!current) return
         setTeam(body?.data?.find(candidate => candidate.id === body.selected)?.name ?? null)
-        const shown = Array.isArray(body?.offered) ? new Set(body.offered) : null
+        // No answer, or one that does not say: nothing is offered
+        const shown = new Set(Array.isArray(body?.offered) ? body.offered : [])
         setOffered(shown)
         const can = new Set(body?.allowed ?? [])
         setAllowed(can)
         const granted = Array.isArray(body?.granted) ? body.granted : null
         setConnected(granted !== null)
         // Already connected: what it holds. Not yet: the defaults. Either way, only what the role can hold.
-        setChosen(new Set(asked.filter(scope => (!shown || shown.has(scope)) && can.has(scope) && (granted ? granted.includes(scope) : isPreselectedScope(scope)))))
+        setChosen(new Set(asked.filter(scope => shown.has(scope) && can.has(scope) && (granted ? granted.includes(scope) : isPreselectedScope(scope)))))
       })
-      // What the role allows could not be read: no entity permission stays ticked, so none is asked for
-      .catch(() => { setTeam(null); setAllowed(new Set()); setChosen(new Set()) })
+      // What is offered and what the role allows could not be read: no entity permission is shown or stays ticked,
+      // so none is asked for
+      .catch(() => { if (current) { setTeam(null); setOffered(new Set()); setAllowed(new Set()); setChosen(new Set()) } })
+    return () => { current = false }
   }, [params, clientId, asked])
 
   const entities = useMemo(() => [...new Set(requested.map(scope => entityScope(scope)!.entity))].sort(), [requested])
@@ -143,7 +149,7 @@ export function OAuthConsent() {
             </tbody>
           </table>
         )}
-        {entities.length === 0 && <p className="text-sm text-muted-foreground">{t('identityOnly')}</p>}
+        {offered !== null && entities.length === 0 && <p className="text-sm text-muted-foreground">{t('identityOnly')}</p>}
         {entities.length > 0 && <p className="text-xs text-muted-foreground" data-cy="oauth-consent-hint">{t(connected ? 'hintConnected' : 'hint')}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </CardContent>
