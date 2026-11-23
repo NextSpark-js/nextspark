@@ -5,14 +5,13 @@
  * on the consent screen and grants: a permission no tool needs would do nothing, so it is not a permission of the
  * server at all, whatever a connecting client asks for.
  *
- * No imports of the executor, the SDK or anything that reaches the request path: the authorization server is
- * configured from this module while `lib/auth` loads.
+ * The authorization server is configured from this module while `lib/auth` loads, so it imports nothing of the
+ * request path (no executor, no SDK) and runs nothing of the project: it reads configuration, never tool
+ * factories.
  */
 
 import type { EntityConfig } from '../entities/types'
 import { isApiOperationEnabled } from '../entities/api-access'
-import { buildEntitySchemas } from './schema-builder'
-import { translateApiError } from './errors'
 import type { EngineApi, McpEngineOptions, McpEntityOverride, McpOperation, McpToolDefinition } from './types'
 
 export const DEFAULT_OPERATIONS: McpOperation[] = ['list', 'get', 'create', 'update', 'delete']
@@ -21,7 +20,10 @@ export const DEFAULT_EXCLUDED_SLUGS = ['patterns']
 export const DEFAULT_TIMEZONE = 'UTC'
 
 /** The options that decide what is exposed: the same ones `createMcpEngine` takes. */
-export type McpExposureOptions = Pick<McpEngineOptions, 'overrides' | 'excludeSlugs' | 'defaultOperations' | 'utilityTools'>
+export type McpExposureOptions = Pick<
+  McpEngineOptions,
+  'overrides' | 'excludeSlugs' | 'defaultOperations' | 'utilityTools' | 'utilityToolScopes'
+>
 
 export interface ExposedEntity {
   slug: string
@@ -93,43 +95,27 @@ export function scopesOfToolMeta(meta: McpToolDefinition['meta']): string[] {
 }
 
 /**
- * Every scope some tool of a server built from `registry` and `options` needs, sorted: the scopes of the generated
- * tools and the ones the hand-written tools declare. It equals `createMcpEngine(registry, options).toolScopes`
- * without building the engine.
+ * Every scope a server built from `registry` and `options` can need, sorted: the scopes of the generated tools,
+ * and the ones a project declares for its hand-written tools (`extraToolScopes` of an override whose `extraTools`
+ * the engine builds, `utilityToolScopes` next to `utilityTools`).
  *
- * The hand-written tools are built here only to read what they declare, with an API whose `execute` refuses to
- * run. A factory that throws leaves its scopes out, with a warning: this runs while the authorization server is
- * configured, and a broken tool must not take sign-in down with it (the engine still fails on it, at `/api/mcp`).
+ * Nothing of the project runs here. The hand-written tools are not built to find out what they need: a factory
+ * gets the engine's own API (tool prefix, schemas, executor) and may depend on any of it, and this is read while
+ * the authorization server is configured, before there is an engine. The engine warns when it builds a
+ * hand-written tool that needs a scope outside this list.
  */
 export function toolScopesOf(registry: Record<string, EntityConfig>, options: McpExposureOptions = {}): string[] {
   const scopes = new Set<string>()
   for (const { entityConfig, operations } of exposedEntities(registry, options)) {
     for (const operation of operations) scopes.add(operationScope(entityConfig.slug, operation))
   }
-
-  const overrides = options.overrides ?? {}
-  const definitionApi: EngineApi = {
-    execute: async () => {
-      throw new Error('This API only reads tool definitions: it does not run them')
-    },
-    entitySchemas: (slug: string) => {
-      const entityConfig = registry[slug]
-      if (!entityConfig) throw new Error(`Unknown entity for MCP schemas: ${slug}`)
-      return buildEntitySchemas(entityConfig, { override: overrides[slug] })
-    },
-    toolPrefix: 'app',
-    defaultTimezone: DEFAULT_TIMEZONE,
-    registry,
-    translateApiError,
+  const excluded = new Set(options.excludeSlugs ?? DEFAULT_EXCLUDED_SLUGS)
+  for (const [slug, override] of Object.entries(options.overrides ?? {})) {
+    if (!override.extraTools || excluded.has(slug)) continue
+    for (const scope of override.extraToolScopes ?? []) scopes.add(scope)
   }
-  for (const factory of handWrittenToolFactories(options)) {
-    try {
-      for (const tool of factory(definitionApi)) {
-        for (const scope of scopesOfToolMeta(tool.meta)) scopes.add(scope)
-      }
-    } catch (error) {
-      console.warn('[mcp] The scopes of a hand-written tool could not be read, so the consent screen will not offer them:', error)
-    }
+  if (options.utilityTools) {
+    for (const scope of options.utilityToolScopes ?? []) scopes.add(scope)
   }
   return [...scopes].sort()
 }

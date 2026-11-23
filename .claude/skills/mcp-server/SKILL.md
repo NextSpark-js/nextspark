@@ -122,9 +122,13 @@ fills from the generated `MCP_OVERRIDES` registry (`@nextsparkjs/registries/mcp-
 | generated `delete` | `<entity>:delete` |
 | hand-written (`extraTools`, `utilityTools`) | what it declares in `meta.requiredScopes`; none if it declares nothing |
 
-`engine.toolScopes` is the sorted union over all tools; `toolScopesOf(registry, options)` (`exposure.ts`) gives
-the same list without building the engine, and a test holds the two equal. They feed the OAuth path: the up-front
-403, and the scopes the server publishes, offers and grants.
+`engine.toolScopes` is the sorted union over all tools. `toolScopesOf(registry, options)` (`exposure.ts`) is what
+browser sign-in publishes, offers and grants: the scopes of the generated tools plus the ones the project
+declares as plain data for its hand-written tools (`extraToolScopes` next to `extraTools` in an `mcp.ts`,
+`utilityToolScopes` next to `utilityTools`). It never runs a tool factory: sign-in is configured while `lib/auth`
+loads, before there is an engine, and a factory may depend on anything the engine hands it. The two lists are
+equal when the declarations are complete; the engine warns (`[mcp] The tool "..." needs ...`) when it builds a
+hand-written tool that needs a scope outside `toolScopesOf`.
 
 ## Two credentials, never mixed
 
@@ -222,15 +226,17 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
   once per process). That one list is the `scopes_supported` of both metadata documents, what the authorization
   server accepts (anything else is `invalid_scope`) and what the consent screen offers. It does not depend on
   the client: Claude asks for the scopes of the 401 challenge, ChatGPT for all of `scopes_supported`. A
-  hand-written tool that needs a scope no generated tool uses must declare it in `meta.requiredScopes`, or no
-  connection can hold it. A custom route with other `excludeSlugs`, `defaultOperations` or `utilityTools` is not
-  what this list follows.
+  hand-written tool that needs a scope no generated tool uses must have it in `extraToolScopes` of its `mcp.ts`,
+  or no connection can hold it. A custom route with other `excludeSlugs`, `defaultOperations` or `utilityTools`
+  is not what this list follows. "Accepts" is checked against the application's `oauthClient` row, which holds
+  the list of the day it was registered: see "Retiring a scope".
 - **What the challenge asks for**: the 401 tells a connecting client to request `offline_access` plus every
   scope of the resource (`mcpOAuthDefaultScopes`). Without `offline_access` there is no refresh token and the
   connection ends with its first access token.
-- **Retiring a scope** (excluding an operation or an entity later): a connection that holds it keeps renewing
-  while the client's `oauthClient` row carries the earlier list; once that row is refreshed the renewal is
-  refused with `invalid_scope` and the user connects again.
+- **Retiring a scope** (excluding an operation or an entity later): while the client's `oauthClient` row carries
+  the earlier list, that application can still ask for the scope, be granted it and renew a connection that
+  holds it (it does nothing: no tool); once the row is refreshed the renewal is refused with `invalid_scope` and
+  the user connects again. Connections are not rewritten when the list changes.
 - **The user chooses** on the consent screen (`OAuthConsent.tsx`): one row per entity with read, write,
   delete. First connection: read and write ticked, delete not (`isPreselectedScope`). A permission the role
   cannot hold is shown disabled (`allowed` from `/api/internal/oauth-team`). An application already connected
@@ -384,6 +390,10 @@ Details (Redis, fail-open, `DISABLE_RATE_LIMITING`): see the `rate-limiting` ski
   (`consentWithinRolePlugin`) and again on every request (`principalFromClaims`).
 - **A hand-written tool declares `meta.requiredScopes`** with every scope its calls need. Without it the tool
   gets no up-front `insufficient_scope`: each call is checked where it is made, and a tool can fail half done.
+- **A scope only hand-written tools need goes in `extraToolScopes`** of the entity's `mcp.ts` (plain list, next
+  to `extraTools`), or in `utilityToolScopes`. Sign-in grants only the scopes of generated tools plus those.
+- **Keep the module scope of an `mcp.ts` free of work.** It is imported while `lib/auth` is configured (the
+  scopes of sign-in come from the overrides). Do the work inside the tool handlers.
 - **A hand-written tool calls `api.execute` and `api.entitySchemas`**, the engine's wired versions, never the
   handlers directly: output normalization and `transformOutput` would be skipped.
 - **A new route of the feature** is added to `src/routes/manifest.json` and to `OPT_IN_CORE_ROUTES.mcpOAuth`,
@@ -488,7 +498,7 @@ DELETE FROM "oauthConsent" WHERE "userId" = $1 AND "clientId" = $2 AND "referenc
 - [ ] Both credential paths still work, and a request with both is still refused
 - [ ] New feature route: in `manifest.json`, in `OPT_IN_CORE_ROUTES.mcpOAuth`, 404 while the feature is off
 - [ ] Session-only routes use `getAuthorizationSession`, never `authenticateRequest`
-- [ ] Hand-written tool declares `meta.requiredScopes` and uses `api.execute`
+- [ ] Hand-written tool declares `meta.requiredScopes` and uses `api.execute`; a scope no generated tool uses is in `extraToolScopes`
 - [ ] Consent scopes are bound on the server, not only in `OAuthConsent.tsx`
 - [ ] A write or delete of a consent or a refresh token was checked against the triggers of migration 048
 - [ ] Multi-statement work on OAuth tables runs inside `withServiceTransaction`, consent row first

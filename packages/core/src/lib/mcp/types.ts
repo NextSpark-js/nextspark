@@ -156,6 +156,16 @@ export interface McpEntityOverride {
   ) => Record<string, unknown> | Promise<Record<string, unknown>>
   transformOutput?: (operation: McpOperation, output: unknown) => unknown
   extraTools?: (api: EngineApi) => McpToolDefinition[]
+  /**
+   * The scopes the `extraTools` of this entity need beyond the ones of its generated tools, for example
+   * `['tasks:delete']` for an archive tool on an entity whose `delete` is excluded.
+   *
+   * A plain list, read without running `extraTools`: MCP browser sign-in publishes, offers on the consent screen
+   * and grants only the scopes of the generated tools plus the ones declared here, and it is configured before
+   * any tool is built. A tool that needs a scope missing from both can never be called through a browser
+   * sign-in connection; the engine warns about it when it builds the tool.
+   */
+  extraToolScopes?: string[]
 }
 
 export interface AuditEntry {
@@ -207,6 +217,8 @@ export interface McpEngineOptions {
   defaultTimezone?: string
   /** Extra tools not attached to an entity (e.g. list_team_members). */
   utilityTools?: (api: EngineApi) => McpToolDefinition[]
+  /** The scopes the `utilityTools` need beyond the ones of the generated tools. A plain list, like `extraToolScopes`. */
+  utilityToolScopes?: string[]
   /** Injectable for tests. Defaults to the api_audit_log writer. */
   audit?: (entry: AuditEntry) => Promise<void>
   /** Injectable for tests. Defaults to the in-process executor. */

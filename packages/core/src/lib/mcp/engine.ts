@@ -29,7 +29,7 @@ import { buildEntitySchemas } from './schema-builder'
 import { executeEntityOperation } from './executor'
 import { auditToolCall } from './audit'
 import { translateApiError } from './errors'
-import { DEFAULT_TIMEZONE, exposedEntities, handWrittenToolFactories, scopesOfToolMeta } from './exposure'
+import { DEFAULT_TIMEZONE, exposedEntities, handWrittenToolFactories, scopesOfToolMeta, toolScopesOf } from './exposure'
 import type {
   EngineApi,
   EntityExecutor,
@@ -119,8 +119,21 @@ export function createMcpEngine(
     )
   }
 
+  // A hand-written tool that needs a scope no generated tool uses and no override declares still works with an
+  // API key, but MCP browser sign-in publishes and grants only the declared scopes, so no connection of it could
+  // ever hold that one. Said once, when the tool is built, where the project can see it.
+  const declaredScopes = new Set(toolScopesOf(registry, options))
   for (const factory of handWrittenToolFactories(options)) {
-    tools.push(...factory(api))
+    for (const tool of factory(api)) {
+      const undeclared = scopesOfToolMeta(tool.meta).filter(scope => !declaredScopes.has(scope))
+      if (undeclared.length) {
+        console.warn(
+          `[mcp] The tool "${tool.name}" needs ${undeclared.join(', ')}, which no generated tool uses and no override declares. ` +
+            'Add it to `extraToolScopes` in the entity\'s mcp.ts (or `utilityToolScopes`): until then no MCP browser sign-in connection can be granted it.'
+        )
+      }
+      tools.push(tool)
+    }
   }
 
   assertUniqueNames(tools)

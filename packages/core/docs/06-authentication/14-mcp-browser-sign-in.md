@@ -235,25 +235,32 @@ of the MCP server needs (`mcpOAuthResourceScopes()` in `lib/mcp/oauth/scopes.ts`
 
 - what the server publishes as `scopes_supported`, in the protected resource metadata and in the authorization
   server metadata;
-- what the authorization server accepts: a client that asks for any other scope is refused with `invalid_scope`;
+- what the authorization server accepts from an application it meets for the first time, or whose client record
+  it has refreshed since the list changed: any other scope is refused with `invalid_scope` (see "When a scope is
+  retired" below for an application registered earlier);
 - what the consent screen offers (`allowed` of `/api/internal/oauth-team`).
 
 It does not depend on what a client chooses to request. Claude asks for the scopes of the `401` challenge; ChatGPT
 asks for everything in `scopes_supported`; both are offered the same rows. The list is computed from the entity
 registry and the `entities/<slug>/mcp.ts` overrides, the registries the default `/api/mcp` route builds its tools
-from, with the function the engine itself uses (`lib/mcp/exposure.ts`). A hand-written tool adds the scopes it
-declares in `meta.requiredScopes`: one that needs a scope no generated tool uses has to declare it, or no
-connection can ever hold that scope.
+from, with the function the engine itself uses to decide which entities and operations get a tool
+(`exposedEntities` in `lib/mcp/exposure.ts`). For hand-written tools the list takes what the project declares as
+plain data: `extraToolScopes` next to `extraTools` in an entity's `mcp.ts`. Nothing of the project is run to find
+it out. A hand-written tool that needs a scope no generated tool uses and no `extraToolScopes` declares cannot be
+granted it by any connection; the engine warns about it when it builds the tool. See
+[Scopes a tool needs](../05-api/20-mcp-server.md#scopes-a-tool-needs).
 
 The `401` challenge tells a connecting client to ask for `offline_access` plus every scope of the resource
 (`mcpOAuthDefaultScopes`). Asking is not getting: the request carries them all because a consent can only take
 scopes away from what was asked.
 
-**When a scope is retired.** Excluding an operation later (or an entity) takes its scope out of the list. A
-connection that already holds it keeps working while the application's client record still carries the server's
-earlier list, and the scope does nothing: there is no tool for it. Once that record is refreshed, the renewal of
-a token that holds the retired scope is refused with `invalid_scope`, and the user connects again; the new
-connection does not carry it.
+**When a scope is retired.** Excluding an operation later (or an entity) takes its scope out of the list. An
+application the server already knows has a client record that carries the list of the day it was registered, and
+the authorization server checks a request against that record. Until the record is refreshed, that application
+can still ask for the retired scope, be granted it and renew a connection that holds it; the scope does nothing,
+because there is no tool for it. Once the record is refreshed, the renewal of a token that holds the retired
+scope is refused with `invalid_scope`, and the user connects again; the new connection does not carry it.
+Connections are not rewritten when the list changes.
 
 ### The consent screen and its defaults
 

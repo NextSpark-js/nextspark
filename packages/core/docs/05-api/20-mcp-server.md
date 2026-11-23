@@ -132,9 +132,26 @@ const mergeCustomers: McpToolDefinition = {
 
 On the API key path this metadata changes nothing: each API call the tool makes is checked by its handler. With
 [browser sign-in](#browser-sign-in-experimental) it is what lets the server refuse the call up front with a `403`
-that tells the client which permission to ask the user for, and it is what puts those scopes on the consent screen.
-A hand-written tool without `meta.requiredScopes` still has each call checked where it is made, but the client gets
-a tool error instead of the challenge.
+that tells the client which permission to ask the user for. A hand-written tool without `meta.requiredScopes` still
+has each call checked where it is made, but the client gets a tool error instead of the challenge.
+
+**A scope no generated tool uses has to be declared next to the tools.** Browser sign-in publishes, offers on the
+consent screen and grants only the scopes of the generated tools, plus the ones a project declares as a plain list:
+
+```ts
+// entities/tasks/mcp.ts: delete is not exposed as a tool, an archive tool needs the scope
+const tasksMcpOverride: McpEntityOverride = {
+  excludeOperations: ['delete'],
+  extraTools: api => [archiveTask(api)],   // meta.requiredScopes: ['tasks:read', 'tasks:delete']
+  extraToolScopes: ['tasks:delete'],
+}
+```
+
+`extraToolScopes` goes with `extraTools` in an entity's `mcp.ts`; `utilityToolScopes` goes with `utilityTools` in
+the engine options. The list is read without building the tools, because the authorization server is configured
+before there is an engine. A tool that needs a scope that is in neither still works with an API key, but no browser
+sign-in connection can be granted that scope: the engine logs a warning that names the tool and the scope when it
+builds it.
 
 ---
 

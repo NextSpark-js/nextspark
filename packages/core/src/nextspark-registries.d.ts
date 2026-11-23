@@ -964,6 +964,7 @@ declare module '@nextsparkjs/registries/mcp-registry' {
     exclude?: boolean
     excludeOperations?: string[]
     extraTools?: (api: any) => any[]
+    extraToolScopes?: string[]
     [key: string]: any
   }
 

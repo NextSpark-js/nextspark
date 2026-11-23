@@ -8,10 +8,13 @@ import { mcpToolScopes } from './tool-scopes'
  * The scopes of the resource: every scope a team role can hold that some tool of the MCP server needs. Wildcards
  * are never offered.
  *
- * It is what the authorization server publishes (`scopes_supported`) and accepts, and what the consent screen
- * offers. A scope no tool needs (an entity kept out of MCP, an operation an entity's `mcp.ts` excludes) is not in
- * it, so no client can ask for it and no connection can hold it: it does not depend on what a client chooses to
- * request.
+ * It is what the authorization server publishes (`scopes_supported`), what it accepts from an application it
+ * registers from now on, and what the consent screen offers. A scope no tool needs (an entity kept out of MCP, an
+ * operation an entity's `mcp.ts` excludes) is not in it, whatever a client chooses to request.
+ *
+ * An application registered earlier has the list of that day in its `oauthClient` row, which is what the
+ * authorization server checks a request against: until that row is refreshed it can still ask for a scope that
+ * was retired since, and hold it. Such a scope does nothing, because no tool needs it.
  */
 export function mcpOAuthResourceScopes(): string[] {
   const scopes = new Set<string>(ScopeService.getBaseScopes())
