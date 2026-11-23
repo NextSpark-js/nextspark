@@ -245,10 +245,20 @@ asks for everything in `scopes_supported`; both are offered the same rows. The l
 registry and the `entities/<slug>/mcp.ts` overrides, the registries the default `/api/mcp` route builds its tools
 from, with the function the engine itself uses to decide which entities and operations get a tool
 (`exposedEntities` in `lib/mcp/exposure.ts`). For hand-written tools the list takes what the project declares as
-plain data: `extraToolScopes` next to `extraTools` in an entity's `mcp.ts`. Nothing of the project is run to find
-it out. A hand-written tool that needs a scope no generated tool uses and no `extraToolScopes` declares cannot be
-granted it by any connection; the engine warns about it when it builds the tool. See
+plain data: `extraToolScopes` next to `extraTools` in an entity's `mcp.ts`. No tool factory is run to find it out.
+A hand-written tool that needs a scope no generated tool uses and no `extraToolScopes` declares cannot be granted
+it by any connection; the engine warns about it when it builds the tool. See
 [Scopes a tool needs](../05-api/20-mcp-server.md#scopes-a-tool-needs).
+
+**With sign-in enabled, every `mcp.ts` is loaded while the authorization server is configured.** Reading the
+declarations imports the overrides, and importing a module evaluates its module scope. An `mcp.ts` must not read
+`lib/auth` there (directly or through a helper that does): `auth` is not initialized yet at that point and every
+auth route would fail to load. Do that work inside the tool handlers. With sign-in off the overrides are loaded
+by `/api/mcp` only, as before.
+
+**A declaration is trusted.** A scope left in `extraToolScopes` after its tool is gone is published and offered
+again, and nothing warns about it: remove the scope with the tool. A scope no team role can hold (a typo such as
+`task:read`) is dropped from the list without a message.
 
 The `401` challenge tells a connecting client to ask for `offline_access` plus every scope of the resource
 (`mcpOAuthDefaultScopes`). Asking is not getting: the request carries them all because a consent can only take

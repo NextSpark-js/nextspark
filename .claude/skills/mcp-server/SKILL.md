@@ -392,8 +392,12 @@ Details (Redis, fail-open, `DISABLE_RATE_LIMITING`): see the `rate-limiting` ski
   gets no up-front `insufficient_scope`: each call is checked where it is made, and a tool can fail half done.
 - **A scope only hand-written tools need goes in `extraToolScopes`** of the entity's `mcp.ts` (plain list, next
   to `extraTools`), or in `utilityToolScopes`. Sign-in grants only the scopes of generated tools plus those.
-- **Keep the module scope of an `mcp.ts` free of work.** It is imported while `lib/auth` is configured (the
-  scopes of sign-in come from the overrides). Do the work inside the tool handlers.
+- **With sign-in enabled, never read `lib/auth` in the module scope of an `mcp.ts`** (directly or through a
+  helper). The overrides are loaded while `lib/auth` is configured (`appOverrides()` in `tool-scopes.ts`, a lazy
+  `require`), `auth` is not initialized yet and every auth route would fail to load. Do the work inside the tool
+  handlers. With sign-in off the overrides are loaded by `/api/mcp` only.
+- **Remove a scope from `extraToolScopes` with its tool.** The list is trusted: a leftover scope is offered again
+  with no warning, and a scope no role can hold (a typo) is dropped silently.
 - **A hand-written tool calls `api.execute` and `api.entitySchemas`**, the engine's wired versions, never the
   handlers directly: output normalization and `transformOutput` would be skipped.
 - **A new route of the feature** is added to `src/routes/manifest.json` and to `OPT_IN_CORE_ROUTES.mcpOAuth`,
