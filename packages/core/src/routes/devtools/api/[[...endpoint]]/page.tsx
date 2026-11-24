@@ -1,5 +1,5 @@
 import { ApiRoutesService } from "@nextsparkjs/core/lib/services/api-routes.service"
-import { ApiExplorer } from "@nextsparkjs/core/components/devtools/api-explorer"
+import { ApiExplorer } from "@nextsparkjs/core/components/devtools/api-explorer/ApiExplorer"
 import { bodySkeleton } from "@nextsparkjs/core/components/devtools/api-explorer/explorer-helpers"
 import { ENTITY_REGISTRY } from "@nextsparkjs/registries/entity-registry"
 import { isActAsEnabled } from "@nextsparkjs/core/lib/api/auth/act-as-flag"
