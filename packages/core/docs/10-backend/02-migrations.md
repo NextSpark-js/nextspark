@@ -460,7 +460,8 @@ all the same, and write at most one row of `oauthRevocation` per user).
 | Tables | `jwks`, `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`. Names and column types are the ones Better Auth 1.7.27 expects. |
 | RLS | Every table is service-only: one policy `TO authenticated USING (can_bypass_rls())`. The authorization server reads and writes them on the service connection, like the other auth tables: discovery, token and refresh calls carry no user. `jwks` holds the private half of the signing keys. |
 | Unique index | `uq_oauth_consent_connection` on `oauthConsent("userId", "clientId", "referenceId")`: a connection (a client acting for a user in one team) has one consent. |
-| Existing tables | None is altered. Two triggers are added to existing tables: `account` and `users`. |
+| Existing tables | None is altered. Three triggers are added to existing tables: `account`, `users` and `team_members`. |
+| Functions | Ten: the nine the triggers use, and `revoke_oauth_scope(text)`, which the operator calls through `nextspark mcp:revoke-scope` to take a scope away from every consent that holds it (a connection left with no entity permission is ended). It is not `SECURITY DEFINER`: for a role that RLS applies to it changes nothing. |
 | Applying it again | Changes nothing (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP TRIGGER IF EXISTS` before each `CREATE TRIGGER`). |
 
 The rules it keeps in the database are triggers, because Better Auth changes these rows from several endpoints
@@ -474,6 +475,8 @@ and in separate statements, so no single function in the application could hold 
 | `oauth_refresh_token_revoked`, `oauth_refresh_token_deleted` | `AFTER UPDATE OF revoked`, `AFTER DELETE` on `oauthRefreshToken` | A live refresh token that is revoked or deleted records a revocation of that connection. A rotation is not one. |
 | `oauth_revoke_on_password_change` | `AFTER UPDATE OF password` on `account` | Ends every connection of the user. |
 | `oauth_revoke_on_suspension` | `AFTER UPDATE OF role` on `users`, when the role becomes `suspended` | Ends every connection of the user. |
+| `oauth_end_on_member_removed` | `AFTER DELETE` on `team_members` | A member who leaves or is removed loses the connections to that team. Deleting a team removes its members, so its connections end the same way. |
+| `oauth_consent_requires_membership` | `BEFORE INSERT`, and `UPDATE` of the user or the team, on `oauthConsent` | A consent is written only for a member of its team, with the membership row locked (`FOR KEY SHARE`), so a removal and a consent being written at the same moment are ordered. |
 
 `oauthRevocation` is how an ended connection is refused at once on every instance. An access token is a signed
 JWT that lives ten minutes. It carries, in its `rev` claim, the number of the user's newest revocation when it was

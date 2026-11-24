@@ -12,12 +12,16 @@ project that does not turn the feature on has two things to do: move two depende
 | `better-auth` | `~1.7.7` | `~1.7.27` |
 | `@better-fetch/fetch` | `1.3.2` | `1.3.3`, the exact version Better Auth 1.7.27 pins |
 | Core's own dependencies | | `@better-auth/oauth-provider`, `@better-auth/mcp`, `@better-auth/cimd` and `@better-auth/core`, all `~1.7.27`. They come with `@nextsparkjs/core`: a project does not declare them |
-| Migrations | Up to `048` | `049_oauth_provider.sql`: ten service-only tables and nine triggers for the OAuth authorization server, three of them on existing tables (`account`, `users`, `team_members`). No existing table is altered |
+| Migrations | Up to `048` | `049_oauth_provider.sql`: ten service-only tables, nine triggers and ten functions for the OAuth authorization server. Three of the triggers are on existing tables (`account`, `users`, `team_members`). No existing table is altered |
 | MCP endpoint (`/api/mcp`) | API key only | API key, and, only when the project turns it on, an OAuth access token obtained by signing in through the browser |
 | Rate limit tiers | `auth`, `authIdentifier`, `api`, `strict`, `read`, `write`, `webhook`, `ingest` | The same plus `credential`: 1000 charges a minute per API key or MCP connection |
 | `features` of `nextspark.config.ts` | `billing`, `superadmin` (both on by default) | The same plus `mcpOAuth`, **off** by default |
 | `config/app.config.ts` | | Optional `mcp.oauth.allowedClientHosts` |
 | New projects | | `create-nextspark-app` and the CLI wizard write `better-auth ~1.7.27` and `@better-fetch/fetch 1.3.3` |
+| Generated registries | | `mcp-scopes.ts`: the permissions of MCP browser sign-in as data. Empty lists in a project without `features.mcpOAuth`, whose sources are not read for it |
+| Generated `scope-registry.ts` | Carried its own copy of the permission to scope rule | Calls core's `entityScopesOfRole` (`lib/api/auth/entity-role-scopes`). The scopes of every role are the same |
+| CLI | | `nextspark mcp:revoke-scope <scope>`: takes a permission of MCP browser sign-in away from every connection that holds it |
+| Environment | | `MCP_OAUTH_ACCEPT_RISKS`, read only in production by a project built with `features.mcpOAuth` |
 
 ## Better Auth 1.7.27: what behaves differently
 
@@ -64,7 +68,8 @@ A test that asserted the `415` of an empty sign-out, or the verification email o
 
 That is all, apart from two things that reach a project that leaves the feature off: the page slugs `oauth` and
 `.well-known` are reserved, and the per-key limit of API keys is shared across instances when Redis is configured
-(see below). Nothing else changes:
+(see below). `nextspark prepare` writes one more registry file, `mcp-scopes.ts`, with empty lists; it is generated
+with the others and needs nothing. Nothing else changes:
 
 - `/api/mcp` keeps taking an API key only, and answers the same `401` without one.
 - The host gets no new route: the OAuth routes are generated only with `features.mcpOAuth`.
@@ -97,30 +102,60 @@ Two changes apply to API keys as well, with the feature off:
 ### A project that turns MCP browser sign-in on
 
 It is opt-in and experimental: `features: { mcpOAuth: true }` in `nextspark.config.ts`, then a build. Follow
-[MCP Browser Sign-In Deployment](../14-deployment/12-mcp-browser-sign-in.md) before production: the framework
-does not check its items at start. What the feature does is in [MCP server](../05-api/20-mcp-server.md) and
+[MCP Browser Sign-In Deployment](../14-deployment/12-mcp-browser-sign-in.md) before production. In production the
+framework checks two of its items, Redis and the database role, and none of the others. What the feature does is
+in [MCP server](../05-api/20-mcp-server.md) and
 [MCP Browser Sign-in (OAuth 2.1)](../06-authentication/14-mcp-browser-sign-in.md).
 
-Two things to know for project code and clients:
+Three things the project has to have in place, or the feature does not build or does not serve:
+
+- **Literal values in the entity configs and the `mcp.ts` files.** With the feature on, `nextspark prepare` reads
+  the permissions from source, without running it: `slug`, `enabled` and `access.api` of each entity config, and
+  `exclude`, `excludeOperations`, `extraToolScopes` and the presence of `extraTools` of each
+  `entities/<slug>/mcp.ts`. An `mcp.ts` has an `export default` of an object literal that spreads no other object.
+  A value that is not a literal stops the build and names the file and what to write.
+- **The production gate.** In production sign-in does not start without Redis (`UPSTASH_REDIS_REST_URL` and
+  `UPSTASH_REDIS_REST_TOKEN`), and it answers every OAuth request `503` while the role of `DATABASE_URL` skips
+  row-level security. Connecting as the owner of the tables is the default setup until the `nextspark_app`
+  cutover, so do the cutover, or name what the deployment accepts:
+  `MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit,rls-not-enforced` (one name or both). The server log says at start
+  what is refused.
+- **`meta.requiredScopes` on every hand-written tool.** A tool of `extraTools` or `utilityTools` that declares
+  none is refused to every browser sign-in connection; `requiredScopes: []` is for a tool that needs no
+  permission. With an API key the tool runs as before.
+
+Three things to know for project code, clients and operations:
 
 - Inside the server an OAuth connection is carried as a principal of type `'api-key'` with an `oauth` field. A
   route that branches on `type === 'api-key'` treats an MCP connection as a key.
 - With the feature on, a request to `/api/mcp` that presents no API key is an OAuth request: it gets a `401` with a
   `WWW-Authenticate` challenge instead of the API key message. An empty `x-api-key` header does not count as
   presenting a key, and a request that presents both a key and an OAuth bearer is refused (`400`).
+- Removing a tool does not take its scope out of the consents that had it. To do that, run
+  `nextspark mcp:revoke-scope <entity>:<read|write|delete> --yes` after the deployment that removes the tool is
+  the only one serving. Without `--yes` it only reports.
 
 ## Contributors: tests
 
 - `scripts/test/throwaway-postgres.cjs`: `HAS_POSTGRES` now requires the `postgres` binary as well as `initdb`
   and `pg_ctl`. A machine with the client tools only (Homebrew's `libpq`) used to try to start a cluster and fail;
   its PostgreSQL suites are now skipped. A project's `db` Jest project uses the same helper.
-- New: `tests/node/oauth-connections-pg.test.ts`, 18 cases on the rules migration 049 keeps in the database. See
+- New: `tests/node/oauth-connections-pg.test.ts`, 28 cases on the rules migration 049 keeps in the database. See
   [Integration Testing](../12-testing/07-integration-testing.md#postgresql-integration-tests-in-core-testsnode).
+- New: `scripts/build/registry/__tests__/mcp-scopes.test.mjs` (the generator of `mcp-scopes.ts`) and
+  `tests/node/mcp-oauth-auth-graph.test.ts` (sign-in adds no path from `lib/auth` to the entity registry, the scope
+  registry or the `mcp.ts` files).
+- `tests/node/core-routes.test.ts`: the check that a per-entity route does not load the entity registry now
+  follows a literal `require()` too. One older `require` is named in it as the only exception
+  (`types/meta.types.ts`).
+- A Jest test of a project that mocks `@nextsparkjs/registries/*` by hand needs a mock of
+  `@nextsparkjs/registries/mcp-scopes` when it loads `lib/mcp/oauth`. Core's preset ships one, with empty lists.
 
 ## Not done
 
-- No production gate: the feature does not refuse to start with a database connection that owns the tables (RLS
-  without effect) or without Redis.
+- The production gate checks Redis and the database role only. The list of accepted applications and the rest of
+  the deployment checklist are not checked.
+- `tools/list` is not filtered by what a connection can call.
 - Run against Claude (web, desktop, mobile) and ChatGPT (web). Not run against other clients.
 - Migration 049 is the only migration of the feature. From the release that carries it, a change to its tables or
   triggers is a new migration; the file is not edited.

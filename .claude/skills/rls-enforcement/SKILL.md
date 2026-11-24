@@ -96,6 +96,10 @@ Adding *another* user as the acting owner or admin passes RLS under the actor's 
   The authorization for those reads is done in code, each statement scoped to its subject (the
   token's user, client and team; the session's user). Their invariants are triggers, not policies
   (see `database-migrations` and `mcp-server`).
+  **In production MCP browser sign-in refuses every OAuth request while the role of `DATABASE_URL` skips
+  RLS** (owner, superuser or BYPASSRLS; `lib/mcp/oauth/production-gate.ts`, the query of `lib/rls-runtime.ts`
+  on the app pool), unless `MCP_OAUTH_ACCEPT_RISKS=rls-not-enforced`. It is the one feature for which the
+  `nextspark_app` cutover is enforced and not only warned about.
 
 **Other legitimate service-pool actors** (no request user → service pool by routing, since they
 call with no `userId`): Better Auth login/verification, the **scheduled-actions processor**,

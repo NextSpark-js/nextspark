@@ -351,6 +351,10 @@ CREATE TRIGGER oauth_refresh_token_requires_consent
 - **Service-only RLS on library-owned tables.** The library reads and writes them with no user context, so every
   policy is `FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls())`.
   Core reads them on the service connection (see `rls-enforcement`).
+- **A function an operator calls on service-only tables is not `SECURITY DEFINER`.** 049's
+  `revoke_oauth_scope(text)` (behind `nextspark mcp:revoke-scope`) runs with the caller's role: for a role RLS
+  applies to it sees no row and changes nothing, so it needs no `REVOKE`. A trigger function is the opposite
+  case: it must run whatever role wrote the row.
 - **Test it against a real PostgreSQL**, with two connections to prove the lock ordering
   (`packages/core/tests/node/oauth-connections-pg.test.ts`, see `jest-unit`). A unit test with mocked queries runs
   no trigger.

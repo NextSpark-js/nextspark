@@ -1,6 +1,6 @@
 # MCP Browser Sign-In Deployment
 
-> **Experimental and opt-in.** MCP browser sign-in (#541) is off unless a project turns it on. It has been run against Claude (web, desktop and mobile) and ChatGPT (web); other clients have not been run. **The framework does not enforce a production gate**: nothing refuses to start when an item of this checklist is missing. The checklist is the gate.
+> **Experimental and opt-in.** MCP browser sign-in (#541) is off unless a project turns it on. It has been run against Claude (web, desktop and mobile) and ChatGPT (web); other clients have not been run. **In production the framework enforces two items of this checklist**, Redis (item 5) and the database role (item 6): sign-in does not serve without them unless `MCP_OAUTH_ACCEPT_RISKS` names what the deployment accepts. Nothing checks the other items.
 
 ## Introduction
 
@@ -18,14 +18,21 @@ A project that does not turn the feature on needs nothing from this page: `/api/
 
 | # | Item | Where |
 | --- | --- | --- |
-| 1 | Build flag `features.mcpOAuth`, and a build that runs `nextspark prepare` | `nextspark.config.ts` |
+| 1 | Build flag `features.mcpOAuth`, and a build that runs `nextspark prepare`. Literal values in the entity configs and the `mcp.ts` files | `nextspark.config.ts`, `entities/` |
 | 2 | `MCP_ENABLED=true`; `MCP_OAUTH_ENABLED` unset or not `false` | Environment |
 | 3 | Migration `049_oauth_provider.sql` applied | `pnpm db:migrate` |
 | 4 | App URL and issuer URL are the public https URLs | `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_URL` |
-| 5 | Redis for the shared per-credential limit | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
-| 6 | The runtime database role is not the table owner, so RLS is in effect | `DATABASE_URL`, `DATABASE_SERVICE_URL` |
+| 5 | Redis for the shared per-credential limit. **Enforced in production** | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| 6 | The runtime database role is not the table owner, so RLS is in effect. **Enforced in production** | `DATABASE_URL`, `DATABASE_SERVICE_URL` |
 | 7 | Optional: the list of applications that may connect | `config/app.config.ts` |
-| 8 | Verify: the 401 challenge, the discovery documents, a real client | Below |
+| 8 | Hand-written tools declare their permissions | `meta.requiredScopes` of each tool |
+| 9 | Verify: the 401 challenge, the discovery documents, a real client | Below |
+
+Items 5 and 6 are the [production gate](#the-production-gate). A deployment that runs without one of them says so:
+
+```bash
+MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit,rls-not-enforced   # one name, or both
+```
 
 ### 1. The feature flag and `nextspark prepare`
 
@@ -46,6 +53,14 @@ Changing the flag needs a new build. A build command that calls `next build` dir
 before it, does not regenerate the routes.
 
 `oauth` and `.well-known` are reserved slugs: a page-builder page cannot take them.
+
+With the flag on, `nextspark prepare` also generates the permissions of the feature as data
+(`.nextspark/registries/mcp-scopes.ts`). It reads them from the source of the entity configs (`slug`, `enabled`,
+`access.api`) and of the `entities/<slug>/mcp.ts` files (`exclude`, `excludeOperations`, `extraToolScopes`,
+whether there are `extraTools`), without running them. Those values have to be literals, and an `mcp.ts` has to
+`export default` an object literal that spreads no other object. A value that cannot be read stops the build and
+names the file and what to write. See
+[Where the list comes from](../06-authentication/14-mcp-browser-sign-in.md#where-the-list-comes-from).
 
 ### 2. The runtime switches
 
@@ -69,7 +84,7 @@ pnpm db:migrate --expect-database <name> --expect-host <host>
 `049_oauth_provider.sql` is a core migration, so `db:migrate` applies it to every project, with the feature on or
 off. It adds ten tables (`jwks`, `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`,
 `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`), all
-service-only under RLS, and nine triggers. It changes no existing table; three of the triggers are on existing
+service-only under RLS, nine triggers and ten functions. It changes no existing table; three of the triggers are on existing
 tables (`account`, for a changed password, `users`, for a suspension, and `team_members`, for a member who leaves
 or is removed). The app neither reads nor writes the new tables while the feature is off; those three triggers
 run in every project: the first two record one row in `oauthRevocation`, the third deletes consents that do not
@@ -79,9 +94,12 @@ To check it:
 
 ```sql
 SELECT tgname FROM pg_trigger WHERE tgname LIKE 'oauth_%' ORDER BY tgname;
--- oauth_consent_narrowed, oauth_consent_removed, oauth_refresh_token_deleted,
+-- oauth_consent_narrowed, oauth_consent_removed, oauth_consent_requires_membership,
+-- oauth_end_on_member_removed, oauth_refresh_token_deleted,
 -- oauth_refresh_token_requires_consent, oauth_refresh_token_revoked,
 -- oauth_revoke_on_password_change, oauth_revoke_on_suspension
+
+SELECT to_regprocedure('public.revoke_oauth_scope(text)') IS NOT NULL;   -- the operator's function, see Operations
 ```
 
 The triggers are part of the security of the feature, not a convenience: they are what refuses a token for a
@@ -120,6 +138,10 @@ and any serverless deployment, multiplies it by the number of instances. Both va
 Upstash's REST API is supported. On Vercel the Marketplace integration creates other variable names: see
 [Vercel Deployment](./03-vercel-deployment.md#upstash-redis-from-vercels-marketplace).
 
+**In production sign-in does not start without both variables.** The deployment then behaves as with
+`MCP_OAUTH_ENABLED=false`: every OAuth route answers `404`, `/api/mcp` takes an API key only, and the server log
+says why once, at start. `MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit` starts it with the per-process count.
+
 To check it on the deployment, and to size the Redis plan (about 4 commands for each per-credential check), follow
 [Verifying the shared rate limit with Redis](../12-testing/12-shared-rate-limit-verification.md).
 
@@ -144,6 +166,13 @@ Do the documented cutover before turning the feature on:
 start core logs a warning beginning with `[rls]` when the role of `DATABASE_URL` skips RLS, and `nextspark doctor`
 reports the same. Neither stops the server.
 
+**In production sign-in serves no OAuth request while that role skips RLS** (it owns the tables, is a superuser or
+has `BYPASSRLS`). The server starts and everything else works. The endpoints of the authorization server and the
+discovery documents answer `503`, the OAuth path of `/api/mcp` answers `503` with no challenge, and a line
+beginning with `[mcp:oauth]` says why at start. Connecting as the owner is the default setup, so this is what a
+project that turns the feature on without the cutover sees. `MCP_OAUTH_ACCEPT_RISKS=rls-not-enforced` serves
+sign-in without the cutover.
+
 ### 7. Optional: which applications may connect
 
 By default any application that publishes a valid Client ID Metadata Document can start a sign-in, and the user
@@ -164,7 +193,21 @@ mcp: { oauth: { allowedClientHosts: ['claude.ai', 'chatgpt.com'] } }
 
 This is `app.config`, so changing it is a new build.
 
-### 8. Verify
+### 8. Hand-written tools declare their permissions
+
+A tool a project writes (`extraTools` of an `mcp.ts`, `utilityTools`) is refused to every browser sign-in
+connection unless it declares what it needs:
+
+```ts
+meta: { operation: 'workflow', requiredScopes: ['tasks:read', 'tasks:write'] }
+meta: { requiredScopes: [] }   // a tool that needs no permission
+```
+
+A scope no generated tool uses also goes in `extraToolScopes` of the `mcp.ts`. With an API key nothing changes. A
+build with the flag on logs a warning for each tool that declares nothing. See
+[Scopes a tool needs](../05-api/20-mcp-server.md#scopes-a-tool-needs).
+
+### 9. Verify
 
 With `APP=https://app.yourdomain.com`:
 
@@ -191,7 +234,8 @@ How to read the results:
 | `404` on `/api/mcp` | `MCP_ENABLED` is not `true` |
 | `401` without `WWW-Authenticate`, with a message about an API key | The endpoint is on and browser sign-in is not: the build has no `features.mcpOAuth`, or `MCP_OAUTH_ENABLED=false` |
 | `401` with `WWW-Authenticate: Bearer ...` naming `/.well-known/oauth-protected-resource/api/mcp` | Browser sign-in is on |
-| `404` on a discovery document | The routes were not generated (no build flag, or a build without `nextspark prepare`), or the runtime switch is off |
+| `404` on a discovery document | The routes were not generated (no build flag, or a build without `nextspark prepare`), the runtime switch is off, or in production Redis is missing (item 5) |
+| `503` on `/api/mcp` or on a discovery document | The production gate: the role of `DATABASE_URL` skips RLS (item 6), the migrations have not run, or the database could not be asked. The server log has the reason |
 | `resource` or `issuer` with `localhost`, `http://` or another host | Item 4 |
 
 Then connect a real client. In Claude, add the app as a custom connector with the URL `$APP/api/mcp`. The browser
@@ -208,23 +252,42 @@ row per entity. After accepting:
 
 ---
 
+## The Production Gate
+
+In production (`NODE_ENV=production`) two items of the checklist are enforced:
+
+| Risk name | Without it | To accept it |
+| --- | --- | --- |
+| `no-shared-rate-limit` | No Redis (item 5): sign-in does not start, as with `MCP_OAUTH_ENABLED=false` | `MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit` |
+| `rls-not-enforced` | `DATABASE_URL` connects as a role that skips RLS (item 6): every OAuth request is answered `503` | `MCP_OAUTH_ACCEPT_RISKS=rls-not-enforced` |
+
+- Both names go in the one variable, separated by a comma or a space. A value that is neither name, such as
+  `true`, accepts nothing and is logged.
+- The log says at start what is refused and how to fix or accept it, and, with a risk accepted, what the server is
+  running without.
+- A client that revokes its token (`/oauth2/revoke`) and a user who withdraws a consent are still served while the
+  gate refuses.
+- Outside production there is no gate.
+
+The reasons and the details are in
+[MCP Browser Sign-in: production gate](../06-authentication/14-mcp-browser-sign-in.md#production-gate).
+
 ## What the Framework Does Not Enforce
 
-There is no production gate. A production build with the feature on starts and serves sign-in in each of these
-cases, without refusing:
+A production build with the feature on starts and serves sign-in in each of these cases, without refusing:
 
-- `DATABASE_URL` connects as the table owner, so RLS has no effect (a warning is logged, see item 6);
-- there is no Redis, so the per-credential limit is per instance;
-- there is no list of applications, so any application with a valid metadata document can start a sign-in.
+- there is no list of applications, so any application with a valid metadata document can start a sign-in;
+- `MCP_OAUTH_ACCEPT_RISKS` accepts a condition of the gate: the per-credential limit is then per instance, or RLS
+  has no effect, as the name says.
 
 Known limits, as of this version:
 
 - Run against Claude and ChatGPT only. With ChatGPT, widening a connection's permissions after a refused call has not been run.
-- Removing a tool does not cut connections off: its scope stays accepted and stops being offered and issued. It is not a revocation; to take a permission away from existing connections, narrow them.
+- Removing a tool does not cut connections off: its scope stays accepted and stops being offered and issued. It is not a revocation: the consents still name the scope, and it counts again if a tool needs it again. To take it away from existing connections, run `nextspark mcp:revoke-scope` (see Operations).
 - A change to the tools that changes the permissions on offer has to reach every instance at once. Each instance writes the policy that cuts tokens down to those permissions when it starts, with no version check, so in a gradual deployment an instance of the earlier version that starts late puts the earlier list back until an instance of the new version starts again. Deploy such a change all at once, or drain the earlier version first.
 - A client that renews its token, loses the answer and retries within 30 seconds across such a deployment is refused with `invalid_grant` and has to authorize again.
 - `tools/list` shows every tool, including the ones the connection has no permission to call.
-- A tool written by hand gets the up-front `403 insufficient_scope` only if it declares `meta.requiredScopes`.
+- A tool written by hand that declares no `meta.requiredScopes` cannot be called through a connection (item 8).
 - When everything a client asks for is already consented, Better Auth shows no consent screen on reconnect.
 - Signing out of the browser does not disconnect an application.
 
@@ -236,6 +299,21 @@ Known limits, as of this version:
 keys are purged where tokens are issued, at most once an hour per process, at most 2000 rows of each kind per run,
 a day after they expired (signing keys 31 days after). This is not a Scheduled Action and needs no cron. A project
 that wants its own schedule calls `purgeExpiredOAuth` from `lib/mcp/oauth/purge`, an internal module.
+
+**Retiring a permission.** Removing a tool, or excluding an operation, stops its scope from being offered and
+issued. The consents that had it keep it. To remove it from them, after the deployment that retires the tool is the
+only one serving:
+
+```bash
+nextspark mcp:revoke-scope tasks:delete          # reports: how many connections hold it, how many would be ended
+nextspark mcp:revoke-scope tasks:delete --yes    # applies it
+```
+
+Each connection that held the scope loses it at once (its tokens are cut down and the access tokens already issued
+are refused), and one left with no entity permission is ended. It connects with `MIGRATE_DATABASE_URL`, else
+`DATABASE_SERVICE_URL`, else `DATABASE_URL`, and refuses a role that RLS applies to. It is not run automatically:
+during a rolling deployment that would take the scope away from connections the earlier version still serves. See
+[When a scope is retired](../06-authentication/14-mcp-browser-sign-in.md#when-a-scope-is-retired).
 
 **Signing keys rotate by themselves** every 30 days; the replaced key stays published for 30 more days, far longer
 than the ten minutes an access token lives. A key created before rotation was configured has no expiry and does not
@@ -261,5 +339,5 @@ edited: a later change to these tables or triggers comes as a new migration, app
 
 ---
 
-**Last Updated:** 2026-11-22
+**Last Updated:** 2026-11-24
 **Status:** Experimental

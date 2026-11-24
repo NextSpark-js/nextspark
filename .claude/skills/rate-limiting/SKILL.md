@@ -258,6 +258,9 @@ credential, on top of the per-address limit: `credentialRateLimitResponse(reques
   `UPSTASH_REDIS_REST_TOKEN` are both set, so every instance shares the count. The request is refused when either
   count is over. In memory alone the limit is per process: on serverless every instance gives a credential its own
   1000, which is close to no limit.
+  For that reason MCP browser sign-in does not start in production without Redis, unless the deployment sets
+  `MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit` (`sharedRateLimitGate`, see the `mcp-server` skill). API keys have
+  no such gate. `maybeRedisConfigured(env)` is the one definition of "Redis is configured" both use.
 - **Fails open on Redis**: when Redis fails the shared check lets the request through; the count of the process
   still applies.
 - **Once per request**, however many times the request is authenticated (a `WeakMap` keyed by the request).

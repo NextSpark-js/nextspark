@@ -479,10 +479,11 @@ authorization server of its MCP endpoint. See [MCP Browser Sign-in](./14-mcp-bro
 feature does, and [MCP Browser Sign-In Deployment](../14-deployment/12-mcp-browser-sign-in.md) for the deployment
 checklist.
 
-**The framework does not enforce a production gate for any of the following.** The feature starts and serves
-requests whether or not they are in place. The warnings that exist do not block and do not cover everything: a
-database role that bypasses RLS is reported at startup and a list of accepted applications with unusable entries
-is logged once, but nothing says that Redis or the list is absent. They are the operator's to check.
+**The framework enforces two of the following in production, and no others.** Sign-in does not start without Redis
+(item 2), and it serves no OAuth request while the database role skips row-level security (item 3), unless the
+deployment accepts the condition by name with `MCP_OAUTH_ACCEPT_RISKS`. See
+[Production gate](./14-mcp-browser-sign-in.md#production-gate). The rest is the operator's to check: a list of
+accepted applications with unusable entries is logged once, and nothing says that the list is absent.
 
 ### 1. List the applications that may connect
 
@@ -507,12 +508,20 @@ is close to no limit. Set both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_
 the Upstash variables as `KV_REST_API_URL` and `KV_REST_API_TOKEN`; the framework does not read those names, so add
 the two it reads by hand.
 
+In production the feature does not start without them: `/api/mcp` takes API keys only and the server log says why.
+`MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit` starts it anyway, with the per-process count.
+
 ### 3. Run the app with a database role that does not own the tables
 
 Every OAuth table has a service-only RLS policy: `jwks` holds the signing private key, and the token tables hold
 credentials. PostgreSQL does not apply row-level security to the owner of a table, so those policies have no effect
 while the runtime connection (`DATABASE_URL`) is the role that owns the tables. Run the app with the non-owner
 runtime role and keep the owner for migrations. See [RLS Policies](../10-backend/03-rls-policies.md#enforcement-layer-beta167).
+
+In production the feature serves no OAuth request while the role of `DATABASE_URL` owns the tables, is a superuser
+or has `BYPASSRLS`: the authorization server and the OAuth path of `/api/mcp` answer `503`, and the server log says
+why at start. Connecting as the owner is the default setup until the `nextspark_app` cutover, so a project that
+turns the feature on needs the cutover, or `MCP_OAUTH_ACCEPT_RISKS=rls-not-enforced` to run without it.
 
 ### 4. Review connected applications
 
@@ -521,8 +530,8 @@ runtime role and keep the owner for migrations. See [RLS Policies](../10-backend
   end, the other members' connections to that team. Decide who holds it: a connection acts with its user's role in
   the team.
 - Changing a user's password or suspending the account ends every connection of that user.
-- Removing a user from a team stops the connection from working on the next request, but leaves its rows; the same
-  is true of deleting a team.
+- Removing a user from a team ends that user's connections to it, and so does deleting the team (a trigger of
+  migration 049). They do not come back if the user joins again.
 
 ### 5. Read the audit log
 
@@ -537,6 +546,11 @@ are stored as `[redacted]`. See [MCP Server: audit trail](../05-api/20-mcp-serve
 - `MCP_OAUTH_ENABLED=false` turns browser sign-in off at runtime, without a build. Existing connections stop
   working while it is off.
 - `MCP_ENABLED=false` (or unset in production) turns the whole MCP endpoint off.
+- `MCP_OAUTH_ACCEPT_RISKS` names the conditions of the production gate a deployment accepts:
+  `no-shared-rate-limit`, `rls-not-enforced`, or both separated by a comma. Any other value accepts nothing.
+- `nextspark mcp:revoke-scope <entity>:<read|write|delete>` takes a permission away from every connection that
+  holds it. Run it, with `--yes`, after retiring a tool whose scope should not come back with a later tool. See
+  [When a scope is retired](./14-mcp-browser-sign-in.md#when-a-scope-is-retired).
 - Signing keys rotate every 30 days without intervention. Expired tokens and retired keys are purged when tokens
   are issued; there is no job to schedule.
 
@@ -772,7 +786,7 @@ async function logAuthEvent(event: {
 - [ ] Review and rotate secrets regularly
 - [ ] Monitor for suspicious activity
 - [ ] Configure Redis (`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`) so rate limits are shared between instances
-- [ ] If MCP browser sign-in is on: set `mcp.oauth.allowedClientHosts`, run the app with a non-owner database role, and review `api_audit_log` (see [MCP Browser Sign-in](#mcp-browser-sign-in))
+- [ ] If MCP browser sign-in is on: set `mcp.oauth.allowedClientHosts`, configure Redis and run the app with a non-owner database role (the production gate refuses to serve sign-in without both, unless `MCP_OAUTH_ACCEPT_RISKS` names what is accepted), and review `api_audit_log` (see [MCP Browser Sign-in](#mcp-browser-sign-in))
 
 ## Security Headers Migration Guide
 

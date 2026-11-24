@@ -782,6 +782,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:5173
 # MCP browser sign-in (only with features.mcpOAuth; see "OAuth Authorization Server" below)
 MCP_ENABLED=true            # production: the MCP endpoint is off unless 'true'
 MCP_OAUTH_ENABLED=false     # optional: switches browser sign-in off at runtime without a build
+# Production only: sign-in does not start without Redis and refuses OAuth requests while the role of
+# DATABASE_URL skips RLS, unless the deployment names what it accepts (see the `mcp-server` skill)
+# MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit,rls-not-enforced
 
 # Google OAuth
 GOOGLE_CLIENT_ID=your-client-id
@@ -828,6 +831,7 @@ matched by `ctx.path`. It is how core puts a rule in front of an endpoint Better
 
 | Path | Rule |
 |------|------|
+| `/oauth2/*`, `/admin/oauth2/*`, the `.well-known` documents (not `/oauth2/revoke` or `/oauth2/delete-consent`) | The production gate, first: `503 temporarily_unavailable` while the role of `DATABASE_URL` skips RLS in production and the deployment has not accepted it (`mcpOAuthRefusedByGate`) |
 | `/oauth2/consent` | The scopes granted are rewritten to requested ∩ ticked by the user ∩ active (a tool needs it) ∩ what the user's role can hold in the chosen team |
 | `/oauth2/update-consent` | The same bound, for the endpoint that lets the signed-in user rewrite a consent's scopes directly |
 | `/oauth2/token`, `/oauth2/userinfo` | With an allow-list of applications (`mcp.oauth.allowedClientHosts`), every client the request names must be accepted |

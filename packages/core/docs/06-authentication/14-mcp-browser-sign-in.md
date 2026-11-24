@@ -12,6 +12,7 @@
 - [Overview](#overview)
 - [API key or browser sign-in?](#api-key-or-browser-sign-in)
 - [Turning it on](#turning-it-on)
+- [Production gate](#production-gate)
 - [What the host serves](#what-the-host-serves)
 - [The flow a user sees](#the-flow-a-user-sees)
 - [The model](#the-model)
@@ -81,6 +82,10 @@ names, and a connection never does.
    The default is `false`. `nextspark prepare` generates the routes of the feature only when it is `true`; without
    it the host has none of them, the authorization server is not registered, and `/api/mcp` takes an API key only.
 
+   With it on, `nextspark prepare` also reads a few values from the source of the entity configs and of the
+   `entities/<slug>/mcp.ts` files, and they have to be literals: see
+   [Where the list comes from](#where-the-list-comes-from). A value it cannot read stops the build and names the file.
+
 2. Apply the migrations. `migrations/049_oauth_provider.sql` adds the tables and the database rules described in
    [Security model](#security-model). The tables exist whether or not the feature is on, and the app neither reads
    nor writes them while it is off. Three triggers on existing tables run in every project all the same: a changed
@@ -97,11 +102,55 @@ Runtime switch: `MCP_OAUTH_ENABLED=false` turns browser sign-in off without a bu
 `404`, the internal APIs answer `404`, the plugins are not registered, and `/api/mcp` goes back to API keys only.
 
 The two functions that decide this are in `lib/mcp/oauth/config.ts`: `isMcpOAuthBuilt()` (the build flag) and
-`isMcpOAuthEnabled()` (the build flag, `MCP_OAUTH_ENABLED` and `MCP_ENABLED` together).
+`isMcpOAuthEnabled()` (the build flag, `MCP_OAUTH_ENABLED`, `MCP_ENABLED` and, in production, the Redis half of the
+[production gate](#production-gate) together).
 
 Before going to production read
-[Security Best Practices: MCP browser sign-in](./07-security-best-practices.md#mcp-browser-sign-in): the framework
-does not check any of those settings for you.
+[Security Best Practices: MCP browser sign-in](./07-security-best-practices.md#mcp-browser-sign-in). The framework
+checks two of those settings for you, Redis and the database role (the production gate, next). It checks none of
+the others.
+
+---
+
+## Production gate
+
+In production (`NODE_ENV=production`) browser sign-in has two conditions it does not run without. Both are
+conditions the framework tolerates, with a warning, for sessions and API keys. They are not tolerated here by
+default because a connection is an agent that makes many calls on its own, and any user can create one without an
+administrator.
+
+| Risk name | Condition | What the gate does |
+|---|---|---|
+| `no-shared-rate-limit` | Redis is not configured (`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, both). Every instance counts its own limits, so the real limit of a connection is the nominal one times the number of instances | Sign-in does not start. The deployment behaves as with `MCP_OAUTH_ENABLED=false`: no authorization server, the OAuth pages and internal APIs answer `404`, and `/api/mcp` takes API keys only |
+| `rls-not-enforced` | The role `DATABASE_URL` connects as skips row-level security: it owns the tables, is a superuser or has `BYPASSRLS`. A check missed in the code is then not contained by the database | No OAuth request is served. Every endpoint of the authorization server under the auth route and the discovery documents answer `503` (`temporarily_unavailable`). The OAuth path of `/api/mcp` answers `503` with no challenge |
+
+A deployment that knows about a condition and accepts it names it:
+
+```bash
+MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit,rls-not-enforced
+```
+
+- The names are separated by commas or spaces. Each one accepts that condition and no other.
+- A value that is not one of the two names, such as `true`, accepts nothing. It is logged once and ignored.
+- With a risk accepted the server logs, once, what it is running without.
+- Outside production nothing changes: there is no gate in development or in tests.
+
+Details of the database half (`lib/mcp/oauth/production-gate.ts`):
+
+- Whether the role skips RLS is read from the catalogs, with the query `nextspark doctor` and the start warning use
+  (`lib/rls-runtime.ts`). It runs on the app pool, the connection the requests themselves use.
+- A database with no table under row-level security has not been migrated and is refused too.
+- The verdict is kept for the life of the process. A failure to read the catalogs is not kept: that request is
+  refused and the next one asks again.
+- `/oauth2/revoke` and `/oauth2/delete-consent` are still served while the gate refuses. They only take access
+  away.
+- Both halves are evaluated at server start (`instrumentation`), so the log line that says what is refused, and
+  how to fix or accept it, appears then and not on the first OAuth request. The client is told only that sign-in
+  is not available on the server.
+
+A project that turns the feature on and connects as the owner of the tables, which is the default setup until the
+`nextspark_app` cutover, therefore needs the cutover
+([RLS policies: runtime role and cutover](../10-backend/03-rls-policies.md)) or `rls-not-enforced` in the variable.
 
 ---
 
@@ -254,32 +303,72 @@ Everything a user or a client sees or gets goes by the active list:
 
 None of it depends on what a client chooses to request. Claude asks for the scopes of the `401` challenge; ChatGPT
 asks for everything in `scopes_supported`, and keeps asking for the list of the day its connector was created;
-both are offered the same rows. The list is computed from the entity
-registry and the `entities/<slug>/mcp.ts` overrides, the registries the default `/api/mcp` route builds its tools
-from, with the function the engine itself uses to decide which entities and operations get a tool
-(`exposedEntities` in `lib/mcp/exposure.ts`). For hand-written tools the list takes what the project declares as
-plain data: `extraToolScopes` next to `extraTools` in an entity's `mcp.ts`. No tool factory is run to find it out.
-A hand-written tool that needs a scope no generated tool uses and no `extraToolScopes` declares cannot be granted
-it by any connection; the engine warns about it when it builds the tool. See
+both are offered the same rows.
+
+### Where the list comes from
+
+The list is generated data. `nextspark prepare` writes `.nextspark/registries/mcp-scopes.ts`:
+
+```ts
+export const MCP_SCOPES = {
+  apiEntities: ['customers', 'pages', 'patterns', 'posts', 'tasks'],   // the entities the API serves
+  toolScopes: ['customers:delete', 'customers:read', /* ... */ 'tasks:read', 'tasks:write'],
+}
+```
+
+- `toolScopes` is what `mcpToolScopes()` returns: the scopes some tool of the default `/api/mcp` route needs.
+- `apiEntities` are the entities a scope can name. With the permissions registry they give the scopes each team
+  role holds (`mcpOAuthRoleScopes`), by the rule the scope registry uses for API keys (`entityScopesOfRole` in
+  `lib/api/auth/entity-role-scopes.ts`, one implementation for both).
+- The module imports nothing. In a project without `features.mcpOAuth` both lists are empty and the project's
+  sources are not read.
+
+The generator (`scripts/build/registry/generators/mcp-scopes.mjs`) runs nothing of the project. It parses the
+sources and reads literals:
+
+| File | What is read |
+|---|---|
+| Each entity config (the project's, the plugins' and core's) | `slug`, `enabled`, `access.api` |
+| Each `entities/<slug>/mcp.ts` | `exclude`, `excludeOperations`, `extraToolScopes`, and whether it has `extraTools` |
+
+It then applies core's own `lib/mcp/exposure.ts` to those facts, the module the engine uses to decide which
+entities and operations get a tool, so there is one implementation of the rules. For hand-written tools the list
+takes what the project declares as plain data: `extraToolScopes` next to `extraTools`. No tool factory is run. A
+hand-written tool that needs a scope no generated tool uses and no `extraToolScopes` declares cannot be granted it
+by any connection; the engine warns about it when it builds the tool. See
 [Scopes a tool needs](../05-api/20-mcp-server.md#scopes-a-tool-needs).
 
-**With sign-in enabled, every `mcp.ts` is loaded while the authorization server is configured.** Reading the
-declarations imports the overrides, and importing a module evaluates its module scope. An `mcp.ts` must not read
-`lib/auth` there (directly or through a helper that does): `auth` is not initialized yet at that point and every
-auth route would fail to load. Do that work inside the tool handlers. With sign-in off the overrides are loaded
-by `/api/mcp` only, as before.
+**The values have to be literals.** With `features.mcpOAuth` on:
 
-**Outside the app.** `nextspark worker` runs core's built modules without a bundler, and the two registries the
-list comes from (the entities and the overrides) cannot be loaded late there. When a handler of the project
-imports `lib/auth` in that process, it has no list: `mcpToolScopes()` is empty, `mcpToolScopesKnown()` is false
-and a warning says so. Sign-in is not served from the worker, so nothing is published or granted from it, and it
-does not write its empty list over the stored policy of the resource: it only inserts the row when it is missing
-(`resourceSeedMode: 'insertOnly'`), and the app brings it to its own list when it starts. Only the missing
-`require` is tolerated: a registry or an `mcp.ts` that fails to load for any other reason still fails loudly.
+- `slug` is a string literal, `enabled` is `true` or `false`, and `access.api` is `true`, `false` or an object of
+  literal booleans (`{ read: true, create: true }`).
+- An `mcp.ts` has an `export default` of an object literal: directly, or a `const` of the same file or of a
+  relative import. The object does not spread another one.
+- `exclude` is `true` or `false`; `excludeOperations` and `extraToolScopes` are literal arrays of strings.
+- A value that is a `const` of the same file or of a relative import is followed.
 
-The registries are loaded late, and not imported at the top of the module, for two reasons. `lib/auth` is
-reached by every route, and the entity registry imports the config of every entity, which core keeps out of the
-per-entity routes. And the registry of overrides evaluates every `mcp.ts`, as the paragraph above says.
+A value the generator cannot read stops the build, with the file and what to write. The lists are an authorization
+policy: a guess would publish a permission no tool needs, or hide one a tool does.
+
+**Why data.** The authorization server is configured while `lib/auth` loads, and `lib/auth` is in the module graph
+of every route of the app. Read from the registries, the list made auth load the entity registry (the config of
+every entity, which core keeps out of the per-entity routes) and the registry of overrides, which evaluates every
+`mcp.ts` of the project. With the data, sign-in adds no path from `lib/auth` to the entity registry, the scope
+registry or the `mcp.ts` files, and an `mcp.ts` is evaluated by the `/api/mcp` route only, with sign-in on or off.
+`tests/node/mcp-oauth-auth-graph.test.ts` holds this.
+
+**Every process reads the same list.** `nextspark worker`, or any other process that builds auth, imports the same
+generated module as the app. The authorization server brings the stored policy of the resource to the list each
+time it starts (`resourceSeedMode: 'merge'`).
+
+**The route checks the data against the running app.** `/api/mcp` has both registries loaded. When it loads, in a
+project built with the feature, it compares the generated lists with what the registries say (`mcpScopeDrift`) and
+logs an error that names each difference. A difference is safe in both directions: a scope no tool needs does
+nothing, and a tool whose scope is not in the list cannot be called through a connection. It means the registries
+are stale (run `nextspark prepare`) or a config is built in a way the generator cannot see.
+
+A project that mounts its own MCP route with other `excludeSlugs`, `defaultOperations` or `utilityTools` exposes
+something else than the list says: the default route is the one it follows.
 
 **A declaration is trusted.** A scope left in `extraToolScopes` after its tool is gone is published and offered
 again, and nothing warns about it: remove the scope with the tool. A scope no team role can hold (a typo such as
@@ -289,8 +378,10 @@ The `401` challenge tells a connecting client to ask for `offline_access` plus e
 (`mcpOAuthDefaultScopes`). Asking is not getting: the request carries them all because a consent can only take
 scopes away from what was asked.
 
-**When a scope is retired.** Excluding an operation later (or an entity) takes its scope out of the active list
-and leaves it in the accepted one. Nobody is cut off:
+### When a scope is retired
+
+Excluding an operation later (or an entity) takes its scope out of the active list and leaves it in the accepted
+one. Nobody is cut off:
 
 - An application that kept an older list (ChatGPT stores the scopes it discovered with the connector) can still
   authorize. The scope is accepted when asked for and it is not granted: the consent screen does not show it, and
@@ -304,9 +395,35 @@ user edits the permissions or connects again. That matters if a tool that needs 
 later. A connection that never renewed while the scope was retired still has it in its tokens and can use the
 tool at once. One that renewed lost it from its tokens, so the tool does not work for it by itself; but since the
 consent still names the scope, its next authorization or step-up gets it back without a consent screen.
-Retiring a tool is not a revocation. To take a permission away for good, narrow the connections
-(`narrowConnection`, which records the revocation and cuts the live tokens), and do not give a scope name a
-wider meaning than it had.
+Retiring a tool is not a revocation.
+
+**To take a permission away for good, the operator runs one command:**
+
+```bash
+nextspark mcp:revoke-scope tasks:delete          # reports, changes nothing
+nextspark mcp:revoke-scope tasks:delete --yes    # applies it
+```
+
+- It removes the scope from every consent that holds it, in every team. The database does the rest for each one
+  ([Rules that live in the database](#rules-that-live-in-the-database-migration-049)): the live refresh tokens are
+  cut down and the access tokens already issued are refused. A connection left with no entity permission is ended.
+- After it, holding the scope again takes a new consent.
+- Without `--yes` it reports how many connections hold the scope, how many of them would be ended, and whether a
+  tool of the running app still needs it (from the policy the app last stored for the resource).
+- It also works on a scope a tool still needs: every connection loses it, and each application asks its user again
+  when it needs it.
+- It connects with `MIGRATE_DATABASE_URL`, else `DATABASE_SERVICE_URL`, else `DATABASE_URL`. The consents are
+  service-only, so it refuses to run with a role that row-level security applies to: that role would see no
+  consent and report nothing to do. `--no-env-file` ignores the project's `.env` files.
+- It accepts an entity scope only (`<entity>:read`, `:write` or `:delete`), never a wildcard or an identity scope.
+
+Run it after the deployment that retires the tool is the only one serving. The cut is not made automatically at
+start: during a rolling deployment an instance of the new version would take the scope away from connections the
+instances of the old version still serve the tool to.
+
+The work is the database function `revoke_oauth_scope(text)` of migration 049. Code can call it through
+`revokeScopeFromConnections(scope)` (`lib/mcp/oauth/connections.ts`), which checks nobody's role and is behind no
+route. Do not give a scope name a wider meaning than it had.
 
 ### The consent screen and its defaults
 
@@ -358,6 +475,10 @@ A scope that *was* granted and that the user's role no longer allows is a differ
 with a tool error and no challenge, because asking again would not help. The engine refuses it before the tool
 runs, for every tool that names the scope (an entity tool, or one that declares it in `meta.requiredScopes`), so a
 tool the project wrote that does its work without the API is held to the role too.
+
+A hand-written tool that declares no `meta.requiredScopes` is a third case: it is refused to every connection,
+before it runs, with a tool error and no challenge. Nothing says which of the granted permissions it stands for,
+so no consent can cover it. `requiredScopes: []` says the tool needs no permission and lets it run.
 
 Which scopes a tool needs comes from `engine.requiredScopesFor(toolName)`; see
 [MCP Server: scopes a tool needs](../05-api/20-mcp-server.md#scopes-a-tool-needs).
@@ -455,12 +576,14 @@ Each guarantee, and what enforces it.
 | A connection acts in one team | The `team_id` claim, set from the consent's `referenceId`; `x-team-id` of the request is not read, and `authenticateRequest` refuses an in-process call for any other team (`TEAM_NOT_IN_CONNECTION`) |
 | A connection ends with the membership | The trigger `oauth_end_on_member_removed`: leaving or being removed from a team, and the deletion of the team, delete the consents for it, and with each its connection |
 | A connection never holds more than the user's role | `consentWithinRolePlugin` when the consent is written; `validateScopesForUser` on every request |
+| A tool runs only for a permission the user granted | The up-front `403` for a scope that was not granted; the engine refuses a hand-written tool that declares no `meta.requiredScopes` to every connection |
 | The consent decides what a connection may do | The consent row is read on every request; the database rules below hold every refresh token to it |
 | A connection that was ended stays ended, at once, on every instance | The revocation number (`oauthRevocation` and the `rev` claim), and the removal of the consent and the refresh tokens |
 | Only accepted applications connect | `allowedClientHosts`, applied in four places |
 | A suspended account authorizes nothing and gets no token | Checked at authorization (read from the database, since the session's copy of the user can be older than the suspension), at every token issuance and on every request; a suspension also ends every connection of the user |
 | The authorization server's tables are not readable through a user's database role | Service-only RLS policies on every OAuth table |
-| What one connection may send is limited | The `credential` rate limit tier, shared between instances only with Redis configured |
+| What one connection may send is limited | The `credential` rate limit tier, shared between instances only with Redis configured. In production sign-in does not start without Redis unless the deployment accepts it ([production gate](#production-gate)) |
+| Row-level security is behind every query a connection causes | In production no OAuth request is served while the role of `DATABASE_URL` skips RLS, unless the deployment accepts it ([production gate](#production-gate)) |
 | What an application did, and what it was refused for lack of a permission, is recorded | `api_audit_log`, best effort: a call rejected before its handler for malformed arguments leaves no row, and a failed audit write does not stop the call |
 
 ### Rules that live in the database (migration 049)
@@ -486,6 +609,10 @@ against a narrowing: the new token holds no more than the consent it finds.
 
 Also in the migration:
 
+- The function `revoke_oauth_scope(text)`, for the operator: it takes a scope away from every consent that holds
+  it, and ends a connection left with no entity permission
+  ([When a scope is retired](#when-a-scope-is-retired)). It is not `SECURITY DEFINER`: the consents are
+  service-only, so for a role that row-level security applies to it changes nothing.
 - The unique index `uq_oauth_consent_connection` on `oauthConsent("userId", "clientId", "referenceId")`: one consent
   per connection.
 - Every OAuth table, `jwks` and `oauthRevocation` included, has RLS enabled with a service-only policy. `jwks` holds
@@ -583,9 +710,14 @@ screens' APIs, not a public surface.
 
 ## Known limits
 
-- **No production gate.** The feature does not refuse to start when the database connection owns the tables, in
-  which case RLS has no effect, or when there is no Redis, in which case the rate limit is per process. Both are the
-  operator's to check; see [Security Best Practices](./07-security-best-practices.md#mcp-browser-sign-in).
+- **The production gate checks two things and no others.** Redis and the role of the database
+  ([Production gate](#production-gate)). The rest of the production checklist is the operator's to check; see
+  [Security Best Practices](./07-security-best-practices.md#mcp-browser-sign-in). A deployment that accepts a risk
+  with `MCP_OAUTH_ACCEPT_RISKS` runs with it: without Redis the rate limit is per process, and with a role that
+  skips RLS the database contains nothing a check in the code misses.
+- **A retired scope stays in the consents until the operator revokes it.** Retiring a tool does not rewrite them,
+  so the scope counts again if a tool needs it again. `nextspark mcp:revoke-scope` removes it; nothing runs it
+  for you. See [When a scope is retired](#when-a-scope-is-retired).
 - **Run against Claude** (web, desktop and mobile) **and ChatGPT** (web), with their real hosted clients. Other
   clients have not been run. What was seen with ChatGPT, which differs from Claude: it authenticates itself to
   the token endpoint with a signed assertion (`private_key_jwt`) instead of being a public client; it asks for
@@ -606,9 +738,14 @@ screens' APIs, not a public surface.
   the consent screen offers and what a consent can hold do not read that row: each instance computes them from
   its own version. Deploy
   a change to the list all at once, or drain the earlier version first.
-- **Hand-written tools get the up-front `403` only if they declare `meta.requiredScopes`.** Without it each API call
-  the tool makes is checked where it is made.
-- **`tools/list` shows every tool**, including those the connection cannot use.
+- **A hand-written tool that declares no `meta.requiredScopes` cannot be called through a connection.** It is
+  refused to every connection and keeps working with an API key. Declare its scopes, or `requiredScopes: []` for a
+  tool that needs none.
+- **`tools/list` shows every tool**, including those the connection cannot use and the hand-written ones that
+  declare nothing.
+- **The values the scope list is generated from have to be literals.** A config or an `mcp.ts` that computes
+  `enabled`, `access.api`, `exclude`, `excludeOperations` or `extraToolScopes` stops the build of a project with
+  the feature on. See [Where the list comes from](#where-the-list-comes-from).
 - **No consent screen on reconnect when nothing new is asked.** If everything a client asks for is already
   consented, Better Auth does not show the consent screen again.
 - **The in-process principal is a bridge.** Inside the server an OAuth call is carried as a principal of type

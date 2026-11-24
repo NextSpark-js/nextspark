@@ -205,11 +205,11 @@ decided by PostgreSQL, and is only seen with two real connections. The test poin
 cluster, then imports the real `src/lib/db`, `connection-store` and `purge`. `connection-store.ts` imports no
 project configuration so that this is possible.
 
-**What it covers.** One top-level test with 18 cases:
+**What it covers.** One top-level test with 28 cases (`node --test` reports 29 tests: the cases and the test that holds them):
 
 | # | Case |
 | --- | --- |
-| 1 | Migration 049 applies on a database with nothing in it, leaves exactly the seven `oauth_*` triggers, and applying it again changes nothing |
+| 1 | Migration 049 applies on a database with nothing in it, leaves exactly the nine `oauth_*` triggers, and applying it again changes nothing |
 | 2 | A refresh token is written only for a connection that has a consent, and holding no more than the consent: a wider token is cut down, and the consent of another team or another client does not count |
 | 3 | A connection has one consent: a second row for the same user, client and team is refused (`uq_oauth_consent_connection`) |
 | 4 | `disconnect` removes the consent and the tokens and records the revocation; the same client in another team is untouched |
@@ -223,10 +223,20 @@ project configuration so that this is possible.
 | 12 | Permissions taken away between the steps of a renewal: the renewal still leaves a live token, holding less |
 | 13 | A connection ended between the steps of a renewal: the renewal leaves nothing |
 | 14 | `narrowConnection`: `narrowed`, `unchanged`, `nothing-left` and `not-found`, and what each leaves in the consent and the tokens |
-| 15 | `disconnectAs` reads the actor's app role and team role inside the transaction and holds them: it waits for a role change in flight and decides on its result |
-| 16 | `othersConnections` reads other members' connections by team and never the reader's own |
-| 17 | A suspended account loses its consents with its tokens, and a renewal in flight cannot write a token |
-| 18 | `purgeExpiredOAuth` removes what expired and keeps a replaced token until its own expiry; a user's newest revocation stays |
+| 15 | `revokeScopeFromConnections` (the function `revoke_oauth_scope`): the scope leaves every consent that holds it, the live tokens are cut down, a connection left with no entity permission is ended, a connection that did not hold it is untouched, and a later renewal does not get it back. Called as the app role, which RLS applies to, it changes nothing. A wildcard or an identity scope is refused |
+| 16 | `nextspark mcp:revoke-scope` (the script, run as a process): it reports without `--yes`, says when a tool still needs the scope, refuses a role that cannot see the consents, uses `DATABASE_SERVICE_URL` before `DATABASE_URL`, applies with `--yes`, and refuses what is not one entity scope |
+| 17 | `disconnectAs` reads the actor's app role and team role inside the transaction and holds them: it waits for a role change in flight and decides on its result |
+| 18 | `othersConnections` reads other members' connections by team and never the reader's own |
+| 19 | A suspended account loses its consents with its tokens, and a renewal in flight cannot write a token |
+| 20 | A member removed from a team loses the connections to it, and they do not come back when the member does |
+| 21 | A consent is written only for a member of the team |
+| 22 | A removal that gets there first: the consent being written waits for it, then is refused |
+| 23 | A consent that gets there first: the removal waits for it, then takes it away |
+| 24 | A change of role does not wait for a consent being written, nor the other way round |
+| 25 | A change of role is not a removal: the connection stays |
+| 26 | Deleting a team ends every connection to it and leaves the connections to other teams |
+| 27 | A user who is deleted takes their connections with them, and nothing fails on the way |
+| 28 | `purgeExpiredOAuth` removes what expired and keeps a replaced token until its own expiry; a user's newest revocation stays |
 
 Cases 12 and 13 follow a renewal step by step because Better Auth renews in separate statements: it reads the old
 token, marks it replaced, then writes the new one with the scopes it read. The test performs each step itself and

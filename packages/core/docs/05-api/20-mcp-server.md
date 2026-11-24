@@ -115,12 +115,11 @@ The engine knows which scopes a call to a tool needs before it runs:
 
 | | |
 |---|---|
-| `engine.requiredScopesFor(toolName)` | A generated entity tool: `<entity>:read` for `list` and `get`, `<entity>:write` for `create` and `update`, `<entity>:delete` for `delete`. A hand-written tool: what it declares in `meta.requiredScopes`. Nothing for a hand-written tool that declares none, or for an unknown name |
+| `engine.requiredScopesFor(toolName)` | A generated entity tool: `<entity>:read` for `list` and `get`, `<entity>:write` for `create` and `update`, `<entity>:delete` for `delete`. A hand-written tool: what it declares in `meta.requiredScopes`. Nothing for a hand-written tool that declares none (browser sign-in refuses that tool, see below), or for an unknown name |
 | `engine.toolScopes` | The union over all tools: every scope some tool of this server needs |
 | `engine.auditRefused(body, ctx, granted)` | Tries to record, best effort, the tool calls of a request that was refused for missing scopes: one row for each well-formed call of a known tool; a write that fails is logged and nothing else |
 
-A hand-written tool that makes several API calls (an `extraTools` entry, a utility tool) should declare what it
-needs:
+A hand-written tool (an `extraTools` entry, a utility tool) declares what it needs:
 
 ```ts
 const mergeCustomers: McpToolDefinition = {
@@ -128,12 +127,30 @@ const mergeCustomers: McpToolDefinition = {
   // ...
   meta: { operation: 'workflow', requiredScopes: ['customers:read', 'customers:write', 'customers:delete'] },
 }
+
+const serverTime: McpToolDefinition = {
+  name: 'acme_server_time',
+  // ...
+  meta: { requiredScopes: [] },   // an empty list says the tool needs no permission
+}
 ```
 
-On the API key path this metadata changes nothing: each API call the tool makes is checked by its handler. With
-[browser sign-in](#browser-sign-in-experimental) it is what lets the server refuse the call up front with a `403`
-that tells the client which permission to ask the user for. A hand-written tool without `meta.requiredScopes` still
-has each call checked where it is made, but the client gets a tool error instead of the challenge.
+On the API key path this metadata changes nothing: each API call the tool makes is checked by its handler, and the
+tool runs whether or not it declares anything.
+
+With [browser sign-in](#browser-sign-in-experimental) it is what the tool is held to:
+
+- A connection that was not granted one of the scopes is refused up front with a `403` that tells the client which
+  permission to ask the user for.
+- A connection whose user's role no longer allows one of them is refused by the engine before the tool runs.
+- **A hand-written tool that declares no `meta.requiredScopes` is refused to every connection**, before it runs,
+  with a `403` tool error that is written to the audit trail. Nothing says which of the permissions the user
+  granted the tool stands for, and a handler that never calls the API through `api.execute` would otherwise run for
+  any connection. `requiredScopes: []` is the way to say that a tool needs none. A tool whose `meta` names one
+  entity operation (`entitySlug` with `list`, `get`, `create`, `update` or `delete`) counts as declared.
+
+In a project built with `features.mcpOAuth` the engine logs a warning that names each tool that declares nothing
+when it builds it. `tools/list` still lists the tool.
 
 **A scope no generated tool uses has to be declared next to the tools.** Browser sign-in publishes, offers on the
 consent screen and grants only the scopes of the generated tools, plus the ones a project declares as a plain list:
@@ -152,6 +169,11 @@ the engine options. The list is read without building the tools, because the aut
 before there is an engine. A tool that needs a scope that is in neither still works with an API key, but no browser
 sign-in connection can be granted that scope: the engine logs a warning that names the tool and the scope when it
 builds it.
+
+With `features.mcpOAuth` on, `nextspark prepare` reads these values from the source of the `mcp.ts`, without
+running it, and writes the scopes to `.nextspark/registries/mcp-scopes.ts`. `exclude`, `excludeOperations` and
+`extraToolScopes` have to be literals, in an object literal that is the file's `export default`. See
+[Where the list comes from](../06-authentication/14-mcp-browser-sign-in.md#where-the-list-comes-from).
 
 ---
 
@@ -499,13 +521,14 @@ connection. For a connection, read "API key" as "connection".
   show on this endpoint are the next three.
 - **`tools/list` shows every tool**, including those an OAuth connection was not granted the scope for. The call
   is refused when it is made.
-- **A hand-written tool gets the up-front `403` only if it declares `meta.requiredScopes`.** See
-  [Scopes a tool needs](#scopes-a-tool-needs).
+- **A hand-written tool that declares no `meta.requiredScopes` cannot be called through browser sign-in.** It is
+  refused to every connection and still works with an API key. See [Scopes a tool needs](#scopes-a-tool-needs).
 - **Browser sign-in has been run against Claude** (web, desktop and mobile) **and ChatGPT** (web). Other clients
   have not been run; see [what was seen with each](../06-authentication/14-mcp-browser-sign-in.md#known-limits).
-- **No production gate.** Nothing refuses to start when Redis is missing or when the database role makes row-level
-  security ineffective. See
-  [Security Best Practices](../06-authentication/07-security-best-practices.md#mcp-browser-sign-in).
+- **Browser sign-in has a production gate.** In production it does not start without Redis, and it serves no OAuth
+  request while the database role skips row-level security, unless `MCP_OAUTH_ACCEPT_RISKS` names what the
+  deployment accepts. The API key path has no such gate. See
+  [Production gate](../06-authentication/14-mcp-browser-sign-in.md#production-gate).
 - **The per-credential limit is per process without Redis** — see [Rate Limits](#rate-limits).
 - **A call rejected by the SDK's argument validation is not audited** — see [Audit Trail](#audit-trail).
 - **`access.api` is a boolean or a per-operation object** — with `api: false` API-key requests to the REST
