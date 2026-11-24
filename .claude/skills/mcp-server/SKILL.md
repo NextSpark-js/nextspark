@@ -132,9 +132,10 @@ fills from the generated `MCP_OVERRIDES` registry (`@nextsparkjs/registries/mcp-
 | hand-written (`extraTools`, `utilityTools`) | what it declares in `meta.requiredScopes`; none if it declares nothing, and then an OAuth connection is refused the tool |
 
 **A hand-written tool that declares nothing is refused to every OAuth connection** (`declaresScopes` in
-`exposure.ts`, checked in the tool handler of `engine.ts`): a `403` tool error before it runs, audited. A tool
-"declares" when it has `meta.requiredScopes` (an empty list means it needs no permission) or when its `meta` names
-one entity operation. With an API key nothing changes. In a project built with `features.mcpOAuth` the engine
+`exposure.ts`, checked in the tool handler of `engine.ts`): a `403` tool error before it runs, audited. A
+hand-written tool "declares" only by having `meta.requiredScopes` (an empty list means it needs no permission).
+`entitySlug` plus an operation in its `meta` is not a declaration: that pair is taken at its word only for a tool
+the engine generated itself (the engine keeps where each tool came from). With an API key nothing changes. In a project built with `features.mcpOAuth` the engine
 warns when it builds such a tool (`isMcpOAuthBuilt()`). `tools/list` still lists it (P-17 is open).
 
 `engine.toolScopes` is the sorted union over all tools. `toolScopesOf(registry, options)` (`exposure.ts`) is what
@@ -349,8 +350,9 @@ accepts nothing and is logged once).
 | `rls-not-enforced` | The role of `DATABASE_URL` skips RLS (`readRlsRuntime` / `rlsRuntimeVerdict` of `lib/rls-runtime.ts`, on the app pool), or no RLS table exists, or the catalogs cannot be read | Async, `mcpOAuthRefusedByGate()` (`production-gate.ts`), asked on the requests: the first `before` hook of `consentWithinRolePlugin` (`isHeldByProductionGate`: `/oauth2/*`, `/admin/oauth2/*`, the `.well-known` documents; 503 `temporarily_unavailable`), `serveOAuthDiscovery` (503) and `handleOAuthMcpRequest` (503, no challenge) |
 
 - The database half cannot be decided while `lib/auth` loads (it is a query), which is why the plugins are
-  registered on the env half alone and the role is asked per request. The verdict is kept on `globalThis` for the
-  life of the process; a failed read is not kept and refuses that request.
+  registered on the env half alone and the role is asked per request. The verdict is kept on `globalThis` for a
+  minute (`GATE_RECHECK_MS`) and then read again, so a role changed while the process lives is seen in either
+  direction; a failed read is not kept and refuses that request.
 - `/oauth2/revoke` and `/oauth2/delete-consent` are not held: they only take access away.
 - `production-risks.ts` reads the environment only: the proxy imports it through `config.ts`. Anything that needs
   the database goes in `production-gate.ts`.

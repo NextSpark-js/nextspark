@@ -7,7 +7,7 @@
  * and the start warning use (lib/rls-runtime). It cannot be known while `lib/auth` loads, which is when the
  * authorization server is configured, so it is asked on the requests instead: every endpoint of the authorization
  * server (the hook in ./consent-plugin), its discovery documents and the OAuth path of `/api/mcp`. A verdict is
- * kept for the life of the process; a failure to read it is not, and refuses that request.
+ * kept for a minute and then read again; a failure to read it is not kept, and refuses that request.
  */
 import { pool } from '../../db'
 import { readRlsRuntime, rlsBypassReason, rlsRuntimeVerdict, type RlsRuntimeRow } from '../../rls-runtime'
@@ -18,8 +18,17 @@ type Run = (sql: string) => Promise<{ rows: RlsRuntimeRow[] }>
 /** What a client is told. The reason is for the operator, in the server's log: it names a role of the database. */
 export const NOT_AVAILABLE = 'MCP browser sign-in is not available on this server.'
 
+/**
+ * How long a verdict is gone by before the catalogs are read again. The role of a connection can change while the
+ * process lives (`ALTER ROLE ... BYPASSRLS`, a table given another owner), in either direction: a verdict kept for
+ * good would go on serving after the role stopped being subject to row-level security, and go on refusing after
+ * it was fixed. A minute keeps the query off the requests and bounds both.
+ */
+export const GATE_RECHECK_MS = 60_000
+
 // On globalThis: Next bundles this module separately for instrumentation and for the routes
 const VERDICT = Symbol.for('nextspark.mcpOAuthDatabaseGate')
+type Verdict = { refused: boolean; until: number }
 
 /** Forgets the verdict of this process. For tests. */
 export function resetProductionGate(): void {
@@ -28,12 +37,18 @@ export function resetProductionGate(): void {
 
 /**
  * Whether an OAuth request is refused by the gate: `false` when it may be served. Outside production it always
- * may. `run` is for tests; by default the query runs on the app pool, the connection the requests themselves use.
+ * may. `run` and `now` are for tests; by default the query runs on the app pool, the connection the requests
+ * themselves use.
  */
-export async function mcpOAuthRefusedByGate(env: NodeJS.ProcessEnv = process.env, run?: Run): Promise<boolean> {
+export async function mcpOAuthRefusedByGate(env: NodeJS.ProcessEnv = process.env, run?: Run, now: () => number = Date.now): Promise<boolean> {
   if (!isProductionRuntime(env)) return false
-  const state = globalThis as Record<symbol, boolean | undefined>
-  if (typeof state[VERDICT] === 'boolean') return state[VERDICT] as boolean
+  const state = globalThis as Record<symbol, Verdict | undefined>
+  const kept = state[VERDICT]
+  if (kept && now() < kept.until) return kept.refused
+  const keep = (refused: boolean): boolean => {
+    state[VERDICT] = { refused, until: now() + GATE_RECHECK_MS }
+    return refused
+  }
 
   let row: RlsRuntimeRow | null
   try {
@@ -45,7 +60,7 @@ export async function mcpOAuthRefusedByGate(env: NodeJS.ProcessEnv = process.env
   }
 
   const verdict = row ? rlsRuntimeVerdict(row) : 'unknown'
-  if (verdict === 'enforced') return (state[VERDICT] = false)
+  if (verdict === 'enforced') return keep(false)
 
   const accepted = acceptedRisks(env).has('rls-not-enforced')
   const why = verdict === 'bypassed' && row
@@ -62,5 +77,5 @@ export async function mcpOAuthRefusedByGate(env: NodeJS.ProcessEnv = process.env
       `[mcp:oauth] MCP browser sign-in is built (features.mcpOAuth) and REFUSES every OAuth request: ${why}. Connect as nextspark_app (docs/10-backend/03-rls-policies.md, "Runtime role + cutover"; check with \`nextspark doctor\`), or accept this with ${ACCEPT_RISKS_VARIABLE}=rls-not-enforced.`
     )
   }
-  return (state[VERDICT] = !accepted)
+  return keep(!accepted)
 }

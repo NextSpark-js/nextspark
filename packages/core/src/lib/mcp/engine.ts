@@ -127,11 +127,15 @@ export function createMcpEngine(
   // API key, but MCP browser sign-in publishes and grants only the declared scopes, so no connection of it could
   // ever hold that one. Said once, when the tool is built, where the project can see it.
   const declaredScopes = new Set(toolScopesOf(registry, options))
+  // Where a tool came from decides what counts as saying what it needs (./exposure `declaresScopes`)
+  const handWritten = new Set<McpToolDefinition>()
+  const saysWhatItNeeds = (tool: McpToolDefinition) => declaresScopes(tool.meta, handWritten.has(tool))
   for (const factory of handWrittenToolFactories(options)) {
     for (const tool of factory(api)) {
+      handWritten.add(tool)
       // A tool that does not say what it needs is refused to every browser sign-in connection (see the handler
       // below). Said when it is built, in a project that has sign-in, so that it is not found out by a user.
-      if (isMcpOAuthBuilt() && !declaresScopes(tool.meta)) {
+      if (isMcpOAuthBuilt() && !saysWhatItNeeds(tool)) {
         console.warn(
           `[mcp] The tool "${tool.name}" does not declare the permissions it needs, so MCP browser sign-in connections are refused it (it still works with an API key). ` +
             'Add `meta: { requiredScopes: [...] }` to it, with the scopes every call of it needs; an empty list if it needs none.'
@@ -182,7 +186,7 @@ export function createMcpEngine(
           const roleLacks = ctx.principal?.oauth ? scopesOfToolMeta(tool.meta).filter(scope => !ctx.scopes.includes(scope)) : []
           // And to what its user consented to: a tool that does not say what it needs stands for none of the
           // permissions of the consent, so no connection is let through to it (./exposure `declaresScopes`).
-          if (ctx.principal?.oauth && !declaresScopes(tool.meta)) {
+          if (ctx.principal?.oauth && !saysWhatItNeeds(tool)) {
             result = errorResult(
               'This tool cannot be used through this connection: the application has not declared which permissions it needs, so the server cannot tell whether you granted them. Connecting again will not change it. It can be used with an API key; the developers of the application can make it available here by declaring its permissions (`meta.requiredScopes`).',
               403

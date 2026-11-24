@@ -146,8 +146,9 @@ With [browser sign-in](#browser-sign-in-experimental) it is what the tool is hel
 - **A hand-written tool that declares no `meta.requiredScopes` is refused to every connection**, before it runs,
   with a `403` tool error that is written to the audit trail. Nothing says which of the permissions the user
   granted the tool stands for, and a handler that never calls the API through `api.execute` would otherwise run for
-  any connection. `requiredScopes: []` is the way to say that a tool needs none. A tool whose `meta` names one
-  entity operation (`entitySlug` with `list`, `get`, `create`, `update` or `delete`) counts as declared.
+  any connection. `requiredScopes: []` is the way to say that a tool needs none. `entitySlug` and an
+  operation in the `meta` of a hand-written tool do not count as a declaration: they are what the audit trail files
+  the call under, and only a tool the engine generated is held to the scope of that operation by what it is.
 
 In a project built with `features.mcpOAuth` the engine logs a warning that names each tool that declares nothing
 when it builds it. `tools/list` still lists the tool.

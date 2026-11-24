@@ -140,8 +140,9 @@ Details of the database half (`lib/mcp/oauth/production-gate.ts`):
 - Whether the role skips RLS is read from the catalogs, with the query `nextspark doctor` and the start warning use
   (`lib/rls-runtime.ts`). It runs on the app pool, the connection the requests themselves use.
 - A database with no table under row-level security has not been migrated and is refused too.
-- The verdict is kept for the life of the process. A failure to read the catalogs is not kept: that request is
-  refused and the next one asks again.
+- The verdict is kept for a minute and then read again, so a role that changes while the process lives
+  (`ALTER ROLE ... BYPASSRLS`, a table given another owner, or the fix of either) is seen without a restart. A
+  failure to read the catalogs is not kept: that request is refused and the next one asks again.
 - `/oauth2/revoke` and `/oauth2/delete-consent` are still served while the gate refuses. They only take access
   away.
 - Both halves are evaluated at server start (`instrumentation`), so the log line that says what is refused, and

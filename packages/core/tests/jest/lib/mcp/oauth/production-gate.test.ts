@@ -12,7 +12,7 @@ const mockPoolQuery = jest.fn();
 jest.mock('@/core/lib/db', () => ({ pool: { query: (...args: unknown[]) => mockPoolQuery(...args) } }));
 
 import { isMcpOAuthEnabled } from '@/core/lib/mcp/oauth/config';
-import { mcpOAuthRefusedByGate, resetProductionGate } from '@/core/lib/mcp/oauth/production-gate';
+import { GATE_RECHECK_MS, mcpOAuthRefusedByGate, resetProductionGate } from '@/core/lib/mcp/oauth/production-gate';
 import { acceptedRisks, sharedRateLimitGate } from '@/core/lib/mcp/oauth/production-risks';
 import type { RlsRuntimeRow } from '@/core/lib/rls-runtime';
 
@@ -110,12 +110,36 @@ describe('the role of the database', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  it('a role subject to row-level security is served, and asked once per process', async () => {
+  it('a role subject to row-level security is served, and the catalogs are not read on every request', async () => {
     const run = answering(row());
     expect(await mcpOAuthRefusedByGate(production, run)).toBe(false);
     expect(await mcpOAuthRefusedByGate(production, run)).toBe(false);
     expect(run).toHaveBeenCalledTimes(1);
     expect(logged).toEqual([]);
+  });
+
+  it('a verdict is read again after a minute: a role that stops being subject to row-level security is refused then', async () => {
+    let clock = 1_000_000;
+    const now = () => clock;
+    const run = jest.fn()
+      .mockResolvedValueOnce({ rows: [row()] })
+      .mockResolvedValueOnce({ rows: [row({ bypassRls: true })] })
+      .mockResolvedValueOnce({ rows: [row()] });
+    expect(await mcpOAuthRefusedByGate(production, run, now)).toBe(false);
+    clock += GATE_RECHECK_MS - 1;
+    expect(await mcpOAuthRefusedByGate(production, run, now)).toBe(false);
+    expect(run).toHaveBeenCalledTimes(1);
+    // ALTER ROLE ... BYPASSRLS while the process lives: the requests of a token issued before it are refused too
+    clock += 1;
+    expect(await mcpOAuthRefusedByGate(production, run, now)).toBe(true);
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(logged.join('\n')).toMatch(/has BYPASSRLS/);
+    // and one that was fixed is served again without a restart
+    clock += GATE_RECHECK_MS - 1;
+    expect(await mcpOAuthRefusedByGate(production, run, now)).toBe(true);
+    clock += 1;
+    expect(await mcpOAuthRefusedByGate(production, run, now)).toBe(false);
+    expect(run).toHaveBeenCalledTimes(3);
   });
 
   it.each([

@@ -590,6 +590,40 @@ describe('the audit trail of what did not succeed (#541)', () => {
       expect(audit.mock.calls.map(([entry]) => [entry.tool, entry.statusCode])).toEqual([['acme_export_everything', 403], ['acme_customer_report', 403]]);
     });
 
+    it('metadata that looks like an entity operation is not a declaration: only a tool the engine generated is taken at that word', async () => {
+      // `entitySlug` and an operation are what the audit trail files a call under; the handler can do anything
+      const direct = done();
+      const utility = done();
+      const lookalike: Record<string, McpEntityOverride> = {
+        customers: { extraTools: () => [tool('acme_purge_customers', { entitySlug: 'customers', operation: 'delete' }, direct)] as never },
+      };
+      const audit = jest.fn().mockResolvedValue(undefined);
+      const engine = createMcpEngine(registry, {
+        toolPrefix: 'acme', executor: jest.fn(), audit, overrides: lookalike,
+        utilityTools: () => [tool('acme_team_report', { entitySlug: 'customers', operation: 'list' }, utility)] as never,
+      });
+      const everything = oauth(['customers:read', 'customers:write', 'customers:delete']);
+      for (const [name, handler] of [['acme_purge_customers', direct], ['acme_team_report', utility]] as const) {
+        const response = await call(engine, name, everything);
+        expect([name, handler.mock.calls.length, response.result.isError]).toEqual([name, 0, true]);
+        expect(response.result.content[0].text).toMatch(/has not declared which permissions it needs/);
+      }
+      expect(audit.mock.calls.map(([entry]) => entry.statusCode)).toEqual([403, 403]);
+      // the generated tool of the same operation is not caught by this: it reaches the API with the scope
+      const executor: EntityExecutor = jest.fn().mockResolvedValue(ok());
+      const generated = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit: jest.fn().mockResolvedValue(undefined) });
+      await call(generated, 'acme_list_customers', everything);
+      expect(executor).toHaveBeenCalledTimes(1);
+      // and with `requiredScopes` the hand-written ones run
+      const declared = done();
+      const withScopes = createMcpEngine(registry, {
+        toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined),
+        overrides: { customers: { extraTools: () => [tool('acme_purge_customers', { entitySlug: 'customers', operation: 'delete', requiredScopes: ['customers:delete'] }, declared)] as never } },
+      });
+      await call(withScopes, 'acme_purge_customers', everything);
+      expect(declared).toHaveBeenCalledTimes(1);
+    });
+
     it('one that declares an empty list needs no permission and runs, even for a connection that holds nothing', async () => {
       const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
       const response = await call(engine, 'acme_server_time', oauth([]));

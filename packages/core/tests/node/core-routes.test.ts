@@ -506,11 +506,12 @@ test('a per-entity route\'s core module graph never imports the generated client
     // the route's server bundle all the same (#541, where one hid the entity registry from this test).
     // One is older than this check and still there: `getEntityMetaConfig` (types/meta.types.ts, since the first
     // commit) requires the entity registry for an entity that is not core's, and `lib/auth` reaches it through the
-    // user flags service. It is named here so that it is the only one; taking it out is its own change.
-    if (path.relative(CORE, file) === 'src/types/meta.types.ts') return found
+    // user flags service. That one call is named here so that it is the only one; taking it out is its own change.
+    const older = path.relative(CORE, file) === 'src/types/meta.types.ts' ? '@nextsparkjs/registries/entity-registry' : null
     const visit = (node: ts.Node): void => {
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'require' && node.arguments.length === 1 && ts.isStringLiteralLike(node.arguments[0])) {
-        found.push({ specifier: (node.arguments[0] as ts.StringLiteralLike).text, typeOnly: false })
+        const specifier = (node.arguments[0] as ts.StringLiteralLike).text
+        if (specifier !== older) found.push({ specifier, typeOnly: false })
       }
       ts.forEachChild(node, visit)
     }

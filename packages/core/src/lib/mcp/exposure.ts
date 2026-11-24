@@ -95,17 +95,22 @@ export function scopesOfToolMeta(meta: McpToolDefinition['meta']): string[] {
 }
 
 /**
- * Whether a tool says what it needs: a single entity operation does by what it is, and any other tool by
- * `meta.requiredScopes`, where an empty list is the statement that it needs no permission.
+ * Whether a tool says what it needs. A tool the engine generated from an entity does by what it is: one entity
+ * operation, whose scope the API handler it calls asks for. A tool a project wrote (`extraTools`, `utilityTools`)
+ * does only with `meta.requiredScopes`, where an empty list is the statement that it needs no permission.
+ *
+ * `handWritten` is where the tool came from, not what its `meta` looks like: a project's tool can carry
+ * `entitySlug` and an operation for the audit trail and do anything in its handler, so that pair says nothing of
+ * what it needs unless the engine generated the tool itself.
  *
  * A tool that says nothing cannot be held to a consent: the server would not know which of the permissions the
  * user granted it stands for, and a handler that never calls the API through `api.execute` would run for any
  * connection at all. So a browser sign-in connection is refused such a tool (the engine), whatever it holds. With
  * an API key nothing changes: there the tool is checked call by call where it makes them, as before.
  */
-export function declaresScopes(meta: McpToolDefinition['meta']): boolean {
-  if (meta?.requiredScopes) return true
-  return Boolean(meta?.entitySlug && meta.operation && meta.operation !== 'workflow')
+export function declaresScopes(meta: McpToolDefinition['meta'], handWritten: boolean): boolean {
+  if (Array.isArray(meta?.requiredScopes)) return true
+  return !handWritten && Boolean(meta?.entitySlug && meta.operation && meta.operation !== 'workflow')
 }
 
 /**

@@ -33,33 +33,34 @@ function resolveModule(from: string, specifier: string): string | null {
 }
 
 /**
- * Modules of `main` that load something late, from before MCP sign-in. Their `import` declarations are followed;
- * their `require()` and `import()` calls are not.
+ * Late loads of `main`, from before MCP sign-in: the one call of each file that is not followed, by the module it
+ * names. Any other `require()` or `import()` of the same file is followed like everywhere else.
  */
-const OLDER_LATE_LOADS: Record<string, string> = {
+const OLDER_LATE_LOADS: Record<string, { specifier: string; call: string }> = {
   // getEntityMetaConfig requires the entity registry for an entity that is not core's (since the first commit);
   // lib/auth reaches it through the user flags service
-  'types/meta.types.ts': "require('@nextsparkjs/registries/entity-registry')",
+  'types/meta.types.ts': { specifier: '@nextsparkjs/registries/entity-registry', call: "require('@nextsparkjs/registries/entity-registry')" },
   // suspendUser drops the cached API keys of the account: it imports lib/api/auth only when a key was deactivated,
   // on purpose, because that module pulls in the config registries
-  'lib/auth/suspension.ts': "import('../api/auth')",
+  'lib/auth/suspension.ts': { specifier: '../api/auth', call: "import('../api/auth')" },
 }
 
 /** The specifiers a module loads at run time. */
 function loadedBy(file: string): string[] {
   const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   const found: string[] = []
-  const followLate = !(path.relative(SRC, file) in OLDER_LATE_LOADS)
+  const older = OLDER_LATE_LOADS[path.relative(SRC, file)]?.specifier
   const visit = (node: ts.Node): void => {
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
       const clause = ts.isImportDeclaration(node) ? node.importClause : undefined
       const typeOnly = Boolean(clause?.isTypeOnly) || (ts.isExportDeclaration(node) && node.isTypeOnly) ||
         Boolean(clause?.namedBindings && ts.isNamedImports(clause.namedBindings) && !clause.name && clause.namedBindings.elements.every(element => element.isTypeOnly))
       if (!typeOnly) found.push(node.moduleSpecifier.text)
-    } else if (followLate && ts.isCallExpression(node) && node.arguments.length === 1 && ts.isStringLiteralLike(node.arguments[0])) {
+    } else if (ts.isCallExpression(node) && node.arguments.length === 1 && ts.isStringLiteralLike(node.arguments[0])) {
       const isRequire = ts.isIdentifier(node.expression) && node.expression.text === 'require'
       const isImport = node.expression.kind === ts.SyntaxKind.ImportKeyword
-      if (isRequire || isImport) found.push((node.arguments[0] as ts.StringLiteralLike).text)
+      const specifier = (node.arguments[0] as ts.StringLiteralLike).text
+      if ((isRequire || isImport) && specifier !== older) found.push(specifier)
     }
     ts.forEachChild(node, visit)
   }
@@ -100,7 +101,7 @@ test('MCP sign-in makes lib/auth load neither the entity registry, nor the scope
 })
 
 test('the two older late loads are still what this file says they are', () => {
-  for (const [file, call] of Object.entries(OLDER_LATE_LOADS)) {
+  for (const [file, { call }] of Object.entries(OLDER_LATE_LOADS)) {
     assert.ok(fs.readFileSync(path.join(SRC, file), 'utf8').includes(call), `${file} no longer has ${call}: take it out of OLDER_LATE_LOADS`)
   }
 })
