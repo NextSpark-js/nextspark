@@ -218,15 +218,36 @@ function ProfilePage() {
   const timezoneValue = watch('timezone')
   const languageValue = watch('language')
 
+  // Static text: it paints with the page, not once the profile has loaded
+  const header = (
+    <header>
+      <h1
+        className="text-2xl font-bold"
+        id="profile-heading"
+      >
+        {t('profile.title')}
+      </h1>
+      <p className="text-muted-foreground mt-1">
+        {t('profile.description')}
+      </p>
+    </header>
+  )
+
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center py-12"
-        role="status"
-        aria-label={t('profile.loading.aria')}
+        className="max-w-4xl space-y-6"
+        data-cy={sel('settings.profile.container')}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
-        <span className="sr-only">{t('profile.loading.text')}</span>
+        {header}
+        <div
+          className="flex items-center justify-center py-12"
+          role="status"
+          aria-label={t('profile.loading.aria')}
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">{t('profile.loading.text')}</span>
+        </div>
       </div>
     )
   }
@@ -261,18 +282,7 @@ function ProfilePage() {
         className="max-w-4xl space-y-6"
         data-cy={sel('settings.profile.container')}
       >
-        {/* Header */}
-        <header>
-          <h1
-            className="text-2xl font-bold"
-            id="profile-heading"
-          >
-            {t('profile.title')}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('profile.description')}
-          </p>
-        </header>
+        {header}
 
         {/* Success Alert */}
         {updateSuccess && (

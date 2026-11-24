@@ -8,7 +8,7 @@ import { resolveHomeRoute } from '@nextsparkjs/core/lib/auth/home-route'
 import { DASHBOARD_HOME_CONFIG } from '@nextsparkjs/core/lib/config/public-config-client'
 import { FEATURES } from '@nextsparkjs/core/lib/config/build-features'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
@@ -51,9 +51,27 @@ function DefaultDashboardPage() {
     if (home.split(/[?#]/)[0] !== '/dashboard') router.replace(home)
   }, [authUser, router])
 
+  // The heading is static text and paints with the page; only what the profile decides waits for it. The session
+  // user (already there, or server-rendered by the shell) names the greeting until the profile arrives.
+  const greeted = user ?? authUser
+  const frame = (content: ReactNode) => (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="mb-8" data-cy="dashboard-welcome">
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
+          <p className="text-muted-foreground mt-1 min-h-6">
+            {greeted ? t('welcome', { name: greeted.firstName || greeted.email || '' }) : null}
+          </p>
+        </div>
+        {content}
+      </div>
+    </div>
+  )
+
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return frame(
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -90,17 +108,8 @@ function DefaultDashboardPage() {
     },
   ]
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="mb-8" data-cy="dashboard-welcome">
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('welcome', { name: user.firstName || user.email || '' })}
-          </p>
-        </div>
-
+  return frame(
+      <>
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
@@ -213,8 +222,7 @@ function DefaultDashboardPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </>
   )
 }
 

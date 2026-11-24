@@ -366,7 +366,8 @@ export class SettingsPOM extends BasePOM {
    * Assert profile settings is visible
    */
   assertProfileVisible() {
-    cy.get(this.selectors.profileContainer).should('be.visible')
+    // The container renders with the heading while the profile loads; a form field means it has
+    cy.get(this.selectors.profileFirstName).should('be.visible')
     return this
   }
 
@@ -461,7 +462,8 @@ export class SettingsPOM extends BasePOM {
    */
   waitForProfile() {
     cy.url().should('include', '/settings/profile')
-    cy.get(this.selectors.profileContainer, { timeout: 15000 }).should('be.visible')
+    // The container renders with the heading while the profile loads; a form field means it has
+    cy.get(this.selectors.profileFirstName, { timeout: 15000 }).should('be.visible')
     return this
   }
 

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { FileTree, FileTreeNode } from "./FileTree";
-import { MarkdownViewer } from "./MarkdownViewer";
-import { BDDTestViewer } from "./bdd";
+import dynamic from "next/dynamic";
+import { BDDTestViewer } from "./bdd/BDDTestViewer";
 import { TestCoverageDashboard } from "./TestCoverageDashboard";
 import { cn } from '../../lib/utils';
 import { sel } from '../../lib/test';
@@ -19,6 +19,15 @@ import { Loader2, FileText, AlertCircle, ArrowLeft, LayoutDashboard, Folder, Fil
 import { useTranslations } from "next-intl";
 import { useTreeNavigation } from '../../hooks/useTreeNavigation';
 import { withBasePath } from "../../lib/base-path"
+
+// The renderers (markdown, syntax highlighting, diagrams) are most of this page's JavaScript and only a selected
+// file needs them, so they load when one is opened instead of with the first paint.
+const viewerLoading = () => (
+  <div className="flex items-center justify-center h-full">
+    <Loader2 className="h-8 w-8 animate-spin text-violet-600 dark:text-violet-400" />
+  </div>
+);
+const MarkdownViewer = dynamic(() => import("./MarkdownViewer").then((m) => m.MarkdownViewer), { ssr: false, loading: viewerLoading });
 
 interface TestFileContent {
   path: string;
