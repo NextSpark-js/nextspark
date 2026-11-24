@@ -354,8 +354,10 @@ active scopes that are missing (`mcpOAuthStepUpScopes`), so a client that author
 loses nothing that does something. A retired scope the connection still holds is not named. A batch is refused
 whole when any of its calls lacks a scope. The refused calls are written to the audit log.
 
-A scope that *was* granted and that the user's role no longer allows is a different case: the tool refuses it, with
-no challenge, because asking again would not help.
+A scope that *was* granted and that the user's role no longer allows is a different case: the call is answered
+with a tool error and no challenge, because asking again would not help. The engine refuses it before the tool
+runs, for every tool that names the scope (an entity tool, or one that declares it in `meta.requiredScopes`), so a
+tool the project wrote that does its work without the API is held to the role too.
 
 Which scopes a tool needs comes from `engine.requiredScopesFor(toolName)`; see
 [MCP Server: scopes a tool needs](../05-api/20-mcp-server.md#scopes-a-tool-needs).
@@ -475,6 +477,7 @@ for every path, Better Auth's own endpoints included, and on every instance.
 | `oauth_refresh_token_revoked`, `oauth_refresh_token_deleted` | A live refresh token revoked or deleted records a revocation of that connection. A rotation is not one |
 | `oauth_revoke_on_password_change` (on `account`), `oauth_revoke_on_suspension` (on `users`) | End every connection of the user |
 | `oauth_end_on_member_removed` (AFTER DELETE on `team_members`) | A member who leaves or is removed loses the connections to that team, and they do not come back if the member does. Deleting a team removes its members, so its connections end the same way. A change of role is not a removal |
+| `oauth_consent_requires_membership` (BEFORE INSERT, and UPDATE of the user or the team, on `oauthConsent`) | A consent is written only for a member of its team, with the membership row locked (`FOR KEY SHARE`), so a removal and a consent being written at the same moment are ordered: the consent is refused, or it is deleted with the membership |
 
 The share lock in the first rule is what makes a renewal and a disconnection exclude each other. A renewal in flight
 either writes its new token before the consent goes, and the token is removed with the rest, or finds no consent and

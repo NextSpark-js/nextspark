@@ -12,7 +12,7 @@ project that does not turn the feature on has two things to do: move two depende
 | `better-auth` | `~1.7.7` | `~1.7.27` |
 | `@better-fetch/fetch` | `1.3.2` | `1.3.3`, the exact version Better Auth 1.7.27 pins |
 | Core's own dependencies | | `@better-auth/oauth-provider`, `@better-auth/mcp`, `@better-auth/cimd` and `@better-auth/core`, all `~1.7.27`. They come with `@nextsparkjs/core`: a project does not declare them |
-| Migrations | Up to `048` | `049_oauth_provider.sql`: ten service-only tables and eight triggers for the OAuth authorization server, three of them on existing tables (`account`, `users`, `team_members`). No existing table is altered |
+| Migrations | Up to `048` | `049_oauth_provider.sql`: ten service-only tables and nine triggers for the OAuth authorization server, three of them on existing tables (`account`, `users`, `team_members`). No existing table is altered |
 | MCP endpoint (`/api/mcp`) | API key only | API key, and, only when the project turns it on, an OAuth access token obtained by signing in through the browser |
 | Rate limit tiers | `auth`, `authIdentifier`, `api`, `strict`, `read`, `write`, `webhook`, `ingest` | The same plus `credential`: 1000 charges a minute per API key or MCP connection |
 | `features` of `nextspark.config.ts` | `billing`, `superadmin` (both on by default) | The same plus `mcpOAuth`, **off** by default |
@@ -55,12 +55,16 @@ A test that asserted the `415` of an empty sign-out, or the verification email o
    pnpm db:migrate
    ```
 
-   `049_oauth_provider.sql` is applied to every project, with the feature on or off. Nothing reads or writes its
-   tables while the feature is off. It adds two triggers to existing tables, on `account` (a changed password) and
-   on `users` (a suspension); with no OAuth connection they find nothing to do. Like every core migration it has
-   no down step: take a backup first if you need to be able to go back.
+   `049_oauth_provider.sql` is applied to every project, with the feature on or off. The app neither reads nor
+   writes its tables while the feature is off. It adds three triggers to existing tables, which run in every
+   project: on `account` (a changed password) and on `users` (a suspension), each of which records one row in
+   `oauthRevocation` (the newest of a user is kept), and on `team_members` (a member who leaves or is removed),
+   which deletes that member's consents for the team: there are none while the feature is off. Like every core
+   migration it has no down step: take a backup first if you need to be able to go back.
 
-That is all. Nothing else changes for a project that leaves the feature off:
+That is all, apart from two things that reach a project that leaves the feature off: the page slugs `oauth` and
+`.well-known` are reserved, and the per-key limit of API keys is shared across instances when Redis is configured
+(see below). Nothing else changes:
 
 - `/api/mcp` keeps taking an API key only, and answers the same `401` without one.
 - The host gets no new route: the OAuth routes are generated only with `features.mcpOAuth`.

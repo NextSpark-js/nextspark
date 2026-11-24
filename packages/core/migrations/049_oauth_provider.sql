@@ -21,8 +21,8 @@
 -- `oauthAccessToken.token` is NOT NULL: Better Auth 1.7.27 declares the field without `required: false`, which is
 -- required, and its migration planner reports a nullable column there as drift.
 --
--- Additive only: no existing table changes; three of its eight triggers are on existing tables (account, users,
--- team_members). Undoing it is dropping the eight triggers and the eight functions, then the ten tables (in reverse order of
+-- Additive only: no existing table changes; three of its nine triggers are on existing tables (account, users,
+-- team_members). Undoing it is dropping the nine triggers and the nine functions, then the ten tables (in reverse order of
 -- creation), which signs every MCP client out and makes them authorize again.
 --
 -- This is the only migration of the feature: everything it needs is in this file. Once it has been released it is
@@ -470,6 +470,38 @@ CREATE TRIGGER oauth_end_on_member_removed
   AFTER DELETE ON public."team_members"
   FOR EACH ROW
   EXECUTE FUNCTION public.end_oauth_connections_of_member();
+
+--    The other half: a consent is written only for a member. The authorization server checks the membership and
+--    writes the consent in two statements, and a removal that commits between them would find no consent to delete
+--    and leave the new one behind, for someone who is no longer in the team. The membership row is locked while the
+--    consent is written (FOR KEY SHARE: a change of role does not wait for it, a removal does), so the two are
+--    ordered: either the removal comes first and the consent is refused, or the consent comes first and the removal
+--    deletes it. A consent with no team is not an MCP grant and is not constrained.
+CREATE OR REPLACE FUNCTION public.require_membership_for_oauth_consent()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW."referenceId" IS NULL OR NEW."userId" IS NULL THEN
+    RETURN NEW;
+  END IF;
+  PERFORM 1 FROM public."team_members"
+    WHERE "teamId" = NEW."referenceId" AND "userId" = NEW."userId"
+    FOR KEY SHARE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'oauth consent refused: user % is not a member of team %', NEW."userId", NEW."referenceId"
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS oauth_consent_requires_membership ON public."oauthConsent";
+CREATE TRIGGER oauth_consent_requires_membership
+  BEFORE INSERT OR UPDATE OF "userId", "referenceId" ON public."oauthConsent"
+  FOR EACH ROW
+  EXECUTE FUNCTION public.require_membership_for_oauth_consent();
 
 DROP TRIGGER IF EXISTS oauth_revoke_on_password_change ON public."account";
 CREATE TRIGGER oauth_revoke_on_password_change

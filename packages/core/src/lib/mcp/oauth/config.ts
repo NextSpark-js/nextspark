@@ -9,22 +9,20 @@
  * At runtime it only counts while the MCP endpoint itself is on, and `MCP_OAUTH_ENABLED=false` turns it off without
  * a build (the emergency switch).
  */
-import { FEATURES } from '@nextsparkjs/registries/features'
 import { withBasePath } from '../../base-path'
 import { APP_CONFIG_MERGED } from '../../config/config-client'
 import { readAllowList } from './allowed-clients'
 import { resolveAppUrl, resolveBaseUrl } from '../../utils/base-url'
+import { isMcpOAuthBuilt } from './built'
+
+// Client code takes it from './built': this module reads the app configuration, which no public page should load
+export { isMcpOAuthBuilt }
 
 /** MCP kill switch: on in development unless 'false', off in production unless 'true'. */
 export function isMcpEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const flag = env.MCP_ENABLED
   if (env.NODE_ENV === 'production') return flag === 'true'
   return flag !== 'false'
-}
-
-/** The project was built with MCP browser sign-in (`features.mcpOAuth`). Client-safe. */
-export function isMcpOAuthBuilt(): boolean {
-  return FEATURES.mcpOAuth === true
 }
 
 export function isMcpOAuthEnabled(env: NodeJS.ProcessEnv = process.env): boolean {

@@ -163,10 +163,22 @@ export function createMcpEngine(
         (async (args: Record<string, unknown>) => {
           const startedAt = Date.now()
           let result: McpToolResult
-          try {
-            result = await tool.handler(args ?? {}, ctx)
-          } catch (error) {
-            result = errorResult(`Unexpected error: ${error instanceof Error ? error.message : String(error)}`, 500)
+          // An OAuth connection is held to what its user's role allows now (ctx.scopes). The request was already
+          // refused if the connection was never granted a scope the tool declares; this is the other case, a scope
+          // that was granted and the role has lost since. An entity tool would be refused by the API handler it
+          // calls; a tool the project wrote may never call one, so it is refused here, before it runs.
+          const roleLacks = ctx.principal?.oauth ? scopesOfToolMeta(tool.meta).filter(scope => !ctx.scopes.includes(scope)) : []
+          if (roleLacks.length) {
+            result = errorResult(
+              `Your role in the team does not allow ${roleLacks.join(', ')} any more, so this tool cannot run for this connection. Connecting again will not change it: ask an administrator of the team.`,
+              403
+            )
+          } else {
+            try {
+              result = await tool.handler(args ?? {}, ctx)
+            } catch (error) {
+              result = errorResult(`Unexpected error: ${error instanceof Error ? error.message : String(error)}`, 500)
+            }
           }
           await audit({
             apiKeyId: ctx.apiKeyId,
@@ -234,13 +246,16 @@ export function createMcpEngine(
    * of an agent's activity most worth being able to reconstruct.
    */
   async function auditRefused(body: unknown, ctx: ToolExecutionContext, granted: readonly string[]): Promise<void> {
+    // Written together: each write has its own deadline (lib/mcp/audit), and one after another a refused batch
+    // would wait for the sum of them before its 403
+    const writes: Array<Promise<void>> = []
     for (const message of Array.isArray(body) ? body : [body]) {
       const call = message as { jsonrpc?: unknown; method?: unknown; params?: { name?: unknown; arguments?: unknown } } | null
       if (call?.jsonrpc !== '2.0' || call.method !== 'tools/call' || typeof call.params?.name !== 'string') continue
       const tool = tools.find(candidate => candidate.name === call.params!.name)
       if (!tool) continue
       const args = (call.params.arguments && typeof call.params.arguments === 'object' ? call.params.arguments : {}) as Record<string, unknown>
-      await audit({
+      writes.push(audit({
         apiKeyId: ctx.apiKeyId,
         oauth: ctx.principal?.oauth,
         userId: ctx.userId,
@@ -253,8 +268,9 @@ export function createMcpEngine(
         requestSummary: args,
         responseTimeMs: 0,
         missingScopes: requiredScopesFor(tool.name).filter(scope => !granted.includes(scope)),
-      })
+      }))
     }
+    await Promise.all(writes)
   }
 
   /** Every scope some tool needs, for telling a client what there is to ask for. */

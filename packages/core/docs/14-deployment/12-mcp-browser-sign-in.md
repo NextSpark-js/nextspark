@@ -69,7 +69,7 @@ pnpm db:migrate --expect-database <name> --expect-host <host>
 `049_oauth_provider.sql` is a core migration, so `db:migrate` applies it to every project, with the feature on or
 off. It adds ten tables (`jwks`, `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`,
 `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`), all
-service-only under RLS, and eight triggers. It changes no existing table; three of the triggers are on existing
+service-only under RLS, and nine triggers. It changes no existing table; three of the triggers are on existing
 tables (`account`, for a changed password, `users`, for a suspension, and `team_members`, for a member who leaves
 or is removed). The app neither reads nor writes the new tables while the feature is off; those three triggers
 run in every project: the first two record one row in `oauthRevocation`, the third deletes consents that do not

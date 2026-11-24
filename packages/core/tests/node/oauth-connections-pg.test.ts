@@ -87,6 +87,7 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.deepEqual(before, [
       'oauth_consent_narrowed',
       'oauth_consent_removed',
+      'oauth_consent_requires_membership',
       'oauth_end_on_member_removed',
       'oauth_refresh_token_deleted',
       'oauth_refresh_token_requires_consent',
@@ -395,6 +396,64 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.deepEqual(await tokensOf('u-bea', 'team-1'), [])
     assert.equal(await consentScopes('u-bea', 'team-1'), undefined)
     assert.deepEqual((await store.userConnections('u-bea')).map(c => c.teamId), [])
+    await owner.query(`UPDATE team_members SET role = 'member' WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
+  })
+
+  await t.test('a consent is written only for a member of the team', async () => {
+    await reset()
+    await assert.rejects(consent('u-bea', 'team-2', [READ]), /oauth consent refused/, 'Bea is not in team 2')
+    await assert.rejects(consent('u-ana', 'no-such-team', [READ]), /oauth consent refused/)
+    await consent('u-bea', 'team-1', [READ])
+    // moved to a team the user is not in: refused as well
+    await assert.rejects(owner.query(`UPDATE "oauthConsent" SET "referenceId" = 'team-2' WHERE "userId" = 'u-bea'`), /oauth consent refused/)
+    // a consent with no team is not an MCP grant: left alone
+    await owner.query(`INSERT INTO "oauthConsent" (id, "clientId", "userId", scopes, "createdAt", "updatedAt") VALUES ('consent-no-team', $1, 'u-bea', '["openid"]', now(), now())`, [CLIENT])
+    await owner.query(`DELETE FROM "oauthConsent" WHERE id = 'consent-no-team'`)
+  })
+
+  await t.test('a removal that gets there first: the consent being written waits for it and is then refused', async () => {
+    await reset()
+    await other.query('BEGIN')
+    await other.query(`DELETE FROM team_members WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
+    let settled = false
+    const writing = consent('u-bea', 'team-1', [...BASE, READ]).then(
+      () => { settled = true; return 'written' },
+      (error: Error) => { settled = true; return error.message }
+    )
+    await new Promise(resolve => setTimeout(resolve, 300))
+    assert.equal(settled, false, 'the consent waits for the removal to end')
+    await other.query('COMMIT')
+    assert.match(await writing, /oauth consent refused/)
+    assert.equal(await consentScopes('u-bea', 'team-1'), undefined)
+    await owner.query(`INSERT INTO team_members ("teamId", "userId", role) VALUES ('team-1', 'u-bea', 'member')`)
+  })
+
+  await t.test('a consent that gets there first: the removal waits for it and then takes it away', async () => {
+    await reset()
+    await other.query('BEGIN')
+    await other.query(
+      `INSERT INTO "oauthConsent" (id, "clientId", "userId", "referenceId", scopes, "createdAt", "updatedAt") VALUES ('consent-race', $1, 'u-bea', 'team-1', $2::jsonb, now(), now())`,
+      [CLIENT, JSON.stringify([...BASE, READ])]
+    )
+    let removed = false
+    const removing = owner.query(`DELETE FROM team_members WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`).then(() => { removed = true })
+    await new Promise(resolve => setTimeout(resolve, 300))
+    assert.equal(removed, false, 'the removal waits for the consent being written')
+    await other.query('COMMIT')
+    await removing
+    assert.equal(await consentScopes('u-bea', 'team-1'), undefined, 'the consent written just before went with the membership')
+    await owner.query(`INSERT INTO team_members ("teamId", "userId", role) VALUES ('team-1', 'u-bea', 'member')`)
+  })
+
+  await t.test('a change of role does not wait for a consent being written, nor the other way round', async () => {
+    await reset()
+    await other.query('BEGIN')
+    await other.query(
+      `INSERT INTO "oauthConsent" (id, "clientId", "userId", "referenceId", scopes, "createdAt", "updatedAt") VALUES ('consent-role', $1, 'u-bea', 'team-1', '["tasks:read"]', now(), now())`,
+      [CLIENT]
+    )
+    await owner.query(`UPDATE team_members SET role = 'admin' WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
+    await other.query('COMMIT')
     await owner.query(`UPDATE team_members SET role = 'member' WHERE "teamId" = 'team-1' AND "userId" = 'u-bea'`)
   })
 

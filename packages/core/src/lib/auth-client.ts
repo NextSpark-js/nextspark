@@ -4,7 +4,7 @@ import { emailOTPClient, magicLinkClient } from "better-auth/client/plugins";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import type { auth } from "./auth";
 import { withBasePath } from "./base-path";
-import { isMcpOAuthBuilt } from "./mcp/oauth/config";
+import { isMcpOAuthBuilt } from "./mcp/oauth/built";
 
 export const authClient = createAuthClient({
   // In the browser, always talk to the origin the page was actually served

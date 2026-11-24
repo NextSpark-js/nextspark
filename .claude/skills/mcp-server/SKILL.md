@@ -268,7 +268,9 @@ and every route handler answers 404 itself (`if (!isMcpOAuthEnabled()) return no
   `403` before anything runs, with `WWW-Authenticate: Bearer error="insufficient_scope", scope="..."` naming
   the active scopes it has plus the active ones that are missing (`mcpOAuthStepUpScopes`: a retired scope the
   connection still holds is not named), so authorizing again with that list loses nothing that does something. A batch is refused whole. A scope that was granted and the role no longer allows is refused by the
-  tool instead: asking again would not help.
+  engine before the tool runs (a tool error, no challenge: asking again would not help), for every tool that names
+  it, hand-written ones included (`roleLacks` in `engine.ts`). Only an OAuth connection: an API key's calls are
+  checked by the handlers.
 
 ## Ending and narrowing a connection
 
@@ -335,6 +337,7 @@ paths core wrote and for none of Better Auth's. So the rules are triggers:
 | `oauth_refresh_token_revoked`, `oauth_refresh_token_deleted` | A live refresh token revoked or deleted records a revocation of that connection. A rotation is not one |
 | `oauth_revoke_on_password_change` (on `account`), `oauth_revoke_on_suspension` (on `users`) | End every connection of the user |
 | `oauth_end_on_member_removed` (AFTER DELETE on `team_members`) | A member who leaves or is removed, and every member of a deleted team, loses the connections to that team |
+| `oauth_consent_requires_membership` (BEFORE INSERT, UPDATE of user or team, on `oauthConsent`) | A consent only for a member, with the membership row locked `FOR KEY SHARE`: a removal and a consent written at the same moment are ordered |
 
 - **The share lock is what orders a renewal against a disconnection or a narrowing.** The new token either is
   written first (and removed or cut down with the rest), or waits and then finds no consent (refused) or a

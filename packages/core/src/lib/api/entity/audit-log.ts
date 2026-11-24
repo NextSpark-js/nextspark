@@ -75,7 +75,9 @@ export async function logGenericHandlerUsage(
         statusCode,
         ipAddress,
         userAgent,
-        null,
+        // An OAuth call has no api_key row (#541): without this its row would read as a browser session's, the
+        // only other case of a null "apiKeyId". The same marker the `mcp:<tool>` row of the call carries.
+        auth?.oauth ? JSON.stringify({ credential: 'oauth', oauthClientId: auth.oauth.clientId, oauthTokenId: auth.oauth.tokenId ?? null }) : null,
         typeof responseTime === 'number' ? Math.round(responseTime) : null,
       ],
       userId
