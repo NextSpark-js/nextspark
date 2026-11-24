@@ -90,7 +90,9 @@ test('the tracked budget is valid and covers public, auth and dashboard routes',
   const routes = Object.entries(BUDGET.routes)
   for (const url of ['/', '/support', '/login', '/signup', '/dashboard', '/dashboard/tasks']) assert.ok(BUDGET.routes[url], url)
   for (const [url, rule] of routes) {
-    assert.equal(rule.public, !url.startsWith('/dashboard'), url)
+    assert.equal(rule.public, !/^\/(dashboard|devtools)/.test(url), url)
+    // The devtools routes have no 193 reference: their ceiling is the measured size of #561 plus about 3% (a fixed number)
+    if (url.startsWith('/devtools')) continue
     // The ceiling is the 0.1.0-beta.193 reference plus 5% (G0 decision 10)
     // The routes the 'groups' scope makes lighter are held to the 'groups' measurement plus 5% instead (#362)
     if (rule.referenceGroupsGzipBytes) assert.ok(rule.maxGzipBytes >= rule.referenceGroupsGzipBytes && rule.maxGzipBytes <= Math.ceil(rule.referenceGroupsGzipBytes * 1.05) && rule.maxGzipBytes < rule.reference193GzipBytes, url)

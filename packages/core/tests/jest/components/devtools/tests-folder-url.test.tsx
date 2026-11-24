@@ -14,7 +14,7 @@ jest.mock('next-intl', () => ({
 }))
 jest.mock('../../../../src/components/devtools/TestCoverageDashboard', () => ({ TestCoverageDashboard: () => <div>dashboard</div> }))
 jest.mock('../../../../src/components/devtools/MarkdownViewer', () => ({ MarkdownViewer: ({ content }: { content: string }) => <div>{content}</div> }))
-jest.mock('../../../../src/components/devtools/bdd', () => ({ BDDTestViewer: () => <div>bdd</div> }))
+jest.mock('../../../../src/components/devtools/bdd/BDDTestViewer', () => ({ BDDTestViewer: () => <div>bdd</div> }))
 
 import { TestCasesViewer } from '../../../../src/components/devtools/TestCasesViewer'
 
