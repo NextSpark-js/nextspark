@@ -5,7 +5,7 @@ description: |
   Covers distributed rate limiting with Redis, tier selection, HOC patterns, and security best practices.
   Use this skill when creating new API endpoints or reviewing rate limiting implementation.
 allowed-tools: Read, Glob, Grep
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Rate Limiting Skill
@@ -17,8 +17,8 @@ Rate limiting patterns and best practices for protecting API endpoints from abus
 ```
 core/lib/
 ├── api/
-│   └── rate-limit.ts          # withRateLimitTier HOC, checkDistributedRateLimit
-└── rate-limit-redis.ts        # Redis/Upstash distributed rate limiting
+│   └── rate-limit.ts          # withRateLimitTier HOC, checkDistributedRateLimit, credentialRateLimitResponse
+└── rate-limit-redis.ts        # Upstash Redis distributed rate limiting, the built-in tiers
 
 packages/core/src/routes/api/  # All template routes use rate limiting
 plugins/*/api/                    # Plugin API routes
@@ -60,7 +60,7 @@ export const POST = withWriteRateLimit(NextSparkPOST) // POST, PUT, PATCH, DELET
 - `prepare` prints the opted-out routes as `Info: [NS_HOST_RATE_LIMIT_OPT_OUT]`. Opt out `dynamic = 'force-static'` routes.
 - `export const rateLimit = false` opts the whole route out (webhooks with their own limits). Only the
   literal `false`; anything else is `NS_HOST_INVALID_RATE_LIMIT`.
-- `DISABLE_RATE_LIMITING=true` turns it off with the rest.
+- `DISABLE_RATE_LIMITING=true` turns it off with the other per-address limits (not the per-credential limit).
 
 So in a project or plugin route, do not add `withRateLimitTier` just to get `read`/`write`: the default
 does it. Add it to choose another tier or to get core's CORS and origin check.
@@ -72,13 +72,22 @@ does it. Add it to choose another tier or to get core's CORS and origin check.
 
 ## Rate Limit Tiers
 
+The built-in tiers (`DEFAULT_TIERS` in `packages/core/src/lib/rate-limit-redis.ts`):
+
 | Tier | Limit | Window | Use Case |
 |------|-------|--------|----------|
-| `auth` | 5 | 15 min | Authentication endpoints (login, register, reset password) |
+| `auth` | 60 | 15 min | Authentication endpoints, per address |
+| `authIdentifier` | 5 | 15 min | Codes and passwords, counted per email |
 | `read` | 200 | 1 min | GET requests, read-only operations |
 | `write` | 50 | 1 min | POST, PUT, PATCH, DELETE operations |
 | `api` | 100 | 1 min | General API (default tier) |
 | `strict` | 10 | 1 hr | Sensitive operations (bulk delete, admin actions) |
+| `webhook` | 500 | 1 hr | Webhook endpoints (the signature is the primary check) |
+| `ingest` | 1000 | 1 min | High-volume ingestion endpoints |
+| `credential` | 1000 | 1 min | What one API key or one MCP connection may send, counted by the credential and not by the address. Not a tier to pass to `withRateLimitTier`: see "Per-credential limit" |
+
+`rateLimit.tiers` in `config/app.config.ts` overrides the numbers of a built-in tier (`credential` included) or
+declares a tier of your own.
 
 ## How to Apply Rate Limiting
 
@@ -178,12 +187,13 @@ export const DELETE = withRateLimitTier(async (request: NextRequest) => {
 
 ## Response Headers
 
-All rate-limited responses include these headers:
+The REST responses of a rate-limited route include these headers (the 429 of `/api/mcp` for the per-credential
+limit is a JSON-RPC error that carries `Retry-After` only):
 
 ```
 X-RateLimit-Limit: 200        # Max requests in window
 X-RateLimit-Remaining: 150    # Requests remaining
-X-RateLimit-Reset: 1705432100 # Unix timestamp when window resets
+X-RateLimit-Reset: 1705432100000 # When the window resets, in milliseconds since the epoch
 ```
 
 When limit is exceeded (429 response):
@@ -234,33 +244,60 @@ All 3 requests count toward the SAME 200/min 'read' limit
 (see `docs/14-deployment/10-client-address.md`). Never read `x-forwarded-for` or similar headers yourself: use the helper.
 
 It runs before the route authenticates anything, so no credential header (`x-api-key` included) picks the bucket.
+
+### Per-credential limit (tier `credential`)
+
 A request authenticated with an API key (`authenticateRequest`, `validateAndAuthenticateRequest`, `validateAndAuthenticateApiRequest`)
-is also limited per key (`apiKeyRateLimitResponse`, counted once per request), on top of the per-address limit. With
-`authenticateRequest`, a key over its limit comes back as `success: false` with `rateLimitResponse` (429); `createAuthFailureResponse`
-returns it. The per-key limit is a safety cap and stays on with `DISABLE_RATE_LIMITING=true`, which only turns off the
-per-address limit and Better Auth's own limiter. On that 429 the wrapper keeps the handler's own `X-RateLimit-*` headers.
+or with an MCP connection (an OAuth access token on `/api/mcp`, see the `mcp-server` skill) is also limited per
+credential, on top of the per-address limit: `credentialRateLimitResponse(request, auth)` in
+`packages/core/src/lib/api/rate-limit.ts`. Every call site in core uses it.
+
+- **The key**: an API key is counted by its key id; an MCP connection by `oauthRateLimitKey`
+  (`oauth:<clientId>:<userId>:<teamId>`, one count per connection, `lib/api/auth/in-process-principal.ts`).
+- **Two counts**: always in this process, and also in Redis when `UPSTASH_REDIS_REST_URL` and
+  `UPSTASH_REDIS_REST_TOKEN` are both set, so every instance shares the count. The request is refused when either
+  count is over. In memory alone the limit is per process: on serverless every instance gives a credential its own
+  1000, which is close to no limit.
+  For that reason MCP browser sign-in does not start in production without Redis, unless the deployment sets
+  `MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit` (`sharedRateLimitGate`, see the `mcp-server` skill). API keys have
+  no such gate. `maybeRedisConfigured(env)` is the one definition of "Redis is configured" both use.
+- **Fails open on Redis**: when Redis fails the shared check lets the request through; the count of the process
+  still applies.
+- **Once per request**, however many times the request is authenticated (a `WeakMap` keyed by the request).
+- **A safety cap**: it stays on with `DISABLE_RATE_LIMITING=true`, which only turns off the per-address limits and
+  Better Auth's own limiter.
+- **What an MCP request costs**: one charge for the request and one more for each API handler a tool calls in process. A request with one
+  generated entity tool costs two, a hand-written tool one plus the handlers it calls. Same with an API key.
+- `apiKeyRateLimitResponse` is the in-process half alone. It is kept for projects that call it; new code calls
+  `credentialRateLimitResponse` (it is async: `await` it).
+
+With `authenticateRequest`, a credential over its limit comes back as `success: false` with `rateLimitResponse` (429);
+`createAuthFailureResponse` returns it. On that 429 the wrapper keeps the handler's own `X-RateLimit-*` headers.
 
 `withRateLimitTier` also adds core's CORS to every response it returns (route, 429, origin-check 403), except in the `webhook`
 tier. Export `OPTIONS = corsPreflight` (`@nextsparkjs/core/lib/api/cors-response`) from every wrapped route so its preflight matches.
 
 ## Redis Configuration (Production)
 
-For distributed rate limiting across multiple instances, configure Redis:
+For distributed rate limiting across multiple instances, configure Upstash Redis (REST). Both variables are
+required: the client is created only when both are set (`packages/core/src/lib/rate-limit-redis.ts`).
 
 ```env
-# Upstash Redis (recommended for Vercel)
 UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
 UPSTASH_REDIS_REST_TOKEN=xxx
-
-# Or standard Redis
-REDIS_URL=redis://localhost:6379
 ```
 
-Without Redis, the system falls back to in-memory rate limiting (single-instance only).
+- Only Upstash's REST API is supported (`@upstash/redis`). `REDIS_URL` is not read: a standard Redis connection
+  string does nothing.
+- Vercel's Marketplace creates the Upstash variables as `KV_REST_API_URL` and `KV_REST_API_TOKEN`. The framework
+  does not read those names: add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` by hand.
+- Without Redis, the per-address tiers fall back to in-memory counting (single-instance only), and the
+  per-credential limit is counted per process only.
 
-## Disabling Rate Limiting (Development/Testing)
+## Disabling the Per-Address Limits (Development/Testing)
 
-To disable rate limiting completely (useful for development, testing, or debugging):
+To turn off the per-address limits and Better Auth's own limiter (useful for development, testing, or debugging).
+The per-credential limit is a safety cap and stays on:
 
 ```env
 # .env.local or .env
@@ -271,13 +308,14 @@ When disabled:
 - The per-address checks (`withRateLimitTier`, `checkDistributedRateLimit`) are bypassed
 - Better Auth's own limiter is off too (`rateLimit.enabled: false` in `lib/auth.ts`): sign-in, sign-up and the
   email OTP rules (3 per minute per address) no longer answer 429
-- The per-API-key limit (`checkRateLimit` by key id) stays on: it is a per-key cap, not per address
+- The per-credential limit (`credentialRateLimitResponse`: an API key or an MCP connection) stays on: it is a
+  cap per credential, not per address
 - A warning is logged once: `[RateLimit] WARNING: Rate limiting is DISABLED...`
-- Handlers execute without rate limit headers
+- Handlers execute without the per-address rate limit headers
 
 Any value other than `true` leaves everything on, Better Auth included (its default: on when `NODE_ENV=production`).
 
-**WARNING:** Never disable rate limiting in production environments! Only for QA/preview deploys and tests.
+**WARNING:** Never set `DISABLE_RATE_LIMITING=true` in production environments! Only for QA/preview deploys and tests.
 
 **Use cases for disabling:**
 - Local development when hitting limits during testing
@@ -375,8 +413,21 @@ describe('Rate Limiting', () => {
 });
 ```
 
+### The per-credential limit
+
+```bash
+# from packages/core: the shared store is mocked
+pnpm test -- tests/jest/lib/api/credential-rate-limit.test.ts
+```
+
+It covers: no Redis configured, the numbers of the `credential` tier and an override in `rateLimit.tiers`, one
+count per request, and a 429 from the process count or from the shared count. It mocks Redis, so it does not
+prove two instances sharing a count: that takes a deployment with both `UPSTASH_REDIS_REST_*` variables set and
+more requests than the limit sent in parallel with one credential (expect exactly the limit to answer 200).
+
 ## Related Skills
 
+- `mcp-server` - `/api/mcp`, the MCP connection the `credential` tier also limits
 - `better-auth` - Authentication patterns (auth tier integration)
 - `nextjs-api-development` - API route development patterns
 - `cypress-api` - API testing with rate limit considerations

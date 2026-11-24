@@ -5,7 +5,7 @@ description: |
   Dual authentication (API Key + Session), dynamic entities, metadata system.
   Use this skill to create endpoints, validate APIs, or understand API patterns.
 allowed-tools: Read, Glob, Grep, Bash(python:*)
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Next.js API Development Skill
@@ -108,6 +108,12 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
 })
 ```
 
+> **Three credentials, not two.** `/api/v1/**` accepts a session or an API key over HTTP. The third credential,
+> the OAuth access token of MCP browser sign-in, is accepted by `/api/mcp` only. The MCP server then calls the
+> generic entity handlers in process with the verified principal attached to the request, and
+> `authenticateRequest` returns it as `type: 'api-key'` with `oauth: { clientId, tokenId }`: the same
+> `requiredScope` rule applies, and there is no `api_key` row behind it. See the `mcp-server` skill.
+
 ### Response Helpers (MANDATORY)
 
 ```typescript
@@ -206,6 +212,55 @@ System endpoints that cannot be overridden.
 - `/api/v1/users` - User management
 - `/api/v1/api-keys` - API key management
 - `/api/v1/auth` - Authentication
+
+### 4. Session-Only Internal Routes
+
+A route that backs one of the app's own screens and must never be driven by an API key or by an MCP
+connection does not use `authenticateRequest`. It reads the browser session and nothing else:
+
+```typescript
+// packages/core/src/routes/api/internal/oauth-connections/route.ts (shape)
+import { createApiError, readJsonObject } from '@nextsparkjs/core/lib/api/error-response'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response'
+import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
+import { isMcpOAuthEnabled } from '@nextsparkjs/core/lib/mcp/oauth/config'
+
+export const GET = withRateLimitTier(async (request: NextRequest) => {
+  if (!isMcpOAuthEnabled()) return createApiError('Not found', 404, undefined, 'NOT_FOUND')
+  const session = await getAuthorizationSession(request.headers)
+  if (!session) return createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_FAILED')
+  // ... session.user.id, session.user.role, session.session.id
+}, 'read')
+
+export const OPTIONS = corsPreflight
+```
+
+- `/api/internal/oauth-team` (GET, POST) and `/api/internal/oauth-connections` (GET, PATCH, DELETE) are the two
+  such routes of MCP browser sign-in; `/api/superadmin/**` follows the same rule.
+- There is no scope to declare: no scoped credential is accepted. The subject of every statement is the
+  session's user; another user's row is touched only after a permission check done where the write happens
+  (`disconnectManaged`).
+- Answer a row the caller may not see as the one that is not there (404), not 403.
+
+### 5. Routes That Exist Only When a Feature Is On
+
+A core route that belongs to an opt-in feature is generated into the host only when the project turns the
+feature on. For MCP browser sign-in (`features: { mcpOAuth: true }` in `nextspark.config.ts`):
+
+1. **`packages/core/src/routes/manifest.json`** lists the route (`kind`, `target`, `specifier`), like every
+   core route.
+2. **`OPT_IN_CORE_ROUTES`** in `packages/core/scripts/build/registry/host/features.mjs` holds the patterns of
+   the feature's targets: `nextspark prepare` leaves them out unless the flag is exactly `true`
+   (`omittingFeature`). The opposite list, `OMITTED_CORE_ROUTES`, leaves routes out when a flag is `false`
+   (`billing`, `superadmin`). A new route of an opt-in feature must match a pattern there, or it ships to
+   every project.
+3. **The handler still answers 404 while the feature is off at runtime** (`MCP_OAUTH_ENABLED=false`, or MCP
+   itself off): first line, before reading the session, `if (!isMcpOAuthEnabled()) return notFound()`. Pages
+   of the feature are rewritten to a 404 in `packages/core/src/proxy/index.ts` (a `notFound()` in the page
+   arrives after the layout began streaming a 200).
+
+A host built without the feature has none of these routes, so a project's own routes at those paths are its own.
 
 ## Input Validation
 
@@ -365,7 +420,8 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
 - [ ] Uses `withApiLogging` wrapper
 - [ ] Has `OPTIONS` handler using `handleCorsPreflightRequest()`
 - [ ] All responses wrapped with `addCorsHeaders()`
-- [ ] Dual authentication implemented
+- [ ] Dual authentication implemented (or, for a route behind one of the app's own screens: session only, with `getAuthorizationSession`)
+- [ ] A route of an opt-in feature is in `manifest.json`, matches `OPT_IN_CORE_ROUTES`, and answers 404 while the feature is off
 - [ ] `authenticateRequest` call declares `{ requiredScope }` (or `{ allowAnyScope: true }` with a comment) — undeclared routes reject API keys with 403 `SCOPE_NOT_DECLARED` (#93)
 - [ ] Input validation with Zod schema
 - [ ] Response helpers used (`createApiResponse`, `createApiError`)

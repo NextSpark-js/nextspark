@@ -1,5 +1,5 @@
 /**
- * The per-key limit (1000 requests per minute per validated API key) on routes that authenticate with
+ * The per-key limit (1000 charges per minute per validated API key, one per request) on routes that authenticate with
  * authenticateRequest, on top of the per-address limit of withRateLimitTier; counted once per request.
  */
 import { describe, it, expect, jest, beforeEach, afterAll } from '@jest/globals'

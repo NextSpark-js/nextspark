@@ -46,11 +46,14 @@ The application uses a robust migration system to manage database schema changes
 ├── 001_better_auth_and_functions.sql  # Better Auth tables + helper functions
 ├── 002_auth_tables.sql                 # Additional auth tables
 ├── 003_user_metas.sql                  # Metadata system
-├── 004_users_sample_data.sql           # Sample users (dev only)
-├── 005_api_key.sql                     # API keys table
-├── 006_api_audit_log.sql               # Audit logging
-└── 007_api_key_sample_data.sql         # Sample API keys (dev only)
+├── 004_api_key.sql                     # API keys table
+├── 005_api_audit_log.sql               # Audit logging
+├── ...
+├── 049_oauth_provider.sql              # MCP browser sign-in: OAuth tables and triggers
+└── 090_sample_data.sql                 # Sample data (dev only)
 ```
+
+The listing is an excerpt: core ships migrations `001` to `049`, and the sample data as `090`.
 
 **Theme Migrations:**
 ```text
@@ -430,6 +433,60 @@ UPDATE "_content_migrations" SET filename = '001_schema.sql'
 Run it as a person, on that database, and run `db:migrate` again. If the new file is meant to run again as a new migration, delete the old record instead. `doctor` reports it as `NS_MIGRATION_RENAMED`. A file renamed **and** edited has no match, so it is not found.
 
 **Why this comes up with the order.** Files run in numeric order (see [Order of Execution](#order-of-execution)), which differs from the order of their names as text. A project that numbered its files for the old order can find a file, usually the initial schema, running after migrations that need it on a **new** database, and fixes that by renaming it to the number it needs. The ledger of an existing database still holds the old name, so without the `UPDATE` above the runner would apply the schema again: this is the rename the check finds. Renaming a file is the one change to an applied migration that is safe, as long as its record changes with it.
+
+### One file while a feature is unpublished, a new file afterwards
+
+The rule above has a counterpart for work in progress:
+
+- **While a feature is unpublished**, keep its schema in **one** migration file and edit that file as the feature
+  changes. No database but the developers' own has run it, so they recreate theirs. A branch that piles up
+  `050_fix`, `051_fix_again` for a table nobody has yet ships its own false starts to every project.
+- **Once the file is published** (part of a released version, or applied to a database other people use), it is
+  **never edited**. A change is a new migration with the next number.
+
+MCP browser sign-in (#541) followed it: the whole feature is `049_oauth_provider.sql`. The work added no other
+migration and changed no existing one, although the file was rewritten several times while the feature was being
+built. From the release that carries it, a change to those tables or triggers is a new migration.
+
+### Migration 049: MCP browser sign-in
+
+`049_oauth_provider.sql` creates what the OAuth 2.1 authorization server of the MCP endpoint needs (see
+[MCP server](../05-api/20-mcp-server.md)). It runs on every project, with the feature on or off; while it is off
+the app neither reads nor writes these tables (its three triggers on `account`, `users` and `team_members` run
+all the same, and write at most one row of `oauthRevocation` per user).
+
+| What | Detail |
+| --- | --- |
+| Tables | `jwks`, `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`. Names and column types are the ones Better Auth 1.7.27 expects. |
+| RLS | Every table is service-only: one policy `TO authenticated USING (can_bypass_rls())`. The authorization server reads and writes them on the service connection, like the other auth tables: discovery, token and refresh calls carry no user. `jwks` holds the private half of the signing keys. |
+| Unique index | `uq_oauth_consent_connection` on `oauthConsent("userId", "clientId", "referenceId")`: a connection (a client acting for a user in one team) has one consent. |
+| Existing tables | None is altered. Three triggers are added to existing tables: `account`, `users` and `team_members`. |
+| Functions | Ten: the nine the triggers use, and `revoke_oauth_scope(text)`, which the operator calls through `nextspark mcp:revoke-scope` to take a scope away from every consent that holds it (a connection left with no entity permission is ended). It is not `SECURITY DEFINER`: for a role that RLS applies to it changes nothing. |
+| Applying it again | Changes nothing (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP TRIGGER IF EXISTS` before each `CREATE TRIGGER`). |
+
+The rules it keeps in the database are triggers, because Better Auth changes these rows from several endpoints
+and in separate statements, so no single function in the application could hold them:
+
+| Trigger | On | Rule |
+| --- | --- | --- |
+| `oauth_refresh_token_requires_consent` | `BEFORE INSERT` on `oauthRefreshToken` | A refresh token with a team is written only while the consent of its connection exists (the trigger takes `FOR SHARE` on the consent row; otherwise the insert fails with `oauth connection ended`), and holding no more than the consent: wider scopes are cut down with `oauth_scopes_within`. |
+| `oauth_consent_narrowed` | `AFTER UPDATE OF scopes` on `oauthConsent` | A consent that loses a scope records a revocation and cuts the connection's live refresh tokens down to it. |
+| `oauth_consent_removed` | `AFTER DELETE` on `oauthConsent` | Removing a consent, by whatever means, records a revocation and removes the connection's refresh tokens. |
+| `oauth_refresh_token_revoked`, `oauth_refresh_token_deleted` | `AFTER UPDATE OF revoked`, `AFTER DELETE` on `oauthRefreshToken` | A live refresh token that is revoked or deleted records a revocation of that connection. A rotation is not one. |
+| `oauth_revoke_on_password_change` | `AFTER UPDATE OF password` on `account` | Ends every connection of the user. |
+| `oauth_revoke_on_suspension` | `AFTER UPDATE OF role` on `users`, when the role becomes `suspended` | Ends every connection of the user. |
+| `oauth_end_on_member_removed` | `AFTER DELETE` on `team_members` | A member who leaves or is removed loses the connections to that team. Deleting a team removes its members, so its connections end the same way. |
+| `oauth_consent_requires_membership` | `BEFORE INSERT`, and `UPDATE` of the user or the team, on `oauthConsent` | A consent is written only for a member of its team, with the membership row locked (`FOR KEY SHARE`), so a removal and a consent being written at the same moment are ordered. |
+
+`oauthRevocation` is how an ended connection is refused at once on every instance. An access token is a signed
+JWT that lives ten minutes. It carries, in its `rev` claim, the number of the user's newest revocation when it was
+issued, and `/api/mcp` refuses it once a newer row covers its client and team, or all of the user's connections
+(`src/lib/mcp/oauth/revocation.ts`). No clock is compared.
+
+A change to any of this needs a new migration and a case in `tests/node/oauth-connections-pg.test.ts`, which
+applies the migrations to an empty PostgreSQL and checks these rules with two connections: see
+[Integration Testing](../12-testing/07-integration-testing.md#mcp-browser-sign-in-oauth-connections-pgtestts).
+The Jest suites mock the queries, so they run no trigger.
 
 ---
 

@@ -175,3 +175,25 @@ export function dbDemoResetCommand(options: { status?: boolean; envFile?: boolea
   });
   process.exit(run.status ?? 1);
 }
+
+/**
+ * Take a permission of MCP browser sign-in away from every connection that holds it (`mcp:revoke-scope`).
+ * scripts/db/revoke-oauth-scope.mjs decides whether it may run and does the work: this only hands it the project's
+ * environment. Without `yes` it reports and changes nothing.
+ */
+export function mcpRevokeScopeCommand(scope: string, options: { yes?: boolean; envFile?: boolean } = {}): void {
+  const coreDir = getCoreDir();
+  const projectRoot = getProjectRoot();
+  const projectEnv = resolveDbEnv(projectRoot, process.env, options);
+  // The consents are service-only: the script picks the role that sees them, from the same files
+  const fileEnv = options.envFile === false ? {} : loadProjectEnv(projectRoot, process.env.NODE_ENV);
+  for (const name of ['MIGRATE_DATABASE_URL', 'DATABASE_SERVICE_URL']) {
+    projectEnv[name] = process.env[name] || fileEnv[name];
+  }
+  const run = spawnSync('node', [join(coreDir, 'scripts', 'db', 'revoke-oauth-scope.mjs'), scope, ...(options.yes ? ['--yes'] : [])], {
+    cwd: projectRoot,
+    stdio: 'inherit',
+    env: { ...projectEnv, NEXTSPARK_CORE_DIR: coreDir },
+  });
+  process.exit(run.status ?? 1);
+}

@@ -176,7 +176,8 @@ async function inlineUiPackage(distDir: string): Promise<void> {
  */
 async function buildRouteModules(srcDir: string, distDir: string): Promise<void> {
   // presets.ts is data the registry build reads as text (copied below), not a module
-  const files = await glob('**/*.{ts,tsx}', { cwd: srcDir, ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts', '**/presets.ts'] })
+  // dot: the OAuth discovery routes live under `.well-known/` (#541)
+  const files = await glob('**/*.{ts,tsx}', { cwd: srcDir, dot: true, ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts', '**/presets.ts'] })
   for (const file of files) {
     const source = await readFile(join(srcDir, file), 'utf-8')
     const { code } = await transform(source, {

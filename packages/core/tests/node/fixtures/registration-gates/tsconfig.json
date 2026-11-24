@@ -27,6 +27,9 @@
       "@nextsparkjs/registries/route-handlers": [
         "./tests/node/fixtures/registration-gates/route-handlers.ts"
       ],
+      "@nextsparkjs/registries/features": [
+        "./tests/node/fixtures/registration-gates/features.ts"
+      ],
       "@nextsparkjs/registries/*": [
         "./tests/jest/__mocks__/@nextsparkjs/registries/*"
       ],

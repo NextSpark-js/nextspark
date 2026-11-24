@@ -207,6 +207,11 @@ VERCEL_PROJECT=your-project-name
 
 **See:** [Environment Configuration](./02-environment-configuration.md) for complete list.
 
+Optional features have variables of their own. The MCP endpoint is off in production unless `MCP_ENABLED=true`.
+Rate limits are shared between instances only with `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` both
+set. A project that turns on MCP browser sign-in (`features.mcpOAuth`) follows the checklist in
+[MCP Browser Sign-In Deployment](./12-mcp-browser-sign-in.md): the framework does not check those items at start.
+
 ---
 
 ## Deployment Workflow
@@ -372,6 +377,9 @@ This deployment section covers:
 7. **[Logging](./07-logging.md)** - Logging strategy
 8. **[Rollback Procedures](./08-rollback-procedures.md)** - Rollback and recovery
 9. **[Disaster Recovery](./09-disaster-recovery.md)** - Backup and recovery
+10. **[Client Address](./10-client-address.md)** - The client address behind a proxy or a platform
+11. **[Public Demo Instance](./11-demo-instance.md)** - Running a throwaway demo
+12. **[MCP Browser Sign-In Deployment](./12-mcp-browser-sign-in.md)** - Checklist for the opt-in OAuth sign-in of the MCP endpoint
 
 **Additional Resources:**
 - [Environment Configuration](./02-environment-configuration.md) - Every variable a deployment needs

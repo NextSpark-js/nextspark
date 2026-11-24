@@ -77,6 +77,21 @@ export async function register(): Promise<void> {
     // Production only, not awaited: one warning when DATABASE_URL's role skips RLS, or applies RLS with no DATABASE_SERVICE_URL (#492), never a delay or an error at start
     void import('../lib/rls-runtime').then(({ logRlsBypassAtStartup }) => logRlsBypassAtStartup()).catch(() => {})
 
+    // MCP browser sign-in (#541), production only, not awaited: what its production gate refuses is said at start
+    // (no Redis, or a database role that skips row-level security), not found out on the first OAuth request.
+    // Nothing is loaded or asked in a project built without `features.mcpOAuth`, nor during next build.
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+      void import('../lib/mcp/oauth/built')
+        .then(async ({ isMcpOAuthBuilt }) => {
+          if (!isMcpOAuthBuilt()) return
+          const { isMcpOAuthEnabled } = await import('../lib/mcp/oauth/config')
+          if (!isMcpOAuthEnabled()) return
+          const { mcpOAuthRefusedByGate } = await import('../lib/mcp/oauth/production-gate')
+          await mcpOAuthRefusedByGate()
+        })
+        .catch(() => {})
+    }
+
     console.log('[Instrumentation] Initializing scheduled actions system...')
 
     // A project whose work depends on the recurring actions sets scheduledActions.requireRecurringSeed: the server

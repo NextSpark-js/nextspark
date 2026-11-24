@@ -487,8 +487,8 @@
       "tipRevoke": "Revoca subito la chiave se pensi che sia compromessa",
       "tipHttps": "Usa sempre HTTPS quando invii richieste all'API",
       "limits": "Limiti dell'API:",
-      "limitRate": "1.000 richieste al minuto",
-      "limitHeaders": "Le risposte includono le intestazioni di limitazione della frequenza",
+      "limitRate": "Per impostazione predefinita, 1.000 addebiti al minuto: uno per richiesta e uno in più per ogni chiamata API effettuata da uno strumento MCP",
+      "limitHeaders": "Una risposta REST limitata include le intestazioni Retry-After e X-RateLimit-*; sull’endpoint MCP, solo Retry-After",
       "limitDocs": "Documentazione completa disponibile su /docs",
       "keyCopied": "Chiave API copiata!",
       "copyKey": "Copia chiave API",
@@ -570,6 +570,39 @@
         "name": "Sistema",
         "description": "Accesso completo al sistema"
       }
+    }
+  },
+  "connectedApps": {
+    "title": "Applicazioni connesse",
+    "description": "Applicazioni che hanno effettuato l’accesso al tuo account per lavorare con i tuoi dati, come un assistente IA. Ognuna lavora con un solo team.",
+    "empty": "Nessuna applicazione è connessa.",
+    "loading": "Caricamento",
+    "loadError": "Impossibile caricare le connessioni.",
+    "unknownClient": "Un’applicazione",
+    "team": "Team: {team}",
+    "teamAndUser": "Team: {team} · {user}",
+    "since": "Connessa il {date} · rinnovata l’ultima volta il {renewed}",
+    "disconnect": "Disconnetti",
+    "disconnected": "L’applicazione è stata disconnessa.",
+    "error": "Impossibile disconnettere l’applicazione.",
+    "managedTitle": "Connessioni di altri membri",
+    "managedDescription": "Applicazioni che altri membri hanno connesso ai team di cui sei proprietario o amministratore.",
+    "confirmTitle": "Disconnettere {client}?",
+    "confirmDescription": "Perde subito l’accesso a {team}. Per usarla di nuovo va connessa e autorizzata di nuovo.",
+    "cancel": "Annulla",
+    "actions": {
+      "read": "leggere",
+      "write": "creare e modificare",
+      "delete": "eliminare"
+    },
+    "edit": {
+      "open": "Modifica autorizzazioni",
+      "title": "Autorizzazioni di {client}",
+      "description": "Deseleziona ciò che non deve più poter fare in {team}. Resta connessa con ciò che rimane. Per darle di più, chiedilo dall’applicazione: apre la schermata di consenso.",
+      "save": "Salva",
+      "saved": "Le autorizzazioni sono state aggiornate.",
+      "error": "Impossibile aggiornare le autorizzazioni.",
+      "empty": "Per togliere tutte le autorizzazioni, disconnetti l’applicazione."
     }
   }
 }

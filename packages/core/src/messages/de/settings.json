@@ -487,8 +487,8 @@
       "tipRevoke": "Widerrufen Sie den Schlüssel sofort, wenn Sie vermuten, dass er kompromittiert wurde",
       "tipHttps": "Verwenden Sie bei Anfragen an die API immer HTTPS",
       "limits": "API-Limits:",
-      "limitRate": "1.000 Anfragen pro Minute",
-      "limitHeaders": "Antworten enthalten Rate-Limit-Header",
+      "limitRate": "Standardmäßig 1.000 Belastungen pro Minute: eine pro Anfrage und eine weitere für jeden API-Aufruf eines MCP-Tools",
+      "limitHeaders": "Eine begrenzte REST-Antwort enthält die Header Retry-After und X-RateLimit-*; am MCP-Endpunkt nur Retry-After",
       "limitDocs": "Die vollständige Dokumentation finden Sie unter /docs",
       "keyCopied": "API-Schlüssel kopiert!",
       "copyKey": "API-Schlüssel kopieren",
@@ -570,6 +570,39 @@
         "name": "System",
         "description": "Vollzugriff auf das System"
       }
+    }
+  },
+  "connectedApps": {
+    "title": "Verbundene Anwendungen",
+    "description": "Anwendungen, die sich bei Ihrem Konto angemeldet haben, um mit Ihren Daten zu arbeiten, etwa ein KI-Assistent. Jede arbeitet mit einem einzigen Team.",
+    "empty": "Keine Anwendung ist verbunden.",
+    "loading": "Wird geladen",
+    "loadError": "Die Verbindungen konnten nicht geladen werden.",
+    "unknownClient": "Eine Anwendung",
+    "team": "Team: {team}",
+    "teamAndUser": "Team: {team} · {user}",
+    "since": "Verbunden am {date} · zuletzt erneuert am {renewed}",
+    "disconnect": "Trennen",
+    "disconnected": "Die Anwendung wurde getrennt.",
+    "error": "Die Anwendung konnte nicht getrennt werden.",
+    "managedTitle": "Verbindungen anderer Mitglieder",
+    "managedDescription": "Anwendungen, die andere Mitglieder mit Teams verbunden haben, deren Inhaber oder Administrator Sie sind.",
+    "confirmTitle": "{client} trennen?",
+    "confirmDescription": "Sie verliert sofort den Zugriff auf {team}. Um sie wieder zu nutzen, muss sie erneut verbunden und autorisiert werden.",
+    "cancel": "Abbrechen",
+    "actions": {
+      "read": "lesen",
+      "write": "erstellen und bearbeiten",
+      "delete": "löschen"
+    },
+    "edit": {
+      "open": "Berechtigungen bearbeiten",
+      "title": "Berechtigungen von {client}",
+      "description": "Entfernen Sie das Häkchen bei dem, was sie in {team} nicht mehr tun soll. Sie bleibt mit dem Rest verbunden. Mehr erhält sie, wenn es aus der Anwendung angefordert wird: Sie öffnet den Zustimmungsbildschirm.",
+      "save": "Speichern",
+      "saved": "Die Berechtigungen wurden aktualisiert.",
+      "error": "Die Berechtigungen konnten nicht aktualisiert werden.",
+      "empty": "Um alle Berechtigungen zu entziehen, trennen Sie die Anwendung."
     }
   }
 }

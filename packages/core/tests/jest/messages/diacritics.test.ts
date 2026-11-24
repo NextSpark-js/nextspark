@@ -67,6 +67,7 @@ const AMBIGUOUS: Record<string, Record<string, string>> = {
     como: 'cómo, but "como" (as) is a word',
     cuando: 'cuándo, but "cuando" (when) is a word',
     donde: 'dónde, but "donde" (where) is a word',
+    cual: 'cuál, but "cual" (as in "tal cual") is a word',
     super: 'súper, but "super" is a prefix and a word',
     videos: 'vídeos, but "videos" is the accepted spelling',
     // the catalog speaks with "vos" in some texts (ingresá) and with "tú" in others (ingresa): both are real forms

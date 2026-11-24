@@ -5,7 +5,7 @@
  * a `send-code` step replaces the email provider with one that sends, answers { success: false } or throws.
  * Started by registration-gates.test.ts and social-providers.test.ts under tsx with this folder's tsconfig.
  */
-import { createPrivateKey, createPublicKey, sign } from 'node:crypto'
+import { generateKeyPairSync, sign } from 'node:crypto'
 import { createServer } from 'node:net'
 import { NextRequest } from 'next/server'
 
@@ -23,7 +23,8 @@ type Step =
   | { op: 'apple'; email: string; emailVerified?: boolean; firstName?: string; lastName?: string }
   // A provider enabled only through the auth.providers map: no readiness check, no button, no mapping of its own
   | { op: 'discord'; email: string; emailVerified?: boolean; id?: string }
-  // A native app's Sign in with Apple: /sign-in/social with an id token signed by APPLE_PRIVATE_KEY (Apple's keys are stubbed with its public half)
+  // A native app's Sign in with Apple: /sign-in/social with an RS256 id token, the algorithm Apple signs with and the only one
+  // Better Auth 1.7.27 accepts for it (Apple's keys are stubbed with the public half of a key made for this run)
   | { op: 'apple-id-token'; email: string; emailVerified: boolean }
   // POST /email-otp/send-verification-otp with an email provider that sends, fails or throws
   | { op: 'send-code'; email: string; type?: 'sign-in' | 'email-verification' | 'forget-password'; provider: 'ok' | 'fail' | 'throw' }
@@ -32,12 +33,21 @@ type Step =
   // Opens the address's kept link as a browser would; callbackURL rewrites it in the link
   | { op: 'magic-open'; email: string; callbackURL?: string; signupIntent?: string }
   | { op: 'wait'; email: string; ms: number }
+  // MCP browser sign-in (#541): GET /oauth2/authorize for a client with no session; the login page URL it answers
+  // carries the signed query. The next mcp-* step signs in as the login page does: with the authorization as the
+  // place to come back to (lib/mcp/oauth/sign-in-continuation), then follows that with the session it got
+  | { op: 'mcp-authorize'; email: string; clientId: string; redirectUri: string; scope: string }
+  // Google sign-in started from that login page: the callback has to go on with the authorization
+  | { op: 'mcp-google'; email: string }
+  // A sign-in link asked for from that login page, then opened
+  | { op: 'mcp-magic'; email: string }
 
 const CORE_SRC = new URL('../../../../src/', import.meta.url)
 const authRoute = await import(new URL('routes/api/auth/[...all]/route.ts', CORE_SRC).href)
 const inviteRoute = await import(new URL('routes/api/v1/auth/signup-with-invite/route.ts', CORE_SRC).href)
 const { auth } = await import(new URL('lib/auth.ts', CORE_SRC).href)
 const { EmailFactory } = await import(new URL('lib/email/factory.ts', CORE_SRC).href)
+const { oauthAuthorizePath } = await import(new URL('lib/mcp/oauth/sign-in-continuation.ts', CORE_SRC).href)
 
 const ORIGIN = process.env.NEXT_PUBLIC_APP_URL!
 const PASSWORD = 'correct-horse-battery-staple'
@@ -63,6 +73,18 @@ let appleClientSecret: string | undefined
 const part = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
 const jsonResponse = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } })
 let discord: Extract<Step, { op: 'discord' }> | null = null
+// Signs the id token of a native Sign in with Apple
+const appleIdTokenKey = generateKeyPairSync('rsa', { modulusLength: 2048 })
+// The signed query of the MCP authorization in progress (mcp-authorize)
+let mcpOAuthQuery = ''
+/** Where a sign-in sent the browser (`signedInTo`), and where the authorization endpoint sends it next with the session. */
+async function followAuthorization(signIn: Response) {
+  const signedInTo = signIn.headers.get('location') ?? ''
+  const cookie = signIn.headers.getSetCookie().map(c => c.split(';')[0]).join('; ')
+  const setsSession = signIn.headers.getSetCookie().some(c => c.includes('session_token'))
+  if (!signedInTo.includes('/oauth2/authorize')) return { ...(await outcome(signIn)), signedInTo, setsSession }
+  return { ...(await outcome(await callbackGet(new URL(signedInTo, ORIGIN).href, cookie))), signedInTo, setsSession }
+}
 const realFetch = globalThis.fetch
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
@@ -90,8 +112,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     return jsonResponse({ access_token: 'stub-apple-access', id_token: idToken, token_type: 'Bearer', expires_in: 600 })
   }
   if (url === 'https://appleid.apple.com/auth/keys') {
-    const jwk = createPublicKey(createPrivateKey(process.env.APPLE_PRIVATE_KEY!)).export({ format: 'jwk' })
-    return jsonResponse({ keys: [{ ...jwk, kid: 'stub-apple-kid', alg: 'ES256', use: 'sig' }] })
+    return jsonResponse({ keys: [{ ...appleIdTokenKey.publicKey.export({ format: 'jwk' }), kid: 'stub-apple-kid', alg: 'RS256', use: 'sig' }] })
   }
   if (url.startsWith('https://oauth2.googleapis.com/token')) {
     const idToken = `${part({ alg: 'none', typ: 'JWT' })}.${part({ sub: `google-${googleEmail}`, email: googleEmail, email_verified: googleEmailVerified, name: googleName, iss: 'https://accounts.google.com', aud: process.env.GOOGLE_CLIENT_ID, exp: Math.floor(Date.now() / 1000) + 600, iat: Math.floor(Date.now() / 1000) })}.`
@@ -234,8 +255,8 @@ async function run(step: Step) {
     }
     case 'apple-id-token': {
       const now = Math.floor(Date.now() / 1000)
-      const input = `${part({ alg: 'ES256', kid: 'stub-apple-kid', typ: 'JWT' })}.${part({ iss: 'https://appleid.apple.com', aud: process.env.APPLE_CLIENT_ID, sub: `apple-native-${step.email}`, email: step.email, email_verified: step.emailVerified, iat: now, exp: now + 600 })}`
-      const signature = sign('sha256', Buffer.from(input), { key: createPrivateKey(process.env.APPLE_PRIVATE_KEY!), dsaEncoding: 'ieee-p1363' }).toString('base64url')
+      const input = `${part({ alg: 'RS256', kid: 'stub-apple-kid', typ: 'JWT' })}.${part({ iss: 'https://appleid.apple.com', aud: process.env.APPLE_CLIENT_ID, sub: `apple-native-${step.email}`, email: step.email, email_verified: step.emailVerified, iat: now, exp: now + 600 })}`
+      const signature = sign('sha256', Buffer.from(input), appleIdTokenKey.privateKey).toString('base64url')
       const res = await authRoute.POST(json('/api/auth/sign-in/social', { provider: 'apple', idToken: { token: `${input}.${signature}` } }))
       const text = await res.clone().text()
       return { ...(await outcome(res)), body: text.slice(0, 300), setsSession: res.headers.getSetCookie().some(c => c.includes('session_token')) }
@@ -286,6 +307,39 @@ async function run(step: Step) {
       if (step.callbackURL) link.searchParams.set('callbackURL', step.callbackURL)
       const res = await callbackGet(link.href, step.signupIntent ? `signup-intent=${step.signupIntent}` : '')
       return { ...(await outcome(res)), setsSession: res.headers.getSetCookie().some(c => c.includes('session_token')) }
+    }
+    case 'mcp-authorize': {
+      const query = new URLSearchParams({ response_type: 'code', client_id: step.clientId, redirect_uri: step.redirectUri, scope: step.scope, state: 'mcp-state', code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', code_challenge_method: 'S256' })
+      const res = await callbackGet(`${ORIGIN}/api/auth/oauth2/authorize?${query}`, '')
+      const result = await outcome(res)
+      mcpOAuthQuery = result.location ? new URL(result.location, ORIGIN).search.slice(1) : ''
+      return result
+    }
+    case 'mcp-google': {
+      googleEmail = step.email
+      googleEmailVerified = true
+      googleName = 'Mcp Google'
+      const start = await authRoute.POST(json('/api/auth/sign-in/social', { provider: 'google', callbackURL: oauthAuthorizePath(mcpOAuthQuery) }))
+      const { url } = await start.json() as { url: string }
+      const state = new URL(url).searchParams.get('state')!
+      const cookie = start.headers.getSetCookie().map(c => c.split(';')[0]).join('; ')
+      const res = await authRoute.GET(new NextRequest(`${ORIGIN}/api/auth/callback/google?code=stub-code&state=${encodeURIComponent(state)}`, { headers: { cookie } }), { params: Promise.resolve({ all: ['callback', 'google'] }) })
+      return followAuthorization(res)
+    }
+    case 'mcp-magic': {
+      const email = step.email
+      EmailFactory.create = () => ({
+        send: async (message: { html: string }) => {
+          magicLinks.set(email, hrefIn(message.html)!)
+          return { id: 'stub', success: true }
+        },
+        verify: async () => true,
+      })
+      const sent = await authRoute.POST(json('/api/auth/sign-in/magic-link', { email, callbackURL: oauthAuthorizePath(mcpOAuthQuery), errorCallbackURL: '/auth-error' }))
+      await new Promise(resolve => setTimeout(resolve, 300))
+      const link = magicLinks.get(email)
+      if (!link) return { status: sent.status, body: (await sent.text()).slice(0, 200) }
+      return followAuthorization(await callbackGet(link, ''))
     }
     case 'wait':
       await new Promise(resolve => setTimeout(resolve, step.ms))

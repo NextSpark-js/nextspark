@@ -19,6 +19,7 @@ import {
   handleGenericUpdate,
   handleGenericDelete,
 } from '../api/entity/generic-handler'
+import { attachInProcessPrincipal } from '../api/auth/in-process-principal'
 import type { EntityApiResult, EntityExecutor, ExecuteEntityArgs, ToolExecutionContext } from './types'
 
 /** Internal-only origin: never used for network I/O, only for URL parsing. */
@@ -64,10 +65,10 @@ function buildRequest(args: ExecuteEntityArgs, ctx: ToolExecutionContext): NextR
   }
 
   const method = METHODS[args.operation]
-  const headers: Record<string, string> = {
-    authorization: ctx.authHeader,
-    'x-team-id': ctx.teamId,
-  }
+  // The team of the context a tool passes. For an OAuth connection the handler refuses any team but the one the
+  // connection was approved for (authenticateRequest), so a tool cannot move a call to another team from here.
+  const headers: Record<string, string> = { 'x-team-id': ctx.teamId }
+  if (!ctx.principal) headers.authorization = ctx.authHeader
 
   let body: string | undefined
   if (args.body !== undefined) {
@@ -75,7 +76,9 @@ function buildRequest(args: ExecuteEntityArgs, ctx: ToolExecutionContext): NextR
     headers['content-type'] = 'application/json'
   }
 
-  return new NextRequest(url, { method, headers, body })
+  const request = new NextRequest(url, { method, headers, body })
+  if (ctx.principal) attachInProcessPrincipal(request, ctx.principal)
+  return request
 }
 
 const METHODS: Record<ExecuteEntityArgs['operation'], string> = {

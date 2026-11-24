@@ -89,7 +89,7 @@ module.exports = {
 node node_modules/@nextsparkjs/core/scripts/test/jest.mjs --selectProjects db
 ```
 
-With `--selectProjects db` the runner gives the suites a database of their own. It starts a throwaway PostgreSQL cluster on a free port of `127.0.0.1` (it needs `initdb` and `pg_ctl` on the `PATH`, for example `/opt/homebrew/opt/postgresql@16/bin` with Homebrew), applies the project's migrations to it (core's and yours, without sample data), hands it to the suites as `DATABASE_URL`, and removes it when the run ends, also on Ctrl-C and on `SIGTERM`. Nothing needs a `DATABASE_URL` in the environment, and the one that is there is not used: the project says so when it is set. The runner prints the target before Jest starts:
+With `--selectProjects db` the runner gives the suites a database of their own. It starts a throwaway PostgreSQL cluster on a free port of `127.0.0.1` (it needs `initdb`, `pg_ctl` and `postgres` on the `PATH`, for example `/opt/homebrew/opt/postgresql@16/bin` with Homebrew's `postgresql@16`; Homebrew's `libpq` has the first two without the server, which is not enough), applies the project's migrations to it (core's and yours, without sample data), hands it to the suites as `DATABASE_URL`, and removes it when the run ends, also on Ctrl-C and on `SIGTERM`. Nothing needs a `DATABASE_URL` in the environment, and the one that is there is not used: the project says so when it is set. The runner prints the target before Jest starts:
 
 ```text
   The db project runs against a throwaway PostgreSQL cluster (host 127.0.0.1, port 54329), removed when the run ends.
@@ -116,7 +116,9 @@ const url = clusterUrl(cluster)                  // postgresql://owner@127.0.0.1
 cluster.stop()                                   // stops the server and removes the directory; safe to call twice
 ```
 
-`startCluster` retries a port another process takes between picking it and binding it, waits long enough for a loaded machine, and throws an error that carries the server's own log when the cluster cannot start. Its user is `owner`, a superuser, with `trust` authentication on the loopback interface only. `HAS_POSTGRES` is false when `initdb` or `pg_ctl` is not on the `PATH`: skip the suite then.
+`startCluster` retries a port another process takes between picking it and binding it, waits long enough for a loaded machine, and throws an error that carries the server's own log when the cluster cannot start. Its user is `owner`, a superuser, with `trust` authentication on the loopback interface only. `HAS_POSTGRES` is false when `initdb`, `pg_ctl` or `postgres` is not on the `PATH`: skip the suite then. The server binary is part of the check since #541: `initdb` and `pg_ctl` come with the client tools alone on some installs, and no cluster starts without `postgres`. The message of the runner (`initdb and pg_ctl are not on the PATH`) and the skip reason of core's suites (`initdb/pg_ctl not on PATH`) still name two binaries when the missing one is `postgres`.
+
+Core's own suites of this kind are `node:test` files, not Jest: see [PostgreSQL integration tests in core](./07-integration-testing.md#postgresql-integration-tests-in-core-testsnode).
 
 ### Running Tests
 
@@ -136,6 +138,15 @@ pnpm test:core -- docs/docs-registry.test.ts
 # Update snapshots
 pnpm test:core -- -u
 ```
+
+`pnpm test:core` runs Jest only. Core's `node:test` suites (`packages/core/tests/node`, among them the PostgreSQL
+tests of the rules the database holds) run with `pnpm --filter @nextsparkjs/core test:node`: see
+[Integration Testing](./07-integration-testing.md#postgresql-integration-tests-in-core-testsnode).
+
+A Jest suite that mocks a store proves the logic around it, not the store. The per-credential rate limit is an
+example: `pnpm test:core -- lib/api/credential-rate-limit.test.ts` mocks Redis, and the count against a real
+Redis is checked by hand with the procedure in
+[Verifying the shared rate limit with Redis](./12-shared-rate-limit-verification.md).
 
 ---
 

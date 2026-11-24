@@ -326,9 +326,9 @@ export async function updatePackageJson(
     'react': '^19.2.0',
     'react-dom': '^19.2.0',
     // Auth
-    'better-auth': '~1.7.7',
+    'better-auth': '~1.7.27',
     // The exact version better-auth pins, which @better-auth/core requires as a peer
-    '@better-fetch/fetch': '1.3.2',
+    '@better-fetch/fetch': '1.3.3',
     // i18n
     'next-intl': '^4.11.0',
     // Build tools

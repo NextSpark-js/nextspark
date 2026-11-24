@@ -2,7 +2,7 @@
 
 The `nextspark` command: generates the host and the registries, runs the development server and the build, and runs migrations and checks for a NextSpark project.
 
-> **Stability.** Stable: `dev`, `build`, `prepare`, `db:*`, `doctor` and `migrate`. Experimental: `add:plugin`, `add:mobile`, `setup:ai`, `sync:ai`, `skills`. `add:theme` is not supported. Commands not named here (`init`, `worker`, `db:demo-reset`, `check:mobile`, the `registry` aliases) are not on the stable list. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
+> **Stability.** Stable: `dev`, `build`, `prepare`, `db:*`, `doctor` and `migrate`. Experimental: `add:plugin`, `add:mobile`, `setup:ai`, `sync:ai`, `skills`. `add:theme` is not supported. Commands not named here (`init`, `worker`, `db:demo-reset`, `mcp:revoke-scope`, `check:mobile`, the `registry` aliases) are not on the stable list. See [Stability](https://github.com/NextSpark-js/nextspark/blob/main/packages/core/docs/22-stability-and-support/01-stability.md).
 
 ## Installation
 

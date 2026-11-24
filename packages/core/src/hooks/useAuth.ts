@@ -10,6 +10,8 @@ import { safeCallbackPath } from '../lib/auth/callback-url'
 import { resolveHomeRoute } from '../lib/auth/home-route'
 import { DASHBOARD_HOME_CONFIG } from '../lib/config/public-config-client'
 import { withBasePath } from '../lib/base-path'
+import { oauthAuthorizePath } from '../lib/mcp/oauth/sign-in-continuation'
+import { isMcpOAuthBuilt } from '../lib/mcp/oauth/built'
 import { loadLoginPage } from '../lib/auth/load-login-page'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { clearQueryCaches } from '../lib/auth/query-caches'
@@ -48,7 +50,22 @@ type SupportedLocale = typeof I18N_CONFIG.supportedLocales[number]
  * sign-in with INVALID_CALLBACK_URL. Setting the marker replaces one already in
  * the query rather than adding a second.
  */
+/**
+ * A sign-in made from the login page of an MCP authorization (#541) is answered with `{ redirect: true, url }`: the
+ * URL that continues it (consent, or back to the client). Goes there instead of the dashboard.
+ */
+function continueOAuthSignIn(data: unknown): boolean {
+  const next = data as { redirect?: unknown; url?: unknown } | null
+  if (!next || next.redirect !== true || typeof next.url !== 'string') return false
+  if (typeof window === 'undefined' || !isMcpOAuthBuilt() || !new URLSearchParams(window.location.search).has('sig')) return false
+  window.location.assign(next.url)
+  return true
+}
+
 function signInCallbackURL(method: SocialLoginMethod | 'email', redirectTo?: string): string {
+  // From the login page of an MCP authorization (#541), a provider or a sign-in link comes back to the authorization
+  const authorization = typeof window === 'undefined' || !isMcpOAuthBuilt() ? null : oauthAuthorizePath(window.location.search)
+  if (authorization) return withBasePath(authorization)
   const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
   url.searchParams.set('auth_method', method)
   return withBasePath(`${url.pathname}${url.search.replace(/\*/g, '%2A')}`)
@@ -78,7 +95,7 @@ const SESSION_DROP_TIMEOUT_MS = 2000
  * answers each with 401. So the store is brought up to date first, for at most SESSION_DROP_TIMEOUT_MS:
  * the redirect never depends on that request. Best effort: a store that cannot be refreshed leaves the order as it was.
  *
- * `$store.atoms.session` is an undocumented internal of better-auth, checked against 1.7.7 (client/session-atom.mjs: the atom's
+ * `$store.atoms.session` is an undocumented internal of better-auth, checked against 1.7.27 (client/session-atom.mjs: the atom's
  * value carries `refetch`). If an upgrade renames it this becomes a no-op and the 401s come back:
  * tests/jest/hooks/useAuth.signed-in-data.test.tsx pins the call, re-check it when better-auth is bumped.
  */
@@ -118,6 +135,9 @@ export function useAuthActions() {
     if (error) {
       throw toAuthError(error, 'Failed to sign in')
     }
+
+    // An MCP sign-in (#541): the server answers with the URL that continues the authorization
+    if (continueOAuthSignIn(data)) return data
 
     if (data) {
       // Save auth method only when login is truly successful
@@ -202,6 +222,8 @@ export function useAuthActions() {
     if (error) {
       throw toAuthError(error, 'Invalid or expired code')
     }
+
+    if (continueOAuthSignIn(data)) return data
 
     if (data) {
       // OTP is an email-based method for the "last used" badge purposes

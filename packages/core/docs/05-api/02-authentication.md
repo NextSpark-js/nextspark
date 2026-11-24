@@ -1,6 +1,6 @@
 # API Authentication
 
-**Dual authentication • API keys • Sessions • Scope system • Security**
+**API keys • Sessions • OAuth access tokens for MCP • Scope system • Security**
 
 ---
 
@@ -10,6 +10,7 @@
 - [Authentication Methods](#authentication-methods)
 - [API Key Authentication](#api-key-authentication)
 - [Session Authentication](#session-authentication)
+- [OAuth Access Token Authentication (`/api/mcp` only)](#oauth-access-token-authentication-apimcp-only)
 - [Dual Authentication Flow](#dual-authentication-flow)
 - [Scope System](#scope-system)
 - [Scope Enforcement Fails Closed](#scope-enforcement-fails-closed)
@@ -25,21 +26,34 @@
 
 ## Overview
 
-The API v1 authentication system supports **two authentication methods** that work seamlessly together:
+The API accepts three credentials. Where each one is accepted matters:
+
+| Credential | Accepted at | Presented as |
+|---|---|---|
+| **API key** | `/api/v1/*` and `/api/mcp` | `Authorization: Bearer sk_...` or `x-api-key` |
+| **Session** | `/api/v1/*` and the app's own routes | The session cookie |
+| **OAuth access token** | `/api/mcp` only, and only when the project turns on [MCP browser sign-in](../06-authentication/14-mcp-browser-sign-in.md) | `Authorization: Bearer <JWT>` |
+
+For **`/api/v1`** the description of this document as "dual authentication" is exact: an endpoint takes an API key
+or a session, and nothing else. An OAuth access token presented to `/api/v1` is not accepted. It is issued for
+`/api/mcp`, verified there once, and from there on travels to the entity handlers as an in-process principal; see
+[OAuth Access Token Authentication](#oauth-access-token-authentication-apimcp-only).
 
 **Key Features:**
-- ✅ **Dual Authentication** - API Keys OR Sessions in single endpoint
-- ✅ **Scope-Based Permissions** - Granular access control
+- ✅ **Dual Authentication on `/api/v1`** - API Keys OR Sessions in single endpoint
+- ✅ **Scope-Based Permissions** - Granular access control, the same scopes for API keys and OAuth access tokens
 - ✅ **Secure by Default** - SHA-256 hashed keys, HttpOnly cookies
-- ✅ **Automatic Fallback** - Session first, then API Key
-- ✅ **Rate Limiting** - Per-key/per-user limits
+- ✅ **Automatic Fallback** - API key first, then session
+- ✅ **Rate Limiting** - Per client address by tier, plus a per-credential limit for API keys and MCP connections
 - ✅ **Type-Safe** - Full TypeScript support
 
 **Authentication Sources:**
 ```typescript
-core/lib/api/auth/dual-auth.ts   // Dual authentication system
-core/lib/api/keys.ts             // API key management
-core/lib/auth.ts                 // Session authentication (Better Auth)
+core/lib/api/auth/dual-auth.ts             // authenticateRequest: API key, session, in-process principal
+core/lib/api/keys.ts                       // API key management
+core/lib/auth.ts                           // Session authentication (Better Auth)
+core/lib/mcp/oauth/resource-server.ts      // OAuth access tokens at /api/mcp
+core/lib/api/auth/in-process-principal.ts  // How a verified OAuth call reaches the entity handlers
 ```
 
 ---
@@ -48,15 +62,17 @@ core/lib/auth.ts                 // Session authentication (Better Auth)
 
 ### Comparison
 
-| Feature | API Keys | Sessions |
-|---------|----------|----------|
-| **Use Case** | External integrations, mobile apps, scripts | Dashboard users |
-| **Header** | `Authorization: Bearer sk_xxx` | Cookie (automatic) |
-| **Permissions** | Scope-based | Role-based + Scopes |
-| **Rate Limiting** | Per-key limits | Per-user limits |
-| **Expiration** | 365 days (configurable) | Session-based |
-| **Revocation** | Delete key in dashboard | Logout |
-| **Best For** | Server-to-server, third-party | Browser-based apps |
+| Feature | API Keys | Sessions | OAuth access tokens |
+|---------|----------|----------|---------------------|
+| **Accepted at** | `/api/v1/*`, `/api/mcp` | `/api/v1/*`, the app's own routes | `/api/mcp` only |
+| **Use Case** | External integrations, mobile apps, scripts | Dashboard users | An MCP client the user connects from its own interface |
+| **Header** | `Authorization: Bearer sk_xxx` | Cookie (automatic) | `Authorization: Bearer <JWT>` |
+| **Permissions** | Scope-based | Role-based + Scopes | Scope-based: the consent, cut down to the user's role on every request |
+| **Team** | Named per request (`x-team-id`), or the user's default team | The active team of the session | One team, fixed when the application is authorized |
+| **Rate Limiting** | The tier of the route per client address, plus the `credential` tier per key | The tier of the route per client address (no per-user counter) | The `api` tier per client address, plus the `credential` tier per connection |
+| **Expiration** | None by default; `expiresAt` is optional when the key is created | Session-based | 10 minutes; the client renews it with a rotating refresh token |
+| **Revocation** | Revoke key in dashboard | Logout | Disconnect in Settings > Security |
+| **Best For** | Server-to-server, third-party | Browser-based apps | AI assistants and other MCP applications |
 
 ### When to Use Each
 
@@ -74,6 +90,13 @@ core/lib/auth.ts                 // Session authentication (Better Auth)
 - ✅ Need full user context (role, flags, etc.)
 - ✅ SSR with Next.js Server Components
 - ✅ Want automatic authentication
+
+**Use an OAuth access token (MCP browser sign-in) when:**
+- ✅ The client is an MCP application such as Claude or ChatGPT
+- ✅ The user should approve, per team, what the application may do
+- ✅ No long-lived secret should be copied into the client
+
+It is not a general API credential: it works at `/api/mcp` and nowhere else.
 
 ---
 
@@ -265,11 +288,97 @@ function generateScopesForRole(role: string, flags: UserFlag[] = []): string[] {
 
 ---
 
+## OAuth Access Token Authentication (`/api/mcp` only)
+
+With `features: { mcpOAuth: true }` the app is the OAuth 2.1 authorization server of its own MCP endpoint, and
+`/api/mcp` accepts the access tokens it issues. This section describes how such a request is authenticated. The
+feature itself — turning it on, the consent, teams, connected applications — is documented in
+[MCP Browser Sign-in](../06-authentication/14-mcp-browser-sign-in.md).
+
+### Scope of the credential
+
+- The token is a JWT issued for the resource `/api/mcp`. It is valid for 10 minutes.
+- It is accepted **at `/api/mcp` only**. `authenticateRequest` does not read it: a route under `/api/v1` that
+  receives it finds no API key and no session and answers `401`.
+- `/api/mcp` accepts an API key or an access token, never both in one request.
+
+### How the request is authenticated
+
+```text
+1. Client sends POST /api/mcp with Authorization: Bearer <JWT>
+   ↓
+2. The token is verified in process (requireMcpAuth)
+   ↓
+   signature, issuer, audience (the MCP resource, exactly), expiry
+   ↓
+3. The principal is resolved from the database, on every request (principalFromClaims)
+   ↓
+   user is active · team exists and the user is a member · application is accepted
+   connection was not revoked · consent exists
+   ↓
+4. Effective scopes
+   ↓
+   token scopes ∩ consent scopes, cut down to what the user's role in the team allows now
+   ↓
+5. Per-credential rate limit (credentialRateLimitResponse)
+   ↓
+6. Scopes the call needs and the connection lacks → 403 insufficient_scope, before anything runs
+   ↓
+7. The tool runs: the entity handler is called in process with the principal attached
+```
+
+### The in-process principal
+
+An MCP tool runs by calling the real entity handler with a request the server builds. On the API key path that
+request carries the caller's `Authorization` header and the handler authenticates it again. On the OAuth path the
+request carries **no credential**: the verified principal is attached to the request object
+(`attachInProcessPrincipal` in `lib/api/auth/in-process-principal.ts`) and `authenticateRequest` reads it back
+before it looks for anything else.
+
+```typescript
+// core/lib/api/auth/dual-auth.ts
+const injected = inProcessPrincipal(request)
+if (injected) {
+  // the same scope enforcement as an API key, and the per-credential limit
+  // ...
+  return injected
+}
+```
+
+- The principals are kept in a `WeakMap` keyed by the request object. It never leaves the process, so nothing sent
+  over HTTP can set or imitate it.
+- The access token is never presented to another route.
+- The principal is a `DualAuthResult` of **type `'api-key'`** with an extra field:
+
+  ```typescript
+  {
+    success: true,
+    type: 'api-key',
+    oauth: { clientId, tokenId },   // set for an OAuth call; absent for a real API key
+    user: { id, email, role, name, defaultTeamId },
+    scopes: [...],                   // effective scopes, see step 4
+  }
+  ```
+
+`type` stays `'api-key'` so that every check written for an API key (the declared scope, `access.api`, the rules
+for external callers) applies to an OAuth call as it is. It does not mean there is a row in `api_key`: `keyId` is
+not set. A route that branches on `type === 'api-key'` treats an OAuth connection as a key; a route that needs to
+tell them apart reads `authResult.oauth`. This is a bridge, not the final model.
+
+---
+
 ## Dual Authentication Flow
+
+This is the flow of `/api/v1` and of every route that calls `authenticateRequest`.
 
 ### Priority Order
 
 The authentication system tries methods in this order:
+
+**0. In-process principal**
+
+A principal the server attached itself, for an MCP tool call made with an OAuth access token (see the previous
+section). It is never present on a request that arrived over HTTP.
 
 **1. API Key (First Priority)**
 ```typescript
@@ -309,6 +418,17 @@ export async function authenticateRequest(
   request: NextRequest,
   options: AuthenticateOptions = {}
 ): Promise<DualAuthResult> {
+  // A principal the server attached itself (an MCP tool call made with an
+  // OAuth access token): the same scope enforcement and per-credential limit
+  // as an API key, and no other credential on the request is read.
+  const injected = inProcessPrincipal(request)
+  if (injected) {
+    const failure = resolveApiKeyScopeFailure(injected.scopes, options, describeRoute(request))
+    if (failure) return { ...injected, success: false, error: failure }
+    // ...per-credential rate limit (credentialRateLimitResponse)...
+    return injected
+  }
+
   // First try API Key authentication
   const apiKeyResult = await tryApiKeyAuth(request)
   if (apiKeyResult.success) {
@@ -318,8 +438,10 @@ export async function authenticateRequest(
     // rejected here, before the caller sees it as authenticated.
     const failure = resolveApiKeyScopeFailure(apiKeyResult.scopes, options, describeRoute(request))
     if (failure) {
-      return { success: false, type: 'api-key', user: null, scopes: apiKeyResult.scopes, error: failure }
+      return { success: false, type: 'api-key', user: apiKeyResult.user, scopes: apiKeyResult.scopes, keyId: apiKeyResult.keyId, error: failure }
     }
+    // ...per-credential rate limit (credentialRateLimitResponse): a key over
+    // its limit gets `rateLimitResponse` and the error RATE_LIMIT_EXCEEDED...
     return apiKeyResult
   }
 
@@ -528,6 +650,9 @@ handler to remember (#93):
 **Session authentication is never gated by this rule** — sessions always
 carry full access, exactly as before.
 
+**An OAuth access token is gated exactly as an API key is.** Its principal has `type: 'api-key'`, so the scope a
+route declares is checked against the connection's effective scopes.
+
 **Failure responses:**
 
 | Situation | `type` | `code` | Status |
@@ -535,6 +660,7 @@ carry full access, exactly as before.
 | No credential at all | `'none'` | `AUTHENTICATION_FAILED` | 401 |
 | Valid key, missing the declared scope | `'api-key'` | `INSUFFICIENT_SCOPE` | 403 |
 | Valid key, route declared no scope | `'api-key'` | `SCOPE_NOT_DECLARED` | 403 |
+| Valid key or MCP connection over its per-credential limit | `'api-key'` | `RATE_LIMIT_EXCEEDED` | 429 |
 
 Use `createAuthFailureResponse(authResult)` in the `!authResult.success`
 branch — it reads `authResult.error` and returns the right status and code,
@@ -1047,26 +1173,34 @@ async function logApiKeyUsage(authResult: DualAuthResult, endpoint: string) {
 
 ## Rate Limiting
 
-### Default Limits
+Authentication does not set the limit of a request by its scopes. Two limits apply, and they are independent:
 
-```typescript
-// core/lib/api/keys.ts
-export const RATE_LIMITS = {
-  default: { requests: 1000, windowMs: 60000 },       // 1000 req/min
-  'users:write': { requests: 100, windowMs: 60000 },  // 100 req/min
-  'users:delete': { requests: 10, windowMs: 60000 },  // 10 req/min
-  'tasks:write': { requests: 500, windowMs: 60000 },  // 500 req/min
-  '*': { requests: 5000, windowMs: 60000 }            // 5000 req/min
-}
-```
+| Limit | Counted by | Default |
+|---|---|---|
+| The tier of the route (`withRateLimitTier`) | Client address | `read`: 200 per minute, `write`: 50 per minute on `/api/v1/{entity}`; `api`: 100 per minute on `/api/mcp` |
+| The `credential` tier (`credentialRateLimitResponse`) | The API key, or the MCP connection | 1000 charges per minute: one charge for the request and one more for each API handler a tool calls in process |
+
+- A request authenticated with a **session** is limited by the tier of the route only. There is no per-user
+  counter.
+- A request authenticated with an **API key** or an **OAuth access token** is also counted against that
+  credential. `authenticateRequest` does it: a credential over its limit comes back with `success: false`,
+  `error.code = 'RATE_LIMIT_EXCEEDED'` and a `rateLimitResponse` ready to return, which
+  `createAuthFailureResponse(authResult)` sends.
+- The per-credential count is shared between instances only when Redis is configured
+  (`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`); otherwise each process counts on its own.
+
+`RATE_LIMITS` in `core/lib/api/keys.ts` (limits by scope) is not what authentication uses. It belongs to the older
+`withRateLimit` wrapper, which none of core's routes use.
+
+See [Rate Limiting](./07-rate-limiting.md) for the tiers, the headers and the configuration.
 
 ### Rate Limit Headers
 
 ```bash
-# API responses include rate limit headers
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1642435200
+# Responses of a rate-limited route describe its per-address bucket
+X-RateLimit-Limit: 200
+X-RateLimit-Remaining: 199
+X-RateLimit-Reset: 1767225660000   # Unix timestamp in milliseconds
 ```
 
 ### 429 Response
@@ -1075,10 +1209,13 @@ X-RateLimit-Reset: 1642435200
 {
   "success": false,
   "error": "Rate limit exceeded",
+  "message": "Too many requests for this credential. Limit: 1000 charges per minute: one per request, and one more for each API call an MCP tool makes",
   "code": "RATE_LIMIT_EXCEEDED",
   "retryAfter": 60
 }
 ```
+
+A `429` always carries a `Retry-After` header, in seconds.
 
 ### Handling Rate Limits
 
@@ -1269,7 +1406,8 @@ core's clients send (`x-team-id`, `x-builder-source`, `x-signup-intent`, `x-veri
 ## Summary
 
 **Authentication System provides:**
-- ✅ **Dual Authentication** - API Keys + Sessions in single endpoint
+- ✅ **Dual Authentication** - API Keys + Sessions in single endpoint, on `/api/v1`
+- ✅ **OAuth access tokens** - A third credential, at `/api/mcp` only, when MCP browser sign-in is on
 - ✅ **Scope-Based Permissions** - Granular access control
 - ✅ **Secure by Default** - SHA-256 hashing, HTTPS required
 - ✅ **Flexible** - Works for dashboards, mobile apps, integrations
@@ -1289,5 +1427,7 @@ core's clients send (`x-team-id`, `x-builder-source`, `x-signup-intent`, `x-veri
 - [Custom Endpoints](./04-custom-endpoints.md) - Creating custom route handlers
 - [Rate Limiting](./07-rate-limiting.md) - Detailed rate limiting configuration
 - [Error Handling](./08-error-handling.md) - Comprehensive error codes
+- [MCP Server](./20-mcp-server.md) - The endpoint that accepts API keys and OAuth access tokens
+- [MCP Browser Sign-in](../06-authentication/14-mcp-browser-sign-in.md) - The OAuth 2.1 authorization server
 
 **Documentation:** `core/docs/05-api/02-authentication.md`

@@ -83,7 +83,7 @@ export function generateScopeRegistry(entities, config) {
 
 import { ENTITY_REGISTRY } from './entity-registry'
 import { AVAILABLE_ROLES, PERMISSIONS_BY_ROLE } from './permissions-registry'
-import type { Permission } from '${convertCorePath('@/core/lib/permissions/types', outputFilePath, config)}'
+import { entityScopesOfRole } from '${convertCorePath('@/core/lib/api/auth/entity-role-scopes', outputFilePath, config)}'
 import type { EntityConfig } from '${convertCorePath('@/core/lib/entities/types', outputFilePath, config)}'
 
 export interface ScopeConfig {
@@ -125,26 +125,16 @@ const SCOPE_API_ENTITIES: ScopeApiEntity[] = Object.values(ENTITY_REGISTRY)
 // For each API-exposed entity, grant \`<slug>:read/write/delete\` to any team
 // role whose PERMISSIONS_BY_ROLE set includes the corresponding
 // \`<slug>.<action>\` permission — the SAME set checkAuthPermission() consults
-// at request time. Superadmin is a GLOBAL role (never in AVAILABLE_ROLES) and
+// at request time. The rule itself is core's entityScopesOfRole, which MCP
+// browser sign-in applies too (lib/mcp/oauth/scopes), so the two cannot drift.
+// Superadmin is a GLOBAL role (never in AVAILABLE_ROLES) and
 // is intentionally NOT represented here; it's handled as an explicit bypass
 // in validateScopesForUser().
 function computeRoleScopes(): Record<string, string[]> {
+  const slugs = SCOPE_API_ENTITIES.map((entity) => entity.slug)
   const roleScopes: Record<string, string[]> = {}
   for (const role of AVAILABLE_ROLES) {
-    const perms = PERMISSIONS_BY_ROLE[role]
-    const scopes: string[] = []
-    for (const { slug } of SCOPE_API_ENTITIES) {
-      if (perms?.has(\`\${slug}.list\` as Permission) || perms?.has(\`\${slug}.read\` as Permission)) {
-        scopes.push(\`\${slug}:read\`)
-      }
-      if (perms?.has(\`\${slug}.create\` as Permission) || perms?.has(\`\${slug}.update\` as Permission)) {
-        scopes.push(\`\${slug}:write\`)
-      }
-      if (perms?.has(\`\${slug}.delete\` as Permission)) {
-        scopes.push(\`\${slug}:delete\`)
-      }
-    }
-    roleScopes[role] = [...new Set(scopes)]
+    roleScopes[role] = entityScopesOfRole(slugs, PERMISSIONS_BY_ROLE[role])
   }
   return roleScopes
 }

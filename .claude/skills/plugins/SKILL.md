@@ -6,7 +6,7 @@ description: |
   CRITICAL: Includes MANDATORY dependency management rules for NPM distribution.
   Use this skill when creating, modifying, or validating plugins.
 allowed-tools: Read, Glob, Grep, Bash
-version: 2.1.0
+version: 2.1.1
 ---
 
 # Plugins Skill
@@ -101,7 +101,7 @@ Result: No conflicts, optimized bundle
   "react-hook-form": "^7.62.0",
   "sonner": "^2.0.7",
   "next-intl": "^4.3.4",
-  "better-auth": "^1.3.5"
+  "better-auth": "~1.7.27"
 }
 ```
 

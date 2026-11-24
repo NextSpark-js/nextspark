@@ -231,7 +231,7 @@ access: {
 }
 ```
 
-- Both are keyed on the caller's role in the active team and apply alike to a session and an API key, through the REST routes, MCP and the server actions.
+- Both are keyed on the caller's role in the active team and apply alike to a session and an API key, through the REST routes, MCP and the server actions. An MCP connection made by browser sign-in (`features.mcpOAuth`) is handled as an API key here: inside the server it is a principal of type `'api-key'`, bound to the one team the user chose, with the scopes the user consented to cut down to what the user's role allows at that moment.
 - A hidden field cannot be used to filter, sort, search or list distinct values: for that role it behaves as a field that does not exist. A server action that lists without a team applies this for every role the user holds in any team, and strips each row with the role the user has in that row's team.
 - Public requests follow `publicFields`, not `fieldVisibility`, and an admin bypass sees every field. See [`access.fieldVisibility`](./03-configuration-reference.md#accessfieldvisibility).
 - Limit: `fieldVisibility` hides values, not their existence in constraints. If a hidden field has a unique constraint, a create or update that guesses its value can be answered with a conflict, which tells the caller the value exists.

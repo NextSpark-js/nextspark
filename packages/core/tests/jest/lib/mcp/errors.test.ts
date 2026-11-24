@@ -37,11 +37,14 @@ describe('translateApiError', () => {
       operation: 'list',
     });
     expect(msg).toContain('batch');
+    // The credential tier is counted in charges, and the message a model reads says so
+    expect(msg).toContain('charges');
+    expect(msg).not.toMatch(/request limit/i);
   });
 
   it('429 without a matching code falls back to the plain rate-limit status message', () => {
     const msg = translateApiError(result(429), { slug: 'customers', operation: 'list' });
-    expect(msg).toContain('Request limit reached');
+    expect(msg).toContain('Rate limit reached. Wait before retrying.');
     expect(msg).not.toContain('batch');
   });
 

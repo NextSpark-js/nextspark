@@ -34,6 +34,7 @@ import {
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../lib/teams/active-team-cookie'
 import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '../lib/auth/session-hint'
 import { isDocsPublic, legacyDocsAccessMessage } from '../lib/docs/access'
+import { isMcpOAuthEnabled } from '../lib/mcp/oauth/config'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { FEATURES } from '@nextsparkjs/registries/features'
 import { NOT_FOUND_REWRITE, ROOT_FILES } from '@nextsparkjs/registries/root-files'
@@ -684,6 +685,14 @@ async function handle(request: NextRequest, { authenticatedPaths, hookTimeoutMs,
       newUrl.pathname = '/docs'
     }
     return finishCoreResponse(NextResponse.redirect(newUrl, 301))
+  }
+
+  // The two pages of MCP browser sign-in (#541), consent and team picker, exist only in a host built with
+  // features.mcpOAuth. When it is then switched off at runtime (MCP_OAUTH_ENABLED=false, or MCP itself off) they
+  // answer a real 404 (a notFound() in the page arrives after the layout has begun streaming a 200). A host built
+  // without the feature has no such routes, and a project's own pages at those paths are served as any other.
+  if (FEATURES.mcpOAuth && (pathname === '/oauth/consent' || pathname === '/oauth/select-team') && !isMcpOAuthEnabled()) {
+    return rewriteToNotFound(request, requestHeaders, themeResponse)
   }
 
   // Documentation access control: docs.publicAccess, or the older

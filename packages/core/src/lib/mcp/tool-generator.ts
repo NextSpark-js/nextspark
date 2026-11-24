@@ -7,10 +7,12 @@
  * few-shot examples). Delete tools require confirm:true and carry destructive
  * warnings.
  *
- * No separate authorization gate is re-implemented here: every tool call
- * round-trips in-process through the real generic entity handler (see
- * executor.ts), which already runs `checkAuthPermission` + `hasRequiredScope`
- * + ownership/field guards for API-key auth (fixed for #94/#95). A denied
+ * No separate authorization gate is re-implemented here: every call of a tool
+ * generated in this file round-trips in-process through the real generic
+ * entity handler (see executor.ts), which already runs `checkAuthPermission`
+ * + `hasRequiredScope` + ownership/field guards for API-key auth (fixed for
+ * #94/#95). A hand-written tool (extraTools, utilityTools) is not generated
+ * here and is bound by them only for the API handlers it calls. A denied
  * call surfaces as a normal API error, translated via errors.ts.
  */
 
@@ -90,7 +92,8 @@ export function generateEntityTools(
         if (error instanceof McpToolError) return errorResult(error.message)
         console.error(`[mcp] unexpected error in ${name}:`, error)
         return errorResult(
-          `Unexpected error executing ${name}: ${error instanceof Error ? error.message : String(error)}`
+          `Unexpected error executing ${name}: ${error instanceof Error ? error.message : String(error)}`,
+          500
         )
       }
     },
@@ -98,7 +101,8 @@ export function generateEntityTools(
 
   const apiError = (result: EntityApiResult, operation: string) =>
     errorResult(
-      translateApiError(result, { slug, operation, hints: override?.errorHints })
+      translateApiError(result, { slug, operation, hints: override?.errorHints }),
+      result.status
     )
 
   // ── LIST ────────────────────────────────────────────────────────────────
@@ -121,15 +125,7 @@ export function generateEntityTools(
           const total = info.total ?? (Array.isArray(data) ? data.length : '?')
           const page = info.page ?? 1
           const totalPages = info.totalPages ?? 1
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `${String(total)} ${entityConfig.names.plural} (page ${String(page)}/${String(totalPages)})`,
-              },
-            ],
-            structuredContent: { data, info } as Record<string, unknown>,
-          }
+          return withData(`${String(total)} ${entityConfig.names.plural} (page ${String(page)}/${String(totalPages)})`, { data, info })
         }
       )
     )
@@ -153,10 +149,7 @@ export function generateEntityTools(
           )
           if (!result.body.success) return apiError(result, 'get')
           const data = normalizeOutput(result.body.data)
-          return {
-            content: [{ type: 'text', text: `${entityConfig.names.singular} found.` }],
-            structuredContent: { data } as Record<string, unknown>,
-          }
+          return withData(`${entityConfig.names.singular} found.`, { data })
         }
       )
     )
@@ -181,12 +174,7 @@ export function generateEntityTools(
           if (!result.body.success) return apiError(result, 'create')
           const data = normalizeOutput(result.body.data)
           const id = extractId(data)
-          return {
-            content: [
-              { type: 'text', text: `${entityConfig.names.singular} created${id ? ` (id: ${id})` : ''}.` },
-            ],
-            structuredContent: { data } as Record<string, unknown>,
-          }
+          return withData(`${entityConfig.names.singular} created${id ? ` (id: ${id})` : ''}.`, { data })
         }
       )
     )
@@ -221,10 +209,7 @@ export function generateEntityTools(
           )
           if (!result.body.success) return apiError(result, 'update')
           const data = normalizeOutput(result.body.data)
-          return {
-            content: [{ type: 'text', text: `${entityConfig.names.singular} updated.` }],
-            structuredContent: { data } as Record<string, unknown>,
-          }
+          return withData(`${entityConfig.names.singular} updated.`, { data })
         }
       )
     )
@@ -350,8 +335,34 @@ function extractId(data: unknown): string | null {
   return null
 }
 
-export function errorResult(message: string): McpToolResult {
-  return { content: [{ type: 'text', text: message }], isError: true }
+/**
+ * A result with its data in both forms: `structuredContent` for a client that reads it, and the same JSON as text
+ * after the summary, which the MCP specification asks of a tool that returns structured content. An assistant such
+ * as Claude reads the text only: without it a list answered "15 Tasks" and nothing else (#541).
+ */
+function withData(summary: string, structured: Record<string, unknown>): McpToolResult {
+  return {
+    content: [
+      { type: 'text', text: summary },
+      { type: 'text', text: JSON.stringify(structured) },
+    ],
+    structuredContent: structured,
+  }
+}
+
+// Kept beside the result and not in it: the result is sent to the client as it is
+const errorStatuses = new WeakMap<McpToolResult, number>()
+
+/** `status`: the HTTP status of the API answer behind the error, for the audit trail. */
+export function errorResult(message: string, status?: number): McpToolResult {
+  const result: McpToolResult = { content: [{ type: 'text', text: message }], isError: true }
+  if (status) errorStatuses.set(result, status)
+  return result
+}
+
+/** The API status behind an error result; undefined for an error that never reached the API (invalid arguments). */
+export function errorStatusOf(result: McpToolResult): number | undefined {
+  return errorStatuses.get(result)
 }
 
 function formatZodIssues(error: z.ZodError): string {

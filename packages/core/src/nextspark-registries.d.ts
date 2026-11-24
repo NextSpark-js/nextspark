@@ -466,8 +466,8 @@ declare module '@nextsparkjs/registries/providers-scope' {
 }
 
 declare module '@nextsparkjs/registries/features' {
-  /** `features` of nextspark.config.ts: a flag that is false left its core routes and pages out of the host (#425). */
-  export const FEATURES: { readonly billing: boolean; readonly superadmin: boolean }
+  /** `features` of nextspark.config.ts: a flag that is false left its core routes and pages out of the host (#425); `mcpOAuth` is opt-in (#541). */
+  export const FEATURES: { readonly billing: boolean; readonly superadmin: boolean; readonly mcpOAuth: boolean }
 }
 
 declare module '@nextsparkjs/registries/root-files' {
@@ -949,6 +949,38 @@ declare module '@nextsparkjs/registries/scope-registry' {
 
   export const SCOPE_CONFIG: ScopeConfig
   export const API_CONFIG: ApiConfig
+}
+
+// ============================================================================
+// MCP Scopes (data only)
+//
+// What MCP browser sign-in (#541) reads of the project: the entities the API
+// serves and the scopes some tool of the default /api/mcp route needs. Plain
+// data, generated from the sources (generators/mcp-scopes.mjs); empty in a
+// project without `features.mcpOAuth`.
+// ============================================================================
+declare module '@nextsparkjs/registries/mcp-scopes' {
+  export const MCP_SCOPES: { readonly apiEntities: readonly string[]; readonly toolScopes: readonly string[] }
+}
+
+// ============================================================================
+// MCP Override Registry
+//
+// One entry per `entities/<slug>/mcp.ts` of the project. The shape is
+// McpEntityOverride (src/lib/mcp/types.ts), declared loosely here like the
+// other registries (no imports in this file): the /api/mcp route reads it as
+// McpEntityOverride.
+// ============================================================================
+declare module '@nextsparkjs/registries/mcp-registry' {
+  export interface McpOverrideEntry {
+    exclude?: boolean
+    excludeOperations?: string[]
+    extraTools?: (api: any) => any[]
+    extraToolScopes?: string[]
+    [key: string]: any
+  }
+
+  export const MCP_OVERRIDES: Record<string, McpOverrideEntry>
 }
 
 // ============================================================================

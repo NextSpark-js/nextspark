@@ -1,17 +1,22 @@
 /**
  * MCP audit trail.
  *
- * Every MCP tool call is recorded here so destructive actions by an
- * autonomous agent are at least reconstructable — same insert shape as
- * `logApiUsage` (packages/core/src/lib/api/helpers.ts), including passing the
- * caller's userId as RLS context.
+ * An MCP tool call that reaches its handler is recorded here, best effort, so
+ * destructive actions by an autonomous agent are at least reconstructable —
+ * same insert shape as `logApiUsage` (packages/core/src/lib/api/helpers.ts),
+ * including passing the caller's userId as RLS context. Best effort: a write
+ * that fails is logged and the call goes on, one that does not settle within
+ * AUDIT_WRITE_DEADLINE_MS is no longer waited for, and a call the SDK rejects
+ * before the handler (wrong shape or type, unknown parameter or tool) never
+ * gets here.
  *
  * Since #105 the generic entity handlers also write their own row per
- * request (endpoint `/api/v1/...`, see lib/api/entity/audit-log.ts), so an
- * MCP tool call produces two rows: this one (`mcp:<tool>`, with the tool
- * arguments) and the underlying API call's. They are complementary, not
+ * request (endpoint `/api/v1/...`, see lib/api/entity/audit-log.ts), so a
+ * generated entity tool produces two rows: this one (`mcp:<tool>`, with the
+ * tool arguments) and the underlying API call's. They are complementary, not
  * duplicates — this row carries what the agent asked for, the other what
- * the API answered.
+ * the API answered. A hand-written tool produces this row and one more for
+ * each API handler it actually calls: none, one or several.
  *
  * Note for operators: revoking an API key can take up to 5 minutes to become
  * effective (core apiKeyCache TTL) — the audit log covers that window.
@@ -22,11 +27,19 @@ import type { AuditEntry } from './types'
 
 const MAX_SUMMARY_LENGTH = 4000
 
+/**
+ * How long a tool call waits for its audit row. The row is written after the tool ran: a write that never settles
+ * (a pool with no free connection, a network that went quiet) would hold the answer of a call that already
+ * happened, and a client that times out and repeats it would create or delete twice. Past this the call answers
+ * and the write is left to finish, or to fail, on its own.
+ */
+export const AUDIT_WRITE_DEADLINE_MS = 3000
+
 export async function auditToolCall(entry: AuditEntry): Promise<void> {
-  if (!entry.apiKeyId) {
-    // The MCP endpoint only accepts api-key auth, so this should not happen;
-    // never drop the trace silently if it does.
-    console.warn('[mcp:audit] tool call without apiKeyId — skipping DB audit', {
+  if (!entry.apiKeyId && !entry.oauth) {
+    // The MCP endpoint accepts an API key or an OAuth access token, so this should not
+    // happen; never drop the trace silently if it does.
+    console.warn('[mcp:audit] tool call without apiKeyId or OAuth client — skipping DB audit', {
       tool: entry.tool,
       userId: entry.userId,
     })
@@ -39,16 +52,21 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
     operation: entry.operation ?? null,
     recordId: entry.recordId ?? null,
     teamId: entry.teamId,
-    args: truncate(entry.requestSummary),
+    args: truncate(redactSecrets(entry.requestSummary) as Record<string, unknown>),
+    // A call refused before it ran: what it needed and the credential did not have
+    ...(entry.missingScopes ? { refused: 'insufficient_scope', missingScopes: entry.missingScopes } : {}),
+    // An OAuth call has no api_key row: the client and the token's id identify the credential
+    ...(entry.oauth ? { credential: 'oauth', oauthClientId: entry.oauth.clientId, oauthTokenId: entry.oauth.tokenId ?? null } : {}),
   }
 
+  let deadline: ReturnType<typeof setTimeout> | undefined
   try {
-    await mutateWithRLS(
+    const write = mutateWithRLS(
       `INSERT INTO "api_audit_log"
        ("apiKeyId", "userId", endpoint, method, "statusCode", "ipAddress", "userAgent", "requestBody", "responseTime")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
-        entry.apiKeyId,
+        entry.apiKeyId ?? null,
         entry.userId,
         `mcp:${entry.tool}`,
         (entry.operation ?? 'workflow').toUpperCase(),
@@ -60,10 +78,63 @@ export async function auditToolCall(entry: AuditEntry): Promise<void> {
       ],
       entry.userId
     )
+    const late = new Promise<'late'>(resolve => {
+      deadline = setTimeout(() => resolve('late'), AUDIT_WRITE_DEADLINE_MS)
+    })
+    if ((await Promise.race([write.then(() => 'written' as const), late])) === 'late') {
+      console.error(`[mcp:audit] the api_audit_log entry of ${entry.tool} was not written within ${AUDIT_WRITE_DEADLINE_MS} ms; the call answers without it`)
+      // Still running: its failure, if it comes, is logged and not left as an unhandled rejection
+      write.catch(error => console.error('[mcp:audit] failed to write api_audit_log entry:', error))
+    }
   } catch (error) {
     // Auditing must never break the tool call, but must never fail silently either.
     console.error('[mcp:audit] failed to write api_audit_log entry:', error)
+  } finally {
+    clearTimeout(deadline)
   }
+}
+
+// Words that name a secret wherever they appear in a key
+const SECRET_WORDS = new Set([
+  'password', 'passwd', 'passphrase', 'secret', 'secrets', 'authorization', 'credential', 'credentials', 'bearer', 'otp', 'pin', 'cvv', 'cvc', 'ssn',
+  // written as one lower-case word, which has no boundary to split at
+  'apikey', 'apikeys', 'accesskey', 'privatekey', 'secretkey', 'accesstoken', 'refreshtoken', 'idtoken', 'authtoken', 'clientsecret',
+])
+// `key` and `token` name a secret by their place: `apiKey`, `privateKey`, `accessToken`, `token`, but not
+// `tokenCount` or `keyResults`
+const KEY_QUALIFIERS = new Set(['api', 'private', 'access', 'secret', 'signing', 'encryption', 'auth', 'session'])
+const AFTER_TOKEN = new Set(['value', 'hash', 'secret'])
+
+/** `accessToken`, `access_token` and `access-token` as their words: access, token. */
+function wordsOf(key: string): string[] {
+  return key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+}
+
+/** Whether a key names a secret, by its words: `password`, `clientSecret`, `apiKey`, `refresh_token`; not `tokenCount` or `secretaryName`. */
+export function namesSecret(key: string): boolean {
+  const words = wordsOf(key)
+  return words.some((word, index) => {
+    if (SECRET_WORDS.has(word)) return true
+    const next = words[index + 1]
+    if (word === 'token' || word === 'tokens') return next === undefined || AFTER_TOKEN.has(next)
+    if (word === 'key') return index > 0 && KEY_QUALIFIERS.has(words[index - 1])
+    return false
+  })
+}
+
+/**
+ * The arguments with the value of every key that names a secret replaced, at any depth: the audit trail is read by
+ * people who should not learn a password or a token from it.
+ */
+export function redactSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSecrets)
+  if (value === null || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, inner]) => [
+      key,
+      namesSecret(key) && inner !== null && inner !== undefined ? '[redacted]' : redactSecrets(inner),
+    ])
+  )
 }
 
 function truncate(args: Record<string, unknown>): Record<string, unknown> {

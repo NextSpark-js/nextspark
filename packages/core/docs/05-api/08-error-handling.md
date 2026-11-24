@@ -545,8 +545,8 @@ Authorization: Bearer sk_live_abc123
 ## Rate Limit Errors (429)
 
 **When it occurs:**
-- Too many requests in time window
-- Rate limit exceeded for API key or user
+- Too many requests from the client address in the window of the route's tier
+- One API key or MCP connection over its limit (the `credential` tier, 1000 charges per minute by default: one charge for the request and one more for each API handler a tool calls in process)
 
 **Error Response:**
 ```json
@@ -562,7 +562,7 @@ Authorization: Bearer sk_live_abc123
 ```text
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 0
-X-RateLimit-Reset: 1642435200
+X-RateLimit-Reset: 1767225660000   # Unix timestamp in milliseconds
 Retry-After: 60
 ```
 

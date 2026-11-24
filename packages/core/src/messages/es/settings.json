@@ -487,8 +487,8 @@
       "tipRevoke": "Revoca la clave de inmediato si crees que está comprometida",
       "tipHttps": "Usa siempre HTTPS al hacer solicitudes a la API",
       "limits": "Límites de la API:",
-      "limitRate": "1.000 solicitudes por minuto",
-      "limitHeaders": "Las respuestas incluyen encabezados de límite de uso",
+      "limitRate": "Por defecto, 1.000 cargos por minuto: uno por solicitud y uno más por cada llamada a la API que hace una herramienta MCP",
+      "limitHeaders": "Una respuesta REST limitada incluye los encabezados Retry-After y X-RateLimit-*; en el endpoint MCP, solo Retry-After",
       "limitDocs": "Documentación completa disponible en /docs",
       "keyCopied": "¡Clave de API copiada!",
       "copyKey": "Copiar clave de API",
@@ -570,6 +570,39 @@
         "name": "Sistema",
         "description": "Acceso total al sistema"
       }
+    }
+  },
+  "connectedApps": {
+    "title": "Aplicaciones conectadas",
+    "description": "Aplicaciones que iniciaron sesión en tu cuenta para trabajar con tus datos, como un asistente de IA. Cada una trabaja con un solo equipo.",
+    "empty": "No hay ninguna aplicación conectada.",
+    "loading": "Cargando",
+    "loadError": "No se pudieron cargar las conexiones.",
+    "unknownClient": "Una aplicación",
+    "team": "Equipo: {team}",
+    "teamAndUser": "Equipo: {team} · {user}",
+    "since": "Conectada el {date} · renovada por última vez el {renewed}",
+    "disconnect": "Desconectar",
+    "disconnected": "La aplicación fue desconectada.",
+    "error": "No se pudo desconectar la aplicación.",
+    "managedTitle": "Conexiones de otros miembros",
+    "managedDescription": "Aplicaciones que otros miembros conectaron a equipos de los que eres propietario o administrador.",
+    "confirmTitle": "¿Desconectar {client}?",
+    "confirmDescription": "Pierde el acceso a {team} de inmediato. Para volver a usarla hay que conectarla y autorizarla de nuevo.",
+    "cancel": "Cancelar",
+    "actions": {
+      "read": "leer",
+      "write": "crear y editar",
+      "delete": "eliminar"
+    },
+    "edit": {
+      "open": "Editar permisos",
+      "title": "Permisos de {client}",
+      "description": "Desmarca lo que ya no debe poder hacer en {team}. Sigue conectada con lo que quede. Para darle más, pídelo desde la aplicación: abre la pantalla de consentimiento.",
+      "save": "Guardar",
+      "saved": "Los permisos fueron actualizados.",
+      "error": "No se pudieron actualizar los permisos.",
+      "empty": "Para quitar todos los permisos, desconecta la aplicación."
     }
   }
 }

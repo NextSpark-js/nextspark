@@ -26,11 +26,16 @@ export interface ToolExecutionContext {
   userId: string
   userRole: string
   teamId: string
-  /** Raw Authorization header, forwarded verbatim to in-process handlers. */
+  /** Raw Authorization header, forwarded verbatim to in-process handlers. Empty when `principal` is set. */
   authHeader: string
-  /** api_key.id of the caller — required for audit logging. */
+  /** api_key.id of the caller — required for audit logging. Null for an OAuth access token. */
   apiKeyId: string | null
   scopes: string[]
+  /**
+   * The caller as the MCP endpoint verified it from an OAuth access token (#541). The executor attaches it to the
+   * requests it builds instead of forwarding a credential.
+   */
+  principal?: import('../api/auth/dual-auth').DualAuthResult
 }
 
 export interface McpToolAnnotations {
@@ -66,7 +71,16 @@ export interface McpToolDefinition {
   annotations?: McpToolAnnotations
   handler: (args: Record<string, unknown>, ctx: ToolExecutionContext) => Promise<McpToolResult>
   /** Metadata for audit entries. */
-  meta?: { entitySlug?: string; operation?: McpOperation | 'workflow' }
+  /**
+   * `requiredScopes`: the scopes every call of this tool needs, for a tool that is not a single entity operation
+   * (a workflow, an extra or utility tool). An empty list says the tool needs no permission.
+   *
+   * With an API key it is not checked before the tool runs: each API call the tool makes is checked where it is
+   * made. With MCP browser sign-in (#541) it is what the tool is held to: a connection missing one of the scopes
+   * is told which before the tool runs, and a tool that does not declare `requiredScopes` at all is refused to
+   * every connection, because nothing says which of the permissions the user granted it stands for.
+   */
+  meta?: { entitySlug?: string; operation?: McpOperation | 'workflow'; requiredScopes?: string[] }
 }
 
 /** Thrown by overrides/handlers to short-circuit with an actionable message. */
@@ -147,10 +161,22 @@ export interface McpEntityOverride {
   ) => Record<string, unknown> | Promise<Record<string, unknown>>
   transformOutput?: (operation: McpOperation, output: unknown) => unknown
   extraTools?: (api: EngineApi) => McpToolDefinition[]
+  /**
+   * The scopes the `extraTools` of this entity need beyond the ones of its generated tools, for example
+   * `['tasks:delete']` for an archive tool on an entity whose `delete` is excluded.
+   *
+   * A plain list, read without running `extraTools`: MCP browser sign-in publishes, offers on the consent screen
+   * and grants only the scopes of the generated tools plus the ones declared here, and it is configured before
+   * any tool is built. A tool that needs a scope missing from both can never be called through a browser
+   * sign-in connection; the engine warns about it when it builds the tool.
+   */
+  extraToolScopes?: string[]
 }
 
 export interface AuditEntry {
   apiKeyId: string | null
+  /** The OAuth client and token of a call made with an access token (#541); `apiKeyId` is null for it. */
+  oauth?: { clientId: string; tokenId?: string }
   userId: string
   tool: string
   entitySlug?: string
@@ -160,6 +186,8 @@ export interface AuditEntry {
   statusCode: number
   requestSummary: Record<string, unknown>
   responseTimeMs: number
+  /** Set for a call refused before it ran because the credential lacks these scopes (403 `insufficient_scope`). */
+  missingScopes?: string[]
 }
 
 export interface EntityPresetInfo {
@@ -194,6 +222,8 @@ export interface McpEngineOptions {
   defaultTimezone?: string
   /** Extra tools not attached to an entity (e.g. list_team_members). */
   utilityTools?: (api: EngineApi) => McpToolDefinition[]
+  /** The scopes the `utilityTools` need beyond the ones of the generated tools. A plain list, like `extraToolScopes`. */
+  utilityToolScopes?: string[]
   /** Injectable for tests. Defaults to the api_audit_log writer. */
   audit?: (entry: AuditEntry) => Promise<void>
   /** Injectable for tests. Defaults to the in-process executor. */

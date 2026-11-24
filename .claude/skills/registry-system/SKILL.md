@@ -25,6 +25,8 @@ REGISTRY SYSTEM (Pre-built at build time):
 ├── plugin-registry.ts       # PLUGIN_REGISTRY - Plugin configurations
 ├── namespace-registry.ts    # NAMESPACE_REGISTRY - Route namespaces
 ├── scope-registry.ts        # SCOPE_REGISTRY - API scopes
+├── mcp-registry.ts          # MCP_OVERRIDES - entities/<slug>/mcp.ts files (imports them)
+├── mcp-scopes.ts            # MCP_SCOPES - scopes of MCP browser sign-in, data only, read from source
 ├── route-handlers.ts        # API_ROUTES_METADATA - API route documentation metadata (no handlers)
 ├── middleware-registry.ts   # MIDDLEWARE_REGISTRY - Middleware configs
 ├── permissions-registry.ts  # PERMISSIONS_REGISTRY - Permission matrix

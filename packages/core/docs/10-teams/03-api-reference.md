@@ -626,15 +626,12 @@ The first user in `single-tenant` mode uses regular signup (`/api/auth/signup`):
 
 ## Rate Limiting
 
-API key requests are subject to rate limiting based on the key's tier:
+The Teams endpoints are wrapped with `withRateLimitTier`: each is limited per client address by the tier of the
+route. A request made with an API key is also limited per key, 1000 charges per minute by default, one per request (the
+`credential` tier). A session request is limited by the tier of the route only. Limits do not depend on the
+subscription plan.
 
-| Tier | Requests/minute |
-|------|-----------------|
-| Free | 60 |
-| Pro | 300 |
-| Enterprise | 1000 |
-
-Session-based requests have a higher default limit.
+See [API Rate Limiting](../05-api/07-rate-limiting.md).
 
 ---
 

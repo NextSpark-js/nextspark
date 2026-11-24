@@ -204,7 +204,7 @@ export function evaluateSessionSecret(input: AuthReadinessInput): AuthReadinessD
 export const SESSION_SECRET_VARIABLES = ['BETTER_AUTH_SECRETS', 'BETTER_AUTH_SECRET', 'AUTH_SECRET'] as const
 
 /**
- * The secret sessions are signed with and the variable it comes from, resolved as better-auth 1.7.7's
+ * The secret sessions are signed with and the variable it comes from, resolved as better-auth 1.7.27's
  * createAuthContext does with core's options (`secret: process.env.BETTER_AUTH_SECRET`, no `secrets`): the first
  * `<version>:<secret>` entry of BETTER_AUTH_SECRETS when that variable is not empty, else BETTER_AUTH_SECRET, else
  * AUTH_SECRET. null when none is set. A first entry without a colon has an empty value (the library refuses it).
@@ -224,7 +224,7 @@ export function effectiveSessionSecret(
 
 /**
  * Whether every BETTER_AUTH_SECRETS entry is one the auth library accepts (parseSecretsEnv and validateSecretsArray in
- * better-auth 1.7.7): `<version>:<secret>`, a non-negative integer version (parseInt), a non-empty secret, no version
+ * better-auth 1.7.27): `<version>:<secret>`, a non-negative integer version (parseInt), a non-empty secret, no version
  * twice. The library checks this on the first auth request; the server start checks it before.
  */
 function sessionSecretsListValid(list: string): boolean {

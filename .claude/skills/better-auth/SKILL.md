@@ -2,10 +2,11 @@
 name: better-auth
 description: |
   Authentication patterns with Better Auth for this Next.js application.
-  Covers session authentication, API key authentication, dual auth, OAuth, and testing.
+  Covers session authentication, API key authentication, dual auth, social OAuth sign-in, the app as an
+  OAuth authorization server for its MCP endpoint (features.mcpOAuth), and testing.
   Use this skill when implementing or modifying authentication features.
 allowed-tools: Read, Glob, Grep
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Better Auth Skill
@@ -18,10 +19,14 @@ Authentication patterns and best practices for this Next.js application using Be
 core/lib/
 ├── auth.ts                   # Better Auth configuration
 ├── auth-client.ts            # Client-side auth utilities
-└── api/auth/
-    ├── dual-auth.ts          # Dual authentication (API Key + Session)
-    ├── index.ts              # API key validation
-    └── scopes.ts             # Permission scopes
+├── api/auth/
+│   ├── dual-auth.ts          # Dual authentication (API Key + Session)
+│   ├── in-process-principal.ts  # A principal the server verified, attached to an in-process request
+│   ├── index.ts              # API key validation
+│   └── scopes.ts             # Permission scopes
+└── mcp/oauth/                # The app as an OAuth 2.1 authorization server (features.mcpOAuth)
+    ├── plugins.ts            # mcpOAuthPlugins(): jwt(), mcp(), cimd(), consentWithinRolePlugin()
+    └── consent-plugin.ts     # Before-hooks on Better Auth's OAuth endpoints
 
 app/hooks/
 └── useAuth.ts                # Client-side auth hook
@@ -38,11 +43,21 @@ packages/core/src/routes/(auth)/
 - Implementing authentication flows (login, register, logout)
 - Adding API key authentication to endpoints
 - Implementing role-based access control
-- Setting up OAuth providers
+- Setting up OAuth providers (social sign-in: the app is the OAuth client)
+- Touching the Better Auth plugins of MCP browser sign-in (the app is the authorization server): read the
+  `mcp-server` skill too
 - Testing authentication flows
 - Securing API endpoints with dual auth
 
 ## Authentication Methods
+
+Three credentials exist. Which one a route accepts depends on the route:
+
+| Credential | Accepted by |
+|------------|-------------|
+| Session cookie | The dashboard, `/api/v1/**`, and the session-only routes (`/api/superadmin/**`, `/api/internal/oauth-*`) |
+| API key | `/api/v1/**` and `/api/mcp` |
+| OAuth access token (MCP browser sign-in) | `/api/mcp` only, and only when `features.mcpOAuth` is on |
 
 ### 1. Session Authentication (Dashboard)
 
@@ -93,7 +108,8 @@ x-team-id: team-tmt-001
 
 ### 3. Dual Authentication (Unified Endpoints)
 
-All `/api/v1/` endpoints support both authentication methods.
+All `/api/v1/` endpoints support both of the methods above: session and API key. An OAuth access token is
+never accepted by `/api/v1/**` (see method 4).
 
 ```typescript
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
@@ -112,8 +128,28 @@ export async function GET(request: NextRequest) {
   // - type: 'api-key' | 'session'
   // - user: { id, email, role, defaultTeamId }
   // - scopes: string[] (for API keys) or ['all'] (for sessions)
+  // - oauth?: { clientId, tokenId }  (set when the scoped credential is an MCP OAuth connection, see below)
 }
 ```
+
+### 4. OAuth Access Token (`/api/mcp` only)
+
+With `features: { mcpOAuth: true }` the app is an OAuth 2.1 authorization server for its own MCP endpoint, and
+`/api/mcp` accepts a bearer access token as well as an API key (never both in one request). The token is a JWT
+issued for the resource `/api/mcp`, valid 10 minutes, bound to one team (`team_id` claim).
+
+It is verified once, in `lib/mcp/oauth/resource-server.ts`, and is never presented to another route. The tools
+of the MCP server call the `/api/v1` handlers in process with the **verified principal attached to the request
+object** (`attachInProcessPrincipal`, a `WeakMap<Request, DualAuthResult>`), and `authenticateRequest` reads it
+back first (`inProcessPrincipal`). Nothing sent over HTTP can set it.
+
+**Principal type of an OAuth call:** `type: 'api-key'` with `oauth: { clientId, tokenId }` (`DualAuthResult`).
+`type` stays `'api-key'` so every check written for a scoped credential applies unchanged (declared scope,
+`access.api`, external-caller rules, the per-credential rate limit). It does not mean an `api_key` row exists:
+`keyId` is not set. Code that must tell the two apart checks `authResult.oauth`. This is a bridge, not the
+final model.
+
+Everything else (consent, teams, scopes, revocation): see the `mcp-server` skill.
 
 ## User Roles vs Team Roles
 
@@ -568,6 +604,8 @@ const sessionConfig = {
 | Password reset | 1 hour |
 | Session | 7 days |
 | API Key | No expiration (revocable) |
+| MCP OAuth access token | 10 minutes (renewed with a rotating refresh token) |
+| MCP OAuth signing key | Rotates every 30 days; the replaced key stays published 30 more |
 
 ## useAuth Hook
 
@@ -741,6 +779,13 @@ socialProviders: {
 BETTER_AUTH_SECRET=your-secret-key
 NEXT_PUBLIC_APP_URL=http://localhost:5173
 
+# MCP browser sign-in (only with features.mcpOAuth; see "OAuth Authorization Server" below)
+MCP_ENABLED=true            # production: the MCP endpoint is off unless 'true'
+MCP_OAUTH_ENABLED=false     # optional: switches browser sign-in off at runtime without a build
+# Production only: sign-in does not start without Redis and refuses OAuth requests while the role of
+# DATABASE_URL skips RLS, unless the deployment names what it accepts (see the `mcp-server` skill)
+# MCP_OAUTH_ACCEPT_RISKS=no-shared-rate-limit,rls-not-enforced
+
 # Google OAuth
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_SECRET=your-client-secret
@@ -749,6 +794,77 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 RESEND_API_KEY=your-resend-key
 EMAIL_FROM=noreply@yourdomain.com
 ```
+
+## OAuth Authorization Server (MCP browser sign-in)
+
+"OAuth" means two different things in this app:
+
+| | Social sign-in (above) | MCP browser sign-in |
+|---|------------------------|---------------------|
+| The app is | the OAuth **client** of Google | the OAuth **authorization server** and the resource server |
+| Configured in | `socialProviders` | `mcpOAuthPlugins()` in `lib/mcp/oauth/plugins.ts`, spread into `plugins` of `lib/auth.ts` |
+| On when | the provider is enabled | `features: { mcpOAuth: true }` in `nextspark.config.ts` and migration `049_oauth_provider.sql`; `MCP_OAUTH_ENABLED=false` turns it off at runtime |
+
+### Versions
+
+`better-auth` and `@better-auth/oauth-provider`, `@better-auth/mcp`, `@better-auth/cimd`, `@better-auth/core`
+are all `~1.7.27` in `packages/core/package.json`, and `@better-fetch/fetch` is `1.3.3` (the exact version
+`better-auth` pins). The CLI wizard (`packages/cli/src/wizard/generators/index.ts`) and
+`packages/create-nextspark-app/src/create.ts` write the same versions into new projects: change them together.
+Migration 049's columns are the ones Better Auth 1.7.27 expects; an upgrade means re-checking them.
+
+### The plugins
+
+`mcpOAuthPlugins()` returns `[]` while the feature is off (no endpoint, no metadata, no table touched), otherwise:
+
+| Plugin | From | Does |
+|--------|------|------|
+| `jwt()` | `better-auth/plugins` | Signs the access tokens (EdDSA keys in table `jwks`, rotated every `SIGNING_KEY_ROTATION_SECONDS`). `disableSettingJwtHeader: true`: no JWT on session responses |
+| `mcp()` | `@better-auth/mcp` | The OAuth provider bound to the MCP resource: `authorization_code` (PKCE S256) and `refresh_token` grants only, `accessTokenExpiresIn: 600`, the login, team-picker (`postLogin`) and consent pages, `customAccessTokenClaims` (`team_id`, `rev`) |
+| `cimd()` | `@better-auth/cimd` | Client ID Metadata Documents: a client identifies itself with an https URL. Dynamic client registration is closed |
+| `consentWithinRolePlugin()` | `lib/mcp/oauth/consent-plugin.ts` | The project's own hooks plugin, below |
+
+### The hooks plugin
+
+`consentWithinRolePlugin()` is a Better Auth plugin made only of `hooks.before` middlewares (`createAuthMiddleware`),
+matched by `ctx.path`. It is how core puts a rule in front of an endpoint Better Auth owns:
+
+| Path | Rule |
+|------|------|
+| `/oauth2/*`, `/admin/oauth2/*`, the `.well-known` documents (not `/oauth2/revoke` or `/oauth2/delete-consent`) | The production gate, first: `503 temporarily_unavailable` while the role of `DATABASE_URL` skips RLS in production and the deployment has not accepted it (`mcpOAuthRefusedByGate`) |
+| `/oauth2/consent` | The scopes granted are rewritten to requested ∩ ticked by the user ∩ active (a tool needs it) ∩ what the user's role can hold in the chosen team |
+| `/oauth2/update-consent` | The same bound, for the endpoint that lets the signed-in user rewrite a consent's scopes directly |
+| `/oauth2/token`, `/oauth2/userinfo` | With an allow-list of applications (`mcp.oauth.allowedClientHosts`), every client the request names must be accepted |
+
+A before-hook can only refuse or rewrite the request. It cannot make two of Better Auth's statements atomic.
+
+### Better Auth writes these rows itself
+
+Better Auth mutates consents and tokens directly, from several endpoints, without passing through core's code:
+
+- `/oauth2/consent` and `/oauth2/update-consent` write the consent's scopes
+- `/oauth2/delete-consent` deletes the consent row and nothing else
+- `/oauth2/revoke` revokes a token
+- `/oauth2/token` renews in **separate statements**: it reads the old refresh token, marks it replaced, then
+  writes the new one. A disconnection can land between two of them
+- A replaced refresh token presented again ends every connection of that client for the user
+
+So an invariant such as "a refresh token exists only while its consent does, and holds no more than it" cannot
+live in application code: it would hold for core's paths and for none of these. It is enforced in the database,
+by the triggers and row locks of migration `049_oauth_provider.sql` (see `mcp-server` and `database-migrations`).
+Before adding a Better Auth plugin or option that writes `oauthConsent` or `oauthRefreshToken`, or upgrading
+Better Auth, check the new write path against those triggers.
+
+### Other behaviour to know
+
+- A client set to skip consent (`skipConsent`) is refused: `refuseConsentSkippingClient`.
+- A suspended account gets no token, new or refreshed (`refuseSuspended` in `plugins.ts`); a suspension and a
+  changed password end every connection of the user (triggers on `users` and `account`). A member who leaves or
+  is removed from a team, and the deletion of a team, end the connections to that team (trigger on `team_members`).
+- Signing out of the browser does not disconnect an application.
+- After sign-in (password, Google, magic link) the browser continues an authorization that was in progress:
+  `continueOAuthSignIn` and `signInCallbackURL` in `src/hooks/useAuth.ts`, `lib/mcp/oauth/sign-in-continuation.ts`.
+- Better Auth 1.7.27 answers `POST /api/auth/sign-out` with no body with 200 (1.7.7 answered 415).
 
 ## Anti-Patterns
 
@@ -787,6 +903,17 @@ const userId = request.body.userId // User can fake this!
 // CORRECT: Get user from authenticated session
 // (a real route would pass { requiredScope } here — see "API Key Scopes" above)
 const { user } = await authenticateRequest(request, { requiredScope: 'users:read' })
+
+// NEVER: Assume type 'api-key' means an api_key row
+const keyId = authResult.keyId!  // undefined for an MCP OAuth connection
+
+// CORRECT: An OAuth connection is a scoped credential with `oauth` set
+if (authResult.oauth) { /* client: authResult.oauth.clientId */ }
+
+// NEVER: Enforce an invariant over rows Better Auth writes in a hook or in a route only
+// (it renews tokens in separate statements, from its own endpoints)
+
+// CORRECT: A trigger with a row lock in a migration (049_oauth_provider.sql)
 ```
 
 ## Checklist
@@ -803,10 +930,14 @@ Before finalizing authentication code:
 - [ ] Error responses use proper status codes
 - [ ] Rate limiting implemented for sensitive endpoints
 - [ ] OAuth profile mapping configured correctly
+- [ ] Code that branches on `type === 'api-key'` is right for an MCP OAuth connection too (`authResult.oauth`)
+- [ ] A new write path to `oauthConsent` / `oauthRefreshToken` was checked against the triggers of migration 049
+- [ ] Better Auth version changed in `packages/core/package.json`, the CLI wizard and `create-nextspark-app` together
 - [ ] Test users documented and working
 
 ## Related Skills
 
+- `mcp-server` - `/api/mcp`, MCP browser sign-in: consent, teams, scopes, connections, migration 049
 - `cypress-e2e` - UAT testing with session authentication
 - `cypress-api` - API testing with API key authentication
 - `nextjs-api-development` - API route patterns

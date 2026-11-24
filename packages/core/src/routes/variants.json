@@ -84,6 +84,16 @@
     },
     {
       "kind": "page",
+      "target": "(auth)/oauth/consent/page.tsx",
+      "specifier": "@nextsparkjs/core/routes/(auth)/oauth/consent/page.cc"
+    },
+    {
+      "kind": "page",
+      "target": "(auth)/oauth/select-team/page.tsx",
+      "specifier": "@nextsparkjs/core/routes/(auth)/oauth/select-team/page.cc"
+    },
+    {
+      "kind": "page",
       "target": "(public)/docs/[section]/[page]/page.tsx",
       "specifier": "@nextsparkjs/core/routes/(public)/docs/[section]/[page]/page.cc"
     },

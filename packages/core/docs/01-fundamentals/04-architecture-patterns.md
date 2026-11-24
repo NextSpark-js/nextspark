@@ -428,9 +428,18 @@ fi
 
 ### Overview
 
-The application supports two authentication modes simultaneously:
+The application and its REST API (`/api/v1`) support two authentication modes simultaneously:
 1. **Session-based** - For dashboard users (cookies + Better Auth)
 2. **API key-based** - For external API access (Bearer tokens)
+
+A third credential exists for one endpoint only: the MCP server at `/api/mcp` also accepts an OAuth access token
+when a project turns on MCP browser sign-in (`features.mcpOAuth`). It is not accepted by `/api/v1`. Inside the
+server such a call reaches `authenticateRequest` as an in-process principal of type `'api-key'`. See
+[API Authentication](../05-api/02-authentication.md) and
+[MCP Browser Sign-in](../06-authentication/14-mcp-browser-sign-in.md).
+
+The snippet below is a simplification. The real `authenticateRequest` checks, in this order, an in-process
+principal, an API key and then the session.
 
 ### Implementation
 

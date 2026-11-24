@@ -67,7 +67,7 @@ describe('register() session secret check', () => {
     expect(exit).not.toHaveBeenCalled()
   })
 
-  // The secret the auth library signs with (better-auth 1.7.7): BETTER_AUTH_SECRETS' first entry, else
+  // The secret the auth library signs with (better-auth 1.7.27): BETTER_AUTH_SECRETS' first entry, else
   // BETTER_AUTH_SECRET, else AUTH_SECRET (#297)
   test('production with no secret at all exits with 1 and names the three variables', async () => {
     delete env.BETTER_AUTH_SECRET

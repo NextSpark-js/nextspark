@@ -98,7 +98,7 @@ export interface RateLimitCheckResult {
 /**
  * The tiers core ships
  */
-export type BuiltInRateLimitTier = 'auth' | 'authIdentifier' | 'api' | 'strict' | 'read' | 'write' | 'webhook' | 'ingest'
+export type BuiltInRateLimitTier = 'auth' | 'authIdentifier' | 'api' | 'strict' | 'read' | 'write' | 'webhook' | 'ingest' | 'credential'
 
 /**
  * Rate limit tiers available for API endpoints: the built-in ones and any name declared in
@@ -107,7 +107,10 @@ export type BuiltInRateLimitTier = 'auth' | 'authIdentifier' | 'api' | 'strict' 
 export type RateLimitTier = BuiltInRateLimitTier | (string & {})
 
 export interface RateLimitTierConfig {
-  /** Requests allowed per window */
+  /**
+   * What the tier allows per window: requests of a client address for the per-address tiers, and charges for the
+   * `credential` tier (one for each authenticated request, so one more for each API handler an MCP tool calls)
+   */
   limit: number
   /** Window length in milliseconds */
   windowMs: number
@@ -125,6 +128,8 @@ const DEFAULT_TIERS: Record<BuiltInRateLimitTier, RateLimitTierConfig> = {
   write: { limit: 50, windowMs: 60 * 1000 },
   webhook: { limit: 500, windowMs: 60 * 60 * 1000 },
   ingest: { limit: 1000, windowMs: 60 * 1000 },
+  // What one API key or one MCP connection may send, counted by the credential and not by the address
+  credential: { limit: 1000, windowMs: 60 * 1000 },
 }
 
 const warned = new Set<string>()
@@ -259,9 +264,7 @@ export async function isRedisConfigured(): Promise<boolean> {
  * Synchronous check if Redis might be configured (based on env vars)
  * Use this for quick checks, but isRedisConfigured() is more accurate
  */
-export function maybeRedisConfigured(): boolean {
-  return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-}
+export { maybeRedisConfigured } from './rate-limit-env'
 
 /**
  * Get rate limit headers for HTTP response

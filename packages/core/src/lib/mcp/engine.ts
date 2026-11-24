@@ -9,25 +9,31 @@
  *
  * Stateless per request: handleJsonRpc creates an ephemeral McpServer bound
  * to the request's ToolExecutionContext, processes the message(s), and tears
- * everything down. Every tool call is audited.
+ * everything down. A tool call that reaches its handler is audited, best effort (lib/mcp/audit).
  *
  * No separate authorization layer runs here: every generated tool's executor
  * round-trips in-process through the real generic entity handlers, which
  * already enforce scope + team-role permission + ownership/field guards for
- * API-key auth (see tool-generator.ts).
+ * API-key auth (see tool-generator.ts). A hand-written tool (extraTools,
+ * utilityTools) runs its own handler and is bound by them only for the API
+ * handlers it calls through `api.execute`. For an OAuth connection (#541) it
+ * also has to declare what it needs (`meta.requiredScopes`): the request is
+ * refused when the connection was not granted it, and a tool that declares
+ * nothing is refused to every connection.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { JSONRPCMessageSchema, type JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
-import { isApiOperationEnabled } from '../entities/api-access'
 import { StatelessJsonRpcTransport } from './transport'
-import { generateEntityTools, normalizeDateFields } from './tool-generator'
+import { errorResult, errorStatusOf, generateEntityTools, normalizeDateFields } from './tool-generator'
 import { buildEntitySchemas } from './schema-builder'
 import { executeEntityOperation } from './executor'
 import { auditToolCall } from './audit'
 import { translateApiError } from './errors'
+import { DEFAULT_TIMEZONE, declaresScopes, exposedEntities, handWrittenToolFactories, scopesOfToolMeta, toolScopesOf } from './exposure'
+import { isMcpOAuthBuilt } from './oauth/built'
 import type {
   EngineApi,
   EntityExecutor,
@@ -38,10 +44,6 @@ import type {
   ToolExecutionContext,
 } from './types'
 
-const DEFAULT_OPERATIONS: McpOperation[] = ['list', 'get', 'create', 'update', 'delete']
-const DEFAULT_EXCLUDED_SLUGS = ['patterns']
-const DEFAULT_TIMEZONE = 'UTC'
-
 export interface McpEngine {
   tools: McpToolDefinition[]
   handleJsonRpc: (
@@ -49,6 +51,12 @@ export interface McpEngine {
     ctx: ToolExecutionContext
   ) => Promise<JSONRPCMessage | JSONRPCMessage[] | null>
   api: EngineApi
+  /** The scopes a call to a tool needs before it runs: an entity tool's own, or the ones a tool declares in `meta.requiredScopes`. */
+  requiredScopesFor: (toolName: string) => string[]
+  /** Every scope some tool of this server needs. */
+  toolScopes: string[]
+  /** Tries to record, best effort, the tool calls of a body refused for missing scopes; `granted` is what the credential has. */
+  auditRefused: (body: unknown, ctx: ToolExecutionContext, granted: readonly string[]) => Promise<void>
 }
 
 export function createMcpEngine(
@@ -57,8 +65,6 @@ export function createMcpEngine(
 ): McpEngine {
   const executor = options.executor ?? executeEntityOperation
   const audit = options.audit ?? auditToolCall
-  const excluded = new Set(options.excludeSlugs ?? DEFAULT_EXCLUDED_SLUGS)
-  const defaultOperations = options.defaultOperations ?? DEFAULT_OPERATIONS
   const overrides = options.overrides ?? {}
 
   /**
@@ -104,22 +110,9 @@ export function createMcpEngine(
 
   const tools: McpToolDefinition[] = []
 
-  for (const [slug, entityConfig] of Object.entries(registry)) {
-    if (excluded.has(slug)) continue
-    if (!entityConfig?.enabled) continue
-    if (!entityConfig.access?.api) continue
-
-    const override = overrides[slug]
-    if (override?.exclude) continue
-
-    // `access.api` as an object serves only the operations it enables (#376): list/get are reads, the rest map 1:1
-    const operations = defaultOperations.filter(
-      (op) =>
-        !override?.excludeOperations?.includes(op) &&
-        isApiOperationEnabled(entityConfig, op === 'list' || op === 'get' ? 'read' : op)
-    )
-    if (!operations.length) continue
-
+  // Which entities and operations get a tool is decided in ./exposure, shared with MCP browser sign-in: the scopes
+  // it publishes, offers and grants are the ones these tools need.
+  for (const { slug, entityConfig, override, operations } of exposedEntities(registry, options)) {
     tools.push(
       ...generateEntityTools(entityConfig, operations, override, {
         executor: normalizingExecutor,
@@ -130,14 +123,41 @@ export function createMcpEngine(
     )
   }
 
-  for (const [slug, override] of Object.entries(overrides)) {
-    if (!override.extraTools) continue
-    if (excluded.has(slug)) continue
-    tools.push(...override.extraTools(api))
+  // A hand-written tool that needs a scope no generated tool uses and no override declares still works with an
+  // API key, but MCP browser sign-in publishes and grants only the declared scopes, so no connection of it could
+  // ever hold that one. Said once, when the tool is built, where the project can see it.
+  const declaredScopes = new Set(toolScopesOf(registry, options))
+  // Where a tool came from decides what counts as saying what it needs (./exposure `declaresScopes`)
+  const handWritten = new Set<McpToolDefinition>()
+  const saysWhatItNeeds = (tool: McpToolDefinition) => declaresScopes(tool.meta, handWritten.has(tool))
+  // What a call of the tool needs. Only a generated tool is its entity operation: a hand-written one needs what it
+  // declares and nothing else, so that one that declares nothing is told so by the engine, with no challenge
+  // that sends its user to grant a scope the tool could not be called with anyway.
+  const scopesNeededBy = (tool: McpToolDefinition | undefined): string[] => {
+    if (!tool) return []
+    if (!handWritten.has(tool)) return scopesOfToolMeta(tool.meta)
+    return Array.isArray(tool.meta?.requiredScopes) ? [...tool.meta.requiredScopes] : []
   }
-
-  if (options.utilityTools) {
-    tools.push(...options.utilityTools(api))
+  for (const factory of handWrittenToolFactories(options)) {
+    for (const tool of factory(api)) {
+      handWritten.add(tool)
+      // A tool that does not say what it needs is refused to every browser sign-in connection (see the handler
+      // below). Said when it is built, in a project that has sign-in, so that it is not found out by a user.
+      if (isMcpOAuthBuilt() && !saysWhatItNeeds(tool)) {
+        console.warn(
+          `[mcp] The tool "${tool.name}" does not declare the permissions it needs, so MCP browser sign-in connections are refused it (it still works with an API key). ` +
+            'Add `meta: { requiredScopes: [...] }` to it, with the scopes every call of it needs; an empty list if it needs none.'
+        )
+      }
+      const undeclared = scopesNeededBy(tool).filter(scope => !declaredScopes.has(scope))
+      if (undeclared.length) {
+        console.warn(
+          `[mcp] The tool "${tool.name}" needs ${undeclared.join(', ')}, which no generated tool uses and no override declares. ` +
+            'Add it to `extraToolScopes` in the entity\'s mcp.ts (or `utilityToolScopes`): until then no MCP browser sign-in connection can be granted it.'
+        )
+      }
+      tools.push(tool)
+    }
   }
 
   assertUniqueNames(tools)
@@ -167,28 +187,41 @@ export function createMcpEngine(
         (async (args: Record<string, unknown>) => {
           const startedAt = Date.now()
           let result: McpToolResult
-          try {
-            result = await tool.handler(args ?? {}, ctx)
-          } catch (error) {
-            result = {
-              content: [
-                {
-                  type: 'text',
-                  text: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
-                },
-              ],
-              isError: true,
+          // An OAuth connection is held to what its user's role allows now (ctx.scopes). The request was already
+          // refused if the connection was never granted a scope the tool declares; this is the other case, a scope
+          // that was granted and the role has lost since. An entity tool would be refused by the API handler it
+          // calls; a tool the project wrote may never call one, so it is refused here, before it runs.
+          const roleLacks = ctx.principal?.oauth ? scopesNeededBy(tool).filter(scope => !ctx.scopes.includes(scope)) : []
+          // And to what its user consented to: a tool that does not say what it needs stands for none of the
+          // permissions of the consent, so no connection is let through to it (./exposure `declaresScopes`).
+          if (ctx.principal?.oauth && !saysWhatItNeeds(tool)) {
+            result = errorResult(
+              'This tool cannot be used through this connection: the application has not declared which permissions it needs, so the server cannot tell whether you granted them. Connecting again will not change it. It can be used with an API key; the developers of the application can make it available here by declaring its permissions (`meta.requiredScopes`).',
+              403
+            )
+          } else if (roleLacks.length) {
+            result = errorResult(
+              `Your role in the team does not allow ${roleLacks.join(', ')} any more, so this tool cannot run for this connection. Connecting again will not change it: ask an administrator of the team.`,
+              403
+            )
+          } else {
+            try {
+              result = await tool.handler(args ?? {}, ctx)
+            } catch (error) {
+              result = errorResult(`Unexpected error: ${error instanceof Error ? error.message : String(error)}`, 500)
             }
           }
           await audit({
             apiKeyId: ctx.apiKeyId,
+            oauth: ctx.principal?.oauth,
             userId: ctx.userId,
             tool: tool.name,
             entitySlug: tool.meta?.entitySlug,
             operation: tool.meta?.operation,
             recordId: typeof args?.id === 'string' ? args.id : undefined,
             teamId: ctx.teamId,
-            statusCode: result.isError ? 400 : 200,
+            // An API error keeps its status (403, 404, 409...); 400 is an error that never reached the API
+            statusCode: result.isError ? (errorStatusOf(result) ?? 400) : 200,
             requestSummary: (args ?? {}) as Record<string, unknown>,
             responseTimeMs: Date.now() - startedAt,
           })
@@ -227,7 +260,54 @@ export function createMcpEngine(
     }
   }
 
-  return { tools, handleJsonRpc, api }
+  /**
+   * The scopes a call to `toolName` needs before it runs. A generated entity tool: `<slug>:read|write|delete`, as
+   * the API handler it runs declares it. A tool that makes several calls (a workflow, an extra or utility tool)
+   * says so in `meta.requiredScopes`; one that does not has none here, and the handler above refuses it to an
+   * OAuth connection. None for an unknown name.
+   */
+  function requiredScopesFor(toolName: string): string[] {
+    return scopesNeededBy(tools.find(tool => tool.name === toolName))
+  }
+
+  /**
+   * Records, best effort, the tool calls of a body that was refused before anything ran because the credential
+   * lacks scopes: for each well-formed call of a known tool it tries to write a row with status 403 and what that
+   * call was missing (a failed write is logged, lib/mcp/audit). An attempt to do what was not granted is the part
+   * of an agent's activity most worth being able to reconstruct.
+   */
+  async function auditRefused(body: unknown, ctx: ToolExecutionContext, granted: readonly string[]): Promise<void> {
+    // Written together: each write has its own deadline (lib/mcp/audit), and one after another a refused batch
+    // would wait for the sum of them before its 403
+    const writes: Array<Promise<void>> = []
+    for (const message of Array.isArray(body) ? body : [body]) {
+      const call = message as { jsonrpc?: unknown; method?: unknown; params?: { name?: unknown; arguments?: unknown } } | null
+      if (call?.jsonrpc !== '2.0' || call.method !== 'tools/call' || typeof call.params?.name !== 'string') continue
+      const tool = tools.find(candidate => candidate.name === call.params!.name)
+      if (!tool) continue
+      const args = (call.params.arguments && typeof call.params.arguments === 'object' ? call.params.arguments : {}) as Record<string, unknown>
+      writes.push(audit({
+        apiKeyId: ctx.apiKeyId,
+        oauth: ctx.principal?.oauth,
+        userId: ctx.userId,
+        tool: tool.name,
+        entitySlug: tool.meta?.entitySlug,
+        operation: tool.meta?.operation,
+        recordId: typeof args.id === 'string' ? args.id : undefined,
+        teamId: ctx.teamId,
+        statusCode: 403,
+        requestSummary: args,
+        responseTimeMs: 0,
+        missingScopes: requiredScopesFor(tool.name).filter(scope => !granted.includes(scope)),
+      }))
+    }
+    await Promise.all(writes)
+  }
+
+  /** Every scope some tool needs, for telling a client what there is to ask for. */
+  const toolScopes = [...new Set(tools.flatMap(tool => requiredScopesFor(tool.name)))].sort()
+
+  return { tools, handleJsonRpc, api, requiredScopesFor, toolScopes, auditRefused }
 }
 
 function assertUniqueNames(tools: McpToolDefinition[]): void {

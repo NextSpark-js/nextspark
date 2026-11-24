@@ -5,7 +5,7 @@
 
 jest.mock('@/core/lib/api/auth', () => ({ validateApiKey: jest.fn() }))
 jest.mock('@/core/lib/auth', () => ({ auth: { api: { getSession: jest.fn() } } }))
-jest.mock('@/core/lib/api/rate-limit', () => ({ checkRateLimit: jest.fn(), addRateLimitHeaders: jest.fn(), apiKeyRateLimitResponse: jest.fn() }))
+jest.mock('@/core/lib/api/rate-limit', () => ({ checkRateLimit: jest.fn(), addRateLimitHeaders: jest.fn(), credentialRateLimitResponse: jest.fn().mockResolvedValue(null) }))
 jest.mock('@/core/lib/db', () => ({ mutateWithRLS: jest.fn(), queryWithRLS: jest.fn() }))
 jest.mock('@/core/lib/config', () => ({ getApplicationConfig: jest.fn() }))
 jest.mock('@/core/lib/services/meta.service', () => ({ MetaService: {} }))

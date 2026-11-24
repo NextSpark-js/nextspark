@@ -1,0 +1,124 @@
+/**
+ * The per-credential limit shared between instances (#541): with Redis configured an API key or an MCP connection
+ * is counted in the shared store, so every instance of a serverless deployment sees the same count. Without Redis
+ * the count is the one of the process, as before.
+ */
+import { describe, it, expect, jest, beforeEach } from '@jest/globals'
+
+jest.mock('@/core/lib/db', () => ({
+  queryOne: jest.fn(),
+  query: jest.fn(async () => ({ rows: [], rowCount: 0 })),
+  queryWithRLS: jest.fn(async () => []),
+  mutateWithRLS: jest.fn(async () => ({ rows: [], rowCount: 0 })),
+}))
+jest.mock('@/core/lib/auth', () => ({ auth: { api: { getSession: jest.fn(async () => null) } } }))
+
+const redis = {
+  // the `credential` tier as rateLimit.tiers of app.config leaves it
+  tier: { limit: 1000, windowMs: 60_000 },
+  configured: false,
+  check: jest.fn<(identifier: string, tier: string) => Promise<{ success: boolean; remaining: number; reset: number; limit?: number }>>(),
+}
+jest.mock('@/core/lib/rate-limit-redis', () => ({
+  checkRateLimit: (identifier: string, tier: string) => redis.check(identifier, tier),
+  maybeRedisConfigured: () => redis.configured,
+  getRateLimitTierConfig: () => redis.tier,
+}))
+
+import { NextRequest } from 'next/server'
+import { rateLimitCache, getCacheKey } from '@/core/lib/api/cache'
+import { credentialRateLimitResponse, windowLabel } from '@/core/lib/api/rate-limit'
+
+const request = () => new NextRequest('http://localhost:3000/api/mcp', { method: 'POST' })
+const credential = (keyId: string) => ({ keyId, userId: 'user-1', scopes: ['tasks:read'] })
+const allowed = () => ({ success: true, remaining: 10, reset: Date.now() + 60_000, limit: 1000 })
+const over = () => ({ success: false, remaining: 0, reset: Date.now() + 30_000, limit: 1000 })
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  redis.configured = false
+  redis.tier = { limit: 1000, windowMs: 60_000 }
+  redis.check.mockResolvedValue(allowed())
+})
+
+describe('the per-credential limit', () => {
+  it('without Redis is the count of this process, and the shared store is not asked', async () => {
+    expect(await credentialRateLimitResponse(request(), credential('oauth:no-redis'))).toBeNull()
+    expect(redis.check).not.toHaveBeenCalled()
+  })
+
+  it('with Redis is counted in the shared store, by the credential, in the tier of its own', async () => {
+    redis.configured = true
+    expect(await credentialRateLimitResponse(request(), credential('oauth:client|user|team'))).toBeNull()
+    expect(redis.check).toHaveBeenCalledTimes(1)
+    expect(redis.check).toHaveBeenCalledWith('oauth:client|user|team', 'credential')
+  })
+
+  it('counts a request once in the shared store however many times it is authenticated', async () => {
+    redis.configured = true
+    const one = request()
+    await credentialRateLimitResponse(one, credential('key-once'))
+    await credentialRateLimitResponse(one, credential('key-once'))
+    await credentialRateLimitResponse(request(), credential('key-once'))
+    expect(redis.check).toHaveBeenCalledTimes(2)
+  })
+
+  it('refuses with a 429 that says when to retry once the shared count is over, though this process counted little', async () => {
+    redis.configured = true
+    redis.check.mockResolvedValue(over())
+    const response = await credentialRateLimitResponse(request(), credential('key-shared-over'))
+    expect(response?.status).toBe(429)
+    // the message counts in charges, the unit the limit is kept in: a request of the client can cost more than one
+    expect(await response!.json()).toMatchObject({
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many requests for this credential. Limit: 1000 charges per minute: one per request, and one more for each API call an MCP tool makes',
+    })
+    const retryAfter = Number(response!.headers.get('Retry-After'))
+    expect(retryAfter).toBeGreaterThanOrEqual(1)
+    expect(retryAfter).toBeLessThanOrEqual(30)
+  })
+
+  it('a credential over the count of this process is refused without asking the shared store', async () => {
+    redis.configured = true
+    rateLimitCache.set(getCacheKey('rate_limit', 'key-local-over'), { count: 1000, resetTime: Date.now() + 60_000 }, 60_000)
+    const response = await credentialRateLimitResponse(request(), credential('key-local-over'))
+    expect(response?.status).toBe(429)
+    expect(redis.check).not.toHaveBeenCalled()
+  })
+
+  it('two instances share one count: the request that takes it over the limit is refused wherever it lands', async () => {
+    redis.configured = true
+    // the shared store as two instances see it: one counter for the credential, limit 3
+    let count = 0
+    redis.check.mockImplementation(async () => (++count <= 3 ? allowed() : over()))
+    const results: Array<number | null> = []
+    for (let i = 0; i < 5; i++) results.push((await credentialRateLimitResponse(request(), credential('key-two-instances')))?.status ?? null)
+    expect(results).toEqual([null, null, null, 429, 429])
+  })
+
+  it('without Redis the count of the process follows the tier a project configures, below and above the default', async () => {
+    redis.tier = { limit: 2, windowMs: 60_000 }
+    const lowered: Array<number | null> = []
+    for (let i = 0; i < 3; i++) lowered.push((await credentialRateLimitResponse(request(), credential('key-tier-lowered')))?.status ?? null)
+    expect(lowered).toEqual([null, null, 429])
+
+    redis.tier = { limit: 1500, windowMs: 60_000 }
+    rateLimitCache.set(getCacheKey('rate_limit', 'key-tier-raised'), { count: 1200, resetTime: Date.now() + 60_000 }, 60_000)
+    expect(await credentialRateLimitResponse(request(), credential('key-tier-raised'))).toBeNull()
+  })
+
+  it('the message names the window the tier is set to', async () => {
+    redis.tier = { limit: 2, windowMs: 30_000 }
+    await credentialRateLimitResponse(request(), credential('key-window'))
+    await credentialRateLimitResponse(request(), credential('key-window'))
+    const response = await credentialRateLimitResponse(request(), credential('key-window'))
+    expect(response?.status).toBe(429)
+    expect((await response!.json()).message).toContain('Limit: 2 charges per 30 seconds')
+  })
+
+  it('the window reads exactly, for any number of milliseconds a tier can be set to', () => {
+    expect([60_000, 120_000, 300_000, 1_000, 30_000, 90_000, 1_500, 90_500, 499, 1].map(windowLabel)).toEqual([
+      'minute', '2 minutes', '5 minutes', 'second', '30 seconds', '90 seconds', '1500 ms', '90500 ms', '499 ms', '1 ms',
+    ])
+  })
+})

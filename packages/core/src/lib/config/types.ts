@@ -913,13 +913,28 @@ export interface AppConfig {
   consent?: ConsentConfig
 
   /**
-   * Rate limit tiers: override the numbers of a built-in tier (`auth`, `api`, `strict`, `read`, `write`,
-   * `webhook`, `ingest`) or declare a tier of your own, then pass its name to `withRateLimitTier`. A custom tier needs
+   * Rate limit tiers: override the numbers of a built-in tier (`auth`, `authIdentifier`, `api`, `strict`, `read`,
+   * `write`, `webhook`, `ingest`, and `credential`, the limit of one API key or one MCP connection) or declare a
+   * tier of your own, then pass its name to `withRateLimitTier`. A custom tier needs
    * both fields. An invalid or missing value never removes the limit: a built-in tier keeps its default and a custom
    * tier is limited as `api`. Without this entry, every tier keeps its default.
    */
   rateLimit?: {
     tiers?: Record<string, { limit?: number; windowMs?: number }>
+  }
+
+  /** Options of the MCP server (`/api/mcp`). */
+  mcp?: {
+    /** Options of MCP browser sign-in (`features.mcpOAuth` in nextspark.config.ts). */
+    oauth?: {
+      /**
+       * The hosts whose applications may connect, such as `['claude.ai', 'chatgpt.com']`; `*.example.com` accepts
+       * the subdomains of a host. With a list, an application is accepted only when its client id is an https URL
+       * on one of them. Without one, or with an empty one, any application that publishes a valid Client ID
+       * Metadata Document may start a sign-in and the user decides on the consent screen.
+       */
+      allowedClientHosts?: string[]
+    }
   }
 
   /** Security options of the rendered app */

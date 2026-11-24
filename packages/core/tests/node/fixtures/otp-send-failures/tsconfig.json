@@ -30,6 +30,9 @@
       "@nextsparkjs/registries/email-registry": [
         "./tests/node/fixtures/otp-send-failures/email-registry.ts"
       ],
+      "@nextsparkjs/registries/features": [
+        "./tests/node/fixtures/registration-gates/features.ts"
+      ],
       "@nextsparkjs/registries/*": [
         "./tests/jest/__mocks__/@nextsparkjs/registries/*"
       ],

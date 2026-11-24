@@ -13,7 +13,7 @@ description: |
   from a theme. For policy SQL see database-migrations; for queryWithRLS usage see
   service-layer; for can_bypass_rls/superadmin see api-bypass-layers.
 allowed-tools: Read, Glob, Grep
-version: 1.1.0
+version: 1.2.0
 ---
 
 # RLS Enforcement Layer Skill
@@ -53,6 +53,14 @@ re-paste of the SQL.
 - **Atomicity:** `mutateWithRLS` wraps **each call** in its own BEGIN/COMMIT — N calls = N
   transactions. For "insert order + 3 items atomically", use `getTransactionClient(userId)`
   (one GUC, one commit/rollback), not N `mutateWithRLS` calls.
+- **Service-pool transaction:** `withServiceTransaction(fn)` runs `fn` in one transaction on the
+  service pool (commit when it resolves, rollback when it throws). Inside `fn`, `query` /
+  `queryOne` / `queryRows` and the `*WithRLS` calls that route to the service pool (no `userId`,
+  or `{ service: true }`) use that transaction's client. A call **with** a `userId` and
+  `getTransactionClient()` still open their own connection and commit on their own. Use it for a
+  multi-statement invariant on service-only tables: read a row with `FOR UPDATE` / `FOR SHARE`,
+  decide, write (`disconnect`, `disconnectAs`, `narrowConnection` in
+  `src/lib/mcp/oauth/connection-store.ts`).
 
 ## 2. When you MUST force the service pool
 
@@ -75,6 +83,23 @@ Adding *another* user as the acting owner or admin passes RLS under the actor's 
   statement stays scoped to its subject (`WHERE id = $1`, ...). The `/api/v1/*` routes keep RLS.
 - **`users.role`** changes on the app pool only for a caller that passes `can_bypass_rls()`, and never on the
   caller's own row: migration 037's `users_rls_role_guard` trigger. On the service pool it does nothing.
+
+- **The OAuth tables of MCP browser sign-in** (migration `049_oauth_provider.sql`: `jwks`,
+  `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`,
+  `oauthConsent`, `oauthClientAssertion`, `oauthTeamSelection`, `oauthRevocation`) are
+  **service-only**: every policy is `can_bypass_rls()`, because the authorization server reads and
+  writes them with no user GUC (discovery, token and refresh calls carry no session) and they hold
+  credentials and the signing private key. Everything that reads them uses the service connection
+  (`query` / `queryOne` / `queryRows`, never `queryWithRLS(..., userId)`): Better Auth itself, and
+  core's `src/lib/mcp/oauth/` modules (`resource-server.ts` reads the consent on every request,
+  `revocation.ts`, `team-selection.ts`, `connection-store.ts`, `purge.ts`, `consent-plugin.ts`).
+  The authorization for those reads is done in code, each statement scoped to its subject (the
+  token's user, client and team; the session's user). Their invariants are triggers, not policies
+  (see `database-migrations` and `mcp-server`).
+  **In production MCP browser sign-in refuses every OAuth request while the role of `DATABASE_URL` skips
+  RLS** (owner, superuser or BYPASSRLS; `lib/mcp/oauth/production-gate.ts`, the query of `lib/rls-runtime.ts`
+  on the app pool), unless `MCP_OAUTH_ACCEPT_RISKS=rls-not-enforced`. It is the one feature for which the
+  `nextspark_app` cutover is enforced and not only warned about.
 
 **Other legitimate service-pool actors** (no request user → service pool by routing, since they
 call with no `userId`): Better Auth login/verification, the **scheduled-actions processor**,
@@ -102,21 +127,27 @@ any *user-scoped* sub-operation must re-introduce the resolved userId via
 
 ## 4. Fail-closed permission enforcement (`generic-handler.ts`)
 
-- LIST and READ now check the session entity permission (was create/update/delete only).
-  A member without `entity.list`/`entity.read` → **403**. Admin-bypass and api-key (scope)
-  paths are skipped.
+- LIST and READ check the entity permission of the authenticated identity (was
+  create/update/delete only), for a session and for an API key alike: a member without
+  `entity.list`/`entity.read` → **403**, with either credential. For an API key this is in
+  addition to the scope check. Only the admin-bypass path is skipped.
 - A **thrown error** in the permission check returns **`500 PERMISSION_CHECK_FAILED`**
   (fail-closed) — never "allow". Themes must declare `list`/`read` per entity
   (`default`/`starter` already do).
-- **api-key vs session — two different layers, two different behaviors:**
-  - The **entity-permission** check is session-only (api-key uses scopes), so it's *skipped* for api-key.
-  - But **DB RLS still applies to api-key** requests — api-key auth carries a `userId`, so reads
-    route to the app pool and policies evaluate (team isolation holds).
-  - **`ownershipFilter` (role-based row scoping) is OFF for api-key and admin-bypass**
-    (`resolveOwnershipFilter` returns `{applies:false}` for those). So an api-key caller is *not*
-    narrowed to "their own" rows by `ownershipFilter`; they see everything their team-RLS policy
-    allows. To restrict api-key callers, scope the key narrowly or enforce it in a DB RLS policy
-    (which fires for any app-pool request), not via `ownershipFilter`.
+- **api-key vs session — the same layers apply to both** (`lib/api/entity/generic-handler.ts`):
+  - The **entity-permission** check (`checkAuthPermission`) runs for a session user and for an API-key
+    owner alike: the key carries the same real `users.id`, resolved to a `team_members` role the same
+    way. It runs **in addition to** the key's scope check (`<slug>:read|write|delete`), so an API key
+    gets both layers.
+  - **DB RLS applies to api-key requests** — api-key auth carries a `userId`, so reads route to the
+    app pool and policies evaluate (team isolation holds).
+  - **`ownershipFilter` (role-based row scoping) runs identically for session and api-key**
+    (`resolveOwnershipFilter`). Only an **admin bypass** skips it (`{applies:false}`): a
+    superadmin/service-context request is not scoped by any single team role. `fieldGuards` run for
+    both as well.
+  - **An MCP call is one of these**: with either credential it reaches the handler as `type: 'api-key'`
+    (an OAuth connection adds `oauth: { clientId, tokenId }`), so permission, ownership and field guards
+    all apply to it, never in bypass mode. See the `mcp-server` skill.
 
 ## 5. `ownershipFilter` (entity `access` config, `entities/types.ts`)
 
@@ -190,8 +221,9 @@ Seed fixtures via the service pool / owner (first-membership inserts can't satis
 - [ ] DB call routing chosen deliberately: user-scoped → `queryWithRLS(..., userId)`; system → `query*`/no-userId; bootstrap-only → `{ service: true }`. **Not** `{ service: true }` to silence a 0-rows bug.
 - [ ] No transaction tries to mix a user-scoped (app-pool) op and a service-pool (bootstrap) op on the same `tx`.
 - [ ] Multi-row atomic write uses `getTransactionClient(userId)`, not N `mutateWithRLS` calls.
+- [ ] Multi-statement work on service-only tables (the OAuth tables) runs inside `withServiceTransaction`, with the row that orders concurrent writers locked first.
 - [ ] New core-table policy: primitive deps already defined in `001` before the migration that uses them.
-- [ ] New entity exposes `list`/`read` permissions (else 403 under enforcement); api-key callers restricted by scope or a DB policy (not `ownershipFilter`).
+- [ ] New entity exposes `list`/`read` permissions (else 403 under enforcement, for sessions and API keys alike); `ownershipFilter` narrows session and API-key callers the same way, and only an admin bypass skips it.
 - [ ] Theme RLS override drops legacy AND current core policy names.
 
 ## Related skills
@@ -201,3 +233,4 @@ Seed fixtures via the service pool / owner (first-membership inserts can't satis
 - `api-bypass-layers` — `can_bypass_rls()`, superadmin/developer bypass.
 - `permissions-system` — team roles, tiers, permission checks.
 - `scheduled-actions` — background/webhook handlers (service-pool actors with no request user).
+- `mcp-server` — the OAuth tables of MCP browser sign-in, their triggers and the code that reads them.

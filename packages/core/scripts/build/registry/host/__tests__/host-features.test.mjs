@@ -56,14 +56,14 @@ const BILLING_OFF = [
 ]
 
 test('features.billing: false leaves out the payment routes and pages of the manifest, and keeps what plans as tiers read', () => {
-  const omitted = MANIFEST.filter(route => omittingFeature(route.target, { billing: false })).map(route => route.target).sort()
+  const omitted = MANIFEST.filter(route => omittingFeature(route.target, { billing: false, mcpOAuth: true })).map(route => route.target).sort()
   assert.deepEqual(omitted, BILLING_OFF)
   for (const kept of ['api/v1/billing/plans/route.ts', 'api/v1/billing/check-action/route.ts', 'api/v1/teams/[teamId]/subscription/route.ts', 'api/v1/teams/[teamId]/usage/[limitSlug]/route.ts', 'superadmin/subscriptions/page.tsx', 'api/superadmin/subscriptions/route.ts']) {
     assert.ok(MANIFEST.some(route => route.target === kept), kept)
     assert.equal(omittingFeature(kept, { billing: false }), null, kept)
   }
   // true, or not set: nothing is left out
-  assert.equal(MANIFEST.filter(route => omittingFeature(route.target, { billing: true }) || omittingFeature(route.target, {})).length, 0)
+  assert.equal(MANIFEST.filter(route => omittingFeature(route.target, { billing: true, mcpOAuth: true }) || omittingFeature(route.target, { mcpOAuth: true })).length, 0)
 })
 
 test('the plan has no billing route with the flag off, and the same routes as before with it on or unset', () => {
@@ -112,14 +112,16 @@ test('the API route list of the registries leaves out the routes of a flag that 
 })
 
 test('the features registry carries the flags, every one true unless set to false', () => {
-  assert.match(generateFeatures({ billing: false }), /export const FEATURES: \{ readonly billing: boolean; readonly superadmin: boolean \} = \{"billing":false,"superadmin":true\}/)
-  assert.match(generateFeatures({ superadmin: false }), /= \{"billing":true,"superadmin":false\}/)
-  assert.match(generateFeatures({}), /= \{"billing":true,"superadmin":true\}/)
-  assert.match(generateFeatures(), /= \{"billing":true,"superadmin":true\}/)
+  assert.match(generateFeatures({ billing: false }), /export const FEATURES: \{ readonly billing: boolean; readonly superadmin: boolean; readonly mcpOAuth: boolean \} = \{"billing":false,"superadmin":true,"mcpOAuth":false\}/)
+  assert.match(generateFeatures({ superadmin: false }), /= \{"billing":true,"superadmin":false,"mcpOAuth":false\}/)
+  assert.match(generateFeatures({}), /= \{"billing":true,"superadmin":true,"mcpOAuth":false\}/)
+  assert.match(generateFeatures(), /= \{"billing":true,"superadmin":true,"mcpOAuth":false\}/)
+  // mcpOAuth is opt-in (#541)
+  assert.match(generateFeatures({ mcpOAuth: true }), /= \{"billing":true,"superadmin":true,"mcpOAuth":true\}/)
 })
 
 test('features.superadmin: false leaves out the /superadmin area and /api/superadmin, and nothing else', () => {
-  const omitted = MANIFEST.filter(route => omittingFeature(route.target, { superadmin: false })).map(route => route.target)
+  const omitted = MANIFEST.filter(route => omittingFeature(route.target, { superadmin: false, mcpOAuth: true })).map(route => route.target)
   assert.ok(omitted.includes('superadmin/layout.tsx'))
   assert.ok(omitted.includes('superadmin/docs/[section]/[page]/page.tsx'))
   assert.ok(omitted.includes('api/superadmin/users/route.ts'))
@@ -161,4 +163,21 @@ test('the proxy notice does not ask for /superadmin when the area is off', () =>
   const source = "export function proxy(request) { if (request.nextUrl.pathname.startsWith('/dashboard')) return null }\n"
   assert.deepEqual(missingProxyAreas(source).map(area => area.path), ['/superadmin', '/devtools'])
   assert.deepEqual(missingProxyAreas(source, { superadmin: false }).map(area => area.path), ['/devtools'])
+})
+
+test('features.mcpOAuth is opt-in: its routes are left out unless it is true, and nothing else is (#541)', () => {
+  const MCP_OAUTH = [
+    '(auth)/oauth/consent/page.tsx',
+    '(auth)/oauth/select-team/page.tsx',
+    '.well-known/oauth-authorization-server/[[...path]]/route.ts',
+    '.well-known/oauth-protected-resource/[[...path]]/route.ts',
+    'api/internal/oauth-connections/route.ts',
+    'api/internal/oauth-team/route.ts',
+  ]
+  for (const features of [{}, { mcpOAuth: false }, { billing: true, superadmin: true }]) {
+    assert.deepEqual(MANIFEST.filter(route => omittingFeature(route.target, features) === 'mcpOAuth').map(route => route.target).sort(), MCP_OAUTH, JSON.stringify(features))
+  }
+  assert.equal(MANIFEST.filter(route => omittingFeature(route.target, { mcpOAuth: true })).length, 0)
+  // the MCP endpoint itself and the auth routes stay either way
+  for (const kept of ['api/mcp/route.ts', 'api/auth/[...all]/route.ts', '(auth)/login/page.tsx']) assert.equal(omittingFeature(kept, {}), null, kept)
 })

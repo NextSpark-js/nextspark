@@ -6,7 +6,7 @@ description: |
   Use this skill when implementing admin bypass features or validating security architecture.
   For the runtime RLS plumbing (service connection pool, nextspark_app cutover) see rls-enforcement.
 allowed-tools: Read, Glob, Grep
-version: 1.2.0
+version: 1.3.0
 ---
 
 # API Bypass Layers Skill
@@ -88,9 +88,27 @@ Security architecture for superadmin and developer bypass access in the API laye
 >   subscription bootstrap) run on a separate pool (`DATABASE_SERVICE_URL`). This is the
 >   plumbing that keeps the bypass paths working once the app connects as the non-owner
 >   `nextspark_app` role.
-> - **Fail-closed permission check:** in `generic-handler.ts`, LIST/READ now enforce session
->   permissions and a thrown permission check returns `500 PERMISSION_CHECK_FAILED` (never
->   "allow"). Admin-bypass and api-key paths are skipped.
+> - **Fail-closed permission check:** in `generic-handler.ts`, LIST/READ now enforce the entity
+>   permissions of the authenticated identity and a thrown permission check returns `500 PERMISSION_CHECK_FAILED` (never
+>   "allow"). The check runs for a session and for an API key alike (an API key gets it on top of
+>   its scope check); only the admin-bypass path is skipped.
+
+> **A third credential, on `/api/mcp` only (see the `mcp-server` skill):** Layer 1 above is what `/api/v1/**`
+> accepts over HTTP: an API key or a session. With `features.mcpOAuth`, `/api/mcp` also accepts an OAuth access
+> token. It never reaches these layers as a token: the MCP endpoint verifies it once and calls the generic
+> handlers in process with the principal attached to the request (`lib/api/auth/in-process-principal.ts`), which
+> `authenticateRequest` returns as `type: 'api-key'` with `oauth: { clientId, tokenId }`. From Layer 2 down it is
+> handled as an API key: scope validation, then team context.
+> - **An MCP tool call never runs in bypass mode**, with either credential. The executor (`lib/mcp/executor.ts`)
+>   builds the in-process request with `x-team-id` (and the key, for an API key) and nothing else, so
+>   `x-admin-bypass` is never present and `canBypassTeamContext` answers false. Do not add that header there.
+> - The team of an OAuth call is the token's `team_id` claim, re-checked against the membership on every
+>   request; a caller cannot widen it with `x-team-id`.
+> - A tool call that reaches its handler is recorded, best effort, as the MCP row in `api_audit_log`
+>   (`mcp:<tool>`, with `requestBody.credential = 'oauth'` for an OAuth call), and a generated entity tool also
+>   gets the row of the handler it calls (`/api/v1/...`). A call refused before running for a missing scope is
+>   recorded with status 403. Two gaps: a call the SDK rejects before the handler leaves no row, and a failed
+>   audit write is logged without stopping the call.
 
 ## When to Use This Skill
 
@@ -545,4 +563,5 @@ Before finalizing bypass implementation:
 - `database-migrations` - PostgreSQL RLS policies
 - `rls-enforcement` - Runtime RLS: service connection pool, nextspark_app cutover, fail-closed
 - `nextjs-api-development` - API route patterns with dual auth
+- `mcp-server` - `/api/mcp`: the OAuth access token and how its calls enter these layers
 - `cypress-api` - API testing with bypass scenarios

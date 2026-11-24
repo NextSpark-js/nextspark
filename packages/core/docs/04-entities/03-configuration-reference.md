@@ -192,6 +192,7 @@ solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
 - `enabled: false` apaga la entidad para ambos tipos de autenticación: las operaciones de la entidad y de sus child routes responden `405`
 - Para una API key, un campo `relation` / `relation-multi` hacia una entidad cerrada (`access.api: false`, `enabled: false` o un objeto `access.api` sin `read`) siempre responde `400 INVALID_REFERENCE`, exista o no el id, y no consulta esa tabla: la respuesta no dice si el id existe. Con sesión se valida contra lo que el usuario ve, como siempre
 - `GET /api/v1/patterns/<id>/usages` con API key muestra los usos de una entidad cerrada solo con `entityType` y `entityId` (sin título, nombre, email, slug ni estado); con sesión devuelve todos los campos
+- Una conexión MCP hecha con inicio de sesión por navegador (`features.mcpOAuth`, opt-in) cuenta como API key para todas estas reglas: dentro del servidor es un principal de tipo `'api-key'` con un campo `oauth`, así que `access.api`, los scopes (`<entidad>:read|write|delete`) y las reglas de llamador externo se le aplican igual. Las tools que el servidor MCP genera para la entidad son las mismas con una credencial o con la otra. Ver [MCP server](../05-api/20-mcp-server.md)
 
 ```typescript
 {

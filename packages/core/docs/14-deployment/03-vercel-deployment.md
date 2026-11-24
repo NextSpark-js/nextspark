@@ -204,6 +204,50 @@ The other options of `vercel.json` do not solve this:
 
 ---
 
+## Upstash Redis from Vercel's Marketplace
+
+On Vercel every function instance is a process of its own, so a rate limit counted in memory is counted per
+instance: with ten instances a limit of 100 lets 1000 through. Core counts its limits in Redis when
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are both set, and every instance then shares the count.
+This matters most for the per-credential limit of API keys and MCP connections (tier `credential`, 1000 charges
+a minute).
+
+**The variables Vercel creates are not the ones core reads.** An Upstash Redis database created from Vercel's
+Marketplace and connected to the project adds these variables:
+
+```bash
+KV_REST_API_URL
+KV_REST_API_TOKEN
+KV_REST_API_READ_ONLY_TOKEN
+KV_URL
+REDIS_URL
+```
+
+Core reads none of them. With only these set, the limits stay per instance, and nothing in the logs says so.
+Add the two names core reads, with the values of the first two:
+
+| Add | With the value of |
+| --- | --- |
+| `UPSTASH_REDIS_REST_URL` | `KV_REST_API_URL` |
+| `UPSTASH_REDIS_REST_TOKEN` | `KV_REST_API_TOKEN` (not the read-only token: the limiter writes) |
+
+```bash
+# In Project Settings → Environment Variables, or with the CLI (it asks for the value)
+vercel env add UPSTASH_REDIS_REST_URL production
+vercel env add UPSTASH_REDIS_REST_TOKEN production
+```
+
+Variables apply to new deployments: deploy again afterwards. Add them to the Preview scope too if preview
+deployments should share their limits. Keep the token out of the repository.
+
+To check that Redis is in use, send a few requests and look for keys with the prefix `ratelimit:` in the database
+(its data browser, or its REST API). The full check of the per-credential limit is in
+[Verifying the shared rate limit with Redis](../12-testing/12-shared-rate-limit-verification.md), with a sizing
+figure: about 4 Redis commands for each per-credential check, and every per-address tier is counted in the same
+database, so compare the expected traffic with the command quota of the plan.
+
+---
+
 ## Deployment Scopes
 
 ### Production vs Preview

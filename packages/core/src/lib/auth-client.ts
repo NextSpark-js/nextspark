@@ -1,8 +1,10 @@
 import { createAuthClient } from "better-auth/react";
 import { inferAdditionalFields } from "better-auth/client/plugins";
 import { emailOTPClient, magicLinkClient } from "better-auth/client/plugins";
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import type { auth } from "./auth";
 import { withBasePath } from "./base-path";
+import { isMcpOAuthBuilt } from "./mcp/oauth/built";
 
 export const authClient = createAuthClient({
   // In the browser, always talk to the origin the page was actually served
@@ -23,6 +25,9 @@ export const authClient = createAuthClient({
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
     magicLinkClient(),
+    // Carries the signed query of an MCP sign-in (#541) from the login and consent pages to the server. Only in a
+    // project built with features.mcpOAuth; there it does nothing on a page whose URL has none.
+    ...(isMcpOAuthBuilt() ? [oauthProviderClient()] : []),
   ]
 });
 

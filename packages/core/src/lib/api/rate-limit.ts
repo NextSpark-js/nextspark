@@ -84,18 +84,65 @@ const apiKeyChecks = new WeakMap<Request, RateLimitResult>();
 export function apiKeyRateLimitResponse(request: Request, auth: ApiKeyAuth): NextResponse | null {
   let result = apiKeyChecks.get(request);
   if (!result) {
-    result = checkRateLimit(auth.keyId);
+    // The numbers of the `credential` tier (1000 a minute unless rateLimit.tiers says otherwise), as the shared count
+    const { limit, windowMs } = getRateLimitTierConfig('credential');
+    result = checkRateLimit(auth.keyId, limit, windowMs);
     apiKeyChecks.set(request, result);
   }
-  if (result.allowed) return null;
-  const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
+  return result.allowed ? null : credentialLimitExceeded(request, result);
+}
+
+/** The per-credential check each request got from the shared store, so it is counted there once too. */
+const sharedCredentialChecks = new WeakMap<Request, Promise<RateLimitResult>>();
+
+/**
+ * The per-credential limit, for an API key or an MCP connection (`auth.keyId` names either): what
+ * apiKeyRateLimitResponse counts in this process, and with Redis configured the same limit counted in the shared
+ * store (tier `credential`, 1000 a minute unless `rateLimit.tiers` says otherwise). In memory alone the limit is per
+ * process: on serverless every instance gives a credential its own 1000, which is close to no limit. The request is
+ * refused when either count is over; when Redis fails the shared check lets it through (the limiter fails open) and
+ * the count of this process still applies.
+ */
+export async function credentialRateLimitResponse(request: Request, auth: ApiKeyAuth): Promise<NextResponse | null> {
+  const local = apiKeyRateLimitResponse(request, auth);
+  if (local || !maybeRedisConfigured()) return local;
+  let check = sharedCredentialChecks.get(request);
+  if (!check) {
+    check = checkRedisRateLimit(auth.keyId, 'credential').then(result => ({
+      allowed: result.success,
+      remaining: result.remaining,
+      resetTime: result.reset,
+      limit: result.limit ?? getRateLimitTierConfig('credential').limit,
+    }));
+    sharedCredentialChecks.set(request, check);
+  }
+  const result = await check;
+  return result.allowed ? null : credentialLimitExceeded(request, result);
+}
+
+/**
+ * A window as it reads after "per", exact for any number of milliseconds a tier can be set to: `minute`,
+ * `5 minutes`, `second`, `30 seconds`, and `1500 ms` for one that is not a whole number of seconds.
+ */
+export function windowLabel(windowMs: number): string {
+  const unit = (count: number, name: string) => (count === 1 ? name : `${count} ${name}s`);
+  if (windowMs % 60_000 === 0) return unit(windowMs / 60_000, 'minute');
+  if (windowMs % 1000 === 0) return unit(windowMs / 1000, 'second');
+  return `${windowMs} ms`;
+}
+
+function credentialLimitExceeded(request: Request, result: RateLimitResult): NextResponse {
+  const retryAfter = Math.max(1, Math.ceil((result.resetTime - Date.now()) / 1000));
+  // The limit is counted in charges, not in requests of the client: one for each authenticated request, and so one
+  // more for each API handler an MCP tool calls in process. The message says so, in the window the tier is set to.
+  const window = windowLabel(getRateLimitTierConfig('credential').windowMs);
   // With core's CORS for the request: the route returns this as it is, often without withRateLimitTier around it,
   // and a browser from another origin would otherwise see a CORS error instead of the 429 (#432)
   return withCors(NextResponse.json(
     {
       success: false,
       error: 'Rate limit exceeded',
-      message: `Too many requests. Limit: ${result.limit} requests per minute`,
+      message: `Too many requests for this credential. Limit: ${result.limit} charges per ${window}: one per request, and one more for each API call an MCP tool makes`,
       code: 'RATE_LIMIT_EXCEEDED',
       retryAfter
     },

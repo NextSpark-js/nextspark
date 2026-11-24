@@ -1,3 +1,7 @@
+// Whether the project was built with MCP browser sign-in (#541): off, as in a project that does not turn it on
+const mockOAuthBuilt = { current: false };
+jest.mock('@/core/lib/mcp/oauth/built', () => ({ isMcpOAuthBuilt: () => mockOAuthBuilt.current }));
+
 import { createMcpEngine } from '@/core/lib/mcp/engine';
 import type { EntityConfig, EntityField } from '@/core/lib/entities/types';
 import type { EntityApiResult, EntityExecutor, ToolExecutionContext, McpEntityOverride } from '@/core/lib/mcp/types';
@@ -113,7 +117,7 @@ describe('createMcpEngine', () => {
     });
   });
 
-  it('audits failed tool calls with statusCode 400', async () => {
+  it('audits a failed tool call with the status the API answered', async () => {
     const registry = { customers: makeEntity({ slug: 'customers' }) };
     const executor: EntityExecutor = jest.fn().mockResolvedValue({
       status: 403,
@@ -124,7 +128,7 @@ describe('createMcpEngine', () => {
 
     const result = await callTool(engine, 'acme_get_customer', { id: 'c1' });
     expect(result.isError).toBe(true);
-    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 400 });
+    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 403 });
   });
 
   it('joins override.extraTools and options.utilityTools into the final tool set', () => {
@@ -408,5 +412,279 @@ describe('createMcpEngine', () => {
       CTX
     )) as unknown[];
     expect(responses).toHaveLength(1);
+  });
+});
+
+describe('the scopes a tool call needs (#541)', () => {
+  it('is <entity>:read, :write or :delete for the generated entity tools, as the API handler declares it', () => {
+    const engine = createMcpEngine({ customers: makeEntity({ slug: 'customers' }) }, { toolPrefix: 'acme', executor: jest.fn() });
+    const scopes = Object.fromEntries(engine.tools.map(tool => [tool.name, engine.requiredScopesFor(tool.name)]));
+    expect(scopes).toEqual({
+      acme_list_customers: ['customers:read'],
+      acme_get_customer: ['customers:read'],
+      acme_create_customer: ['customers:write'],
+      acme_update_customer: ['customers:write'],
+      acme_delete_customer: ['customers:delete'],
+    });
+  });
+
+  it('is what a composite tool declares, and none for one that declares nothing or an unknown name', () => {
+    const tool = (name: string, meta: object) => ({ name, description: name, inputSchema: {}, handler: jest.fn(), meta });
+    const overrides = {
+      customers: {
+        extraTools: () => [
+          tool('acme_customer_report', { entitySlug: 'customers', operation: 'workflow' }),
+          tool('acme_customer_merge', { entitySlug: 'customers', operation: 'workflow', requiredScopes: ['customers:read', 'customers:delete'] }),
+        ],
+      },
+    };
+    const engine = createMcpEngine({ customers: makeEntity({ slug: 'customers' }) }, { toolPrefix: 'acme', executor: jest.fn(), overrides: overrides as never });
+    expect(engine.requiredScopesFor('acme_customer_report')).toEqual([]);
+    expect(engine.requiredScopesFor('acme_customer_merge')).toEqual(['customers:read', 'customers:delete']);
+    expect(engine.requiredScopesFor('no_such_tool')).toEqual([]);
+  });
+});
+
+describe('the audit trail of what did not succeed (#541)', () => {
+  const registry: Record<string, EntityConfig> = { customers: makeEntity({ slug: 'customers' }) };
+
+  it('an error that never reached the API (arguments the tool rejects) is recorded as a 400', async () => {
+    const executor: EntityExecutor = jest.fn();
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const result = await callTool(engine, 'acme_update_customer', { id: 'c-1' });
+    expect(result.isError).toBe(true);
+    expect(executor).not.toHaveBeenCalled();
+    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 400 });
+  });
+
+  it('an API error is recorded with its own status, not as a 400', async () => {
+    const executor: EntityExecutor = jest.fn().mockResolvedValue({ status: 404, body: { success: false, error: 'Not found' } });
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const result = await callTool(engine, 'acme_get_customer', { id: 'missing' });
+    expect(result.isError).toBe(true);
+    expect(audit.mock.calls[0][0]).toMatchObject({ statusCode: 404, recordId: 'missing' });
+    // The status stays in the trail: the client is sent the result as before
+    expect(Object.keys(result).sort()).toEqual(['content', 'isError']);
+  });
+
+  it('a generated tool whose API call throws is recorded as a 500 too', async () => {
+    const executor: EntityExecutor = jest.fn().mockRejectedValue(new Error('pool exhausted'));
+    const audit = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const result = await callTool(engine, 'acme_get_customer', { id: 'c-1' });
+    expect(result.isError).toBe(true);
+    expect(audit.mock.calls[0][0]).toMatchObject({ tool: 'acme_get_customer', statusCode: 500 });
+    (console.error as jest.Mock).mockRestore();
+  });
+
+  it('a handler that throws is recorded as a 500', async () => {
+    const executor: EntityExecutor = jest.fn();
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const overrides: Record<string, McpEntityOverride> = {
+      customers: {
+        extraTools: () => [{
+          name: 'acme_broken', title: 'Broken', description: 'Throws', inputSchema: {},
+          handler: async () => { throw new Error('boom'); },
+        }] as never,
+      },
+    };
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit, overrides });
+    await callTool(engine, 'acme_broken', {});
+    expect(audit.mock.calls[0][0]).toMatchObject({ tool: 'acme_broken', statusCode: 500 });
+  });
+
+  describe('an OAuth connection whose role lost a scope it was granted (#541)', () => {
+    const handler = jest.fn(async () => ({ content: [{ type: 'text' as const, text: 'done' }] }));
+    const overrides: Record<string, McpEntityOverride> = {
+      customers: {
+        extraTools: () => [
+          {
+            name: 'acme_archive_customers',
+            title: 'Archive',
+            description: 'writes on its own, without the API',
+            inputSchema: {},
+            strictSchema: { safeParse: () => ({ success: true, data: {} }) } as never,
+            meta: { operation: 'workflow', requiredScopes: ['customers:read', 'customers:write'] },
+            handler,
+          },
+        ],
+      },
+    };
+    const oauth = (scopes: string[]) =>
+      ({ ...CTX, apiKeyId: null, authHeader: '', scopes, principal: { oauth: { clientId: 'https://client.example/meta', teamId: 'team-1' } } }) as unknown as ToolExecutionContext;
+    beforeEach(() => handler.mockClear());
+
+    it('a tool the project wrote is refused before it runs, and the refusal is recorded', async () => {
+      const audit = jest.fn().mockResolvedValue(undefined);
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit, overrides });
+      const response = (await engine.handleJsonRpc(req(1, 'tools/call', { name: 'acme_archive_customers', arguments: {} }), oauth(['customers:read']))) as { result: { isError?: boolean; content: Array<{ text: string }> } };
+      expect(handler).not.toHaveBeenCalled();
+      expect(response.result.isError).toBe(true);
+      expect(response.result.content[0].text).toMatch(/does not allow customers:write/);
+      expect(audit.mock.calls[0][0]).toMatchObject({ tool: 'acme_archive_customers', statusCode: 403 });
+    });
+
+    it('a generated entity tool is refused the same way, without reaching the API', async () => {
+      const executor: EntityExecutor = jest.fn();
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit: jest.fn().mockResolvedValue(undefined) });
+      const response = (await engine.handleJsonRpc(req(1, 'tools/call', { name: 'acme_delete_customer', arguments: { id: 'c-1', confirm: true } }), oauth(['customers:read']))) as { result: { isError?: boolean } };
+      expect(executor).not.toHaveBeenCalled();
+      expect(response.result.isError).toBe(true);
+    });
+
+    it('with the scopes it needs it runs', async () => {
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
+      await engine.handleJsonRpc(req(1, 'tools/call', { name: 'acme_archive_customers', arguments: {} }), oauth(['customers:read', 'customers:write']));
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('an API key is not held to this: its calls are checked by the handlers, as before', async () => {
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
+      await engine.handleJsonRpc(req(1, 'tools/call', { name: 'acme_archive_customers', arguments: {} }), { ...CTX, scopes: ['customers:read'] });
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('a hand-written tool that does not say what it needs (#541)', () => {
+    const tool = (name: string, meta: unknown, handler: jest.Mock) => ({
+      name, title: name, description: name, inputSchema: {},
+      strictSchema: { safeParse: () => ({ success: true, data: {} }) } as never,
+      ...(meta === undefined ? {} : { meta }),
+      handler,
+    });
+    const done = () => jest.fn(async () => ({ content: [{ type: 'text' as const, text: 'done' }] }));
+    const silent = done();
+    const workflow = done();
+    const needsNothing = done();
+    const overrides: Record<string, McpEntityOverride> = {
+      customers: {
+        extraTools: () => [
+          // no meta at all, and a workflow of an entity with no requiredScopes: neither says what it needs
+          tool('acme_export_everything', undefined, silent),
+          tool('acme_customer_report', { entitySlug: 'customers', operation: 'workflow' }, workflow),
+          // an empty list is the statement that it needs no permission
+          tool('acme_server_time', { requiredScopes: [] }, needsNothing),
+        ] as never,
+      },
+    };
+    const oauth = (scopes: string[]) =>
+      ({ ...CTX, apiKeyId: null, authHeader: '', scopes, principal: { oauth: { clientId: 'https://client.example/meta', teamId: 'team-1' } } }) as unknown as ToolExecutionContext;
+    const call = async (engine: ReturnType<typeof createMcpEngine>, name: string, ctx: ToolExecutionContext) =>
+      (await engine.handleJsonRpc(req(1, 'tools/call', { name, arguments: {} }), ctx)) as { result: { isError?: boolean; content: Array<{ text: string }> } };
+    beforeEach(() => [silent, workflow, needsNothing].forEach(mock => mock.mockClear()));
+    afterEach(() => { mockOAuthBuilt.current = false; });
+
+    it('is refused to an OAuth connection whatever it holds, before it runs, and the refusal is recorded', async () => {
+      const audit = jest.fn().mockResolvedValue(undefined);
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit, overrides });
+      const everything = ['customers:read', 'customers:write', 'customers:delete'];
+      for (const [name, handler] of [['acme_export_everything', silent], ['acme_customer_report', workflow]] as const) {
+        const response = await call(engine, name, oauth(everything));
+        expect(handler).not.toHaveBeenCalled();
+        expect(response.result.isError).toBe(true);
+        expect(response.result.content[0].text).toMatch(/has not declared which permissions it needs/);
+      }
+      expect(audit.mock.calls.map(([entry]) => [entry.tool, entry.statusCode])).toEqual([['acme_export_everything', 403], ['acme_customer_report', 403]]);
+    });
+
+    it('metadata that looks like an entity operation is not a declaration: only a tool the engine generated is taken at that word', async () => {
+      // `entitySlug` and an operation are what the audit trail files a call under; the handler can do anything
+      const direct = done();
+      const utility = done();
+      const lookalike: Record<string, McpEntityOverride> = {
+        customers: { extraTools: () => [tool('acme_purge_customers', { entitySlug: 'customers', operation: 'delete' }, direct)] as never },
+      };
+      const audit = jest.fn().mockResolvedValue(undefined);
+      const engine = createMcpEngine(registry, {
+        toolPrefix: 'acme', executor: jest.fn(), audit, overrides: lookalike,
+        utilityTools: () => [tool('acme_team_report', { entitySlug: 'customers', operation: 'list' }, utility)] as never,
+      });
+      const everything = oauth(['customers:read', 'customers:write', 'customers:delete']);
+      for (const [name, handler] of [['acme_purge_customers', direct], ['acme_team_report', utility]] as const) {
+        const response = await call(engine, name, everything);
+        expect([name, handler.mock.calls.length, response.result.isError]).toEqual([name, 0, true]);
+        expect(response.result.content[0].text).toMatch(/has not declared which permissions it needs/);
+      }
+      expect(audit.mock.calls.map(([entry]) => entry.statusCode)).toEqual([403, 403]);
+      // and it asks for nothing up front: a connection without the scope gets this tool error, not a challenge that
+      // sends its user to grant a scope the tool could not be called with anyway
+      expect(engine.requiredScopesFor('acme_purge_customers')).toEqual([]);
+      expect(engine.requiredScopesFor('acme_team_report')).toEqual([]);
+      expect((await call(engine, 'acme_purge_customers', oauth([]))).result.content[0].text).toMatch(/has not declared which permissions it needs/);
+      // the generated tool of the same operation is not caught by this: it reaches the API with the scope
+      const executor: EntityExecutor = jest.fn().mockResolvedValue(ok());
+      const generated = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit: jest.fn().mockResolvedValue(undefined) });
+      await call(generated, 'acme_list_customers', everything);
+      expect(executor).toHaveBeenCalledTimes(1);
+      // and with `requiredScopes` the hand-written ones run
+      const declared = done();
+      const withScopes = createMcpEngine(registry, {
+        toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined),
+        overrides: { customers: { extraTools: () => [tool('acme_purge_customers', { entitySlug: 'customers', operation: 'delete', requiredScopes: ['customers:delete'] }, declared)] as never } },
+      });
+      await call(withScopes, 'acme_purge_customers', everything);
+      expect(declared).toHaveBeenCalledTimes(1);
+    });
+
+    it('one that declares an empty list needs no permission and runs, even for a connection that holds nothing', async () => {
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
+      const response = await call(engine, 'acme_server_time', oauth([]));
+      expect(needsNothing).toHaveBeenCalledTimes(1);
+      expect(response.result.isError).toBeUndefined();
+    });
+
+    it('an API key is not held to this: the tool runs and its calls are checked by the handlers, as before', async () => {
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
+      await call(engine, 'acme_export_everything', CTX);
+      await call(engine, 'acme_customer_report', CTX);
+      expect(silent).toHaveBeenCalledTimes(1);
+      expect(workflow).toHaveBeenCalledTimes(1);
+    });
+
+    it('a project built with sign-in is told when the tool is built; one without it is told nothing', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), overrides });
+        expect(warn).not.toHaveBeenCalled();
+        mockOAuthBuilt.current = true;
+        createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), overrides });
+        const told = warn.mock.calls.map(([message]) => String(message)).filter(message => /does not declare the permissions it needs/.test(message));
+        expect(told).toHaveLength(2);
+        expect(told[0]).toMatch(/"acme_export_everything"/);
+        expect(told[1]).toMatch(/"acme_customer_report"/);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  });
+
+  it('calls refused for missing scopes are recorded one by one, with what each lacked, and nothing runs', async () => {
+    const executor: EntityExecutor = jest.fn();
+    const audit = jest.fn().mockResolvedValue(undefined);
+    const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit });
+    const ctx = { ...CTX, apiKeyId: null, principal: { oauth: { clientId: 'https://client.example/meta', tokenId: 'jti-1' } } } as unknown as ToolExecutionContext;
+    await engine.auditRefused(
+      [
+        req(1, 'tools/call', { name: 'acme_delete_customer', arguments: { id: 'c-1' } }),
+        req(2, 'tools/call', { name: 'acme_list_customers', arguments: {} }),
+        req(3, 'tools/list'),
+        req(4, 'tools/call', { name: 'acme_unknown', arguments: {} }),
+        { method: 'tools/call', params: { name: 'acme_delete_customer' } },
+      ],
+      ctx,
+      ['customers:read']
+    );
+    expect(executor).not.toHaveBeenCalled();
+    expect(audit).toHaveBeenCalledTimes(2);
+    expect(audit.mock.calls[0][0]).toMatchObject({
+      tool: 'acme_delete_customer', entitySlug: 'customers', operation: 'delete', recordId: 'c-1',
+      statusCode: 403, missingScopes: ['customers:delete'], teamId: 'team-1', userId: 'user-1',
+      oauth: { clientId: 'https://client.example/meta', tokenId: 'jti-1' },
+    });
+    // The call of the same batch that was allowed did not run either: recorded as refused, missing nothing itself
+    expect(audit.mock.calls[1][0]).toMatchObject({ tool: 'acme_list_customers', statusCode: 403, missingScopes: [] });
   });
 });

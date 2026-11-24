@@ -487,8 +487,8 @@
       "tipRevoke": "Revogue a chave imediatamente se achar que ela foi comprometida",
       "tipHttps": "Use sempre HTTPS ao fazer solicitações à API",
       "limits": "Limites da API:",
-      "limitRate": "1.000 solicitações por minuto",
-      "limitHeaders": "As respostas incluem cabeçalhos de limite de uso",
+      "limitRate": "Por padrão, 1.000 débitos por minuto: um por solicitação e mais um por cada chamada à API feita por uma ferramenta MCP",
+      "limitHeaders": "Uma resposta REST limitada inclui os cabeçalhos Retry-After e X-RateLimit-*; no endpoint MCP, apenas Retry-After",
       "limitDocs": "Documentação completa disponível em /docs",
       "keyCopied": "Chave de API copiada!",
       "copyKey": "Copiar chave de API",
@@ -570,6 +570,39 @@
         "name": "Sistema",
         "description": "Acesso total ao sistema"
       }
+    }
+  },
+  "connectedApps": {
+    "title": "Aplicações ligadas",
+    "description": "Aplicações que iniciaram sessão na sua conta para trabalhar com os seus dados, como um assistente de IA. Cada uma trabalha com uma só equipa.",
+    "empty": "Não há nenhuma aplicação ligada.",
+    "loading": "A carregar",
+    "loadError": "Não foi possível carregar as ligações.",
+    "unknownClient": "Uma aplicação",
+    "team": "Equipa: {team}",
+    "teamAndUser": "Equipa: {team} · {user}",
+    "since": "Ligada em {date} · renovada pela última vez em {renewed}",
+    "disconnect": "Desligar",
+    "disconnected": "A aplicação foi desligada.",
+    "error": "Não foi possível desligar a aplicação.",
+    "managedTitle": "Ligações de outros membros",
+    "managedDescription": "Aplicações que outros membros ligaram a equipas de que é proprietário ou administrador.",
+    "confirmTitle": "Desligar {client}?",
+    "confirmDescription": "Perde de imediato o acesso a {team}. Para a voltar a usar é preciso ligá-la e autorizá-la de novo.",
+    "cancel": "Cancelar",
+    "actions": {
+      "read": "ler",
+      "write": "criar e editar",
+      "delete": "eliminar"
+    },
+    "edit": {
+      "open": "Editar permissões",
+      "title": "Permissões de {client}",
+      "description": "Desmarque o que já não deve poder fazer em {team}. Continua ligada com o que restar. Para lhe dar mais, peça-o a partir da aplicação: abre o ecrã de consentimento.",
+      "save": "Guardar",
+      "saved": "As permissões foram atualizadas.",
+      "error": "Não foi possível atualizar as permissões.",
+      "empty": "Para retirar todas as permissões, desligue a aplicação."
     }
   }
 }

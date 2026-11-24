@@ -38,6 +38,7 @@ import { resolveBaseUrl } from './utils/base-url';
 import { getBetterAuthIpHeaders } from './api/client-ip';
 import { isRateLimitingDisabled } from './api/rate-limit-disabled';
 import { runAfterResponse } from './auth/background-tasks';
+import { mcpOAuthPlugins } from './mcp/oauth/plugins';
 
 /**
  * Does this email have a pending, unexpired team invitation waiting?
@@ -386,6 +387,8 @@ export const auth = betterAuth({
           disableSignUp: false, // auto-create user on the first use of a link
         })]
       : []),
+    // MCP browser sign-in (#541): the OAuth authorization server, only when MCP_OAUTH_ENABLED is on
+    ...mcpOAuthPlugins(),
     // The account's saved theme in a readable cookie, for the areas with a session (#495). One indexed read per issued session.
     accountThemePlugin(readAccountThemeFrom(pool)),
     nextCookies(), // MUST be the last plugin for Next.js cookie handling

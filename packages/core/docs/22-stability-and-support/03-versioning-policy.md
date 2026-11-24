@@ -34,9 +34,13 @@ A surface that is already deprecated when 1.0.0 ships, such as `@nextsparkjs/the
 
 Experimental surfaces carry no guarantee. They may change or be removed in a minor, with a changelog note, and without the deprecation notice above. Each experimental surface's documentation starts with a notice.
 
+An experimental surface can add keys to a public configuration type. Those keys follow the experimental rule, not the rule of the type they sit in: `features.mcpOAuth` in `nextspark.config.ts` and `mcp.oauth.allowedClientHosts` in `app.config.ts` belong to MCP browser sign-in and may change in a minor.
+
 ## Database migrations
 
 Migrations are forward-only and atomic: the runner applies each file and records it in one transaction, and there is no down step. A file that starts with `-- nextspark:no-transaction` is the exception: it is recorded only after it has run. Core ships no such file. In a minor or patch, a migration is additive with respect to user data, except for a security fix. Apart from a security fix, dropping or rewriting user data happens only in a major.
+
+A migration file that has been published is never edited: a change to what it created is a new migration with the next number. While a feature is unpublished its schema stays in one file, which is edited as the feature changes. `049_oauth_provider.sql` (MCP browser sign-in) was built this way; it adds tables and triggers, alters no existing table, and belongs to an experimental surface, so its tables may change in a minor, through new migrations. See [Migrations](../10-backend/02-migrations.md#one-file-while-a-feature-is-unpublished-a-new-file-afterwards).
 
 ## Security support
 

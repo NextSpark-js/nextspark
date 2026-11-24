@@ -164,6 +164,7 @@ export const QUERY_MODULES = new Set([
   'components/patterns/pages/PatternsCreatePage',
   'components/patterns/pages/PatternsListPage',
   'components/permissions/PermissionGate',
+  'components/settings/ConnectedApps',
   'components/settings/layouts/SettingsSidebar',
   'components/superadmin/misc/FieldTypesGallery',
   'components/teams/CreateTeamButton',

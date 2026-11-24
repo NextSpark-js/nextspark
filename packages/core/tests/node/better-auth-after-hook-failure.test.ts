@@ -43,9 +43,10 @@ test('a failing user.create after hook with a compensating delete fails the sign
     assert.equal((await owner.query(`SELECT count(*)::int AS n FROM ${table}`)).rows[0].n, 0, table)
   }
 
-  // What had already happened before the hook ran (recorded in the docs): the verification email went out, and the
-  // response carries a session cookie. The cookie cannot be used: the session row is gone.
-  assert.deepEqual(verificationEmails, ['a@example.test'])
+  // What had already happened before the hook ran (recorded in the docs): the response carries a session cookie. The
+  // cookie cannot be used: the session row is gone. Better Auth 1.7.27 no longer sends the verification email of a
+  // sign-up its after hook failed (1.7.7 had sent it by then).
+  assert.deepEqual(verificationEmails, [])
   const cookies = response.headers.getSetCookie().map(c => c.split(';')[0])
   const session = await auth.api.getSession({ headers: new Headers({ cookie: cookies.join('; ') }), query: { disableCookieCache: true } })
   assert.equal(session, null)

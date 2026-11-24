@@ -5,7 +5,7 @@ description: |
   Covers test structure, mocking strategies, React component testing, hook testing, and coverage targets.
   Use this skill when writing unit tests for services, hooks, utilities, or components.
 allowed-tools: Read, Glob, Grep
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Jest Unit Testing Skill
@@ -29,6 +29,11 @@ core/tests/jest/
 │   └── next-server.js
 └── setup.ts             # Global configuration
 
+core/tests/node/         # node:test suites (NOT Jest): real processes, real PostgreSQL
+├── *.test.ts            # run with `pnpm test:node`
+├── *-pg.test.ts         # against a throwaway PostgreSQL cluster
+└── _pg-cutover.ts       # cutoverDatabase(): cluster + every core migration
+
 tests/jest/
 └── ...                  # Theme-specific tests
 
@@ -43,6 +48,7 @@ plugins/*/__tests__/
 - Testing React components
 - Mocking database operations
 - Setting up test coverage
+- Deciding whether a mocked-query test is enough, or the code needs a real PostgreSQL (`tests/node/*-pg.test.ts`)
 
 ---
 
@@ -203,6 +209,87 @@ test('hook state update', () => {
 
 ---
 
+## When Mocked Queries Are Not Enough: `tests/node/*-pg.test.ts`
+
+A Jest test that mocks `@nextsparkjs/core/lib/db` runs no SQL: no trigger fires, no constraint is checked, no
+lock is taken. It proves what the code asks the database for, not what the database does. Write a node test
+against a real PostgreSQL when the behaviour under test is:
+
+- a **trigger, constraint, unique index or RLS policy** of a migration;
+- **two statements** that must be atomic, or **two connections** racing (which one waits, what the loser sees);
+- a migration applied **from nothing**, or applied **twice**.
+
+These are `node:test` suites, not Jest. Reference: `packages/core/tests/node/oauth-connections-pg.test.ts`
+(the database rules of MCP browser sign-in, see the `mcp-server` skill).
+
+```bash
+# from packages/core
+pnpm test:node                                             # every node test
+npx tsx --test tests/node/oauth-connections-pg.test.ts     # one file
+```
+
+### The pattern
+
+```typescript
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import pg from 'pg'
+import { cutoverDatabase, HAS_POSTGRES } from './_pg-cutover'
+
+test('the rules the database holds', { skip: !HAS_POSTGRES && 'initdb/pg_ctl not on PATH', timeout: 300000 }, async t => {
+  // Throwaway cluster, every core migration applied from nothing (no sample data); stopped by t.after
+  const db = await cutoverDatabase(t)
+
+  // Load the REAL module against it: set the env before the dynamic import
+  process.env.DATABASE_URL = db.ownerUrl
+  delete process.env.DATABASE_SERVICE_URL
+  const core = await import('../../src/lib/db')
+  const store = await import('../../src/lib/mcp/oauth/connection-store')
+  t.after(() => core.pool.end())
+
+  // A second client, to hold a transaction open while the code under test runs
+  const other = new pg.Client({ connectionString: db.ownerUrl })
+  other.on('error', () => {})
+  await other.connect()
+  t.after(() => other.end())
+
+  await t.test('a disconnection waits for a renewal in flight', async () => {
+    await other.query('BEGIN')
+    // ... `other` writes a row and keeps its transaction open
+    const ending = store.disconnect('u-1', 'client', 'team-1')
+    assert.equal(await stillWaiting(ending), true)   // blocked on the lock
+    await other.query('COMMIT')
+    assert.equal(await ending, true)                 // then it goes on
+  })
+})
+```
+
+- **Throwaway cluster**: `cutoverDatabase(t)` (`tests/node/_pg-cutover.ts`) starts one with `startCluster`
+  (`scripts/test/throwaway-postgres.cjs`), applies every file of `packages/core/migrations` except
+  `090_sample_data.sql`, and returns `owner` and `app` clients with `ownerUrl` / `appUrl`. It never touches the
+  database of `DATABASE_URL`.
+- **`HAS_POSTGRES` needs three binaries on the PATH: `initdb`, `pg_ctl` and `postgres`.** Client-only installs
+  (Homebrew's `libpq`) have the first two and not the server, so the suite is skipped there. A skipped suite
+  is not a pass: say so when you report results, and run it where the server is installed.
+- **Two clients to prove lock ordering.** Assert that a promise is still pending after a short wait (the
+  `stillWaiting` helper in the reference test), release the other transaction, then assert the outcome. Test
+  both orders of a race.
+- **Migrations from nothing, and again.** Re-run the migration file on the migrated database and assert it
+  changes nothing: it proves the file is idempotent.
+- **Real Better Auth in a child process** when the library's own behaviour is under test:
+  `tests/node/mcp-oauth-sign-in.test.ts` drives `tests/node/fixtures/registration-gates/driver.mts`.
+
+### Keep the module loadable
+
+A node test imports the real source file with `tsx`, without the Jest module mapper and without a built
+project. A module that imports project configuration (`@nextsparkjs/registries/*`, `lib/config/config-client`)
+cannot be loaded that way. So the database half of a feature lives in a module with no such import:
+`src/lib/mcp/oauth/connection-store.ts` imports only `lib/db` and a pure helper, and the half that needs the
+permission registry is in `connections.ts`, which passes its decision in as a callback (`disconnectAs`).
+Split a module the same way before you conclude it cannot be integration-tested.
+
+---
+
 ## Coverage Targets
 
 | Category | Target | Notes |
@@ -289,6 +376,8 @@ Before finalizing unit tests:
 - [ ] Edge cases covered (null, empty, invalid input)
 - [ ] Coverage targets met (90%+ critical, 80%+ features)
 - [ ] Test names are descriptive
+- [ ] Triggers, constraints, locks and multi-statement atomicity are covered by a `tests/node/*-pg.test.ts`
+      case, not by a mocked-query test; the run was not skipped (`HAS_POSTGRES`)
 
 ---
 
@@ -300,6 +389,8 @@ Before finalizing unit tests:
 
 ## Related Skills
 
+- `mcp-server` - The feature whose database rules `oauth-connections-pg.test.ts` covers
+- `database-migrations` - Invariants as triggers, idempotent migrations
 - `cypress-e2e` - Integration/E2E testing
 - `cypress-api` - API testing with Cypress
 - `zod-validation` - Schema validation testing

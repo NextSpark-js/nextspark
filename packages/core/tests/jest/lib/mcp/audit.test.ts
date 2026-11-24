@@ -3,7 +3,7 @@ jest.mock('@/core/lib/db', () => ({
   mutateWithRLS: (...args: unknown[]) => mockMutateWithRLS(...args),
 }));
 
-import { auditToolCall } from '@/core/lib/mcp/audit';
+import { AUDIT_WRITE_DEADLINE_MS, auditToolCall, namesSecret, redactSecrets } from '@/core/lib/mcp/audit';
 import type { AuditEntry } from '@/core/lib/mcp/types';
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
@@ -90,5 +90,101 @@ describe('auditToolCall', () => {
     mockMutateWithRLS.mockRejectedValueOnce(new Error('db down'));
     await expect(auditToolCall(entry())).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops waiting for a write that does not settle: the tool already ran, and its answer is not held', async () => {
+    jest.useFakeTimers();
+    try {
+      let failLater: (error: Error) => void = () => {};
+      mockMutateWithRLS.mockReturnValueOnce(new Promise((_resolve, reject) => { failLater = reject; }));
+      let answered = false;
+      const call = auditToolCall(entry()).then(() => { answered = true; });
+      await jest.advanceTimersByTimeAsync(AUDIT_WRITE_DEADLINE_MS - 1);
+      expect(answered).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+      await call;
+      expect(answered).toBe(true);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0][0]).toMatch(/was not written within/);
+      // the write that was left running fails later: logged, not an unhandled rejection
+      failLater(new Error('connection lost'));
+      await jest.advanceTimersByTimeAsync(0);
+      expect(errorSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('a write that settles in time leaves no timer behind', async () => {
+    jest.useFakeTimers();
+    try {
+      mockMutateWithRLS.mockResolvedValueOnce(undefined);
+      await auditToolCall(entry());
+      expect(jest.getTimerCount()).toBe(0);
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe('auditToolCall for an OAuth access token (#541)', () => {
+  it('records the call with no api key and the OAuth client and token id in the body', async () => {
+    await auditToolCall(entry({ apiKeyId: null, oauth: { clientId: 'https://client.example/metadata.json', tokenId: 'jti-1' } }));
+    expect(mockMutateWithRLS).toHaveBeenCalledTimes(1);
+    const [, params] = mockMutateWithRLS.mock.calls[0];
+    expect(params[0]).toBeNull();
+    expect(JSON.parse(params[7])).toMatchObject({ credential: 'oauth', oauthClientId: 'https://client.example/metadata.json', oauthTokenId: 'jti-1' });
+  });
+
+  it('still skips a call that has neither an api key nor an OAuth client', async () => {
+    await auditToolCall(entry({ apiKeyId: null }));
+    expect(mockMutateWithRLS).not.toHaveBeenCalled();
+  });
+});
+
+describe('what the audit trail keeps of a call (#541)', () => {
+  it('the value of a key that names a secret is replaced, at any depth', () => {
+    expect(redactSecrets({
+      name: 'Acme',
+      password: 'hunter2',
+      apiKey: 'sk_live_1',
+      nested: { access_token: 'abc', list: [{ clientSecret: 'x', label: 'ok' }] },
+      authorization: null,
+    })).toEqual({
+      name: 'Acme',
+      password: '[redacted]',
+      apiKey: '[redacted]',
+      nested: { access_token: '[redacted]', list: [{ clientSecret: '[redacted]', label: 'ok' }] },
+      authorization: null,
+    });
+  });
+
+  it('a key names a secret by its words, not by a run of letters inside it', () => {
+    for (const key of ['password', 'newPassword', 'passwordHash', 'clientSecret', 'client_secret', 'apiKey', 'api-key', 'API_KEY', 'privateKey', 'accessToken', 'access_token', 'refreshToken', 'token', 'tokenHash', 'Authorization', 'bearer', 'otp', 'otpCode', 'pin', 'cvv', 'ssn', 'credentials', 'apikey', 'accesstoken', 'clientsecret']) {
+      expect([key, namesSecret(key)]).toEqual([key, true]);
+    }
+    // fields an entity may well have
+    for (const key of ['tokenCount', 'tokenLimit', 'tokensUsed', 'secretaryName', 'keyResults', 'key', 'keyword', 'pinned', 'spinner', 'passenger', 'name', 'authorId', 'description']) {
+      expect([key, namesSecret(key)]).toEqual([key, false]);
+    }
+  });
+
+  it('arguments are written redacted', async () => {
+    await auditToolCall(entry({ requestSummary: { name: 'Acme', password: 'hunter2' } }));
+    const requestBody = JSON.parse(mockMutateWithRLS.mock.calls[0][1][7]);
+    expect(requestBody.args).toEqual({ name: 'Acme', password: '[redacted]' });
+  });
+
+  it('a call refused for missing scopes says so, with the scopes', async () => {
+    await auditToolCall(entry({ apiKeyId: null, oauth: { clientId: 'https://client.example/meta' }, statusCode: 403, missingScopes: ['customers:write'] }));
+    const [, params] = mockMutateWithRLS.mock.calls[0];
+    expect(params[4]).toBe(403);
+    expect(JSON.parse(params[7])).toMatchObject({ refused: 'insufficient_scope', missingScopes: ['customers:write'], credential: 'oauth' });
+  });
+
+  it('a call that ran has no refusal fields', async () => {
+    await auditToolCall(entry());
+    expect(JSON.parse(mockMutateWithRLS.mock.calls[0][1][7])).not.toHaveProperty('refused');
   });
 });

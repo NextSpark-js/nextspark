@@ -3,7 +3,7 @@
  * EMAIL_SEND_FAILED instead of 200, for a provider that answers
  * { success: false } and for one that throws, without the provider's text.
  *
- * Better Auth is mocked the way 1.7.7's emailOTP route behaves with
+ * Better Auth is mocked the way 1.7.27's emailOTP route behaves with
  * advanced.backgroundTasks: it hands the send to the background handler with
  * the error caught and answers { success: true } without waiting.
  * tests/node/otp-send-failures.test.ts runs the same against the real library.
@@ -44,7 +44,7 @@ type SendOtp = (data: { email: string; otp: string; type: string }) => Promise<v
 let sendVerificationOTP: SendOtp
 let background: Promise<unknown>[] = []
 
-// Better Auth 1.7.7: runInBackgroundOrAwait(promise) with backgroundTasks set
+// Better Auth 1.7.27: runInBackgroundOrAwait(promise) with backgroundTasks set
 jest.mock('better-auth/next-js', () => ({
   nextCookies: () => ({ id: 'next-cookies' }),
   toNextJsHandler: () => ({

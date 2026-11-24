@@ -74,17 +74,25 @@ core/migrations/
 ├── 001_better_auth_and_functions.sql
 ├── 002_auth_tables.sql
 ├── 003_user_metas.sql
-├── 004_users_sample_data.sql
-├── 005_api_key.sql
-├── 006_api_audit_log.sql
-└── 007_api_key_sample_data.sql
+├── 004_api_key.sql
+├── 005_api_audit_log.sql
+├── ...
+├── 047_users_role_before_suspension.sql
+├── 048_scheduled_actions_retry_of.sql
+├── 049_oauth_provider.sql        # tables and triggers of MCP browser sign-in
+└── 090_sample_data.sql           # sample data, not for production
 ```
+
+Core's migrations are applied to every project by `pnpm db:migrate`, whether or not the project uses the feature
+they belong to. `049_oauth_provider.sql` is an example: it adds the tables and triggers of MCP browser sign-in,
+which the app neither reads nor writes until a project turns the feature on (see
+[MCP Browser Sign-In Deployment](./12-mcp-browser-sign-in.md#3-migration-049)).
 
 ### Creating New Migrations
 
 ```bash
-# 1. Create new file with incremental number
-core/migrations/008_new_feature.sql
+# 1. Create new file with the next number (core is at 049; 090 is the sample data)
+core/migrations/050_new_feature.sql
 
 # 2. Write migration SQL
 # - Include CREATE TABLE IF NOT EXISTS
@@ -96,6 +104,22 @@ pnpm db:migrate
 
 # 4. Inspect the affected schema with your database client
 ```
+
+### Editing a Migration: Only Before It Is Published
+
+A migration file may change only while no database outside your own machine has run it.
+
+- **While a feature is unpublished, keep it in one migration file.** Edit that file as the feature changes, and
+  recreate the development databases that ran an earlier version of it. The MCP browser sign-in work (#541) did
+  this: everything it needs is in `049_oauth_provider.sql`. It adds no other migration and edits no existing one.
+- **Once the file is published** (released in a version, or applied to a shared, staging or production database),
+  **never edit it. Add a new migration** with the next number.
+
+The reason is that the ledger records a file by name: a file that already ran is never run again, so an edit
+reaches only the databases created afterwards, and the environments drift apart without an error. `db:migrate`
+compares each applied file with the content that ran and warns about an edited one; `pnpm db:migrate --strict`
+turns the warning into a failure, which is the mode for a deployment pipeline. See
+[Editing or renaming an applied migration](../10-backend/02-migrations.md#editing-or-renaming-an-applied-migration).
 
 ---
 

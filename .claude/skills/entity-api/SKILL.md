@@ -5,7 +5,7 @@ description: |
   Covers entity resolution, query parameters, response formats, child entities, and metadata.
   Use this skill when consuming entity APIs or understanding dynamic endpoint behavior.
 allowed-tools: Read, Glob, Grep
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Entity API Skill
@@ -351,6 +351,19 @@ headers: {
 }
 ```
 
+Over HTTP these endpoints accept a session or an API key, nothing else. They are also what every **generated
+entity tool** of the app's MCP server (`/api/mcp`) runs through: the MCP engine calls the generic handlers in
+process, with `x-team-id` set to the team it resolved. A hand-written tool (`extraTools`, `utilityTools`) runs its
+own handler and is bound by these checks only for the API handlers it calls through `api.execute`; whatever else
+it does, it has to check itself. A tool call made with an API key forwards that key; one made with an
+OAuth access token (MCP browser sign-in) carries no credential: the verified principal is attached to the
+request object and `authenticateRequest` returns it as `type: 'api-key'` with `oauth: { clientId, tokenId }`.
+The scope table below applies to it unchanged, and so do team-role permissions, ownership and field guards.
+A generated entity tool is audited twice in `api_audit_log`, best effort (a failed audit write is logged and does
+not stop the call): the handler's own `/api/v1/...` row and the MCP row `mcp:<tool>`. A hand-written tool gets the
+`mcp:` row and one handler row per API handler it actually calls.
+See the `mcp-server` skill.
+
 ### Scope Requirements
 
 | Operation | Required Scope |
@@ -358,7 +371,7 @@ headers: {
 | GET (list/read) | `{entity}:read` |
 | POST (create) | `{entity}:write` |
 | PATCH (update) | `{entity}:write` |
-| DELETE | `{entity}:delete` or `{entity}:write` |
+| DELETE | `{entity}:delete` (its own scope: `{entity}:write` does not allow a delete) |
 
 ## Error Codes
 
@@ -474,3 +487,4 @@ Before finalizing entity API integration:
 - `entity-system` - Entity definition (config, fields, types)
 - `tanstack-query` - Data fetching patterns
 - `better-auth` - Authentication patterns
+- `mcp-server` - The MCP tools generated over these endpoints, and the credentials they run with

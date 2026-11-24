@@ -488,4 +488,5 @@ export async function readEntityContract({ file, exportName, projectRoot, source
   }
 }
 
-export { Sources }
+// `property`, `resolve`, `literal` and `topLevelConst` also read the facts MCP browser sign-in needs (generators/mcp-scopes.mjs)
+export { Sources, literal, property, resolve, topLevelConst }
