@@ -952,12 +952,24 @@ declare module '@nextsparkjs/registries/scope-registry' {
 }
 
 // ============================================================================
+// MCP Scopes (data only)
+//
+// What MCP browser sign-in (#541) reads of the project: the entities the API
+// serves and the scopes some tool of the default /api/mcp route needs. Plain
+// data, generated from the sources (generators/mcp-scopes.mjs); empty in a
+// project without `features.mcpOAuth`.
+// ============================================================================
+declare module '@nextsparkjs/registries/mcp-scopes' {
+  export const MCP_SCOPES: { readonly apiEntities: readonly string[]; readonly toolScopes: readonly string[] }
+}
+
+// ============================================================================
 // MCP Override Registry
 //
 // One entry per `entities/<slug>/mcp.ts` of the project. The shape is
 // McpEntityOverride (src/lib/mcp/types.ts), declared loosely here like the
-// other registries (no imports in this file): lib/mcp/oauth/tool-scopes.ts
-// reads it as McpEntityOverride.
+// other registries (no imports in this file): the /api/mcp route reads it as
+// McpEntityOverride.
 // ============================================================================
 declare module '@nextsparkjs/registries/mcp-registry' {
   export interface McpOverrideEntry {

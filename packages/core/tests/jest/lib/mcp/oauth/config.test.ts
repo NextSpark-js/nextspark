@@ -30,7 +30,8 @@ describe('MCP browser sign-in switch (#541)', () => {
     expect(isMcpOAuthEnabled(env({ NODE_ENV: 'development', MCP_ENABLED: 'false' }))).toBe(false);
     // production: MCP itself is off unless MCP_ENABLED=true
     expect(isMcpOAuthEnabled(env({ NODE_ENV: 'production' }))).toBe(false);
-    expect(isMcpOAuthEnabled(env({ NODE_ENV: 'production', MCP_ENABLED: 'true' }))).toBe(true);
+    // and sign-in has its production gate on top (production-gate.test.ts): here, with Redis configured
+    expect(isMcpOAuthEnabled(env({ NODE_ENV: 'production', MCP_ENABLED: 'true', UPSTASH_REDIS_REST_URL: 'https://redis.example', UPSTASH_REDIS_REST_TOKEN: 'token' }))).toBe(true);
   });
 
   it('keeps the MCP kill switch as it was', () => {

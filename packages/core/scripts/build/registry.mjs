@@ -27,6 +27,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 // Path from packages/core/scripts/build/ to project root (4 levels up)
 const rootDir = join(__dirname, '../../../..')
+// The core this script is part of: the scopes of MCP browser sign-in are computed with its own sources
+const CORE_ROOT = join(__dirname, '../..')
 
 // Validation functions moved to ./registry/validation/entity-validator.mjs
 
@@ -80,6 +82,7 @@ import { generateScheduledActionsRegistry } from './registry/generators/schedule
 import { generateDocsRegistry } from './registry/generators/docs-registry.mjs'
 import { generateApiPresetsRegistry, generateApiDocsRegistry } from './registry/generators/api-presets-registry.mjs'
 import { generateMcpRegistry } from './registry/generators/mcp-registry.mjs'
+import { generateMcpScopes, planMcpScopes } from './registry/generators/mcp-scopes.mjs'
 import {
   displayTreeStructure,
   generateTestEntitiesJson,
@@ -111,6 +114,19 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
     // 'server' plugins, the client registry the 'web' ones (a build-only or mobile-only plugin is in neither).
     const serverPlugins = pluginsFor(plugins, 'server')
     const webPlugins = pluginsFor(plugins, 'web')
+
+    // The scopes of MCP browser sign-in (#541), as data: read from the sources only in a project that turns it on,
+    // and a value that cannot be read as a literal stops the build here
+    const mcpScopes = CONFIG.features?.mcpOAuth === true
+      ? await planMcpScopes({
+          entities,
+          mcpOverrides: mcpOverridesData,
+          projectRoot: CONFIG.projectRoot,
+          sourceRoot: CONFIG.projectSourceDir,
+          coreRoot: CORE_ROOT,
+          plugins: (CONFIG.pluginSources ?? []).map(source => ({ root: source.sourceDir, importBase: source.importBase })),
+        })
+      : null
 
     // Generate individual registries (pass CONFIG to all generators)
     const registries = [
@@ -147,6 +163,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, middlewa
       { name: 'api-presets-registry.ts', content: generateApiPresetsRegistry(apiPresetsData, CONFIG) },
       { name: 'api-docs-registry.ts', content: generateApiDocsRegistry(apiPresetsData, CONFIG) },
       { name: 'mcp-registry.ts', content: generateMcpRegistry(mcpOverridesData, CONFIG) },
+      { name: 'mcp-scopes.ts', content: generateMcpScopes(mcpScopes) },
       { name: 'index.ts', content: generateUnifiedRegistry(serverPlugins, entities, themes, middlewares, CONFIG) }
     ]
 

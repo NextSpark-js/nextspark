@@ -4,6 +4,7 @@ import { ApiKeyManager, presentedApiKey } from './keys';
 import { apiKeyCache, getCacheKey } from './cache';
 import { TeamMemberService } from '../services/team-member.service';
 import { ScopeService } from '../services/scope.service';
+import { scopesAllowedForUser } from './auth/user-scopes';
 
 /**
  * Información de autenticación de API Key
@@ -355,76 +356,9 @@ export async function validateScopesForUser(
   allowedScopes: string[];
   deniedScopes: string[];
 }> {
-  try {
-    const user = await queryOne<{ role: string }>(
-      'SELECT role FROM "users" WHERE id = $1',
-      [userId]
-    );
-
-    if (!user) {
-      return {
-        valid: false,
-        allowedScopes: [],
-        deniedScopes: requestedScopes
-      };
-    }
-
-    if (user.role === 'superadmin' || user.role === 'developer') {
-      return {
-        valid: true,
-        allowedScopes: requestedScopes,
-        deniedScopes: []
-      };
-    }
-
-    if (!teamId) {
-      // Non-superadmin with no resolvable team context cannot mint any
-      // team-scoped API key — there is no role to check scopes against.
-      return {
-        valid: false,
-        allowedScopes: [],
-        deniedScopes: requestedScopes
-      };
-    }
-
-    const teamRole = await TeamMemberService.getRole(teamId, userId);
-    if (!teamRole) {
-      return {
-        valid: false,
-        allowedScopes: [],
-        deniedScopes: requestedScopes
-      };
-    }
-
-    const allowedScopes = [
-      ...ScopeService.getBaseScopes(),
-      ...ScopeService.getRoleScopes(teamRole)
-    ];
-
-    // Si tiene acceso completo, permitir todo
-    if (allowedScopes.includes('*')) {
-      return {
-        valid: true,
-        allowedScopes: requestedScopes,
-        deniedScopes: []
-      };
-    }
-
-    // Filtrar scopes permitidos y denegados
-    const validScopes = requestedScopes.filter(scope => allowedScopes.includes(scope));
-    const deniedScopes = requestedScopes.filter(scope => !allowedScopes.includes(scope));
-
-    return {
-      valid: deniedScopes.length === 0,
-      allowedScopes: validScopes,
-      deniedScopes
-    };
-  } catch (error) {
-    console.error('Error validating scopes for user:', error);
-    return {
-      valid: false,
-      allowedScopes: [],
-      deniedScopes: requestedScopes
-    };
-  }
+  // The rule itself is in ./auth/user-scopes, shared with the consent of MCP browser sign-in (#541)
+  return scopesAllowedForUser(userId, teamId, requestedScopes, teamRole => [
+    ...ScopeService.getBaseScopes(),
+    ...ScopeService.getRoleScopes(teamRole)
+  ]);
 }

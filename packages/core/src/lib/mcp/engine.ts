@@ -16,7 +16,10 @@
  * already enforce scope + team-role permission + ownership/field guards for
  * API-key auth (see tool-generator.ts). A hand-written tool (extraTools,
  * utilityTools) runs its own handler and is bound by them only for the API
- * handlers it calls through `api.execute`.
+ * handlers it calls through `api.execute`. For an OAuth connection (#541) it
+ * also has to declare what it needs (`meta.requiredScopes`): the request is
+ * refused when the connection was not granted it, and a tool that declares
+ * nothing is refused to every connection.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -29,7 +32,8 @@ import { buildEntitySchemas } from './schema-builder'
 import { executeEntityOperation } from './executor'
 import { auditToolCall } from './audit'
 import { translateApiError } from './errors'
-import { DEFAULT_TIMEZONE, exposedEntities, handWrittenToolFactories, scopesOfToolMeta, toolScopesOf } from './exposure'
+import { DEFAULT_TIMEZONE, declaresScopes, exposedEntities, handWrittenToolFactories, scopesOfToolMeta, toolScopesOf } from './exposure'
+import { isMcpOAuthBuilt } from './oauth/built'
 import type {
   EngineApi,
   EntityExecutor,
@@ -125,6 +129,14 @@ export function createMcpEngine(
   const declaredScopes = new Set(toolScopesOf(registry, options))
   for (const factory of handWrittenToolFactories(options)) {
     for (const tool of factory(api)) {
+      // A tool that does not say what it needs is refused to every browser sign-in connection (see the handler
+      // below). Said when it is built, in a project that has sign-in, so that it is not found out by a user.
+      if (isMcpOAuthBuilt() && !declaresScopes(tool.meta)) {
+        console.warn(
+          `[mcp] The tool "${tool.name}" does not declare the permissions it needs, so MCP browser sign-in connections are refused it (it still works with an API key). ` +
+            'Add `meta: { requiredScopes: [...] }` to it, with the scopes every call of it needs; an empty list if it needs none.'
+        )
+      }
       const undeclared = scopesOfToolMeta(tool.meta).filter(scope => !declaredScopes.has(scope))
       if (undeclared.length) {
         console.warn(
@@ -168,7 +180,14 @@ export function createMcpEngine(
           // that was granted and the role has lost since. An entity tool would be refused by the API handler it
           // calls; a tool the project wrote may never call one, so it is refused here, before it runs.
           const roleLacks = ctx.principal?.oauth ? scopesOfToolMeta(tool.meta).filter(scope => !ctx.scopes.includes(scope)) : []
-          if (roleLacks.length) {
+          // And to what its user consented to: a tool that does not say what it needs stands for none of the
+          // permissions of the consent, so no connection is let through to it (./exposure `declaresScopes`).
+          if (ctx.principal?.oauth && !declaresScopes(tool.meta)) {
+            result = errorResult(
+              'This tool cannot be used through this connection: the application has not declared which permissions it needs, so the server cannot tell whether you granted them. Connecting again will not change it. It can be used with an API key; the developers of the application can make it available here by declaring its permissions (`meta.requiredScopes`).',
+              403
+            )
+          } else if (roleLacks.length) {
             result = errorResult(
               `Your role in the team does not allow ${roleLacks.join(', ')} any more, so this tool cannot run for this connection. Connecting again will not change it: ask an administrator of the team.`,
               403
@@ -232,8 +251,8 @@ export function createMcpEngine(
   /**
    * The scopes a call to `toolName` needs before it runs. A generated entity tool: `<slug>:read|write|delete`, as
    * the API handler it runs declares it. A tool that makes several calls (a workflow, an extra or utility tool)
-   * says so in `meta.requiredScopes`; one that does not is checked call by call where it makes them. None for an
-   * unknown name.
+   * says so in `meta.requiredScopes`; one that does not has none here, and the handler above refuses it to an
+   * OAuth connection. None for an unknown name.
    */
   function requiredScopesFor(toolName: string): string[] {
     return scopesOfToolMeta(tools.find(tool => tool.name === toolName)?.meta)

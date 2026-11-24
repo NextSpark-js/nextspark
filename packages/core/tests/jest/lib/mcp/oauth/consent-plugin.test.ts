@@ -12,11 +12,19 @@ jest.mock('@/core/lib/db', () => ({ queryOne: (...args: unknown[]) => mockQueryO
 const mockAllowedHosts = jest.fn<unknown, []>();
 jest.mock('@/core/lib/mcp/oauth/config', () => ({ allowedClientHosts: () => mockAllowedHosts() }));
 const mockValidateScopes = jest.fn();
-jest.mock('@/core/lib/api/auth', () => ({ validateScopesForUser: (...args: unknown[]) => mockValidateScopes(...args) }));
+// The rule API keys are held to (lib/api/auth/user-scopes), here with the role's scopes taken from generated data
+jest.mock('@/core/lib/api/auth/user-scopes', () => ({ scopesAllowedForUser: (...args: unknown[]) => mockValidateScopes(...args) }));
+const mockRoleScopes = (role: string) => [`role:${role}`];
 // The scopes whose tool was retired: accepted when asked for, never granted
 const mockRetired = new Set<string>();
 jest.mock('@/core/lib/mcp/oauth/scopes', () => ({
   activeScopes: (scopes: string[]) => scopes.filter(scope => !mockRetired.has(scope)),
+  mcpOAuthRoleScopes: (role: string) => mockRoleScopes(role),
+}));
+const mockGateRefuses = jest.fn<Promise<boolean>, []>();
+jest.mock('@/core/lib/mcp/oauth/production-gate', () => ({
+  NOT_AVAILABLE: 'MCP browser sign-in is not available on this server.',
+  mcpOAuthRefusedByGate: () => mockGateRefuses(),
 }));
 const mockSelectedTeam = jest.fn();
 jest.mock('@/core/lib/mcp/oauth/team-selection', () => ({
@@ -24,7 +32,7 @@ jest.mock('@/core/lib/mcp/oauth/team-selection', () => ({
   selectedTeam: (...args: unknown[]) => mockSelectedTeam(...args),
 }));
 
-import { consentedScopes, consentWithinRolePlugin, refuseConsentSkippingClient, refuseUnlistedClient } from '@/core/lib/mcp/oauth/consent-plugin';
+import { consentedScopes, consentWithinRolePlugin, isHeldByProductionGate, refuseConsentSkippingClient, refuseUnlistedClient } from '@/core/lib/mcp/oauth/consent-plugin';
 
 const CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
 const REQUESTED = 'openid offline_access tasks:read tasks:write tasks:delete customers:read';
@@ -32,18 +40,44 @@ const signedQuery = (scope = REQUESTED, challenge = CHALLENGE) => new URLSearchP
 
 type Hook = { matcher: (ctx: { path: string }) => boolean; handler: (ctx: { path: string; body: unknown }) => Promise<{ context: { body: { scope: string } } } | undefined> };
 const hooks = consentWithinRolePlugin().hooks!.before as unknown as Hook[];
-// the gate of the endpoints used after authorization, the direct update of a consent, then the consent endpoint
-const gate = hooks[0] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string; body?: unknown; headers?: Headers }) => Promise<void> };
-const update = hooks[1] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string; body?: unknown }) => Promise<{ context: { body: { update: { scopes: string[] } } } } | undefined> };
-const hook = hooks[2];
+// the production gate, the gate of the endpoints used after authorization, the direct update of a consent, then the consent endpoint
+const productionGate = hooks[0] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string }) => Promise<void> };
+const gate = hooks[1] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string; body?: unknown; headers?: Headers }) => Promise<void> };
+const update = hooks[2] as unknown as { matcher: (ctx: { path?: string }) => boolean; handler: (ctx: { path: string; body?: unknown }) => Promise<{ context: { body: { update: { scopes: string[] } } } } | undefined> };
+const hook = hooks[3];
 const consent = (body: Record<string, unknown>) => hook.handler({ path: '/oauth2/consent', body });
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetSession.mockResolvedValue({ user: { id: 'user-1' }, session: { id: 'session-1' } });
   mockSelectedTeam.mockResolvedValue('team-1');
+  mockGateRefuses.mockResolvedValue(false);
   // the role in the team can read and write tasks and read customers; it cannot delete
   mockValidateScopes.mockImplementation(async (_user: string, _team: string, scopes: string[]) => ({ allowedScopes: scopes.filter(scope => scope !== 'tasks:delete') }));
+});
+
+describe('the production gate on the authorization server', () => {
+  it('holds every endpoint of the OAuth provider and its discovery documents', () => {
+    for (const path of ['/oauth2/authorize', '/oauth2/token', '/oauth2/register', '/oauth2/consent', '/oauth2/continue', '/oauth2/userinfo', '/oauth2/introspect',
+      '/oauth2/update-consent', '/oauth2/get-consents', '/admin/oauth2/create-client', '/.well-known/oauth-authorization-server', '/.well-known/openid-configuration',
+      '/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/api/mcp']) {
+      expect([path, productionGate.matcher({ path })]).toEqual([path, true]);
+    }
+  });
+
+  it('lets through the two that only take access away, and everything that is not the authorization server', () => {
+    for (const path of ['/oauth2/revoke', '/oauth2/delete-consent', '/sign-in/email', '/get-session', '/jwks', '/oauth2', undefined]) {
+      expect([path, isHeldByProductionGate(path)]).toEqual([path, false]);
+    }
+  });
+
+  it('answers 503 temporarily_unavailable while the gate refuses, and nothing while it does not', async () => {
+    await expect(productionGate.handler({ path: '/oauth2/authorize' })).resolves.toBeUndefined();
+    mockGateRefuses.mockResolvedValue(true);
+    await expect(productionGate.handler({ path: '/oauth2/authorize' })).rejects.toMatchObject({
+      body: { error: 'temporarily_unavailable', error_description: 'MCP browser sign-in is not available on this server.' },
+    });
+  });
 });
 
 describe('the scopes a consent grants', () => {
@@ -72,7 +106,9 @@ describe('the consent endpoint, before Better Auth handles it', () => {
     const result = await consent({ accept: true, scope: 'openid offline_access tasks:read tasks:delete', oauth_query: signedQuery() });
     expect(result?.context.body.scope).toBe('openid offline_access tasks:read');
     expect(mockSelectedTeam).toHaveBeenCalledWith('session-1', CHALLENGE, 'user-1');
-    expect(mockValidateScopes).toHaveBeenCalledWith('user-1', 'team-1', ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read']);
+    expect(mockValidateScopes).toHaveBeenCalledWith('user-1', 'team-1', ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read'], expect.any(Function));
+    // what a role holds comes from the generated data of MCP sign-in, not from the scope registry: `lib/auth` must not load it
+    expect(mockValidateScopes.mock.calls[0][3]('admin')).toEqual(['role:admin']);
   });
 
   it('a scope whose tool was retired is taken out too, whatever the role and whatever the browser sent', async () => {
@@ -84,7 +120,7 @@ describe('the consent endpoint, before Better Auth handles it', () => {
       const unnamed = await consent({ accept: true, oauth_query: signedQuery() });
       expect(unnamed?.context.body.scope).toBe('openid offline_access tasks:read customers:read');
       // the role is not even asked about it
-      expect(mockValidateScopes).toHaveBeenLastCalledWith('user-1', 'team-1', ['tasks:read', 'tasks:delete', 'customers:read']);
+      expect(mockValidateScopes).toHaveBeenLastCalledWith('user-1', 'team-1', ['tasks:read', 'tasks:delete', 'customers:read'], expect.any(Function));
     } finally {
       mockRetired.clear();
     }
@@ -194,7 +230,7 @@ describe('a consent rewritten directly (the authorization server lets the signed
     const result = await update.handler({ path: '/oauth2/update-consent', body: { id: 'consent-1', update: { scopes: ['offline_access', 'tasks:read', 'tasks:delete'] } } });
     expect(result?.context.body.update.scopes).toEqual(['offline_access', 'tasks:read']);
     expect(mockQueryOne).toHaveBeenCalledWith(expect.stringContaining('FROM "oauthConsent" WHERE id = $1'), ['consent-1']);
-    expect(mockValidateScopes).toHaveBeenCalledWith('user-1', 'team-9', ['tasks:read', 'tasks:delete']);
+    expect(mockValidateScopes).toHaveBeenCalledWith('user-1', 'team-9', ['tasks:read', 'tasks:delete'], expect.any(Function));
   });
 
   it('cannot write back a scope whose tool was retired', async () => {
@@ -203,7 +239,7 @@ describe('a consent rewritten directly (the authorization server lets the signed
       mockQueryOne.mockResolvedValueOnce({ userId: 'user-1', referenceId: 'team-9' });
       const result = await update.handler({ path: '/oauth2/update-consent', body: { id: 'consent-1', update: { scopes: ['offline_access', 'tasks:read', 'customers:read'] } } });
       expect(result?.context.body.update.scopes).not.toContain('tasks:read');
-      expect(mockValidateScopes).toHaveBeenLastCalledWith('user-1', 'team-9', ['customers:read']);
+      expect(mockValidateScopes).toHaveBeenLastCalledWith('user-1', 'team-9', ['customers:read'], expect.any(Function));
     } finally {
       mockRetired.clear();
     }

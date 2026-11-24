@@ -33,6 +33,7 @@ import { RATE_LIMIT_MESSAGE } from '../errors'
 import type { ToolExecutionContext } from '../types'
 import { isClientAllowed } from './allowed-clients'
 import { allowedClientHosts, mcpOAuthIssuer, mcpResourceMetadataUrl, mcpResourceUrl, OIDC_SCOPES, REVOCATION_CLAIM, TEAM_CLAIM } from './config'
+import { mcpOAuthRefusedByGate, NOT_AVAILABLE } from './production-gate'
 import { isRevokedSince } from './revocation'
 import { mcpOAuthDefaultScopes, mcpOAuthStepUpScopes } from './scopes'
 
@@ -165,6 +166,10 @@ function insufficientScope(missing: string[], ask: string[]): NextResponse {
 }
 
 export async function handleOAuthMcpRequest(request: NextRequest, { dispatch, requiredScopesFor, toolScopes, auditRefused }: OAuthMcpHandlers): Promise<NextResponse> {
+  // The production gate (./production-gate), before the token is even looked at: no challenge is sent either, a
+  // client that followed it would be refused by the authorization server
+  if (await mcpOAuthRefusedByGate()) return jsonRpcError(503, -32000, NOT_AVAILABLE)
+
   const protectedHandler = requireMcpAuth(
     auth,
     async (verified, claims) => {

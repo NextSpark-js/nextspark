@@ -11,7 +11,7 @@ import type { Permission } from '../../permissions/types'
 import { disconnectAs, membershipsOf, othersConnections, type OAuthConnection } from './connection-store'
 import { activeScopes } from './scopes'
 
-export { disconnect, grantedScopes, narrowConnection, userConnections } from './connection-store'
+export { disconnect, grantedScopes, narrowConnection, revokeScopeFromConnections, userConnections } from './connection-store'
 export type { NarrowResult, OAuthConnection } from './connection-store'
 
 /** The team permission that lets a member see and end the other members' connections to the team. */

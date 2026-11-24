@@ -8,13 +8,23 @@
  */
 import { APIError, type BetterAuthPlugin } from 'better-auth'
 import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
-import { validateScopesForUser } from '../../api/auth'
+import { scopesAllowedForUser } from '../../api/auth/user-scopes'
 import { queryOne } from '../../db'
 import { isClientAllowed, isRequestAllowed } from './allowed-clients'
 import { allowedClientHosts } from './config'
+import { mcpOAuthRefusedByGate, NOT_AVAILABLE } from './production-gate'
 import { entityScope } from './scope-names'
-import { activeScopes } from './scopes'
+import { activeScopes, mcpOAuthRoleScopes } from './scopes'
 import { isAuthorizationKey, selectedTeam } from './team-selection'
+
+/**
+ * Of `scopes`, the ones the user's role in the team holds: the rule `validateScopesForUser` applies for API keys
+ * (lib/api/auth/user-scopes), with the role's scopes computed from data this module's graph may import (./scopes).
+ * The MCP endpoint cuts every token down to the role again, with the scope registry itself, on each request.
+ */
+async function heldByRoleIn(userId: string, teamId: string, scopes: string[]): Promise<string[]> {
+  return (await scopesAllowedForUser(userId, teamId, scopes, mcpOAuthRoleScopes)).allowedScopes
+}
 
 /**
  * The scopes a consent grants: of the ones the client asked for, the ones accepted (all of them when the consent
@@ -52,6 +62,16 @@ export function refuseUnlistedClient(clientId: string | null | undefined): void 
 const scopeList = (value: unknown): string[] | undefined =>
   typeof value === 'string' ? value.split(/\s+/).filter(Boolean) : undefined
 
+/**
+ * Every endpoint the OAuth provider serves under the auth route: `/oauth2/*`, the administration ones and the
+ * discovery documents. The production gate holds all of them, except the two that only take access away: a client
+ * that revokes its token and a user who withdraws a consent are served whatever the deployment is missing.
+ */
+const AUTHORIZATION_SERVER_PATH = /^\/(?:(?:admin\/)?oauth2\/|\.well-known\/(?:oauth-authorization-server|oauth-protected-resource|openid-configuration)(?:\/|$))/
+const TAKES_ACCESS_AWAY = ['/oauth2/revoke', '/oauth2/delete-consent']
+export const isHeldByProductionGate = (path: string | undefined): boolean =>
+  !!path && AUTHORIZATION_SERVER_PATH.test(path) && !TAKES_ACCESS_AWAY.includes(path)
+
 /** The endpoints a client uses after it was authorized: exchanging a code, renewing a token, reading the identity. */
 const AFTER_AUTHORIZATION = ['/oauth2/token', '/oauth2/userinfo']
 
@@ -59,6 +79,18 @@ export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
   id: 'mcp-consent-within-role',
   hooks: {
     before: [
+      {
+        // The production gate (./production-gate): while the role of the database skips row-level security and the
+        // deployment has not accepted that, no endpoint of the authorization server answers. First, so that nothing
+        // below reads or writes for a request that will not be served. The discovery documents and the MCP endpoint
+        // ask the same question themselves (./discovery, ./resource-server).
+        matcher: ctx => isHeldByProductionGate(ctx.path),
+        handler: createAuthMiddleware(async () => {
+          if (await mcpOAuthRefusedByGate()) {
+            throw new APIError('SERVICE_UNAVAILABLE', { error: 'temporarily_unavailable', error_description: NOT_AVAILABLE })
+          }
+        }),
+      },
       {
         // The project's list of accepted applications, for a client that was authorized before the list changed:
         // it exchanges no code, renews no token and reads no identity. (Asking for authorization is refused in
@@ -93,7 +125,7 @@ export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
           const named = scopes.filter((scope): scope is string => typeof scope === 'string')
           // Only active scopes can be held from now on: one whose tool was retired is accepted when asked for, not granted
           const entityScopes = activeScopes(named).filter(scope => entityScope(scope))
-          const heldByRole = entityScopes.length ? (await validateScopesForUser(session.user.id, consent.referenceId, entityScopes)).allowedScopes : []
+          const heldByRole = entityScopes.length ? (await heldByRoleIn(session.user.id, consent.referenceId, entityScopes)) : []
           return { context: { body: { ...body, update: { ...body.update, scopes: consentedScopes(named, undefined, heldByRole) } } } }
         }),
       },
@@ -112,7 +144,7 @@ export const consentWithinRolePlugin = (): BetterAuthPlugin => ({
           const teamId = session && isAuthorizationKey(authorization) ? await selectedTeam(session.session.id, authorization, session.user.id) : undefined
           // Only active scopes are granted: one whose tool was retired is accepted when asked for, not granted
           const entityScopes = activeScopes(requested).filter(scope => entityScope(scope))
-          const heldByRole = session && teamId && entityScopes.length ? (await validateScopesForUser(session.user.id, teamId, entityScopes)).allowedScopes : []
+          const heldByRole = session && teamId && entityScopes.length ? (await heldByRoleIn(session.user.id, teamId, entityScopes)) : []
           const scope = consentedScopes(requested, scopeList(body.scope), heldByRole).join(' ')
           return { context: { body: { ...body, scope } } }
         }),

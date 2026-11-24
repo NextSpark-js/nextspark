@@ -1,15 +1,20 @@
-jest.mock('@/core/lib/services/scope.service', () => ({
-  ScopeService: {
-    getBaseScopes: () => [],
-    getRoles: () => ['owner', 'viewer'],
-    getRoleScopes: (role: string) => (role === 'owner' ? ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read', '*'] : ['tasks:read']),
+// The permissions of two team roles, as the permissions registry holds them. `notes` is not served by the API and
+// `billing.manage` is not an entity permission: neither gives a scope.
+jest.mock('@nextsparkjs/registries/permissions-registry', () => ({
+  AVAILABLE_ROLES: ['owner', 'viewer'],
+  PERMISSIONS_BY_ROLE: {
+    owner: new Set(['tasks.read', 'tasks.create', 'tasks.delete', 'customers.list', 'notes.read', 'billing.manage']),
+    viewer: new Set(['tasks.read']),
   },
 }));
 
 const toolScopes = { current: ['tasks:read', 'tasks:write', 'tasks:delete', 'customers:read', 'pages:read'] };
-jest.mock('@/core/lib/mcp/oauth/tool-scopes', () => ({ mcpToolScopes: () => toolScopes.current }));
+jest.mock('@/core/lib/mcp/oauth/tool-scopes', () => ({
+  mcpToolScopes: () => toolScopes.current,
+  mcpApiEntities: () => ['customers', 'pages', 'tasks'],
+}));
 
-import { activeScopes, entityScope, isPreselectedScope, mcpOAuthAcceptedScopes, mcpOAuthDefaultScopes, mcpOAuthResourceScopes, mcpOAuthStepUpScopes } from '@/core/lib/mcp/oauth/scopes';
+import { activeScopes, entityScope, isPreselectedScope, mcpOAuthAcceptedScopes, mcpOAuthDefaultScopes, mcpOAuthResourceScopes, mcpOAuthRoleScopes, mcpOAuthStepUpScopes } from '@/core/lib/mcp/oauth/scopes';
 
 describe('the scopes of MCP browser sign-in (#541)', () => {
   it('are the ones a team role can hold, without wildcards', () => {
@@ -54,6 +59,12 @@ describe('the scopes of MCP browser sign-in (#541)', () => {
     it('a step-up challenge does not name it, even when the connection still holds it', () => {
       expect(mcpOAuthStepUpScopes(['tasks:read', 'tasks:delete'], ['tasks:write'])).toEqual(['offline_access', 'tasks:read', 'tasks:write']);
     });
+  });
+
+  it('a team role holds the scopes of its permissions, for the entities the API serves and no other', () => {
+    expect(mcpOAuthRoleScopes('owner')).toEqual(['customers:read', 'tasks:read', 'tasks:write', 'tasks:delete']);
+    expect(mcpOAuthRoleScopes('viewer')).toEqual(['tasks:read']);
+    expect(mcpOAuthRoleScopes('nobody')).toEqual([]);
   });
 
   it('what is accepted is never a wildcard or a scope that is not an entity permission', () => {

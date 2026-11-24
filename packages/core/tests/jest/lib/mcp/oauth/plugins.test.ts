@@ -44,8 +44,6 @@ jest.mock('@/core/lib/mcp/oauth/scopes', () => ({
   mcpOAuthAcceptedScopes: () => ['tasks:delete', 'tasks:read', 'tasks:write'],
   mcpOAuthResourceScopes: () => ['tasks:read', 'tasks:write'],
 }));
-const known = { current: true };
-jest.mock('@/core/lib/mcp/oauth/tool-scopes', () => ({ mcpToolScopesKnown: () => known.current }));
 
 import { mcpOAuthPlugins } from '@/core/lib/mcp/oauth/plugins';
 
@@ -61,7 +59,6 @@ function providerOptions(): Record<string, unknown> {
 describe('what the OAuth provider is configured with (#541)', () => {
   afterEach(() => {
     enabled.current = true;
-    known.current = true;
   });
 
   it('is nothing at all while the feature is off', () => {
@@ -80,13 +77,7 @@ describe('what the OAuth provider is configured with (#541)', () => {
     ]);
   });
 
-  it('brings the stored policy of the resource to its list when it starts', () => {
+  it('brings the stored policy of the resource to its list when it starts, from any process: the list is generated data', () => {
     expect(providerOptions().resourceSeedMode).toBe('merge');
-  });
-
-  it('leaves the stored policy alone from a process that could not read the registries', () => {
-    known.current = false;
-    // the provider's default: insert the row when it is missing, never write over one that is there
-    expect(providerOptions().resourceSeedMode).toBe('insertOnly');
   });
 });

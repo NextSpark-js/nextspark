@@ -30,7 +30,7 @@ import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
 import { addMobileCommand } from './commands/add-mobile.js';
 import { doctorCommand } from './commands/doctor.js';
-import { dbMigrateCommand, dbSeedCommand, dbDemoResetCommand, type DbRunOptions } from './commands/db.js';
+import { dbMigrateCommand, dbSeedCommand, dbDemoResetCommand, mcpRevokeScopeCommand, type DbRunOptions } from './commands/db.js';
 import { setupAICommand } from './commands/setup-ai.js';
 import { syncAICommand } from './commands/sync-ai.js';
 import { skillsGetCommand, skillsListCommand } from './commands/skills.js';
@@ -254,6 +254,14 @@ program
   .option('--status', 'Print the last reset and change nothing')
   .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
   .action((opts: { status?: boolean; envFile: boolean }) => dbDemoResetCommand({ status: opts.status, envFile: opts.envFile }));
+
+// MCP browser sign-in: the operator's way to retire a permission for good
+program
+  .command('mcp:revoke-scope <scope>')
+  .description('Take a permission of MCP browser sign-in (<entity>:read|write|delete) away from every connection that holds it; reports only, unless --yes')
+  .option('--yes', 'Apply it (without it, only what would change is printed)')
+  .option('--no-env-file', 'Ignore the project .env; use only the exported environment')
+  .action((scope: string, opts: { yes?: boolean; envFile: boolean }) => mcpRevokeScopeCommand(scope, { yes: opts.yes, envFile: opts.envFile }));
 
 // Optional pg-boss worker (a second process; off unless jobs.enabled)
 program

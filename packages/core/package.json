@@ -500,6 +500,8 @@
     "migrations",
     "src/entities",
     "src/lib/entities/portable",
+    "src/lib/entities/api-access.ts",
+    "src/lib/mcp/exposure.ts",
     "jest-preset.cjs",
     "jest-esm-transform.cjs",
     "tests/jest/setup.ts",

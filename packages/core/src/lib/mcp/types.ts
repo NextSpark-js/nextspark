@@ -72,8 +72,13 @@ export interface McpToolDefinition {
   handler: (args: Record<string, unknown>, ctx: ToolExecutionContext) => Promise<McpToolResult>
   /** Metadata for audit entries. */
   /**
-   * `requiredScopes`: the scopes every call of this tool needs, for a tool that makes several API calls. An OAuth
-   * client missing one is told which before the tool runs (#541); without it each call is checked where it is made.
+   * `requiredScopes`: the scopes every call of this tool needs, for a tool that is not a single entity operation
+   * (a workflow, an extra or utility tool). An empty list says the tool needs no permission.
+   *
+   * With an API key it is not checked before the tool runs: each API call the tool makes is checked where it is
+   * made. With MCP browser sign-in (#541) it is what the tool is held to: a connection missing one of the scopes
+   * is told which before the tool runs, and a tool that does not declare `requiredScopes` at all is refused to
+   * every connection, because nothing says which of the permissions the user granted it stands for.
    */
   meta?: { entitySlug?: string; operation?: McpOperation | 'workflow'; requiredScopes?: string[] }
 }

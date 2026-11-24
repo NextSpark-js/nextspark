@@ -1,9 +1,22 @@
 /**
  * The scopes of MCP browser sign-in (#541): the vocabulary API keys already use, `<entity>:read|write|delete`.
  */
-import { ScopeService } from '../../services/scope.service'
+import { AVAILABLE_ROLES, PERMISSIONS_BY_ROLE } from '@nextsparkjs/registries/permissions-registry'
+import { entityScopesOfRole } from '../../api/auth/entity-role-scopes'
 import { entityScope } from './scope-names'
-import { mcpToolScopes } from './tool-scopes'
+import { mcpApiEntities, mcpToolScopes } from './tool-scopes'
+
+/**
+ * The entity scopes a team role holds: what the scope registry gives the role (`SCOPE_CONFIG.roles`), computed
+ * with the same rule (lib/api/auth/entity-role-scopes) from the permissions registry and the generated list of
+ * the entities the API serves.
+ *
+ * Not read from the scope registry itself: this module is in the import graph of `lib/auth`, and the scope
+ * registry imports the entity registry (see ./tool-scopes).
+ */
+export function mcpOAuthRoleScopes(teamRole: string): string[] {
+  return entityScopesOfRole(mcpApiEntities(), PERMISSIONS_BY_ROLE[teamRole])
+}
 
 /**
  * The scopes the authorization server accepts: every entity scope (`<entity>:read|write|delete`) a team role can
@@ -17,9 +30,9 @@ import { mcpToolScopes } from './tool-scopes'
  * granted: the consent hooks, the tokens issued for the resource and the consent screen all go by the active list.
  */
 export function mcpOAuthAcceptedScopes(): string[] {
-  const scopes = new Set<string>(ScopeService.getBaseScopes())
-  for (const role of ScopeService.getRoles()) {
-    for (const scope of ScopeService.getRoleScopes(role)) scopes.add(scope)
+  const scopes = new Set<string>()
+  for (const role of AVAILABLE_ROLES) {
+    for (const scope of mcpOAuthRoleScopes(role)) scopes.add(scope)
   }
   return [...scopes].filter(scope => !scope.includes('*') && entityScope(scope) !== null).sort()
 }

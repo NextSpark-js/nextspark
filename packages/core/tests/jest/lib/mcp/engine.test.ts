@@ -1,3 +1,7 @@
+// Whether the project was built with MCP browser sign-in (#541): off, as in a project that does not turn it on
+const mockOAuthBuilt = { current: false };
+jest.mock('@/core/lib/mcp/oauth/built', () => ({ isMcpOAuthBuilt: () => mockOAuthBuilt.current }));
+
 import { createMcpEngine } from '@/core/lib/mcp/engine';
 import type { EntityConfig, EntityField } from '@/core/lib/entities/types';
 import type { EntityApiResult, EntityExecutor, ToolExecutionContext, McpEntityOverride } from '@/core/lib/mcp/types';
@@ -541,6 +545,80 @@ describe('the audit trail of what did not succeed (#541)', () => {
       const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
       await engine.handleJsonRpc(req(1, 'tools/call', { name: 'acme_archive_customers', arguments: {} }), { ...CTX, scopes: ['customers:read'] });
       expect(handler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('a hand-written tool that does not say what it needs (#541)', () => {
+    const tool = (name: string, meta: unknown, handler: jest.Mock) => ({
+      name, title: name, description: name, inputSchema: {},
+      strictSchema: { safeParse: () => ({ success: true, data: {} }) } as never,
+      ...(meta === undefined ? {} : { meta }),
+      handler,
+    });
+    const done = () => jest.fn(async () => ({ content: [{ type: 'text' as const, text: 'done' }] }));
+    const silent = done();
+    const workflow = done();
+    const needsNothing = done();
+    const overrides: Record<string, McpEntityOverride> = {
+      customers: {
+        extraTools: () => [
+          // no meta at all, and a workflow of an entity with no requiredScopes: neither says what it needs
+          tool('acme_export_everything', undefined, silent),
+          tool('acme_customer_report', { entitySlug: 'customers', operation: 'workflow' }, workflow),
+          // an empty list is the statement that it needs no permission
+          tool('acme_server_time', { requiredScopes: [] }, needsNothing),
+        ] as never,
+      },
+    };
+    const oauth = (scopes: string[]) =>
+      ({ ...CTX, apiKeyId: null, authHeader: '', scopes, principal: { oauth: { clientId: 'https://client.example/meta', teamId: 'team-1' } } }) as unknown as ToolExecutionContext;
+    const call = async (engine: ReturnType<typeof createMcpEngine>, name: string, ctx: ToolExecutionContext) =>
+      (await engine.handleJsonRpc(req(1, 'tools/call', { name, arguments: {} }), ctx)) as { result: { isError?: boolean; content: Array<{ text: string }> } };
+    beforeEach(() => [silent, workflow, needsNothing].forEach(mock => mock.mockClear()));
+    afterEach(() => { mockOAuthBuilt.current = false; });
+
+    it('is refused to an OAuth connection whatever it holds, before it runs, and the refusal is recorded', async () => {
+      const audit = jest.fn().mockResolvedValue(undefined);
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit, overrides });
+      const everything = ['customers:read', 'customers:write', 'customers:delete'];
+      for (const [name, handler] of [['acme_export_everything', silent], ['acme_customer_report', workflow]] as const) {
+        const response = await call(engine, name, oauth(everything));
+        expect(handler).not.toHaveBeenCalled();
+        expect(response.result.isError).toBe(true);
+        expect(response.result.content[0].text).toMatch(/has not declared which permissions it needs/);
+      }
+      expect(audit.mock.calls.map(([entry]) => [entry.tool, entry.statusCode])).toEqual([['acme_export_everything', 403], ['acme_customer_report', 403]]);
+    });
+
+    it('one that declares an empty list needs no permission and runs, even for a connection that holds nothing', async () => {
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
+      const response = await call(engine, 'acme_server_time', oauth([]));
+      expect(needsNothing).toHaveBeenCalledTimes(1);
+      expect(response.result.isError).toBeUndefined();
+    });
+
+    it('an API key is not held to this: the tool runs and its calls are checked by the handlers, as before', async () => {
+      const engine = createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), audit: jest.fn().mockResolvedValue(undefined), overrides });
+      await call(engine, 'acme_export_everything', CTX);
+      await call(engine, 'acme_customer_report', CTX);
+      expect(silent).toHaveBeenCalledTimes(1);
+      expect(workflow).toHaveBeenCalledTimes(1);
+    });
+
+    it('a project built with sign-in is told when the tool is built; one without it is told nothing', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), overrides });
+        expect(warn).not.toHaveBeenCalled();
+        mockOAuthBuilt.current = true;
+        createMcpEngine(registry, { toolPrefix: 'acme', executor: jest.fn(), overrides });
+        const told = warn.mock.calls.map(([message]) => String(message)).filter(message => /does not declare the permissions it needs/.test(message));
+        expect(told).toHaveLength(2);
+        expect(told[0]).toMatch(/"acme_export_everything"/);
+        expect(told[1]).toMatch(/"acme_customer_report"/);
+      } finally {
+        warn.mockRestore();
+      }
     });
   });
 

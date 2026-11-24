@@ -85,13 +85,27 @@ export function operationScope(slug: string, operation: McpOperation): string {
 
 /**
  * The scopes a call to a tool needs before it runs, from its `meta`. A generated entity tool: the scope of its
- * operation. A hand-written tool: what it declares in `meta.requiredScopes`; one that declares nothing and is not
- * a single entity operation needs none here, and is checked call by call where it makes them.
+ * operation. A hand-written tool: what it declares in `meta.requiredScopes`. One that declares nothing and is not
+ * a single entity operation has none here: see `declaresScopes`.
  */
 export function scopesOfToolMeta(meta: McpToolDefinition['meta']): string[] {
   if (meta?.requiredScopes) return [...meta.requiredScopes]
   if (!meta?.entitySlug || !meta.operation || meta.operation === 'workflow') return []
   return [operationScope(meta.entitySlug, meta.operation)]
+}
+
+/**
+ * Whether a tool says what it needs: a single entity operation does by what it is, and any other tool by
+ * `meta.requiredScopes`, where an empty list is the statement that it needs no permission.
+ *
+ * A tool that says nothing cannot be held to a consent: the server would not know which of the permissions the
+ * user granted it stands for, and a handler that never calls the API through `api.execute` would run for any
+ * connection at all. So a browser sign-in connection is refused such a tool (the engine), whatever it holds. With
+ * an API key nothing changes: there the tool is checked call by call where it makes them, as before.
+ */
+export function declaresScopes(meta: McpToolDefinition['meta']): boolean {
+  if (meta?.requiredScopes) return true
+  return Boolean(meta?.entitySlug && meta.operation && meta.operation !== 'workflow')
 }
 
 /**

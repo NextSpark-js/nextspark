@@ -50,6 +50,11 @@ jest.mock('@/core/lib/mcp/oauth/config', () => ({
 }))
 const revoked = jest.fn()
 jest.mock('@/core/lib/mcp/oauth/revocation', () => ({ isRevokedSince: (...args: unknown[]) => revoked(...args) }))
+const gateRefuses = jest.fn<Promise<boolean>, []>()
+jest.mock('@/core/lib/mcp/oauth/production-gate', () => ({
+  NOT_AVAILABLE: 'MCP browser sign-in is not available on this server.',
+  mcpOAuthRefusedByGate: () => gateRefuses(),
+}))
 jest.mock('@/core/lib/mcp/oauth/scopes', () => ({
   mcpOAuthDefaultScopes: (toolScopes?: readonly string[]) => ['offline_access', ...(toolScopes ?? ['tasks:read'])],
   mcpOAuthStepUpScopes: (granted: string[], missing: string[]) => ['offline_access', ...granted, ...missing],
@@ -105,12 +110,25 @@ beforeEach(() => {
   team.mockResolvedValue({ id: 'team-1', deletedAt: null })
   isMember.mockResolvedValue(true)
   revoked.mockResolvedValue(false)
+  gateRefuses.mockResolvedValue(false)
   // the consent no longer has tasks:delete (the user took it away) and never had pages:read
   consent.mockResolvedValue({ scopes: ['openid', 'offline_access', 'tasks:read', 'tasks:write', 'customers:*'] })
   // and the role can read tasks, no longer write them
   roleScopes.current = ['tasks:read']
   limit.mockResolvedValue(null)
   dispatch.mockResolvedValue({ jsonrpc: '2.0', id: 1, result: { ok: true } })
+})
+
+describe('the production gate (#541)', () => {
+  it('refuses every OAuth request before the token is looked at, with no challenge to follow', async () => {
+    gateRefuses.mockResolvedValue(true)
+    const response = await post(call('app_list_tasks'))
+    expect(response.status).toBe(503)
+    expect((await errorOf(response)).message).toBe('MCP browser sign-in is not available on this server.')
+    expect(response.headers.get('WWW-Authenticate')).toBeFalsy()
+    expect(user).not.toHaveBeenCalled()
+    expect(dispatch).not.toHaveBeenCalled()
+  })
 })
 
 describe('a verified access token is refused (#541)', () => {

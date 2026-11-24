@@ -227,3 +227,23 @@ export function narrowConnection(userId: string, clientId: string, teamId: strin
     return 'narrowed'
   })
 }
+
+/**
+ * Takes `scope` away from every connection that holds it, in every team: the operator's way to retire a
+ * permission for good (`nextspark mcp:revoke-scope`). Retiring a tool stops its scope from being published and
+ * issued, and leaves it in the consents that had it, where it would count again if a tool ever needed that scope
+ * again. After this, holding it takes a new consent.
+ *
+ * The database does it in one statement (migration 049, revoke_oauth_scope): each consent loses the scope, which
+ * cuts its live refresh tokens down and refuses the access tokens already issued; a connection left with no
+ * entity permission is ended. `narrowed` and `ended` count the connections of each outcome.
+ *
+ * Not an action of a user: nothing here checks who asks. It is not behind any route.
+ */
+export function revokeScopeFromConnections(scope: string): Promise<{ narrowed: number; ended: number }> {
+  if (!entityScope(scope) || /[*\s]/.test(scope)) throw new Error(`Not an entity scope (<entity>:read, :write or :delete): ${scope}`)
+  return withServiceTransaction(async () => {
+    const result = await queryOne<{ narrowed: number; ended: number }>('SELECT narrowed, ended FROM public.revoke_oauth_scope($1)', [scope])
+    return { narrowed: result?.narrowed ?? 0, ended: result?.ended ?? 0 }
+  })
+}

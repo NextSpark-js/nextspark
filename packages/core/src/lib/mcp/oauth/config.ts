@@ -7,13 +7,16 @@
  * no database access) and `/api/mcp` answers as it did before: API key only.
  *
  * At runtime it only counts while the MCP endpoint itself is on, and `MCP_OAUTH_ENABLED=false` turns it off without
- * a build (the emergency switch).
+ * a build (the emergency switch). In production it also has a gate: it does not start without Redis, and serves no
+ * OAuth request while the database role skips row-level security, unless `MCP_OAUTH_ACCEPT_RISKS` names what the
+ * deployment accepts (./production-risks, ./production-gate).
  */
 import { withBasePath } from '../../base-path'
 import { APP_CONFIG_MERGED } from '../../config/config-client'
 import { readAllowList } from './allowed-clients'
 import { resolveAppUrl, resolveBaseUrl } from '../../utils/base-url'
 import { isMcpOAuthBuilt } from './built'
+import { sharedRateLimitGate } from './production-risks'
 
 // Client code takes it from './built': this module reads the app configuration, which no public page should load
 export { isMcpOAuthBuilt }
@@ -25,8 +28,14 @@ export function isMcpEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return flag !== 'false'
 }
 
+/**
+ * Whether MCP browser sign-in is on: built, not switched off, with the MCP endpoint on, and, in production, let
+ * through by the half of the production gate the environment decides (./production-risks: Redis, or the missing
+ * shared rate limit accepted by name). The other half, the role of the database, is asked on each OAuth request
+ * (./production-gate).
+ */
 export function isMcpOAuthEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return isMcpOAuthBuilt() && env.MCP_OAUTH_ENABLED !== 'false' && isMcpEnabled(env)
+  return isMcpOAuthBuilt() && env.MCP_OAUTH_ENABLED !== 'false' && isMcpEnabled(env) && sharedRateLimitGate(env)
 }
 
 let warnedAbout: string | undefined

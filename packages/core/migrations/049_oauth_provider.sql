@@ -22,7 +22,7 @@
 -- required, and its migration planner reports a nullable column there as drift.
 --
 -- Additive only: no existing table changes; three of its nine triggers are on existing tables (account, users,
--- team_members). Undoing it is dropping the nine triggers and the nine functions, then the ten tables (in reverse order of
+-- team_members). Undoing it is dropping the nine triggers and the ten functions, then the ten tables (in reverse order of
 -- creation), which signs every MCP client out and makes them authorize again.
 --
 -- This is the only migration of the feature: everything it needs is in this file. Once it has been released it is
@@ -502,6 +502,46 @@ CREATE TRIGGER oauth_consent_requires_membership
   BEFORE INSERT OR UPDATE OF "userId", "referenceId" ON public."oauthConsent"
   FOR EACH ROW
   EXECUTE FUNCTION public.require_membership_for_oauth_consent();
+
+-- 5. A scope taken away from every connection that holds it, for the operator (`nextspark mcp:revoke-scope`,
+--    lib/mcp/oauth/connection-store `revokeScopeFromConnections`). Retiring a tool does not rewrite the consents:
+--    its scope stops being published and issued, and a connection that held it keeps it in its consent, where it
+--    would count again the day a tool needs that scope again, for a permission the user was never asked about a
+--    second time. This removes it from the consents; the rules above do the rest for each one (the live refresh
+--    tokens are cut down and a revocation is recorded). A connection that would be left with no entity permission
+--    is ended instead, as when a user takes the last one away. Getting the scope back takes a new consent.
+--
+--    Not SECURITY DEFINER, on purpose: the consents are service-only, so for a role that row-level security applies
+--    to this changes nothing. `narrowed` and `ended` count the connections of each outcome.
+CREATE OR REPLACE FUNCTION public.revoke_oauth_scope(target TEXT)
+RETURNS TABLE (narrowed INTEGER, ended INTEGER)
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  ended_count INTEGER;
+  narrowed_count INTEGER;
+BEGIN
+  IF target IS NULL OR target !~ '^[^*[:space:]]+:(read|write|delete)$' THEN
+    RAISE EXCEPTION 'not an entity scope (<entity>:read, :write or :delete): %', target
+      USING ERRCODE = 'invalid_parameter_value';
+  END IF;
+  WITH gone AS (
+    DELETE FROM public."oauthConsent" consent
+     WHERE consent."referenceId" IS NOT NULL AND consent.scopes ? target
+       AND NOT EXISTS (
+         SELECT 1 FROM jsonb_array_elements_text(consent.scopes) AS held(scope)
+          WHERE held.scope <> target AND held.scope ~ '^.+:(read|write|delete)$')
+    RETURNING 1)
+  SELECT count(*) INTO ended_count FROM gone;
+  WITH cut AS (
+    UPDATE public."oauthConsent" consent
+       SET scopes = consent.scopes - target, "updatedAt" = now()
+     WHERE consent."referenceId" IS NOT NULL AND consent.scopes ? target
+    RETURNING 1)
+  SELECT count(*) INTO narrowed_count FROM cut;
+  RETURN QUERY SELECT narrowed_count, ended_count;
+END $$;
 
 DROP TRIGGER IF EXISTS oauth_revoke_on_password_change ON public."account";
 CREATE TRIGGER oauth_revoke_on_password_change

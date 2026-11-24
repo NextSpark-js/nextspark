@@ -8,6 +8,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import pg from 'pg'
@@ -319,6 +320,98 @@ test('MCP browser sign-in: the rules the database holds', { skip: !HAS_POSTGRES 
     assert.deepEqual(await consentScopes('u-ana', 'team-1'), [...BASE, READ, 'customers:read'])
     assert.equal(await store.narrowConnection('u-ana', CLIENT, 'team-2', [READ]), 'not-found')
     assert.equal(await store.grantedScopes('u-ana', CLIENT, 'team-2'), null)
+  })
+
+  await t.test('a scope the operator retires is taken away from every connection that holds it, and comes back only with a new consent', async () => {
+    await reset()
+    // ana in team-1 holds it with other permissions, ana in team-2 holds nothing else, bea does not hold it
+    await consent('u-ana', 'team-1', [...BASE, READ, WRITE, 'customers:read'])
+    const replaced = await token('u-ana', 'team-1', [...BASE, READ, WRITE, 'customers:read'], { replaced: true })
+    const live = await token('u-ana', 'team-1', [...BASE, READ, WRITE, 'customers:read'])
+    await consent('u-ana', 'team-2', [...BASE, WRITE])
+    await token('u-ana', 'team-2', [...BASE, WRITE])
+    await consent('u-bea', 'team-1', [...BASE, READ])
+    const hers = await token('u-bea', 'team-1', [...BASE, READ])
+
+    // as the role of the app, which row-level security applies to, it changes nothing: the consents are service-only
+    assert.deepEqual((await db.app.query(`SELECT narrowed, ended FROM public.revoke_oauth_scope($1)`, [WRITE])).rows, [{ narrowed: 0, ended: 0 }])
+    assert.deepEqual(await consentScopes('u-ana', 'team-1'), [...BASE, READ, WRITE, 'customers:read'])
+
+    assert.deepEqual(await store.revokeScopeFromConnections(WRITE), { narrowed: 1, ended: 1 })
+
+    assert.deepEqual(await consentScopes('u-ana', 'team-1'), [...BASE, READ, 'customers:read'], 'the consent lost it and kept the rest')
+    assert.deepEqual(await scopesOf(live), [...BASE, READ, 'customers:read'], 'so did its live token')
+    assert.deepEqual(await scopesOf(replaced), [...BASE, READ, WRITE, 'customers:read'], 'a replaced token is left as it is')
+    assert.equal(await revocations('u-ana', 'team-1'), 1, 'the access tokens issued before are refused')
+
+    assert.equal(await consentScopes('u-ana', 'team-2'), undefined, 'a connection left with no entity permission is ended')
+    assert.deepEqual(await tokensOf('u-ana', 'team-2'), [])
+    assert.ok(await revocations('u-ana', 'team-2') >= 1, 'and its access tokens are refused')
+
+    assert.deepEqual(await consentScopes('u-bea', 'team-1'), [...BASE, READ], 'a connection that did not hold it is not touched')
+    assert.deepEqual(await scopesOf(hers), [...BASE, READ])
+    assert.equal(await revocations('u-bea', 'team-1'), 0)
+
+    // the tool comes back and the application renews with what it remembers: the token is cut down to the consent
+    const renewed = await token('u-ana', 'team-1', [...BASE, READ, WRITE, 'customers:read'])
+    assert.deepEqual(await scopesOf(renewed), [...BASE, READ, 'customers:read'], 'not held again without a new consent')
+
+    assert.deepEqual(await store.revokeScopeFromConnections(WRITE), { narrowed: 0, ended: 0 }, 'nothing left to take')
+    assert.equal(await revocations('u-ana', 'team-1'), 1, 'and nothing refused for it')
+
+    // only an entity permission can be retired: never a wildcard, never an identity scope
+    for (const notOne of ['*', 'tasks:*', 'offline_access', 'tasks: write', '']) {
+      await assert.rejects(owner.query(`SELECT * FROM public.revoke_oauth_scope($1)`, [notOne]), /not an entity scope/, notOne)
+      assert.throws(() => store.revokeScopeFromConnections(notOne), /Not an entity scope/, notOne)
+    }
+    await assert.rejects(owner.query(`SELECT * FROM public.revoke_oauth_scope(NULL)`), /not an entity scope/)
+  })
+
+  await t.test('`nextspark mcp:revoke-scope` reports first, applies with --yes, and refuses a role that cannot see the consents', async () => {
+    await reset()
+    await consent('u-ana', 'team-1', [...BASE, READ, WRITE])
+    await consent('u-ana', 'team-2', [...BASE, WRITE])
+    await consent('u-bea', 'team-1', [...BASE, READ])
+    await owner.query(`INSERT INTO "oauthResource" (id, identifier, name, "allowedScopes") VALUES ('r-1', 'https://app.example/api/mcp', 'MCP', $1::jsonb) ON CONFLICT (identifier) DO UPDATE SET "allowedScopes" = EXCLUDED."allowedScopes"`, [JSON.stringify([...BASE, READ])])
+    const script = path.join(CORE, 'scripts', 'db', 'revoke-oauth-scope.mjs')
+    const run = (args: string[], env: Record<string, string>) => {
+      const result = spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', env: { PATH: process.env.PATH ?? '', NODE_ENV: 'test', ...env } })
+      return { status: result.status, output: `${result.stdout}${result.stderr}` }
+    }
+
+    const report = run([WRITE], { DATABASE_URL: db.ownerUrl })
+    assert.equal(report.status, 0, report.output)
+    assert.match(report.output, /No tool of the running app needs this scope/)
+    assert.match(report.output, /Held by 2 connections; 1 of them holds no other permission and would be ended\./)
+    assert.match(report.output, /Nothing was changed\. Run it again with --yes/)
+    assert.deepEqual(await consentScopes('u-ana', 'team-1'), [...BASE, READ, WRITE], 'reporting changes nothing')
+
+    // a scope a tool still needs is said to be one
+    assert.match(run([READ], { DATABASE_URL: db.ownerUrl }).output, /A tool of the running app still needs this scope/)
+
+    // the role of the app after the cutover: it would see no consent and say there is nothing to do
+    const blind = run([WRITE, '--yes'], { DATABASE_URL: db.appUrl })
+    assert.equal(blind.status, 1)
+    assert.match(blind.output, /is subject to row-level security and cannot see the consents\..*Nothing was changed\./s)
+    assert.deepEqual(await consentScopes('u-ana', 'team-1'), [...BASE, READ, WRITE])
+
+    // the service role is used before the app's, when the deployment has one
+    const applied = run([WRITE, '--yes'], { DATABASE_URL: db.appUrl, DATABASE_SERVICE_URL: db.ownerUrl })
+    assert.equal(applied.status, 0, applied.output)
+    assert.match(applied.output, /tasks:write revoked: 1 connection narrowed, 1 ended\./)
+    assert.deepEqual(await consentScopes('u-ana', 'team-1'), [...BASE, READ])
+    assert.equal(await consentScopes('u-ana', 'team-2'), undefined)
+    assert.deepEqual(await consentScopes('u-bea', 'team-1'), [...BASE, READ])
+    assert.match(run([WRITE, '--yes'], { DATABASE_URL: db.ownerUrl }).output, /Held by 0 connections.*tasks:write revoked: 0 connections narrowed, 0 ended\./s)
+
+    // what is not an entity scope, or not one argument, is refused before connecting
+    for (const args of [['*'], ['tasks:*'], ['offline_access'], [], [READ, WRITE], [WRITE, '--force']]) {
+      const refused = run(args, { DATABASE_URL: db.ownerUrl })
+      assert.equal(refused.status, 1, args.join(' '))
+      assert.match(refused.output, /Nothing was changed\./, args.join(' '))
+    }
+    assert.match(run([WRITE], {}).output, /None of MIGRATE_DATABASE_URL, DATABASE_SERVICE_URL and DATABASE_URL is set/)
+    await owner.query(`DELETE FROM "oauthResource" WHERE id = 'r-1'`)
   })
 
   await t.test("ending another member's connection decides on the roles the database has at that moment, and holds them", async () => {

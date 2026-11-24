@@ -480,7 +480,8 @@ test('a group layout with a role guard is composed only through a wrapper that p
 
 /**
  * The per-entity routes carry only their own entity: no module they reach, in core, imports the generated client entity
- * registry (which imports every entity's config) as a value. Type imports are erased and do not count.
+ * registry (which imports every entity's config) as a value, with `import` or with a literal `require`. Type imports
+ * are erased and do not count.
  */
 test('a per-entity route\'s core module graph never imports the generated client entity registry', () => {
   const resolveModule = (from: string, specifier: string): string | null => {
@@ -501,6 +502,19 @@ test('a per-entity route\'s core module graph never imports the generated client
         found.push({ specifier: statement.moduleSpecifier.text, typeOnly })
       }
     }
+    // A `require('...')` with a literal argument is resolved by the bundlers like an import: the module it names is in
+    // the route's server bundle all the same (#541, where one hid the entity registry from this test).
+    // One is older than this check and still there: `getEntityMetaConfig` (types/meta.types.ts, since the first
+    // commit) requires the entity registry for an entity that is not core's, and `lib/auth` reaches it through the
+    // user flags service. It is named here so that it is the only one; taking it out is its own change.
+    if (path.relative(CORE, file) === 'src/types/meta.types.ts') return found
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'require' && node.arguments.length === 1 && ts.isStringLiteralLike(node.arguments[0])) {
+        found.push({ specifier: (node.arguments[0] as ts.StringLiteralLike).text, typeOnly: false })
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
     return found
   }
   const offenders: string[] = []

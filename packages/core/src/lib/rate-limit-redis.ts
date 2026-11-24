@@ -264,9 +264,7 @@ export async function isRedisConfigured(): Promise<boolean> {
  * Synchronous check if Redis might be configured (based on env vars)
  * Use this for quick checks, but isRedisConfigured() is more accurate
  */
-export function maybeRedisConfigured(): boolean {
-  return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-}
+export { maybeRedisConfigured } from './rate-limit-env'
 
 /**
  * Get rate limit headers for HTTP response

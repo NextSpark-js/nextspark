@@ -44,7 +44,7 @@ test('base scopes are empty — nothing granted irrespective of role', () => {
 test('role scopes are computed from PERMISSIONS_BY_ROLE per AVAILABLE_ROLES, not hardcoded role names', () => {
   const out = generateScopeRegistry([], {})
   assert.match(out, /for \(const role of AVAILABLE_ROLES\)/)
-  assert.match(out, /const perms = PERMISSIONS_BY_ROLE\[role\]/)
+  assert.match(out, /roleScopes\[role\] = entityScopesOfRole\(slugs, PERMISSIONS_BY_ROLE\[role\]\)/)
   // The old hardcoded roleScopes literal (superadmin/admin/manager/member keys,
   // referencing a nonexistent "products" entity) must be gone.
   assert.doesNotMatch(out, /'manager'/)
@@ -52,14 +52,14 @@ test('role scopes are computed from PERMISSIONS_BY_ROLE per AVAILABLE_ROLES, not
   assert.doesNotMatch(out, /products:delete/)
 })
 
-test('read/write/delete scopes are derived from list|read / create|update / delete permissions', () => {
+// The permission -> scope rule (list|read -> read, create|update -> write, delete -> delete) is core's
+// entityScopesOfRole, shared with MCP browser sign-in (#541) so the two cannot drift. Its values are covered by
+// packages/core/tests/jest/lib/api/entity-role-scopes.test.ts; here only that the registry calls it and keeps no copy.
+test('the permission -> scope rule is core\'s entityScopesOfRole, not a copy in the generated file', () => {
   const out = generateScopeRegistry([], {})
-  assert.match(out, /\$\{slug\}\.list.*Permission.*\|\|.*perms\?\.has\(`\$\{slug\}\.read`/)
-  assert.match(out, /\$\{slug\}\.create.*Permission.*\|\|.*perms\?\.has\(`\$\{slug\}\.update`/)
-  assert.match(out, /\$\{slug\}\.delete.*Permission/)
-  assert.match(out, /scopes\.push\(`\$\{slug\}:read`\)/)
-  assert.match(out, /scopes\.push\(`\$\{slug\}:write`\)/)
-  assert.match(out, /scopes\.push\(`\$\{slug\}:delete`\)/)
+  assert.match(out, /import \{ entityScopesOfRole \} from '@\/core\/lib\/api\/auth\/entity-role-scopes'/)
+  assert.doesNotMatch(out, /scopes\.push\(/)
+  assert.doesNotMatch(out, /perms\?\.has\(/)
 })
 
 test('guards against ChildEntityDefinition entries (no access/slug) in ENTITY_REGISTRY', () => {
@@ -87,20 +87,20 @@ test('is a pure function of its output shape — always emits both SCOPE_CONFIG 
   assert.match(out, /export const API_CONFIG: ApiConfig = \{/)
 })
 
-// Regression for the npm-mode bug: this generator hardcoded the two `@/core/*`
-// type-only imports instead of routing them through convertCorePath() like
+// Regression for the npm-mode bug: this generator hardcoded its `@/core/*`
+// imports instead of routing them through convertCorePath() like
 // every sibling generator does, so a scaffolded (non-monorepo) app's tsconfig
 // — which maps `@/*` to its own `./*`, not to core — failed `tsc --noEmit`
 // with TS2307 on both. See https://github.com/NextSpark-js/nextspark/issues/133
-test('monorepo mode (isNpmMode: false or unset): @/core/* type imports are left as-is', () => {
+test('monorepo mode (isNpmMode: false or unset): @/core/* imports are left as-is', () => {
   const out = generateScopeRegistry([], { isNpmMode: false })
-  assert.match(out, /import type \{ Permission \} from '@\/core\/lib\/permissions\/types'/)
+  assert.match(out, /import \{ entityScopesOfRole \} from '@\/core\/lib\/api\/auth\/entity-role-scopes'/)
   assert.match(out, /import type \{ EntityConfig \} from '@\/core\/lib\/entities\/types'/)
 })
 
-test('npm mode: @/core/* type imports are converted to @nextsparkjs/core/*, like every sibling generator', () => {
+test('npm mode: @/core/* imports are converted to @nextsparkjs/core/*, like every sibling generator', () => {
   const out = generateScopeRegistry([], { isNpmMode: true, outputDir: '/project/.nextspark/registries' })
-  assert.match(out, /import type \{ Permission \} from '@nextsparkjs\/core\/lib\/permissions\/types'/)
+  assert.match(out, /import \{ entityScopesOfRole \} from '@nextsparkjs\/core\/lib\/api\/auth\/entity-role-scopes'/)
   assert.match(out, /import type \{ EntityConfig \} from '@nextsparkjs\/core\/lib\/entities\/types'/)
   assert.doesNotMatch(out, /from '@\/core\//)
 })
