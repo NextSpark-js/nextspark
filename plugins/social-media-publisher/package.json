@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/plugin-social-media-publisher",
-  "version": "0.1.0-beta.205",
+  "version": "0.1.0-beta.206",
   "description": "Publish to Instagram Business and Facebook Pages from NextSpark, with OAuth and encrypted tokens",
   "license": "MIT",
   "homepage": "https://www.nextspark.dev",
