@@ -130,6 +130,14 @@ export function createMcpEngine(
   // Where a tool came from decides what counts as saying what it needs (./exposure `declaresScopes`)
   const handWritten = new Set<McpToolDefinition>()
   const saysWhatItNeeds = (tool: McpToolDefinition) => declaresScopes(tool.meta, handWritten.has(tool))
+  // What a call of the tool needs. Only a generated tool is its entity operation: a hand-written one needs what it
+  // declares and nothing else, so that one that declares nothing is told so by the engine, with no challenge
+  // that sends its user to grant a scope the tool could not be called with anyway.
+  const scopesNeededBy = (tool: McpToolDefinition | undefined): string[] => {
+    if (!tool) return []
+    if (!handWritten.has(tool)) return scopesOfToolMeta(tool.meta)
+    return Array.isArray(tool.meta?.requiredScopes) ? [...tool.meta.requiredScopes] : []
+  }
   for (const factory of handWrittenToolFactories(options)) {
     for (const tool of factory(api)) {
       handWritten.add(tool)
@@ -141,7 +149,7 @@ export function createMcpEngine(
             'Add `meta: { requiredScopes: [...] }` to it, with the scopes every call of it needs; an empty list if it needs none.'
         )
       }
-      const undeclared = scopesOfToolMeta(tool.meta).filter(scope => !declaredScopes.has(scope))
+      const undeclared = scopesNeededBy(tool).filter(scope => !declaredScopes.has(scope))
       if (undeclared.length) {
         console.warn(
           `[mcp] The tool "${tool.name}" needs ${undeclared.join(', ')}, which no generated tool uses and no override declares. ` +
@@ -183,7 +191,7 @@ export function createMcpEngine(
           // refused if the connection was never granted a scope the tool declares; this is the other case, a scope
           // that was granted and the role has lost since. An entity tool would be refused by the API handler it
           // calls; a tool the project wrote may never call one, so it is refused here, before it runs.
-          const roleLacks = ctx.principal?.oauth ? scopesOfToolMeta(tool.meta).filter(scope => !ctx.scopes.includes(scope)) : []
+          const roleLacks = ctx.principal?.oauth ? scopesNeededBy(tool).filter(scope => !ctx.scopes.includes(scope)) : []
           // And to what its user consented to: a tool that does not say what it needs stands for none of the
           // permissions of the consent, so no connection is let through to it (./exposure `declaresScopes`).
           if (ctx.principal?.oauth && !saysWhatItNeeds(tool)) {
@@ -259,7 +267,7 @@ export function createMcpEngine(
    * OAuth connection. None for an unknown name.
    */
   function requiredScopesFor(toolName: string): string[] {
-    return scopesOfToolMeta(tools.find(tool => tool.name === toolName)?.meta)
+    return scopesNeededBy(tools.find(tool => tool.name === toolName))
   }
 
   /**

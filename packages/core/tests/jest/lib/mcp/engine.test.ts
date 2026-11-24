@@ -609,6 +609,11 @@ describe('the audit trail of what did not succeed (#541)', () => {
         expect(response.result.content[0].text).toMatch(/has not declared which permissions it needs/);
       }
       expect(audit.mock.calls.map(([entry]) => entry.statusCode)).toEqual([403, 403]);
+      // and it asks for nothing up front: a connection without the scope gets this tool error, not a challenge that
+      // sends its user to grant a scope the tool could not be called with anyway
+      expect(engine.requiredScopesFor('acme_purge_customers')).toEqual([]);
+      expect(engine.requiredScopesFor('acme_team_report')).toEqual([]);
+      expect((await call(engine, 'acme_purge_customers', oauth([]))).result.content[0].text).toMatch(/has not declared which permissions it needs/);
       // the generated tool of the same operation is not caught by this: it reaches the API with the scope
       const executor: EntityExecutor = jest.fn().mockResolvedValue(ok());
       const generated = createMcpEngine(registry, { toolPrefix: 'acme', executor, audit: jest.fn().mockResolvedValue(undefined) });

@@ -45,11 +45,11 @@ const OLDER_LATE_LOADS: Record<string, { specifier: string; call: string }> = {
   'lib/auth/suspension.ts': { specifier: '../api/auth', call: "import('../api/auth')" },
 }
 
-/** The specifiers a module loads at run time. */
-function loadedBy(file: string): string[] {
+/** The specifiers a module loads at run time. `older`: the one late load of this file that is not followed, once. */
+function loadedBy(file: string, older: string | undefined = OLDER_LATE_LOADS[path.relative(SRC, file)]?.specifier): string[] {
   const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   const found: string[] = []
-  const older = OLDER_LATE_LOADS[path.relative(SRC, file)]?.specifier
+  let exempted = false
   const visit = (node: ts.Node): void => {
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
       const clause = ts.isImportDeclaration(node) ? node.importClause : undefined
@@ -60,7 +60,11 @@ function loadedBy(file: string): string[] {
       const isRequire = ts.isIdentifier(node.expression) && node.expression.text === 'require'
       const isImport = node.expression.kind === ts.SyntaxKind.ImportKeyword
       const specifier = (node.arguments[0] as ts.StringLiteralLike).text
-      if ((isRequire || isImport) && specifier !== older) found.push(specifier)
+      if (isRequire || isImport) {
+        // the older call, the first time: a second load of the same module is one more path, and is followed
+        if (specifier === older && !exempted) exempted = true
+        else found.push(specifier)
+      }
     }
     ts.forEachChild(node, visit)
   }
@@ -102,7 +106,20 @@ test('MCP sign-in makes lib/auth load neither the entity registry, nor the scope
 
 test('the two older late loads are still what this file says they are', () => {
   for (const [file, { call }] of Object.entries(OLDER_LATE_LOADS)) {
-    assert.ok(fs.readFileSync(path.join(SRC, file), 'utf8').includes(call), `${file} no longer has ${call}: take it out of OLDER_LATE_LOADS`)
+    const occurrences = fs.readFileSync(path.join(SRC, file), 'utf8').split(call).length - 1
+    assert.equal(occurrences, 1, `${file} has ${call} ${occurrences} times: OLDER_LATE_LOADS names exactly one`)
+  }
+})
+
+test('only one call is exempt: the same module loaded late a second time in the same file is followed', () => {
+  const dir = fs.mkdtempSync(path.join(SRC, '.graph-walk-'))
+  try {
+    const file = path.join(dir, 'twice.ts')
+    fs.writeFileSync(file, `export const one = () => require('./registry')\nexport const two = () => require('./registry')\nexport const other = () => import('./else')\n`)
+    assert.deepEqual(loadedBy(file, './registry'), ['./registry', './else'])
+    assert.deepEqual(loadedBy(file), ['./registry', './registry', './else'])
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
   }
 })
 
