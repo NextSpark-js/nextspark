@@ -185,3 +185,23 @@ test('a project without apiDir hashes the same inputs under api/', { timeout: 18
     cleanup()
   }
 })
+
+test('prepare warns about a Pages Router 404, 500 or _error next to the app not-found, and only then (#563)', { timeout: 300_000 }, async () => {
+  const code = PLAN_NOTICES.PAGES_ROUTER_ERROR_PAGE
+  const noticeOf = result => result.notices.find(notice => notice.code === code)
+  const { root, cleanup } = project()
+  try {
+    const run = () => prepareHost({ ...projectHostConfig({ projectRoot: root }), loadCoreRoutes: loadFixtureCoreRoutes })
+    write(root, 'src/pages/404.tsx', PAGE('Legacy404'))
+    assert.equal(noticeOf(await run()), undefined, 'no app not-found')
+    write(root, 'templates/not-found.tsx', PAGE('NotFound'))
+    assert.match(noticeOf(await run()).message, /^src\/pages\/404\.tsx is next to the app not-found: on Vercel/)
+    write(root, 'pages/_error.js', PAGE('Legacy'))
+    assert.match(noticeOf(await run()).message, /^pages\/_error\.js, src\/pages\/404\.tsx are next/)
+    rmSync(join(root, 'src/pages'), { recursive: true })
+    rmSync(join(root, 'pages'), { recursive: true })
+    assert.equal(noticeOf(await run()), undefined, 'no Pages Router error page')
+  } finally {
+    cleanup()
+  }
+})

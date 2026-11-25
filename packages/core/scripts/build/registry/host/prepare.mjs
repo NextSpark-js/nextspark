@@ -116,6 +116,18 @@ function vercelApiDirNotice(config, routes) {
   }]
 }
 
+/** A warning when a Pages Router 404, 500 or _error sits next to the app root not-found: on Vercel the Pages Router one answers every unmatched URL, so the app not-found never shows (#563). */
+function pagesRouterErrorPageNotice(config, routes) {
+  if (!routes.some(route => route.kind === 'not-found' && route.target === 'not-found.tsx')) return []
+  const root = config.project?.root ?? config.projectRoot
+  const found = ['pages', 'src/pages'].flatMap(dir => ['404', '500', '_error'].flatMap(name => ['tsx', 'ts', 'jsx', 'js'].map(ext => `${dir}/${name}.${ext}`))).filter(file => existsSync(join(root, file)))
+  if (found.length === 0) return []
+  return [{
+    code: PLAN_NOTICES.PAGES_ROUTER_ERROR_PAGE,
+    message: `${found.join(', ')} ${found.length === 1 ? 'is' : 'are'} next to the app not-found: on Vercel the Pages Router error page answers every unmatched URL, so the not-found page never shows. Delete ${found.length === 1 ? 'it' : 'them'} to use the not-found page.`,
+  }]
+}
+
 export async function renderHostFiles(config, { devStatus = false, cache } = {}) {
   const transpile = packagedPluginTranspile({ projectRoot: config.project?.root ?? config.projectRoot, plugins: config.plugins ?? [] })
   if (transpile.diagnostics.length > 0) throw Object.assign(new PrepareError(transpile.diagnostics), { notices: transpile.notices, stage: 'plan' })
@@ -146,7 +158,7 @@ export async function renderHostFiles(config, { devStatus = false, cache } = {})
   const { routes } = planned
   const queryNotice = queryHookNotice(findQueryHooksWithoutProvider({ projectRoot: config.project?.root ?? config.projectRoot, plugins: declared.plugins, routes }))
   const apiKeyNotices = apiKeyScopeNotices(await findApiKeyScopeProblems({ projectRoot: config.project?.root ?? config.projectRoot, routes, plugins: declared.plugins }))
-  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot, config.features), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : []), ...apiKeyNotices, ...vercelApiDirNotice(config, routes)]
+  const notices = [...transpile.notices, ...(entityPlan.notices ?? []), ...(planned.notices ?? []), ...proxyAreaNotices(config.projectRoot, config.features), ...projectEntryNotices(config.projectRoot), ...(queryNotice ? [queryNotice] : []), ...apiKeyNotices, ...vercelApiDirNotice(config, routes), ...pagesRouterErrorPageNotice(config, routes)]
   const diagnostics = [...declared.diagnostics, ...entityPlan.diagnostics, ...webhookPlan.diagnostics, ...planned.diagnostics, ...proxyPathDiagnostics(config.projectRoot)]
   if (diagnostics.length > 0) throw Object.assign(new PrepareError(diagnostics), { notices, stage: 'plan' })
   const rendered = await renderHost({

@@ -41,7 +41,7 @@ when Next's `AppSegmentConfigSchemaKeys` or `HTTP_METHODS` change, and when this
 | loading | `loading` | required | - | - | - |
 | error | `error` | required | - | - | 'use client' (source must be client) |
 | global-error | `global-error` | required | - | - | 'use client' (source must be client) |
-| not-found | `not-found` | required | - | - | - |
+| not-found | `not-found` | required | `metadata`, `generateMetadata` | - | - |
 | global-not-found | `global-not-found` | required | `metadata`, `generateMetadata` | - | - |
 | forbidden | `forbidden` | required | - | - | - |
 | unauthorized | `unauthorized` | required | - | - | - |

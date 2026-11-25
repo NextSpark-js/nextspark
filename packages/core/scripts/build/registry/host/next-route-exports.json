@@ -162,7 +162,9 @@
       "sourceMustBeClient": false,
       "requiresDefault": true,
       "exports": {
-        "default": "default"
+        "default": "default",
+        "metadata": "reexport",
+        "generateMetadata": "reexport"
       }
     },
     "global-not-found": {

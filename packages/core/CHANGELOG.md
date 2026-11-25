@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Signing out from a dashboard page loads `/login` once. `useAuth().signOut()` and the dashboard guard (which sees the session drop) both loaded the login page, so the browser requested it twice. `loadLoginPage()` now loads it once per page load, which covers every sign-out surface (the top bar, the mobile menu, the profile settings) and every layout that guards the session, with no change to the pages themselves and no added JavaScript (#562)
+### Fixed
+
+- **The root `templates/not-found.tsx` can export `metadata` or `generateMetadata` (#563).** The generated host forwarded only the default export of a `not-found` file and stopped `nextspark prepare` with `NS_HOST_UNSUPPORTED_EXPORT` on anything else, so a project could not give its 404 page its own `<title>`. The host now forwards both exports, as it already does for `layout` and `page`; a 404 page without them keeps the title of the root layout. Any other export in a `not-found` file is still refused.
+
+### Added
+
+- **`nextspark prepare` warns when a Pages Router `404`, `500` or `_error` page sits next to the app `not-found` (#563).** In `pages/` or `src/pages/`, it answers every unmatched URL on Vercel, so the `not-found` page never shows; the warning (`NS_HOST_PAGES_ROUTER_ERROR_PAGE`) names the files to delete.
 
 ## [0.1.0-beta.206] - 2026-11-25
 
