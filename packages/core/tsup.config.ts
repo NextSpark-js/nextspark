@@ -183,7 +183,7 @@ async function buildRouteModules(srcDir: string, distDir: string): Promise<void>
       loader: file.endsWith('.tsx') ? 'tsx' : 'ts',
       jsx: 'automatic',
       jsxImportSource: 'react',
-      target: 'node16',
+      target: 'es2022',
       sourcefile: file,
     })
     const out = join(distDir, file.replace(/\.tsx?$/, '.js'))
@@ -225,6 +225,11 @@ export default defineConfig({
 
   // Output format
   format: ['esm'],
+
+  // ES2022, not tsup's default (node16): the browser bundle of a project is built from this output, and node16 rewrote
+  // `?.` and `??` into longer code that every route downloaded (#568). Node 22 and the browsers Next.js 16
+  // supports run ES2022 as written. buildRouteModules below takes the same target.
+  target: 'es2022',
 
   // Disable DTS for now (causes memory issues with large codebases)
   // Using ambient declarations in consuming projects instead
