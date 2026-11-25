@@ -83,14 +83,12 @@ const SESSION_DROP_TIMEOUT_MS = 2000
  * tests/jest/hooks/useAuth.signed-in-data.test.tsx pins the call, re-check it when better-auth is bumped.
  */
 async function waitForSessionToDrop() {
-  let timer: ReturnType<typeof setTimeout> | undefined
   try {
     const refetch = authClient.$store?.atoms?.session?.get?.()?.refetch?.()
-    await Promise.race([refetch, new Promise<void>(resolve => { timer = setTimeout(resolve, SESSION_DROP_TIMEOUT_MS) })])
+    // the timer is left to run out: it only resolves a promise nobody awaits by then, and the page is about to unload
+    await Promise.race([refetch, new Promise<void>(resolve => setTimeout(resolve, SESSION_DROP_TIMEOUT_MS))])
   } catch {
     // the sign-out itself went through; the page is on its way to the login page
-  } finally {
-    clearTimeout(timer)
   }
 }
 

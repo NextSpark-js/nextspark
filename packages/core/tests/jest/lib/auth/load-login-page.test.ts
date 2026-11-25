@@ -9,7 +9,14 @@ let mockBasePath = ''
 
 jest.mock('@/core/lib/base-path', () => ({ withBasePath: (path: string) => `${mockBasePath}${path}` }))
 
-import { loadLoginPage } from '@/core/lib/auth/load-login-page'
+// the module remembers that the page is leaving, so each test loads its own copy
+function freshLoadLoginPage(): () => void {
+  let loadLoginPage!: () => void
+  jest.isolateModules(() => {
+    loadLoginPage = require('@/core/lib/auth/load-login-page').loadLoginPage
+  })
+  return loadLoginPage
+}
 
 beforeEach(() => {
   mockAssign.mockReset()
@@ -23,13 +30,20 @@ afterEach(() => {
 
 describe('loadLoginPage', () => {
   test('assigns the login path', () => {
-    loadLoginPage()
+    freshLoadLoginPage()()
     expect(mockAssign).toHaveBeenCalledWith('/login')
+  })
+
+  test('loads the page once when a sign-out and a guard both ask for it (#562)', () => {
+    const loadLoginPage = freshLoadLoginPage()
+    loadLoginPage()
+    loadLoginPage()
+    expect(mockAssign).toHaveBeenCalledTimes(1)
   })
 
   test('carries the base path', () => {
     mockBasePath = '/app'
-    loadLoginPage()
+    freshLoadLoginPage()()
     expect(mockAssign).toHaveBeenCalledWith('/app/login')
   })
 })
