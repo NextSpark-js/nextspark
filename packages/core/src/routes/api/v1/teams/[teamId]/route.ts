@@ -12,6 +12,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { updateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService, TeamDeleteVetoedError, MembershipService } from '@nextsparkjs/core/lib/services'
+import { TEAM_COLUMNS_SQL, canSeeTeamMetadata, withTeamMetadata } from '@nextsparkjs/core/lib/teams/response'
 import type { Team, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
@@ -58,7 +59,7 @@ export const GET = withRateLimitTier(withApiLogging(
       // Fetch team with member count
       const team = await queryOneWithRLS<Team & { memberCount: string; userRole: TeamRole }>(
         `SELECT
-          t.*,
+          ${TEAM_COLUMNS_SQL},
           COUNT(DISTINCT tm.id) as "memberCount",
           $2::text as "userRole"
         FROM "teams" t
@@ -74,8 +75,9 @@ export const GET = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
+      // `metadata` goes only to a member who can edit the team (#564)
       const responseData = {
-        ...team,
+        ...withTeamMetadata(team, canSeeTeamMetadata(authResult.user!.role, userRole.role)),
         memberCount: parseInt(team.memberCount, 10),
       }
 
@@ -186,7 +188,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
         UPDATE "teams"
         SET ${updates.join(', ')}
         WHERE id = $${paramCount} AND "deletedAt" IS NULL
-        RETURNING *
+        RETURNING id
       `
 
       const result = await mutateWithRLS(query, values, authResult.user!.id)
@@ -199,7 +201,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
       // Fetch team with member count
       const teamWithCount = await queryOneWithRLS<Team & { memberCount: string }>(
         `SELECT
-          t.*,
+          ${TEAM_COLUMNS_SQL},
           COUNT(DISTINCT tm.id) as "memberCount"
         FROM "teams" t
         LEFT JOIN "team_members" tm ON t.id = tm."teamId"

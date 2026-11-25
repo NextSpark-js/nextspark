@@ -16,6 +16,7 @@ import { containsPattern, LIKE_ESCAPE_CLAUSE } from '@nextsparkjs/core/lib/utils
 import { searchTermTooLongError } from '@nextsparkjs/core/lib/api/error-response'
 import { createTeamSchema, teamListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService } from '@nextsparkjs/core/lib/services'
+import { TEAM_COLUMNS_SQL, canSeeTeamMetadata, withTeamMetadata } from '@nextsparkjs/core/lib/teams/response'
 import type { Team } from '@nextsparkjs/core/lib/teams/types'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-sync'
 
@@ -104,14 +105,13 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
       // Superadmin query: get all teams without user membership filter
       teams = await queryRows<Team & { userRole: string | null; memberCount: string }>(
         `SELECT
-          t.*,
+          ${TEAM_COLUMNS_SQL},
           NULL as "userRole",
           COUNT(DISTINCT tm.id) as "memberCount"
         FROM "teams" t
         LEFT JOIN "team_members" tm ON t.id = tm."teamId"
         ${whereClause}
-        GROUP BY t.id, t.name, t.slug, t.description, t."ownerId", t."avatarUrl",
-                 t.settings, t.metadata, t."createdAt", t."updatedAt"
+        GROUP BY t.id
         ORDER BY ${orderByClause}
         LIMIT $${paramCount++} OFFSET $${paramCount++}`,
         queryValues
@@ -137,7 +137,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
       // order instead of the earliest-joined team.
       teams = await queryWithRLS<Team & { userRole: string; joinedAt: string; memberCount: string }>(
         `SELECT
-          t.*,
+          ${TEAM_COLUMNS_SQL},
           tm.role as "userRole",
           tm."joinedAt" as "joinedAt",
           COUNT(DISTINCT tm2.id) as "memberCount"
@@ -145,8 +145,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
         INNER JOIN "team_members" tm ON t.id = tm."teamId"
         LEFT JOIN "team_members" tm2 ON t.id = tm2."teamId"
         ${whereClause}
-        GROUP BY t.id, t.name, t.slug, t.description, t."ownerId", t."avatarUrl",
-                 t.settings, t.metadata, t."createdAt", t."updatedAt", tm.role, tm."joinedAt"
+        GROUP BY t.id, tm.role, tm."joinedAt"
         ORDER BY ${orderByClause}
         LIMIT $${paramCount++} OFFSET $${paramCount++}`,
         queryValues,
@@ -168,8 +167,10 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const paginationMeta = createPaginationMeta(page, limit, total)
 
     // Transform data
+    // `metadata` goes only to a member who can edit the team (#564); scope=all is already superadmin-only.
+    const appRole = authResult.user!.role
     const teamsWithMembers = teams.map((team) => ({
-      ...team,
+      ...withTeamMetadata(team, requestAllTeams || canSeeTeamMetadata(appRole, team.userRole)),
       memberCount: parseInt(team.memberCount, 10),
     }))
 
@@ -284,7 +285,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       // Fetch team with member count
       const teamWithCount = await queryWithRLS<Team & { memberCount: string }>(
         `SELECT
-          t.*,
+          ${TEAM_COLUMNS_SQL},
           COUNT(DISTINCT tm.id) as "memberCount"
         FROM "teams" t
         LEFT JOIN "team_members" tm ON t.id = tm."teamId"

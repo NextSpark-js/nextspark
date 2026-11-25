@@ -81,6 +81,8 @@ export interface Team {
   avatarUrl: string | null
   isGlobal: boolean
   settings: Record<string, any>
+  /** Only in a response for a member who can edit the team (`team.edit`); see lib/teams/response.ts (#564) */
+  metadata?: Record<string, unknown>
   createdAt: string
   updatedAt: string
   deletedAt?: string | null
