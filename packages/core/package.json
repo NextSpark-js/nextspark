@@ -168,6 +168,11 @@
       "import": "./dist/lib/permissions/check.js",
       "default": "./dist/lib/permissions/check.js"
     },
+    "./lib/permissions/role-check": {
+      "types": "./dist/lib/permissions/role-check.d.ts",
+      "import": "./dist/lib/permissions/role-check.js",
+      "default": "./dist/lib/permissions/role-check.js"
+    },
     "./lib/permissions/init": {
       "types": "./dist/lib/permissions/init.d.ts",
       "import": "./dist/lib/permissions/init.js",

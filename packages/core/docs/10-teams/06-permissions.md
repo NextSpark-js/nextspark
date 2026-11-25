@@ -136,6 +136,27 @@ checkTeamPermission('developer', null, 'team.delete')      // false
 
 **Returns:** `boolean` - `true` if user has the permission
 
+### hasTeamPermission (roles already in hand)
+
+`checkPermission(userId, teamId, permission)` reads the team role and the app role from the database. A server layout
+that has already verified the session of this request has both, and can decide with no query, by the same rule
+(including `teams.appRoleBypass`):
+
+```typescript
+// app/dashboard/[entity]/layout.tsx (server component)
+import { hasTeamPermission } from '@nextsparkjs/core/lib/permissions/role-check'
+
+if (!hasTeamPermission(session.user.role, membership?.role, 'customers.read')) notFound()
+```
+
+`@nextsparkjs/core/lib/permissions/role-check` also exports `teamPermissionsFor(appRole, teamRole)` and
+`appRoleSkipsTeamPermissions(appRole)`, and does not import the database layer. The contract:
+
+- `appRole` and `teamRole` come from the verified session of **this** request, and `teamRole` is the role in **this**
+  `teamId`. Never take them from a cookie, a query string or a value cached between requests.
+- `teamRole` `null` means not a member: no permission, whatever the app role.
+- Use `checkPermission` when you do not have the roles.
+
 ### hasPermission
 
 Check if a specific team role has a permission:
