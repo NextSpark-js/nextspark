@@ -145,8 +145,13 @@ that has already verified the session of this request has both, and can decide w
 ```typescript
 // app/dashboard/[entity]/layout.tsx (server component)
 import { hasTeamPermission } from '@nextsparkjs/core/lib/permissions/role-check'
+import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
 
-if (!hasTeamPermission(session.user.role, membership?.role, 'customers.read')) notFound()
+const session = await getAuthorizationSession(await headers())
+// The team_members row of session.user.id for this teamId, read in this request
+const membership = await getMembership(session?.user.id, teamId)
+
+if (!hasTeamPermission(session?.user.role, membership?.role, 'customers.read')) notFound()
 ```
 
 `@nextsparkjs/core/lib/permissions/role-check` also exports `teamPermissionsFor(appRole, teamRole)` and
@@ -154,8 +159,12 @@ if (!hasTeamPermission(session.user.role, membership?.role, 'customers.read')) n
 
 - `appRole` and `teamRole` come from the verified session of **this** request, and `teamRole` is the role in **this**
   `teamId`. Never take them from a cookie, a query string or a value cached between requests.
+- Read the session without Better Auth's cookie cache (on by default, 5 minutes): a demoted or suspended user keeps
+  the old role there. Use `getAuthorizationSession(headers)` from `@nextsparkjs/core/lib/auth/authorization-session`,
+  or `auth.api.getSession` with `query: { disableCookieCache: true }`.
 - `teamRole` `null` means not a member: no permission, whatever the app role.
 - Use `checkPermission` when you do not have the roles.
+- On the client it serves to decide the UI; the authorization is the server's.
 
 ### hasPermission
 

@@ -3,12 +3,16 @@
  *
  * `checkPermission(userId, teamId, permission)` reads the team role and the app role from the database before it
  * decides. A server layout that has verified the session of this request already has both: decide here with no
- * query. These are the same rules as `checkPermission` (including `teams.appRoleBypass`), and, as there, entity
- * permissions are registered before the decision.
+ * query. These are the same rules as `checkPermission` (including `teams.appRoleBypass`), and, as there,
+ * `ensureEntityPermissionsLoaded()` runs before the decision.
  *
  * Contract for the caller:
  * - `appRole` and `teamRole` come from the verified session of THIS request, and `teamRole` is the role in THIS
  *   `teamId`. Never take them from a cookie, a query string or a value kept between requests.
+ * - Read the session without Better Auth's cookie cache (5 minutes by default, where a demoted or suspended user keeps
+ *   the old role): `getAuthorizationSession(headers)` from `@nextsparkjs/core/lib/auth/authorization-session`, or
+ *   `auth.api.getSession` with `query: { disableCookieCache: true }`. `teamRole` is the `role` of the user's row in
+ *   `team_members` for this `teamId`, read in this request.
  * - `teamRole` null or undefined means "not a member of the team": no permission, whatever the app role.
  *
  * This module does not import the database layer, so it can be imported where `lib/permissions/check` cannot.
@@ -16,7 +20,11 @@
  * @example
  * // app/dashboard/[entity]/layout.tsx (server component)
  * import { hasTeamPermission } from '@nextsparkjs/core/lib/permissions/role-check'
- * if (!hasTeamPermission(session.user.role, membership?.role, 'customers.read')) notFound()
+ * import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
+ * const session = await getAuthorizationSession(await headers())
+ * // membership: the team_members row of session.user.id for this teamId, read in this request
+ * const membership = await getMembership(session?.user.id, teamId)
+ * if (!hasTeamPermission(session?.user.role, membership?.role, 'customers.read')) notFound()
  */
 
 import { ensureEntityPermissionsLoaded } from './init'

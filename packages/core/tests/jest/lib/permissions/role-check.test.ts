@@ -3,8 +3,8 @@
  *
  * For app role (user, developer, superadmin) x team role (owner, admin, member, viewer, none) x teams.appRoleBypass
  * (none, developer, developer-and-superadmin), the exported hasTeamPermission / teamPermissionsFor answer like
- * checkPermission, for a permission that only exists once ensureEntityPermissionsLoaded() has run. The mock of that
- * function registers it, so a decision made without calling it is a failure.
+ * checkPermission, for an owner-only permission and a common one. ensureEntityPermissionsLoaded() is a no-op today
+ * (deprecated); the test only checks that the exports call it, as checkPermission does.
  */
 jest.mock('server-only', () => ({}))
 
@@ -16,22 +16,10 @@ jest.mock('@/core/lib/db', () => ({
   }),
 }))
 
-const LAZY = 'lazyentity.read'
-jest.mock('@/core/lib/permissions/init', () => {
-  const registry = jest.requireActual('@nextsparkjs/registries/permissions-registry')
-  return {
-    ...jest.requireActual('@/core/lib/permissions/init'),
-    ensureEntityPermissionsLoaded: jest.fn(() => {
-      // A lazily registered permission: admin (and owner) hold it, member and viewer do not
-      if (!registry.ALL_PERMISSIONS_SET.has('lazyentity.read')) {
-        registry.ALL_PERMISSIONS.push('lazyentity.read')
-        registry.ALL_PERMISSIONS_SET.add('lazyentity.read')
-        registry.PERMISSIONS_BY_ROLE.admin.add('lazyentity.read')
-        registry.ROLE_PERMISSIONS_ARRAY.admin.push('lazyentity.read')
-      }
-    }),
-  }
-})
+jest.mock('@/core/lib/permissions/init', () => ({
+  ...jest.requireActual('@/core/lib/permissions/init'),
+  ensureEntityPermissionsLoaded: jest.fn(),
+}))
 
 import { TEAMS_CONFIG } from '@/core/lib/config/config-client'
 import { checkPermission } from '@/core/lib/permissions/check'
@@ -42,10 +30,9 @@ import {
   appRoleSkipsTeamPermissions,
 } from '@/core/lib/permissions/role-check'
 import type { Permission } from '@/core/lib/permissions/types'
-import * as registry from '@nextsparkjs/registries/permissions-registry'
 import pkg from '../../../../package.json'
 
-const P = LAZY as Permission
+const PERMS = ['team.delete', 'customers.read'] as Permission[] // owner only, and owner/admin/member in the mock registry
 const APP_ROLES = ['user', 'developer', 'superadmin']
 const TEAM_ROLES = ['owner', 'admin', 'member', 'viewer', null]
 const SETTINGS = ['none', 'developer', 'developer-and-superadmin']
@@ -57,18 +44,7 @@ function setSetting(value: string | undefined) {
   else teams.appRoleBypass = value
 }
 
-/** Back to "entities not loaded yet", and forget the calls so far. */
-function reset() {
-  if (registry.ALL_PERMISSIONS_SET.has(LAZY)) {
-    registry.ALL_PERMISSIONS.splice(registry.ALL_PERMISSIONS.indexOf(LAZY), 1)
-    registry.ALL_PERMISSIONS_SET.delete(LAZY)
-    registry.PERMISSIONS_BY_ROLE.admin.delete(LAZY)
-    registry.ROLE_PERMISSIONS_ARRAY.admin = registry.ROLE_PERMISSIONS_ARRAY.admin.filter((p: string) => p !== LAZY)
-  }
-  ensure.mockClear()
-}
-
-beforeEach(reset)
+beforeEach(() => ensure.mockClear())
 afterAll(() => setSetting(undefined))
 
 describe.each(SETTINGS)('teams.appRoleBypass = %s', (setting) => {
@@ -78,16 +54,15 @@ describe.each(SETTINGS)('teams.appRoleBypass = %s', (setting) => {
     'app role %s, team role %s: same answer as checkPermission',
     async (appRole, teamRole) => {
       rows = { u: { teamRole, appRole } }
-      const expected = await checkPermission('u', 'team-1', P)
-
-      reset()
-      expect(hasTeamPermission(appRole, teamRole, P)).toBe(expected)
-      expect(ensure).toHaveBeenCalled()
-
-      reset()
-      expect(teamPermissionsFor(appRole, teamRole).includes(P)).toBe(expected)
-      expect(ensure).toHaveBeenCalled()
-
+      for (const p of PERMS) {
+        const expected = await checkPermission('u', 'team-1', p)
+        ensure.mockClear()
+        expect(hasTeamPermission(appRole, teamRole, p)).toBe(expected)
+        expect(ensure).toHaveBeenCalled()
+        ensure.mockClear()
+        expect(teamPermissionsFor(appRole, teamRole).includes(p)).toBe(expected)
+        expect(ensure).toHaveBeenCalled()
+      }
       expect(appRoleSkipsTeamPermissions(appRole)).toBe(
         setting === 'developer-and-superadmin' ? appRole !== 'user' : setting === 'developer' && appRole === 'developer'
       )
@@ -95,14 +70,15 @@ describe.each(SETTINGS)('teams.appRoleBypass = %s', (setting) => {
   )
 
   it('no team role: no permission, whatever the app role', () => {
-    for (const a of APP_ROLES) expect(hasTeamPermission(a, null, P)).toBe(false)
+    for (const a of APP_ROLES) expect(hasTeamPermission(a, null, PERMS[1])).toBe(false)
   })
 })
 
-it('the matrix is not trivially false: an admin holds the lazy permission, a member does not', () => {
-  setSetting('none')
-  expect(hasTeamPermission('user', 'admin', P)).toBe(true)
-  expect(hasTeamPermission('user', 'member', P)).toBe(false)
+it('the matrix is not trivially false: the bypass grants the owner-only permission, a member does not hold it', () => {
+  setSetting('developer')
+  expect(hasTeamPermission('developer', 'member', PERMS[0])).toBe(true)
+  expect(hasTeamPermission('user', 'member', PERMS[0])).toBe(false)
+  expect(hasTeamPermission('user', 'owner', PERMS[0])).toBe(true)
 })
 
 it('is published: ./lib/permissions/role-check is in exports and points at the dist', () => {
