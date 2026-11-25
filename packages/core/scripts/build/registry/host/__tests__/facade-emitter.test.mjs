@@ -243,6 +243,7 @@ test('a nested not-found refuses metadata and generateMetadata, which Next.js ig
       const result = await plan('not-found', source, { target })
       assert.deepEqual(codes(result), [DIAGNOSTICS.UNSUPPORTED_EXPORT], `${target} ${name}`)
       assert.equal(result.diagnostics[0].exportName, name)
+      assert.match(result.diagnostics[0].message, new RegExp(`Next\\.js reads "${name}" only from the not-found file at the root of the app`))
     }
     assert.deepEqual(codes(await plan('not-found', source, { target: 'not-found.tsx' })), [], name)
   }

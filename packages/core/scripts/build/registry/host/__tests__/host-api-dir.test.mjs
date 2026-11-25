@@ -201,6 +201,11 @@ test('prepare warns about a Pages Router 404, 500 or _error next to the app not-
     rmSync(join(root, 'src/pages'), { recursive: true })
     rmSync(join(root, 'pages'), { recursive: true })
     assert.equal(noticeOf(await run()), undefined, 'no Pages Router error page')
+    // the target keeps the extension of the source: a .js not-found is the root one too
+    rmSync(join(root, 'templates/not-found.tsx'))
+    write(root, 'templates/not-found.js', 'export default function NotFound() { return null }\n')
+    write(root, 'src/pages/404.tsx', PAGE('Legacy404'))
+    assert.match(noticeOf(await run()).message, /^src\/pages\/404\.tsx is next to the app not-found/, 'a .js not-found')
   } finally {
     cleanup()
   }

@@ -118,7 +118,7 @@ function vercelApiDirNotice(config, routes) {
 
 /** A warning when a Pages Router 404, 500 or _error sits next to the app root not-found: on Vercel the Pages Router one answers every unmatched URL, so the app not-found never shows (#563). */
 function pagesRouterErrorPageNotice(config, routes) {
-  if (!routes.some(route => route.kind === 'not-found' && route.target === 'not-found.tsx')) return []
+  if (!routes.some(route => route.kind === 'not-found' && !route.target.includes('/'))) return []
   const root = config.project?.root ?? config.projectRoot
   const found = ['pages', 'src/pages'].flatMap(dir => ['404', '500', '_error'].flatMap(name => ['tsx', 'ts', 'jsx', 'js'].map(ext => `${dir}/${name}.${ext}`))).filter(file => existsSync(join(root, file)))
   if (found.length === 0) return []

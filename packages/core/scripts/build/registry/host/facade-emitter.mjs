@@ -465,7 +465,10 @@ export function planFacade({ kind, target, specifier, file, analysis, cacheCompo
       report(
         DIAGNOSTICS.UNSUPPORTED_EXPORT,
         `Next.js ${ROUTE_EXPORT_TABLE.next} does not support a "${name}" export in a ${kind} file` +
-          ` (supported: ${Object.keys(spec.exports).join(', ')}); move it to another module`,
+          ` (supported: ${Object.keys(spec.exports).join(', ')}); ` +
+          (spec !== tableSpec && tableSpec.rootOnly.includes(name)
+            ? `Next.js reads "${name}" only from the ${kind} file at the root of the app (templates/${kind}.tsx), so move it there or to another module`
+            : 'move it to another module'),
         name,
         line
       )
