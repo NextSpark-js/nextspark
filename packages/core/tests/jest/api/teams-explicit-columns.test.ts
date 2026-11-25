@@ -10,6 +10,7 @@ const mockQueryWithRLS = jest.fn()
 const mockQueryOneWithRLS = jest.fn()
 const mockMutate = jest.fn()
 const mockMembershipGet = jest.fn()
+const mockServiceTx = jest.fn()
 
 jest.mock('@nextsparkjs/core/lib/api/auth/dual-auth', () => ({
   authenticateRequest: (...a: unknown[]) => mockAuth(...a),
@@ -25,7 +26,7 @@ jest.mock('@nextsparkjs/core/lib/db', () => ({
   queryWithRLS: (...a: unknown[]) => mockQueryWithRLS(...a),
   queryOneWithRLS: (...a: unknown[]) => mockQueryOneWithRLS(...a),
   mutateWithRLS: (...a: unknown[]) => mockMutate(...a),
-  getServiceTransactionClient: jest.fn(),
+  getServiceTransactionClient: (...a: unknown[]) => mockServiceTx(...a),
 }))
 jest.mock('@nextsparkjs/core/lib/services', () => ({
   TeamService: { isSlugAvailable: jest.fn().mockResolvedValue(true) },
@@ -33,7 +34,8 @@ jest.mock('@nextsparkjs/core/lib/services', () => ({
   MembershipService: { get: (...a: unknown[]) => mockMembershipGet(...a) },
 }))
 
-import { GET as list } from '../../../src/routes/api/v1/teams/route'
+import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-sync'
+import { GET as list, POST as create } from '../../../src/routes/api/v1/teams/route'
 import { GET as one, PATCH as patch } from '../../../src/routes/api/v1/teams/[teamId]/route'
 
 const metadata = { billing: { taxId: 'secret' } }
@@ -42,7 +44,8 @@ const row = (userRole: string) => ({
   isGlobal: false, settings: {}, metadata, createdAt: 'x', updatedAt: 'x', deletedAt: null,
   userRole, joinedAt: 'x', memberCount: '2',
 })
-const signIn = (_teamRole: string) => mockAuth.mockResolvedValue({ success: true, type: 'session', user: { id: 'u-1', role: 'user' } })
+const signIn = (_teamRole: string, appRole = 'user') =>
+  mockAuth.mockResolvedValue({ success: true, type: 'session', user: { id: 'u-1', role: appRole } })
 const sqlOf = (mock: jest.Mock) => mock.mock.calls.map(c => String(c[0])).join('\n')
 
 describe('team routes: explicit columns and metadata (#564)', () => {
@@ -79,10 +82,34 @@ describe('team routes: explicit columns and metadata (#564)', () => {
     })
   })
 
+  describe('POST /api/v1/teams', () => {
+    it('selects listed columns, not t.*', async () => {
+      const teamsConfig = APP_CONFIG_MERGED.teams as { mode?: string }
+      const mode = teamsConfig.mode
+      teamsConfig.mode = 'multi-tenant'
+      signIn('owner')
+      const tx = { query: jest.fn().mockResolvedValue([{ id: 'team-1' }]), commit: jest.fn(), rollback: jest.fn() }
+      mockServiceTx.mockResolvedValue(tx)
+      mockQueryWithRLS.mockResolvedValueOnce([row('owner')])
+
+      const res = await create(
+        new NextRequest('http://localhost:3000/api/v1/teams', {
+          method: 'POST', body: JSON.stringify({ name: 'Team', slug: 'team' }), headers: { 'content-type': 'application/json' },
+        }),
+        undefined as never
+      )
+
+      teamsConfig.mode = mode
+      expect(res.status).toBe(201)
+      expect(sqlOf(mockQueryWithRLS)).not.toMatch(/t\.\*/)
+      expect(sqlOf(mockQueryWithRLS)).toContain('t."ownerId"')
+    })
+  })
+
   describe('GET /api/v1/teams/:teamId', () => {
     const call = () => one(new NextRequest('http://localhost:3000/api/v1/teams/team-1'), { params: Promise.resolve({ teamId: 'team-1' }) })
-    const run = async (teamRole: string) => {
-      signIn(teamRole)
+    const run = async (teamRole: string, appRole = 'user') => {
+      signIn(teamRole, appRole)
       mockQueryOneWithRLS.mockResolvedValueOnce({ role: teamRole }).mockResolvedValueOnce(row(teamRole))
       return (await (await call()).json()).data as Record<string, unknown>
     }
@@ -95,6 +122,15 @@ describe('team routes: explicit columns and metadata (#564)', () => {
 
     it.each(['owner', 'admin'])('keeps metadata for an %s', async role => {
       expect((await run(role)).metadata).toEqual(metadata)
+    })
+
+    // teams.appRoleBypass defaults to 'developer': a developer skips team permissions, a superadmin follows the team role
+    it('keeps metadata for a developer whose team role is member', async () => {
+      expect((await run('member', 'developer')).metadata).toEqual(metadata)
+    })
+
+    it('leaves metadata out for a superadmin whose team role is member', async () => {
+      expect(await run('member', 'superadmin')).not.toHaveProperty('metadata')
     })
 
     it('selects listed columns, not t.*', async () => {
