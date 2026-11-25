@@ -55,6 +55,8 @@ when Next's `AppSegmentConfigSchemaKeys` or `HTTP_METHODS` change, and when this
 | opengraph-image | `opengraph-image`, `opengraph-image0`-`opengraph-image9` | required | `generateImageMetadata`, `size`, `contentType`, `alt` | `revalidate`, `dynamic`, `fetchCache`, `preferredRegion`, `runtime`, `maxDuration` | - |
 | twitter-image | `twitter-image`, `twitter-image0`-`twitter-image9` | required | `generateImageMetadata`, `size`, `contentType`, `alt` | `revalidate`, `dynamic`, `fetchCache`, `preferredRegion`, `runtime`, `maxDuration` | - |
 
+`metadata` and `generateMetadata` of a `not-found` are forwarded only from the one at the root of `src/app`: Next.js ignores them in a nested `not-found` without a word, so there they are refused (`NS_HOST_UNSUPPORTED_EXPORT`).
+
 Emitted forms: **default** `export { default } from '<source>'`; **re-exported** `export { name } from
 '<source>'` (never through `export *`, which Next does not see); **literal** `export const name = <literal>`
 copied from the source.

@@ -366,7 +366,10 @@ export function planFacade({ kind, target, specifier, file, analysis, cacheCompo
   const diagnostics = []
   const report = (code, message, exportName, line) => diagnostics.push({ code, file, exportName, line, message })
 
-  const spec = ROUTE_EXPORT_TABLE.kinds[kind]
+  const tableSpec = ROUTE_EXPORT_TABLE.kinds[kind]
+  // `rootOnly` exports are read by Next.js only in the file at the root of src/app; a nested file ignores them without a word, so they are refused there
+  const nested = target.split('\\').join('/').includes('/')
+  const spec = tableSpec?.rootOnly && nested ? { ...tableSpec, exports: Object.fromEntries(Object.entries(tableSpec.exports).filter(([name]) => !tableSpec.rootOnly.includes(name))) } : tableSpec
   if (!spec) {
     report(DIAGNOSTICS.UNKNOWN_KIND, `"${kind}" is not a route file kind; expected one of ${ROUTE_KINDS.join(', ')}`)
     return { diagnostics }

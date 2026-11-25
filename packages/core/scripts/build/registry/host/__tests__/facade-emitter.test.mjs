@@ -61,7 +61,8 @@ const LITERALS = {
 const HTTP_METHOD = /^[A-Z]+$/
 
 function targetFor(kind, extension = kind === 'route' || ROUTE_EXPORT_TABLE.kinds[kind].serverOnly ? 'ts' : 'tsx') {
-  return `example/${ROUTE_EXPORT_TABLE.kinds[kind].file}.${extension}`
+  const spec = ROUTE_EXPORT_TABLE.kinds[kind]
+  return `${spec.rootOnly ? '' : 'example/'}${spec.file}.${extension}`
 }
 
 /** A minimal valid source for `kind`, plus `extra` source lines. */
@@ -233,6 +234,18 @@ test('a not-found facade re-exports metadata and generateMetadata next to the de
     'export { metadata, generateMetadata } from "@/templates/not-found"',
     '',
   ].join('\n'))
+})
+
+test('a nested not-found refuses metadata and generateMetadata, which Next.js ignores there; the root one forwards them (#563)', async () => {
+  for (const name of ['metadata', 'generateMetadata']) {
+    const source = sourceFor('not-found', exportLineFor(name))
+    for (const target of ['(public)/not-found.tsx', 'blog/not-found.tsx']) {
+      const result = await plan('not-found', source, { target })
+      assert.deepEqual(codes(result), [DIAGNOSTICS.UNSUPPORTED_EXPORT], `${target} ${name}`)
+      assert.equal(result.diagnostics[0].exportName, name)
+    }
+    assert.deepEqual(codes(await plan('not-found', source, { target: 'not-found.tsx' })), [], name)
+  }
 })
 
 test('a client page is forwarded without a directive; the client boundary stays in the source', async () => {

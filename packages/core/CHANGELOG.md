@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Signing out from a dashboard page loads `/login` once. `useAuth().signOut()` and the dashboard guard (which sees the session drop) both loaded the login page, so the browser requested it twice. `loadLoginPage()` now loads it once per page load, which covers every sign-out surface (the top bar, the mobile menu, the profile settings) and every layout that guards the session, with no change to the pages themselves and no added JavaScript (#562)
 ### Fixed
 
-- **The root `templates/not-found.tsx` can export `metadata` or `generateMetadata` (#563).** The generated host forwarded only the default export of a `not-found` file and stopped `nextspark prepare` with `NS_HOST_UNSUPPORTED_EXPORT` on anything else, so a project could not give its 404 page its own `<title>`. The host now forwards both exports, as it already does for `layout` and `page`; a 404 page without them keeps the title of the root layout. Any other export in a `not-found` file is still refused.
+- **The root `templates/not-found.tsx` can export `metadata` or `generateMetadata` (#563).** The generated host forwarded only the default export of a `not-found` file and stopped `nextspark prepare` with `NS_HOST_UNSUPPORTED_EXPORT` on anything else, so a project could not give its 404 page its own `<title>`. The host now forwards both exports, as it already does for `layout` and `page`; a 404 page without them keeps the title of the root layout. Only the `not-found` at the root of the app does it: Next.js ignores them in a nested one, so there they are still refused. Any other export in a `not-found` file is still refused.
 
 ### Added
 

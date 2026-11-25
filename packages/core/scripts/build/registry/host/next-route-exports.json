@@ -161,6 +161,7 @@
       "facadeDirective": null,
       "sourceMustBeClient": false,
       "requiresDefault": true,
+      "rootOnly": ["metadata", "generateMetadata"],
       "exports": {
         "default": "default",
         "metadata": "reexport",
