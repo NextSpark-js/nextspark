@@ -74,7 +74,7 @@ import {
   ExternalLink,
   Loader2,
 } from 'lucide-react'
-import { SkeletonEntityList } from '../ui/skeleton-list'
+import { SkeletonEntityList, SkeletonTable } from '../ui/skeleton-list'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { sel } from '../../lib/test'
 import { usePermission } from '../../lib/permissions/hooks'
@@ -522,7 +522,9 @@ export function EntityTable<T extends { id: string } = { id: string }>({
 
   // Loading state
   if (loading) {
-    return <SkeletonEntityList rowCount={pageSize} columnCount={columns.length} />
+    // A list that draws its own header (showHeader={false}) reserves only the table's place, not a second header
+    const Skeleton = showHeader ? SkeletonEntityList : SkeletonTable
+    return <Skeleton rowCount={pageSize} columnCount={columns.length} />
   }
 
   // Check if we have actions column

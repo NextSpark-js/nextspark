@@ -16,14 +16,12 @@ export function SkeletonListHeader() {
       {/* Title section */}
       <div className="space-y-2">
         <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-5 w-40" />
       </div>
       
-      {/* Search and Add button */}
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-10 w-80" />
-        <Skeleton className="h-10 w-32" />
-      </div>
+      {/* The add button. The search is not here: it is a row of its own in the list, and a w-80 skeleton beside the title
+          made the page wider than a phone, which a mobile browser then lays out zoomed out. Title and button (160 + 112 px) fit 320 px. */}
+      <Skeleton className="h-10 w-28" />
     </div>
   )
 }
@@ -67,14 +65,7 @@ export function SkeletonTableRow({ columnCount = 6 }: { columnCount?: number }) 
       {/* Data columns */}
       {Array.from({ length: columnCount }).map((_, index) => (
         <td key={index} className="px-4 py-3">
-          <Skeleton className={`h-4 ${
-            index === 0 ? 'w-40' : // First column (name) - wider
-            index === 1 ? 'w-32' : // Second column (category/type) - medium
-            index === 2 ? 'w-48' : // Third column (url/email) - wider
-            index === 3 ? 'w-24' : // Fourth column (status/short) - narrow
-            index === 4 ? 'w-28' : // Fifth column (medium)
-            'w-36' // Other columns
-          }`} />
+          <Skeleton className={`h-4 ${['w-40', 'w-32', 'w-48', 'w-24', 'w-28'][index] ?? 'w-36'}`} />
         </td>
       ))}
       {/* Actions column */}
