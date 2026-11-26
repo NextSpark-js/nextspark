@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **An entity list no longer shifts its layout on a phone while it loads (#559).** `/dashboard/tasks` scored a layout shift of 0.065 to 0.13 on mobile: while the rows loaded, the list drew a whole-page skeleton inside itself (a second header, with its own padding, under the real one), and that header held a 320 px search skeleton next to the title and button, wider than the screen. A mobile browser lays a page wider than its screen out zoomed out, so the fixed bottom navigation sat below the screen and jumped into place when the rows replaced the skeleton. `EntityTable` with `showHeader={false}` (what the entity list passes) now reserves only the table while it loads, and the header skeleton keeps the add button next to the title and leaves the search out (the list's search is a row of its own). A skeleton of the page for `EntityTable` with its own header, and for the lists that render `SkeletonEntityList`, keeps its shape.
 
+### Changed
+
+- **The title and subtitle of an entity list are in the HTML of the page (#566).** `EntityListWrapper` read the entity config in an effect, so the server sent a skeleton and the heading, the subtitle and the toolbar appeared only after the page's JavaScript had loaded and hydrated: the subtitle was the largest contentful paint of `/dashboard/tasks` on mobile (296 ms in an unthrottled run, 120 ms now, the same time as the first paint). `useEntityConfig` takes an `eager` option that reads the config in the first render when the client registry already has it (`DashboardShell` fills it while it renders, on the server too), and the entity list uses it; the form and the detail keep their first render. The HTML of `/dashboard/tasks` grows by 1.8 kB (1 kB gzip) and the route's JavaScript is 290 B smaller. The empty state of a list with no rows is still painted when the list request answers: a client-only change cannot put it in the first paint.
+
 ## [0.1.0-beta.206] - 2026-11-25
 
 ### Upgrading from 0.1.0-beta.205

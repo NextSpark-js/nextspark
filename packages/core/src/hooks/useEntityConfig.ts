@@ -19,11 +19,25 @@ interface UseEntityConfigOptions {
    * Si true, cachea la configuración para evitar re-fetches
    */
   cache?: boolean
+  /**
+   * Si true, la primera render ya trae la configuración cuando el registro del cliente está poblado
+   * (DashboardShell lo puebla durante su render, también en el servidor), así el HTML del servidor
+   * incluye lo que depende de la entidad en vez de un esqueleto.
+   */
+  eager?: boolean
 }
 
 // Cache global para evitar múltiples fetches del mismo entity
 const configCache = new Map<string, EntityConfig>()
+// Por ahora, solo tasks tiene override conocido
+const knownOverrides = ['tasks']
 let registryLoaded = false
+
+// El estado de la entidad si ya se puede leer (cache o registro del cliente), sin tocar estado de React
+function readState(entityType: string, cache: boolean): EntityConfigState {
+  const config = (cache && configCache.get(entityType)) || getAllEntityConfigs().find(entity => entity.slug === entityType) || null
+  return { config, isLoading: !config, error: null, isOverride: config !== null && knownOverrides.includes(entityType.toLowerCase()) }
+}
 
 /**
  * Hook centralizado para cargar y manejar configuraciones de entidades
@@ -33,25 +47,19 @@ export function useEntityConfig(
   entityType: string, 
   options: UseEntityConfigOptions = {}
 ): EntityConfigState {
-  const { silent = false, cache = true } = options
-  
-  const [state, setState] = useState<EntityConfigState>({
-    config: null,
-    isLoading: true,
-    error: null,
-    isOverride: false
-  })
+  const { silent = false, cache = true, eager = false } = options
 
-  // Función para detectar si existe override personalizado
-  const detectOverride = useCallback((entityName: string): boolean => {
-    // En tiempo de ejecución, no podemos usar fs.existsSync
-    // Pero podemos inferir basado en la estructura conocida
-    // Por ahora, solo tasks tiene override conocido
-    const knownOverrides = ['tasks']
-    return knownOverrides.includes(entityName.toLowerCase())
-  }, [])
+  const [state, setState] = useState<EntityConfigState>(() =>
+    eager ? readState(entityType, cache) : { config: null, isLoading: true, error: null, isOverride: false }
+  )
 
   const loadEntityConfig = useCallback(() => {
+    // Un solo estado de falla; el log de cada causa lo escribe quien la detecta
+    const fail = (error: string, ...log: unknown[]) => {
+      setState({ config: null, isLoading: false, error, isOverride: false })
+      if (!silent) console.error(...log)
+    }
+
     if (!entityType) {
       setState(prev => ({
         ...prev,
@@ -62,88 +70,25 @@ export function useEntityConfig(
     }
 
     try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }))
+      // Cache o registro del cliente (poblado por DashboardShell)
+      const found = readState(entityType, cache)
 
-      // Verificar cache primero
-      if (cache && configCache.has(entityType)) {
-        const cachedConfig = configCache.get(entityType)!
-        const hasOverride = detectOverride(entityType)
-
-        setState({
-          config: cachedConfig,
-          isLoading: false,
-          error: null,
-          isOverride: hasOverride
-        })
-
-        if (!silent) {
-          if (process.env.NODE_ENV === 'development') console.log(`[useEntityConfig] Cache hit for ${entityType}`, {
-            config: cachedConfig,
-            hasOverride
-          })
-        }
-        return
-      }
-
-      // Get from client registry (populated by server component)
-      const allEntities = getAllEntityConfigs()
-      const foundEntity = allEntities.find(entity => entity.slug === entityType)
-
-      if (!foundEntity) {
+      if (!found.config) {
         const error = `Entity "${entityType}" not found in the registry`
-        setState({
-          config: null,
-          isLoading: false,
-          error,
-          isOverride: false
-        })
-
-        if (!silent) {
-          console.error(`[useEntityConfig] ${error}`, {
-            entityType,
-            availableEntities: allEntities.map(e => e.slug)
-          })
-        }
-        return
+        // Qué entidades hay se ve solo en desarrollo: en producción el log es el mensaje
+        if (process.env.NODE_ENV === 'development' && !silent) console.error('[useEntityConfig] registered entities:', getAllEntityConfigs().map(e => e.slug))
+        return fail(error, `[useEntityConfig] ${error}`)
       }
 
-      // Detectar si tiene override
-      const hasOverride = detectOverride(entityType)
-
-      // Cachear la configuración
       if (cache) {
-        configCache.set(entityType, foundEntity)
+        configCache.set(entityType, found.config)
       }
 
-      setState({
-        config: foundEntity,
-        isLoading: false,
-        error: null,
-        isOverride: hasOverride
-      })
-
-      if (!silent) {
-        if (process.env.NODE_ENV === 'development') console.log(`[useEntityConfig] Loaded config for ${entityType}`, {
-          config: foundEntity,
-          hasOverride,
-          cached: cache
-        })
-      }
-
+      setState(found)
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Unknown error loading entity configuration'
-      setState({
-        config: null,
-        isLoading: false,
-        error,
-        isOverride: false
-      })
-      
-      if (!silent) {
-        console.error(`[useEntityConfig] Error loading config for ${entityType}:`, err)
-      }
+      fail(err instanceof Error ? err.message : 'Unknown error loading entity configuration', `[useEntityConfig] Error loading config for ${entityType}:`, err)
     }
-  }, [entityType, cache, silent, detectOverride])
+  }, [entityType, cache, silent])
 
   useEffect(() => {
     loadEntityConfig()

@@ -61,7 +61,7 @@ export function EntityListWrapper({
   const router = useRouter()
 
   // Use the new centralized hook for entity configuration
-  const { config: entityConfig, isLoading, error: configError, isOverride } = useEntityConfig(entityType)
+  const { config: entityConfig, isLoading, error: configError } = useEntityConfig(entityType, { eager: true })
 
   // Get current team for relation resolution
   // The list is requested once the team is chosen: before that the request carries no team (400) or a stale one (403)
@@ -145,7 +145,7 @@ export function EntityListWrapper({
       setDataError(null)
 
       const apiFilters = buildApiFilters()
-      if (process.env.NODE_ENV === 'development') console.log(`[EntityListWrapper] Loading data for "${entityType}" (override: ${isOverride}, filters:`, apiFilters, ')')
+      if (process.env.NODE_ENV === 'development') console.log(`[EntityListWrapper] Loading data for "${entityType}" (filters:`, apiFilters, ')')
 
       const result = await listEntityData(entityType, {
         limit: 50,
@@ -164,7 +164,7 @@ export function EntityListWrapper({
       setIsInitialLoad(false)
       setIsSearching(false)
     }
-  }, [entityConfig, entityType, isOverride, buildApiFilters, text])
+  }, [entityConfig, entityType, buildApiFilters, text])
 
   // Track previous filters and schema to detect changes
   const filtersKey = JSON.stringify(filters)
