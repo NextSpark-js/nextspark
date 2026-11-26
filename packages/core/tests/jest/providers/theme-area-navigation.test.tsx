@@ -4,6 +4,7 @@
  * in between: that was one light frame with a dark account theme. Leaving for a public page still turns the area off.
  */
 import React from 'react'
+import { flushSync } from 'react-dom'
 import { act, render } from '@testing-library/react'
 
 jest.mock('next/navigation', () => ({ usePathname: () => window.location.pathname }))
@@ -52,6 +53,18 @@ it('the next area mounts in a later commit than the previous one unmounts: the p
   })
   expect(seen).not.toContain('light')
   expect(document.documentElement.className).toBe('dark')
+})
+
+it('the URL changes in the same tick as the cleanup, after the area is taken out: the public theme still applies (the microtask reads the new URL)', async () => {
+  const { rerender } = render(page(<ThemeArea>x</ThemeArea>))
+  await act(async () => {})
+  expect(document.documentElement.className).toBe('dark')
+  await act(async () => {
+    // the area unmounts while the location is still /dashboard; the router changes it right after, in the same task
+    flushSync(() => rerender(page(<span />)))
+    window.history.pushState({}, '', '/pricing')
+  })
+  expect(document.documentElement.className).toBe('light')
 })
 
 it('leaving an area for a public page applies the public theme', async () => {
