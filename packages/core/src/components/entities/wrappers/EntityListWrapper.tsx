@@ -19,7 +19,7 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 import { entityNameInText } from '../../../lib/entities/entity-text'
-import React, { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus, Loader2 } from 'lucide-react'
@@ -43,7 +43,6 @@ import type { EntityListFirstPage } from '../../../lib/api/entity/list-first-pag
 
 /** The server-read first pages this document has shown, by key: one seen again comes from the router cache (back/forward). */
 const usedFirstPages = new Set<string>()
-const noSubscription = () => () => {}
 
 export interface EntityListWrapperProps {
   entityType: string
@@ -110,10 +109,6 @@ export function EntityListWrapper({
   // prefetch), and a page this document already showed comes back only from the router cache, possibly old
   const [firstPage] = useState(() => (initialPage && !usedFirstPages.has(initialPage.key) ? initialPage : null))
   useEffect(() => { if (firstPage) usedFirstPages.add(firstPage.key) }, [firstPage])
-  // True while hydrating the server's HTML: the rows stay behind the skeleton then (date cells are formatted in the
-  // server's time zone there and in the browser's here; the empty state has no such text and is in the HTML), and
-  // until the team is known, so rows read in another team are never shown
-  const hydrating = useSyncExternalStore(noSubscription, () => false, () => true)
 
   // Data loading states
   const [data, setData] = useState<Record<string, unknown>[]>(firstPage?.data ?? [])
@@ -423,7 +418,11 @@ export function EntityListWrapper({
       <EntityTable
         entityConfig={entityConfig}
         data={data as Array<{ id: string }>}
-        loading={isInitialLoad || (data.length > 0 && (hydrating || !teamReady))}
+        // The server's rows show only once this page's team is known and is the one they were read in (another team's: the
+        // effect requests this team's), so rows of another team are never committed. No team is known on the server or while
+        // hydrating (TeamProvider chooses it in an effect, after the session store's pending server snapshot), so the HTML
+        // and its hydration keep the skeleton for rows, whose date cells are formatted in the time zone of whoever renders
+        loading={isInitialLoad || (data.length > 0 && data === firstPage?.data && firstPage.teamId !== teamId)}
         selectable={bulkOperationsEnabled}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
