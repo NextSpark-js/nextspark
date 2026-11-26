@@ -19,7 +19,7 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 import { entityNameInText } from '../../../lib/entities/entity-text'
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus, Loader2 } from 'lucide-react'
@@ -39,17 +39,28 @@ import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
 import { sel } from '../../../lib/test'
 import { toast } from 'sonner'
+import type { EntityListFirstPage } from '../../../lib/api/entity/list-first-page'
+
+/** The server-read first pages this document has shown, by key: one seen again comes from the router cache (back/forward). */
+const usedFirstPages = new Set<string>()
+const noSubscription = () => () => {}
 
 export interface EntityListWrapperProps {
   entityType: string
   className?: string
   headerActions?: React.ReactNode // Additional actions to display in the header
+  /** The first page the list route read on the server for a document request (#574): shown instead of requested again. */
+  initialPage?: EntityListFirstPage | null
+  /** Heading and skeleton only, requesting nothing: what the list route shows while its server read streams in. */
+  placeholder?: boolean
 }
 
 export function EntityListWrapper({
   entityType,
   className,
-  headerActions
+  headerActions,
+  initialPage,
+  placeholder
 }: EntityListWrapperProps) {
   const text = useTranslations('entities.wrapper')
   const ui = useTranslations('entities.ui')
@@ -95,9 +106,18 @@ export function EntityListWrapper({
   // The 'as unknown as' is required because TypeScript cannot verify runtime-built schema types
   const { filters, setFilter } = useUrlFilters(filterSchema) as unknown as EntityFiltersReturn
 
+  // The server's first page, once: the route reads it only for a document request (never for a client navigation or a
+  // prefetch), and a page this document already showed comes back only from the router cache, possibly old
+  const [firstPage] = useState(() => (initialPage && !usedFirstPages.has(initialPage.key) ? initialPage : null))
+  useEffect(() => { if (firstPage) usedFirstPages.add(firstPage.key) }, [firstPage])
+  // True while hydrating the server's HTML: the rows stay behind the skeleton then (date cells are formatted in the
+  // server's time zone there and in the browser's here; the empty state has no such text and is in the HTML), and
+  // until the team is known, so rows read in another team are never shown
+  const hydrating = useSyncExternalStore(noSubscription, () => false, () => true)
+
   // Data loading states
-  const [data, setData] = useState<Record<string, unknown>[]>([])
-  const [isInitialLoad, setIsInitialLoad] = useState(true) // Only true for first load
+  const [data, setData] = useState<Record<string, unknown>[]>(firstPage?.data ?? [])
+  const [isInitialLoad, setIsInitialLoad] = useState(!firstPage) // Only true for first load
   const [isSearching, setIsSearching] = useState(false) // Subtle indicator for search
   const [dataError, setDataError] = useState<string | null>(null)
 
@@ -207,7 +227,7 @@ export function EntityListWrapper({
 
   // Load data when config is ready AND filters are synced with URL
   useEffect(() => {
-    if (!entityConfig?.slug || !signedIn || !teamReady) return
+    if (!entityConfig?.slug || !signedIn || !teamReady || placeholder) return
 
     // Wait for filters to sync with URL params before loading
     if (!filtersMatchUrl) return
@@ -219,9 +239,11 @@ export function EntityListWrapper({
     if (isInitial || filtersChanged) {
       prevFiltersKeyRef.current = filtersKey
       hasLoadedRef.current = true
+      // The server's first page is this load when it was read in the team this page acts in; another team's is not shown
+      if (isInitial && firstPage && firstPage.teamId === teamId) return
       loadData(isInitial)
     }
-  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, signedIn, teamReady])
+  }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, signedIn, teamReady, firstPage, teamId, placeholder])
 
   // Handle search input change
   const handleSearch = useCallback((query: string) => {
@@ -401,7 +423,7 @@ export function EntityListWrapper({
       <EntityTable
         entityConfig={entityConfig}
         data={data as Array<{ id: string }>}
-        loading={isInitialLoad}
+        loading={isInitialLoad || (data.length > 0 && (hydrating || !teamReady))}
         selectable={bulkOperationsEnabled}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}

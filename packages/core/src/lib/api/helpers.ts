@@ -506,7 +506,7 @@ export interface MetaParams {
   includeAll: boolean;
 }
 
-export function parseMetaParams(request: NextRequest): MetaParams {
+export function parseMetaParams(request: Pick<NextRequest, 'url'>): MetaParams {
   const url = new URL(request.url);
   const metasParam = url.searchParams.get('metas');
   
@@ -547,7 +547,7 @@ export interface ChildParams {
  * Parse child entities parameters from request URL
  * Supports: child=all, child=audiences, child=audiences,products
  */
-export function parseChildParams(request: NextRequest): ChildParams {
+export function parseChildParams(request: Pick<NextRequest, 'url'>): ChildParams {
   const url = new URL(request.url);
   const childParam = url.searchParams.get('child');
 

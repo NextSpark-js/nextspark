@@ -7,7 +7,7 @@ export const MAX_PAGE_SIZE = 100;
  * Parsea y valida parámetros de paginación.
  * A value that is not a number falls back to the default; the page is at least 1 and the limit is clamped to 1..maxLimit.
  */
-export function parsePaginationParams(request: NextRequest, defaultLimit: number = 10, maxLimit: number = MAX_PAGE_SIZE): {
+export function parsePaginationParams(request: Pick<NextRequest, 'url'>, defaultLimit: number = 10, maxLimit: number = MAX_PAGE_SIZE): {
   page: number;
   limit: number;
   offset: number;

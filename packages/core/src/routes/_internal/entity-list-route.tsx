@@ -12,10 +12,12 @@
  * modules every entity's route forwards `metadata`, `error` and `loading` from.
  */
 
-import type { ComponentType } from 'react'
+import { Suspense, type ComponentType } from 'react'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import { EntityListWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityListWrapper'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
+import { readEntityListFirstPage } from '@nextsparkjs/core/lib/api/entity/list-first-page'
 import { isDashboardEntity } from './entity-dashboard'
 
 /** Props a project's list template receives (the `[entity]` route's, so existing templates keep working). */
@@ -33,6 +35,22 @@ export function createEntityListRoute(config: EntityConfig, Template?: Component
   return async function EntityListRoute({ searchParams }: { searchParams: EntityListTemplateProps['searchParams'] }) {
     if (!isDashboardEntity(config)) notFound()
     if (Template) return <Template params={Promise.resolve({ entity: config.slug })} searchParams={searchParams} />
-    return <EntityListWrapper entityType={config.slug} />
+    // The first page is read on the server with the list API's rules (#574). Behind a boundary of its own, whose fallback is
+    // the list's heading and table skeleton (requesting nothing): the page does not wait for the read, so the entity's
+    // loading skeleton is not shown any longer than before
+    return (
+      <Suspense fallback={<EntityListWrapper entityType={config.slug} placeholder />}>
+        <EntityListWithFirstPage slug={config.slug} searchParams={searchParams} />
+      </Suspense>
+    )
   }
+}
+
+async function EntityListWithFirstPage({ slug, searchParams }: { slug: string; searchParams: EntityListTemplateProps['searchParams'] }) {
+  // Read for a document request only: a client navigation or a prefetch (a fetch, not a navigation, for the browser) reads
+  // nothing and the list requests its rows as before, so no payload in the router cache carries rows read long ago.
+  // A browser that sends no Sec-Fetch-Mode gets the read
+  const mode = (await headers()).get('sec-fetch-mode')
+  const initialPage = mode && mode !== 'navigate' ? null : await readEntityListFirstPage(slug, await searchParams)
+  return <EntityListWrapper entityType={slug} initialPage={initialPage} />
 }

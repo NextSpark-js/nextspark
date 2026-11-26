@@ -972,587 +972,613 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       }
     }
 
-    // Parse request parameters
-    const pagination = parsePaginationParams(request)
-    const metaParams = parseMetaParams(request)
-
-    // Parse field filtering and distinct parameters
-    const url = new URL(request.url)
-    const fieldsParam = url.searchParams.get('fields')
-    const distinctParam = url.searchParams.get('distinct') === 'true'
-
-    // Handle both comma-separated and multiple query params for IDs
-    // Example: ?ids=id1,id2,id3 OR ?ids=id1&ids=id2&ids=id3
-    const idsFromParams = url.searchParams.getAll('ids')
-    const specificIds = idsFromParams.length > 0
-        ? idsFromParams.flatMap(param => param.split(',').map(id => id.trim())).filter(Boolean)
-        : null
-
-    // Parse custom filters (any searchParam that isn't a known param)
-    // Supports both repeated params (?status=a&status=b) and comma-separated (?status=a,b)
-    const customFilters: Record<string, string[]> = {}
-    url.searchParams.forEach((value, key) => {
-      if (!LIST_RESERVED_PARAMS.has(key) && value) {
-        if (!customFilters[key]) {
-          customFilters[key] = []
-        }
-        // Support comma-separated values (e.g., "draft,published" -> ['draft', 'published'])
-        const values = value.includes(',') ? value.split(',').map(v => v.trim()) : [value]
-        customFilters[key].push(...values)
-      }
-    })
-
-    // Build dynamic query from entity configuration
-    const entityConfig = resolution.entityConfig
-
-    // #325: the fields this caller's role may not see. They are also not usable to filter, sort or search, which
-    // would tell the caller their values (the checks below treat them as fields that do not exist).
-    const hiddenFields = await hiddenFieldsFor(entityConfig, userId, teamId, isBypass)
-    const userFilterKeys = Object.keys(customFilters)
-
-    // #114: let plugins / declared EntityConfig.hooks add extra filter
-    // key/value pairs to the effective query (e.g. a business-rule scoping
-    // filter) before the parameter validation below runs. Read hooks shape
-    // the query rather than reject it, so any key one adds flows through the
-    // SAME isEntityField/INVALID_FILTER validation as a user-supplied param.
-    const shapedQuery = await beforeEntityRead(entityConfig.slug, { ...customFilters }, userId ?? undefined)
-    for (const [key, value] of Object.entries(shapedQuery)) {
-      customFilters[key] = Array.isArray(value) ? value.map(String) : [String(value)]
-    }
-
-    // ── #97: reject unknown / unsupported list parameters up front ─────────
-    // Each of these used to degrade silently into a plausible-looking 200
-    // (filter dropped, search ignored, default sort) — indistinguishable from
-    // a correct answer for an automated caller.
-
-    // Custom filter keys must be declared entity fields (or, for
-    // taxonomy-enabled entities, the taxonomy filter params).
-    const taxonomyFilterParams = entityConfig.taxonomies?.enabled ? TAXONOMY_FILTER_PARAMS : []
-    const invalidFilterKeys = Object.keys(customFilters).filter(
-      key => !isEntityField(entityConfig, key) && !taxonomyFilterParams.includes(key)
-        || (userFilterKeys.includes(key) && hiddenFields.has(key))
-    )
-    if (invalidFilterKeys.length > 0) {
-      const response = createApiError(
-        `Unknown filter parameter(s) for ${entityConfig.slug}: ${invalidFilterKeys.join(', ')}`,
-        400,
-        {
-          invalidKeys: invalidFilterKeys,
-          allowedKeys: [...entityConfig.fields.map((f: EntityField) => f.name).filter(name => !hiddenFields.has(name)), ...taxonomyFilterParams],
-        },
-        'INVALID_FILTER'
-      )
-      return addCorsHeaders(response, request)
-    }
-
-    // `search` matches name/title/slug/content, and the fields `searchField` names (a relation select asks for its
-    // titleField, a people list for first name, last name and email): a comma-separated list and/or a repeated
-    // parameter, at most MAX_SEARCH_FIELDS. Every name is checked against the entity's own fields, and an entity with
-    // nothing to search says so instead of returning every row.
-    const searchParam = url.searchParams.get('search')
-    const searchFieldParams = [...new Set(url.searchParams.getAll('searchField').flatMap(value => value.split(',')).map(name => name.trim()).filter(Boolean))]
-    const allowedSearchFields = searchFieldAllowlist(entityConfig).filter(name => !hiddenFields.has(name))
-    if (searchFieldParams.length > MAX_SEARCH_FIELDS) {
-      const response = createApiError(
-        `searchField accepts at most ${MAX_SEARCH_FIELDS} fields, got ${searchFieldParams.length}`,
-        400,
-        { maxFields: MAX_SEARCH_FIELDS, allowedKeys: allowedSearchFields },
-        'TOO_MANY_SEARCH_FIELDS'
-      )
-      return addCorsHeaders(response, request)
-    }
-    // the names written into SQL are the config's own, found by the caller's string, never the caller's string
-    const invalidSearchFields = searchFieldParams.filter(name => !allowedSearchFields.includes(name))
-    if (invalidSearchFields.length > 0) {
-      const response = createApiError(
-        `Unknown search field for ${entityConfig.slug}: ${invalidSearchFields.join(', ')}`,
-        400,
-        { invalidKeys: invalidSearchFields, allowedKeys: allowedSearchFields },
-        'INVALID_SEARCH_FIELD'
-      )
-      return addCorsHeaders(response, request)
-    }
-    const extraSearchFields = allowedSearchFields.filter(name => searchFieldParams.includes(name))
-    const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name) && !hiddenFields.has(name)), ...extraSearchFields])]
-    if (searchParam && searchTermLength(searchParam.trim()) > MAX_SEARCH_TERM_LENGTH) {
-      const response = createApiError(
-        `The search term is too long: at most ${MAX_SEARCH_TERM_LENGTH} characters`,
-        400,
-        { maxLength: MAX_SEARCH_TERM_LENGTH },
-        'SEARCH_TERM_TOO_LONG'
-      )
-      return addCorsHeaders(response, request)
-    }
-    if (searchParam && searchParam.trim() !== '' && searchableFields.length === 0) {
-      const response = createApiError(
-        `Entity ${entityConfig.slug} has no searchable field (${SEARCHABLE_FIELDS.join(', ')}); the search parameter is not supported`,
-        400,
-        { searchableFields: SEARCHABLE_FIELDS },
-        'SEARCH_NOT_SUPPORTED'
-      )
-      return addCorsHeaders(response, request)
-    }
-
-    // `sortBy` (alias `sort`) must be an entity field or a base column — it is
-    // interpolated as an identifier, so this check is also the SQL-injection guard.
-    const sortByParam = url.searchParams.get('sortBy') || url.searchParams.get('sort')
-    if (sortByParam && (hiddenFields.has(sortByParam) || !isEntityField(entityConfig, sortByParam) && !SORTABLE_BASE_FIELDS.includes(sortByParam))) {
-      const response = createApiError(
-        `Invalid sortBy field for ${entityConfig.slug}: ${sortByParam}`,
-        400,
-        { allowedFields: [...SORTABLE_BASE_FIELDS, ...entityConfig.fields.map((f: EntityField) => f.name)].filter(name => !hiddenFields.has(name)) },
-        'INVALID_SORT_FIELD'
-      )
-      return addCorsHeaders(response, request)
-    }
-
-    // Determine which fields to select
-    let fields: string
-    if (fieldsParam && distinctParam) {
-      // For distinct field queries (like relation-prop), handle specially
-      const fieldName = fieldsParam
-
-      // #96: the name is interpolated as a SQL identifier below (and inside
-      // handleDistinctJsonbField), so it must be a declared entity field.
-      if (!isEntityField(entityConfig, fieldName) || hiddenFields.has(fieldName)) {
-        const response = createApiError(
-          `Invalid field for distinct query: ${fieldName}`,
-          400,
-          undefined,
-          'INVALID_FIELD'
-        )
-        return addCorsHeaders(response, request)
-      }
-
-      const isJsonbField = fieldName === 'contentLanguages' || fieldName === 'brandValues' || fieldName === 'hashtags'
-
-      if (isJsonbField) {
-        // JSONB array field - extract elements and return distinct values
-        return handleDistinctJsonbField(entityConfig, fieldName, url, userId, parsePaginationParams(request, 50).limit)
-      } else {
-        // Regular field - return distinct values
-        fields = `DISTINCT "${fieldName}" as value, "${fieldName}" as label, '${entityConfig.slug}' as "entityType"`
-      }
-    } else if (fieldsParam) {
-      // Specific fields requested
-      const requestedFields = fieldsParam.split(',').map(f => f.trim())
-      const validFields = requestedFields.filter(fieldName => isEntityField(entityConfig, fieldName) && !hiddenFields.has(fieldName))
-
-      fields = ['id', ...validFields]
-          .map(fieldName => {
-            const columnName = /[A-Z]/.test(fieldName) ? `"${fieldName}"` : fieldName
-            return `t.${columnName}`
-          })
-          .join(', ')
-    } else {
-      // All fields (default behavior)
-      // Always include system fields (id, userId, teamId, createdAt, updatedAt) even if not in entity fields config
-      // (blocks for builder entities, the soft-delete markers when table.softDelete is on: described once in
-      // portable/response-shape, which the generated API contracts read too)
-      const systemFields = entityResponseSystemColumns(entityConfig, { includeSoftDelete: true })
-
-      const configFields = entityConfig.fields
-          .map((field: EntityField) => {
-            // Add quotes for camelCase fields (any field with uppercase letters)
-            const columnName = /[A-Z]/.test(field.name) ? `"${field.name}"` : field.name
-            return `t.${columnName}`
-          })
-
-      const systemFieldsFormatted = systemFields.map(fieldName => {
-        const columnName = /[A-Z]/.test(fieldName) ? `"${fieldName}"` : fieldName
-        return `t.${columnName}`
-      })
-
-      fields = [...systemFieldsFormatted, ...configFields].join(', ')
-
-      // Add usageCount for patterns entity (computed field)
-      if (entityConfig.slug === 'patterns') {
-        fields += ', COALESCE(pu.usage_count, 0)::int as "usageCount"'
-      }
-    }
-
-    // Build query based on access type and request type
-    let query: string
-    let queryParams: unknown[]
-    let paramIndex = 1
-
-    // Extract date range parameters early so they're available for both main query and count query
-    const fromDate = url.searchParams.get('from')
-    const toDate = url.searchParams.get('to')
-    const dateFieldName = url.searchParams.get('dateField')
-
-    // ===================================================================================
-    // PUBLIC ACCESS LOGIC FOR PUBLISHED CONTENT
-    // ===================================================================================
-    // For public entities (access.public: true) with status=published filter:
-    // - Skip userId filter to allow cross-user access
-    // - Enables blog-style viewing where anyone can read published posts
-    // - Dashboard access (without status=published) still filters by userId
-    //
-    // Security: Only LIST operations with explicit status=published filter skip the filter
-    // - READ by ID still requires userId match (prevents accessing unpublished content)
-    // - CREATE/UPDATE/DELETE always require userId match
-    // ===================================================================================
-    const isPublicEntity = entityConfig.access?.public === true
-    const requestingPublishedOnly = customFilters['status']?.includes('published')
-    const skipUserFilter = isPublicEntity && requestingPublishedOnly
-
-    if (skipUserFilter && process.env.NODE_ENV === 'development') {
-      console.log(`[GenericHandler] Public access mode: skipping userId filter for ${entityConfig.slug} (status=published)`)
-    }
-
-    // Anonymous requests to a public entity have no userId to gate on (the
-    // filter above only ever applies `if (userId && ...)`), so requestingPublishedOnly
-    // was never actually enforced server-side — it only decided whether to skip
-    // an ownership filter that already didn't apply. An unauthenticated caller
-    // could omit `status=published` entirely (or ask for `status=draft`) and see
-    // every row regardless of status, team, or owner (#171). Force the
-    // constraint here instead of trusting the caller's own filter intent.
-    const forcePublishedOnly = isPublicEntity
-      && userId === null
-      && entityConfig.fields.some((f: EntityField) => f.name === 'status')
-    // ...and, for an entity that schedules its items, only those whose publishedAt has come (#542)
-    const publishedAtRule = forcePublishedOnly ? publishedAtClause(entityConfig, 't.') : ''
-
-    // Get table name (uses tableName if specified, otherwise slug)
-    const tableName = getTableName(entityConfig)
-
-    // Parse taxonomy filter early so it's available for all query branches
-    const taxonomyFilter = parseTaxonomyFilterParams(url, entityConfig)
-
-    // Resolve ownership filter early so it's available for all query branches.
-    // Only applies when userId and teamId are both present (authenticated, non-bypass).
-    let ownershipFilter: OwnershipFilterResult = { applies: false }
-    if (userId && teamId) {
-      ownershipFilter = await resolveOwnershipFilter(
-        entityConfig,
-        userId,
-        teamId,
-        isBypass
-      )
-    }
-
-    // If ownership filter applies but no linked record exists, return empty list immediately
-    // to avoid leaking records that belong to other linked entities.
-    if (ownershipFilter.applies && ownershipFilter.value === null) {
-      const paginationMeta = createPaginationMeta(pagination.page, pagination.limit, 0)
-      const response = createApiResponse([], paginationMeta)
-      return addCorsHeaders(response, request)
-    }
-
-    if (specificIds && specificIds.length > 0) {
-      // Query specific IDs - for getting details of selected items
-      const idPlaceholders = specificIds.map(() => `$${paramIndex++}`).join(', ')
-      query = `SELECT ${fields} FROM "${tableName}" t WHERE t.id IN (${idPlaceholders})`
-      queryParams = [...specificIds]
-
-      // Add team filter if team context provided (Phase 2)
-      // Skip for public entities requesting published content (allows cross-team public access)
-      if (teamId) {
-        query += ` AND t."teamId" = $${paramIndex++}`
-        queryParams.push(teamId)
-      }
-
-      // Anonymous public access: force published-only regardless of caller's filters (#171)
-      if (forcePublishedOnly) {
-        query += ` AND t."status" = 'published'${publishedAtRule}`
-      }
-
-      // Add user filter if authenticated and not shared (CASE 1 only)
-      // Skip for public entities requesting published content (e.g., viewing blog posts)
-      // Skip when admin bypass is active (allows cross-team/cross-user access)
-      if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
-        query += ` AND t."userId" = $${paramIndex++}`
-        queryParams.push(userId)
-      }
-
-      // Apply role-based ownership filter if configured
-      if (ownershipFilter.applies && ownershipFilter.value !== null) {
-        query += ` AND t."${ownershipFilter.field}" = $${paramIndex++}`
-        queryParams.push(ownershipFilter.value)
-      }
-
-      // Soft delete filter: hide deleted rows for non-bypass users
-      if (entityConfig.table?.softDelete && !isBypass) {
-        query += ` AND t."deletedAt" IS NULL`
-      }
-    } else if (fieldsParam && distinctParam) {
-      // Distinct field values query
-      const fieldName = fieldsParam
-      const parentId = url.searchParams.get('parentId')
-
-      query = `SELECT ${fields} FROM "${tableName}" t WHERE 1=1`
-      queryParams = []
-
-      // Add team filter if team context provided (Phase 2)
-      // Skip for public entities requesting published content
-      if (teamId) {
-        query += ` AND t."teamId" = $${paramIndex++}`
-        queryParams.push(teamId)
-      }
-
-      // Add parent filter if provided (for child entities)
-      // Convention: child entities use "parentId" column as FK to parent
-      if (parentId) {
-        query += ` AND t."parentId" = $${paramIndex++}`
-        queryParams.push(parentId)
-      }
-
-      // Add user filter if authenticated and not shared (CASE 1 only)
-      // Skip for public entities requesting published content (e.g., viewing blog posts)
-      // Skip when admin bypass is active (allows cross-team/cross-user access)
-      if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
-        query += ` AND t."userId" = $${paramIndex++}`
-        queryParams.push(userId)
-      }
-
-      // Apply role-based ownership filter if configured
-      if (ownershipFilter.applies && ownershipFilter.value !== null) {
-        query += ` AND t."${ownershipFilter.field}" = $${paramIndex++}`
-        queryParams.push(ownershipFilter.value)
-      }
-
-      // Soft delete filter: hide deleted rows for non-bypass users
-      if (entityConfig.table?.softDelete && !isBypass) {
-        query += ` AND t."deletedAt" IS NULL`
-      }
-
-      // Anonymous public access: force published-only regardless of caller's filters (#171)
-      if (forcePublishedOnly) {
-        query += ` AND t."status" = 'published'${publishedAtRule}`
-      }
-
-      query += ` ORDER BY "${fieldName}" ASC LIMIT $${paramIndex++}`
-      queryParams.push(pagination.limit)
-    } else {
-      // Regular list query - combine both logics
-      const whereConditions: string[] = []
-      queryParams = []
-      paramIndex = 1
-
-      // Add team filter if team context provided (Phase 2 - Team Isolation)
-      // This is the PRIMARY isolation mechanism - all entities are isolated by team
-      // Skip for public entities requesting published content (allows cross-team public access)
-      if (teamId) {
-        whereConditions.push(`t."teamId" = $${paramIndex++}`)
-        queryParams.push(teamId)
-      }
-
-      // Add user filter if authenticated AND not shared (secondary filter)
-      // Exception: For public entities with status=published filter, allow cross-user access
-      // This enables blog-style public viewing where anyone can read published posts
-      // Skip when admin bypass is active (allows cross-team/cross-user access)
-      if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
-        // CASE 1: Private data - filter by user within team
-        whereConditions.push(`t."userId" = $${paramIndex++}`)
-        queryParams.push(userId)
-      }
-      // else: CASE 2/3 - Public or shared, no user filter (but still team-filtered)
-      // else: CASE 4 - Admin bypass active, no user filter (see all records)
-
-      // Apply role-based ownership filter if configured
-      if (ownershipFilter.applies && ownershipFilter.value !== null) {
-        whereConditions.push(`t."${ownershipFilter.field}" = $${paramIndex++}`)
-        queryParams.push(ownershipFilter.value)
-      }
-
-      // Soft delete filter: hide deleted rows for non-bypass users
-      if (entityConfig.table?.softDelete && !isBypass) {
-        whereConditions.push(`t."deletedAt" IS NULL`)
-      }
-
-      // Anonymous public access: force published-only regardless of caller's filters (#171)
-      if (forcePublishedOnly) {
-        whereConditions.push(`t."status" = 'published'${publishedAtRule}`)
-      }
-
-      // Add search filter (name, title, slug and content, and the validated `searchField`).
-      // Support for the entity was validated above (SEARCH_NOT_SUPPORTED, INVALID_SEARCH_FIELD): every name here is a field of the entity.
-      if (searchParam && searchParam.trim() !== '' && searchableFields.length > 0) {
-        const searchTerm = searchParam.trim()
-        const searchConditions = searchableFields.map(name => `t."${name.replace(/"/g, '""')}" ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE}`)
-        whereConditions.push(`(${searchConditions.join(' OR ')})`)
-        queryParams.push(containsPattern(searchTerm))
-        paramIndex++
-      }
-
-      // Add date range filters (from/to) for specified date field
-      if (dateFieldName && !hiddenFields.has(dateFieldName) && (fromDate || toDate)) {
-        const field = entityConfig.fields.find((f: EntityField) => f.name === dateFieldName)
-
-        // Validate field exists and is a date/datetime type
-        if (field && (field.type === 'datetime' || field.type === 'date')) {
-          if (fromDate) {
-            whereConditions.push(`t."${dateFieldName}" >= $${paramIndex++}`)
-            queryParams.push(fromDate)
-          }
-          if (toDate) {
-            whereConditions.push(`t."${dateFieldName}" <= $${paramIndex++}`)
-            queryParams.push(toDate)
-          }
-        }
-      }
-
-      // Add custom filters (keys were validated against entityConfig.fields
-      // above; taxonomy params are not fields and are handled separately)
-      Object.entries(customFilters).forEach(([key, values]) => {
-        const field = entityConfig.fields.find((f: EntityField) => f.name === key)
-        if (field && values.length > 0) {
-          // Use quoted column name for camelCase fields
-          const columnName = `"${key}"`
-
-          // Special handling for JSONB array fields (e.g., socialPlatformId)
-          if (field.type === 'relation-multi' || key === 'socialPlatformId') {
-            // Multiple values = OR logic: platform = A OR platform = B
-            const orConditions = values.map(() => {
-              const condition = `t.${columnName}::jsonb @> $${paramIndex++}::jsonb`
-              return condition
-            })
-            values.forEach(value => {
-              queryParams.push(JSON.stringify([value]))
-            })
-            whereConditions.push(`(${orConditions.join(' OR ')})`)
-          } else if (field.type === 'date' || field.type === 'datetime') {
-            // #97: a bare calendar day compared with `=` against a
-            // timestamp(tz) column never matches (the column carries a
-            // time-of-day). Treat `?field=YYYY-MM-DD` as the whole day:
-            // `>= day AND < day + 1`. Values with a time component keep
-            // exact equality — the caller asked for a precise instant.
-            const orConditions = values.map(value => {
-              if (BARE_DATE_RE.test(value)) {
-                const lower = paramIndex++
-                const upper = paramIndex++
-                queryParams.push(value, value)
-                return `(t.${columnName} >= $${lower}::date AND t.${columnName} < $${upper}::date + 1)`
-              }
-              queryParams.push(value)
-              return `t.${columnName} = $${paramIndex++}`
-            })
-            whereConditions.push(`(${orConditions.join(' OR ')})`)
-          } else {
-            // Multiple values = OR logic: field = A OR field = B
-            const orConditions = values.map(() => {
-              const condition = `t.${columnName} = $${paramIndex++}`
-              return condition
-            })
-            values.forEach(value => {
-              queryParams.push(value)
-            })
-            whereConditions.push(`(${orConditions.join(' OR ')})`)
-          }
-        }
-      })
-
-      // Add taxonomy filter if applicable (e.g., ?categoryId=xxx or ?taxonomyId=xxx)
-      if (taxonomyFilter?.taxonomyId) {
-        whereConditions.push(`EXISTS (
-          SELECT 1 FROM entity_taxonomy_relations etr
-          WHERE etr."entityId" = t.id::text
-            AND etr."entityType" = '${entityConfig.slug}'
-            AND etr."taxonomyId" = $${paramIndex++}
-        )`)
-        queryParams.push(taxonomyFilter.taxonomyId)
-      }
-
-      const whereClause = whereConditions.length > 0
-          ? `WHERE ${whereConditions.join(' AND ')}`
-          : ''
-
-      // Add LEFT JOIN for patterns entity to include usageCount
-      let joinClause = ''
-      if (entityConfig.slug === 'patterns') {
-        joinClause = `
-          LEFT JOIN (
-            SELECT "patternId", COUNT(*) as usage_count
-            FROM pattern_usages
-            GROUP BY "patternId"
-          ) pu ON t.id = pu."patternId"
-        `
-      }
-
-      // sortBy was validated against entity fields / base columns above
-      // (INVALID_SORT_FIELD) — that check is what makes this interpolation safe.
-      const sortOrderRaw = url.searchParams.get('sortOrder') || url.searchParams.get('order')
-      const sortOrderParam = sortOrderRaw?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
-      const orderByClause = sortByParam
-        ? `t."${sortByParam}" ${sortOrderParam}${nullsLast(sortByParam)}`
-        : 't."createdAt" DESC'
-
-      // Use COUNT(*) OVER() window function to get total count in single query
-      // This eliminates a separate COUNT query, saving ~230ms per request
-      query = `
-        SELECT ${fields}, COUNT(*) OVER() as total_count
-        FROM "${tableName}" t
-        ${joinClause}
-        ${whereClause}
-        ORDER BY ${orderByClause}
-        LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-      `
-      queryParams.push(pagination.limit, pagination.offset)
-    }
-
-    const rawData = await queryWithRLS(query, queryParams, userId)
-
-    // Extract total count from first row (window function includes it in every row)
-    // If no results, total is 0
-    const total = rawData.length > 0 ? Number((rawData[0] as Record<string, unknown>).total_count) || 0 : 0
-
-    // Remove total_count from data (it was only needed for pagination)
-    const data = (rawData as Record<string, unknown>[]).map((row) => {
-      const { total_count, ...rest } = row
-      return rest
-    })
-    const paginationMeta = createPaginationMeta(pagination.page, pagination.limit, total)
-
-    // Handle metadata inclusion (only for authenticated users)
-    let dataWithMeta = data
-    if (metaParams.includeMetadata && userId) {
-      dataWithMeta = await includeEntityMetadata(
-          resolution.entityName,
-          data as Array<{ id: string }>,
-          metaParams,
-          userId
-      )
-    }
-
-    // Handle child entities inclusion (only for authenticated users)
-    const childParams = parseChildParams(request)
-    let dataWithChild = dataWithMeta
-    if (childParams.includeChildren && userId) {
-      dataWithChild = await includeEntityChildren(
-          resolution.entityName,
-          dataWithMeta as Array<{ id: string }>,
-          childParams,
-          userId,
-          resolution.entityConfig
-      )
-    }
-
-    // Handle taxonomy inclusion (for entities with taxonomies.enabled)
-    let dataWithTaxonomies = dataWithChild
-    if (entityConfig.taxonomies?.enabled) {
-      dataWithTaxonomies = await includeTaxonomiesInData(
-        entityConfig,
-        dataWithChild as Array<{ id: string }>,
-        userId
-      )
-    }
-
-    // Filter public fields for unauthenticated requests
-    const finalData = filterPublicFields(dataWithTaxonomies, entityConfig, userId)
-
-    // #114: let plugins / declared EntityConfig.hooks shape or redact the
-    // final result set before it's returned.
-    const shapedData = await afterEntityRead(entityConfig.slug, finalData, { ...customFilters }, userId ?? undefined)
-
-    const response = createApiResponse(omitHiddenFields(shapedData, hiddenFields), paginationMeta)
-    return addCorsHeaders(response, request)
-
+    // Read the page with the same rules the dashboard's server read uses (listEntityRecords)
+    const page = await listEntityRecords({ entityConfig: resolution.entityConfig, entityName: resolution.entityName, url: new URL(request.url), userId, teamId, isBypass, request })
+    if (!('meta' in page)) return page
+    return addCorsHeaders(createApiResponse(page.data, page.meta), request)
   } catch (error) {
     console.error('Error in generic list handler:', error)
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response, request)
   }
+}
+
+/** One page of a list, as `GET /api/v1/<slug>` answers it (`data`, and `info` without its timestamp). */
+export interface ListEntityPage {
+  data: unknown[]
+  meta: ReturnType<typeof createPaginationMeta>
+}
+
+/**
+ * The read behind `GET /api/v1/<slug>` once the caller is known: the list parameters of `url` (pagination, filters,
+ * search, sort, `fields`, `distinct`, `ids`), the fields the caller's role may not see (#325), the read hooks, and the
+ * team, owner, ownership, soft-delete and published-only filters. The handler resolves who asks (session or API key,
+ * team context, bypass, the `<slug>.list` permission) and then calls this; the dashboard list page reads its first page
+ * through the same function (readEntityListFirstPage, #574), so both answer with one set of rules.
+ *
+ * Returns the page, or the response a rejected parameter gets (`request` only sets its CORS headers).
+ */
+export async function listEntityRecords({ entityConfig, entityName, url, userId, teamId, isBypass, request }: {
+  entityConfig: EntityConfig
+  entityName: string
+  url: URL
+  userId: string | null
+  teamId: string | null
+  isBypass: boolean
+  request?: NextRequest
+}): Promise<ListEntityPage | NextResponse> {
+  const params = { url: url.href }
+
+  // Parse request parameters
+  const pagination = parsePaginationParams(params)
+  const metaParams = parseMetaParams(params)
+
+  // Parse field filtering and distinct parameters
+  const fieldsParam = url.searchParams.get('fields')
+  const distinctParam = url.searchParams.get('distinct') === 'true'
+
+  // Handle both comma-separated and multiple query params for IDs
+  // Example: ?ids=id1,id2,id3 OR ?ids=id1&ids=id2&ids=id3
+  const idsFromParams = url.searchParams.getAll('ids')
+  const specificIds = idsFromParams.length > 0
+      ? idsFromParams.flatMap(param => param.split(',').map(id => id.trim())).filter(Boolean)
+      : null
+
+  // Parse custom filters (any searchParam that isn't a known param)
+  // Supports both repeated params (?status=a&status=b) and comma-separated (?status=a,b)
+  const customFilters: Record<string, string[]> = {}
+  url.searchParams.forEach((value, key) => {
+    if (!LIST_RESERVED_PARAMS.has(key) && value) {
+      if (!customFilters[key]) {
+        customFilters[key] = []
+      }
+      // Support comma-separated values (e.g., "draft,published" -> ['draft', 'published'])
+      const values = value.includes(',') ? value.split(',').map(v => v.trim()) : [value]
+      customFilters[key].push(...values)
+    }
+  })
+
+  // Build dynamic query from entity configuration
+
+  // #325: the fields this caller's role may not see. They are also not usable to filter, sort or search, which
+  // would tell the caller their values (the checks below treat them as fields that do not exist).
+  const hiddenFields = await hiddenFieldsFor(entityConfig, userId, teamId, isBypass)
+  const userFilterKeys = Object.keys(customFilters)
+
+  // #114: let plugins / declared EntityConfig.hooks add extra filter
+  // key/value pairs to the effective query (e.g. a business-rule scoping
+  // filter) before the parameter validation below runs. Read hooks shape
+  // the query rather than reject it, so any key one adds flows through the
+  // SAME isEntityField/INVALID_FILTER validation as a user-supplied param.
+  const shapedQuery = await beforeEntityRead(entityConfig.slug, { ...customFilters }, userId ?? undefined)
+  for (const [key, value] of Object.entries(shapedQuery)) {
+    customFilters[key] = Array.isArray(value) ? value.map(String) : [String(value)]
+  }
+
+  // ── #97: reject unknown / unsupported list parameters up front ─────────
+  // Each of these used to degrade silently into a plausible-looking 200
+  // (filter dropped, search ignored, default sort) — indistinguishable from
+  // a correct answer for an automated caller.
+
+  // Custom filter keys must be declared entity fields (or, for
+  // taxonomy-enabled entities, the taxonomy filter params).
+  const taxonomyFilterParams = entityConfig.taxonomies?.enabled ? TAXONOMY_FILTER_PARAMS : []
+  const invalidFilterKeys = Object.keys(customFilters).filter(
+    key => !isEntityField(entityConfig, key) && !taxonomyFilterParams.includes(key)
+      || (userFilterKeys.includes(key) && hiddenFields.has(key))
+  )
+  if (invalidFilterKeys.length > 0) {
+    const response = createApiError(
+      `Unknown filter parameter(s) for ${entityConfig.slug}: ${invalidFilterKeys.join(', ')}`,
+      400,
+      {
+        invalidKeys: invalidFilterKeys,
+        allowedKeys: [...entityConfig.fields.map((f: EntityField) => f.name).filter(name => !hiddenFields.has(name)), ...taxonomyFilterParams],
+      },
+      'INVALID_FILTER'
+    )
+    return addCorsHeaders(response, request)
+  }
+
+  // `search` matches name/title/slug/content, and the fields `searchField` names (a relation select asks for its
+  // titleField, a people list for first name, last name and email): a comma-separated list and/or a repeated
+  // parameter, at most MAX_SEARCH_FIELDS. Every name is checked against the entity's own fields, and an entity with
+  // nothing to search says so instead of returning every row.
+  const searchParam = url.searchParams.get('search')
+  const searchFieldParams = [...new Set(url.searchParams.getAll('searchField').flatMap(value => value.split(',')).map(name => name.trim()).filter(Boolean))]
+  const allowedSearchFields = searchFieldAllowlist(entityConfig).filter(name => !hiddenFields.has(name))
+  if (searchFieldParams.length > MAX_SEARCH_FIELDS) {
+    const response = createApiError(
+      `searchField accepts at most ${MAX_SEARCH_FIELDS} fields, got ${searchFieldParams.length}`,
+      400,
+      { maxFields: MAX_SEARCH_FIELDS, allowedKeys: allowedSearchFields },
+      'TOO_MANY_SEARCH_FIELDS'
+    )
+    return addCorsHeaders(response, request)
+  }
+  // the names written into SQL are the config's own, found by the caller's string, never the caller's string
+  const invalidSearchFields = searchFieldParams.filter(name => !allowedSearchFields.includes(name))
+  if (invalidSearchFields.length > 0) {
+    const response = createApiError(
+      `Unknown search field for ${entityConfig.slug}: ${invalidSearchFields.join(', ')}`,
+      400,
+      { invalidKeys: invalidSearchFields, allowedKeys: allowedSearchFields },
+      'INVALID_SEARCH_FIELD'
+    )
+    return addCorsHeaders(response, request)
+  }
+  const extraSearchFields = allowedSearchFields.filter(name => searchFieldParams.includes(name))
+  const searchableFields = [...new Set([...SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name) && !hiddenFields.has(name)), ...extraSearchFields])]
+  if (searchParam && searchTermLength(searchParam.trim()) > MAX_SEARCH_TERM_LENGTH) {
+    const response = createApiError(
+      `The search term is too long: at most ${MAX_SEARCH_TERM_LENGTH} characters`,
+      400,
+      { maxLength: MAX_SEARCH_TERM_LENGTH },
+      'SEARCH_TERM_TOO_LONG'
+    )
+    return addCorsHeaders(response, request)
+  }
+  if (searchParam && searchParam.trim() !== '' && searchableFields.length === 0) {
+    const response = createApiError(
+      `Entity ${entityConfig.slug} has no searchable field (${SEARCHABLE_FIELDS.join(', ')}); the search parameter is not supported`,
+      400,
+      { searchableFields: SEARCHABLE_FIELDS },
+      'SEARCH_NOT_SUPPORTED'
+    )
+    return addCorsHeaders(response, request)
+  }
+
+  // `sortBy` (alias `sort`) must be an entity field or a base column — it is
+  // interpolated as an identifier, so this check is also the SQL-injection guard.
+  const sortByParam = url.searchParams.get('sortBy') || url.searchParams.get('sort')
+  if (sortByParam && (hiddenFields.has(sortByParam) || !isEntityField(entityConfig, sortByParam) && !SORTABLE_BASE_FIELDS.includes(sortByParam))) {
+    const response = createApiError(
+      `Invalid sortBy field for ${entityConfig.slug}: ${sortByParam}`,
+      400,
+      { allowedFields: [...SORTABLE_BASE_FIELDS, ...entityConfig.fields.map((f: EntityField) => f.name)].filter(name => !hiddenFields.has(name)) },
+      'INVALID_SORT_FIELD'
+    )
+    return addCorsHeaders(response, request)
+  }
+
+  // Determine which fields to select
+  let fields: string
+  if (fieldsParam && distinctParam) {
+    // For distinct field queries (like relation-prop), handle specially
+    const fieldName = fieldsParam
+
+    // #96: the name is interpolated as a SQL identifier below (and inside
+    // handleDistinctJsonbField), so it must be a declared entity field.
+    if (!isEntityField(entityConfig, fieldName) || hiddenFields.has(fieldName)) {
+      const response = createApiError(
+        `Invalid field for distinct query: ${fieldName}`,
+        400,
+        undefined,
+        'INVALID_FIELD'
+      )
+      return addCorsHeaders(response, request)
+    }
+
+    const isJsonbField = fieldName === 'contentLanguages' || fieldName === 'brandValues' || fieldName === 'hashtags'
+
+    if (isJsonbField) {
+      // JSONB array field - extract elements and return distinct values
+      return handleDistinctJsonbField(entityConfig, fieldName, url, userId, parsePaginationParams(params, 50).limit)
+    } else {
+      // Regular field - return distinct values
+      fields = `DISTINCT "${fieldName}" as value, "${fieldName}" as label, '${entityConfig.slug}' as "entityType"`
+    }
+  } else if (fieldsParam) {
+    // Specific fields requested
+    const requestedFields = fieldsParam.split(',').map(f => f.trim())
+    const validFields = requestedFields.filter(fieldName => isEntityField(entityConfig, fieldName) && !hiddenFields.has(fieldName))
+
+    fields = ['id', ...validFields]
+        .map(fieldName => {
+          const columnName = /[A-Z]/.test(fieldName) ? `"${fieldName}"` : fieldName
+          return `t.${columnName}`
+        })
+        .join(', ')
+  } else {
+    // All fields (default behavior)
+    // Always include system fields (id, userId, teamId, createdAt, updatedAt) even if not in entity fields config
+    // (blocks for builder entities, the soft-delete markers when table.softDelete is on: described once in
+    // portable/response-shape, which the generated API contracts read too)
+    const systemFields = entityResponseSystemColumns(entityConfig, { includeSoftDelete: true })
+
+    const configFields = entityConfig.fields
+        .map((field: EntityField) => {
+          // Add quotes for camelCase fields (any field with uppercase letters)
+          const columnName = /[A-Z]/.test(field.name) ? `"${field.name}"` : field.name
+          return `t.${columnName}`
+        })
+
+    const systemFieldsFormatted = systemFields.map(fieldName => {
+      const columnName = /[A-Z]/.test(fieldName) ? `"${fieldName}"` : fieldName
+      return `t.${columnName}`
+    })
+
+    fields = [...systemFieldsFormatted, ...configFields].join(', ')
+
+    // Add usageCount for patterns entity (computed field)
+    if (entityConfig.slug === 'patterns') {
+      fields += ', COALESCE(pu.usage_count, 0)::int as "usageCount"'
+    }
+  }
+
+  // Build query based on access type and request type
+  let query: string
+  let queryParams: unknown[]
+  let paramIndex = 1
+
+  // Extract date range parameters early so they're available for both main query and count query
+  const fromDate = url.searchParams.get('from')
+  const toDate = url.searchParams.get('to')
+  const dateFieldName = url.searchParams.get('dateField')
+
+  // ===================================================================================
+  // PUBLIC ACCESS LOGIC FOR PUBLISHED CONTENT
+  // ===================================================================================
+  // For public entities (access.public: true) with status=published filter:
+  // - Skip userId filter to allow cross-user access
+  // - Enables blog-style viewing where anyone can read published posts
+  // - Dashboard access (without status=published) still filters by userId
+  //
+  // Security: Only LIST operations with explicit status=published filter skip the filter
+  // - READ by ID still requires userId match (prevents accessing unpublished content)
+  // - CREATE/UPDATE/DELETE always require userId match
+  // ===================================================================================
+  const isPublicEntity = entityConfig.access?.public === true
+  const requestingPublishedOnly = customFilters['status']?.includes('published')
+  const skipUserFilter = isPublicEntity && requestingPublishedOnly
+
+  if (skipUserFilter && process.env.NODE_ENV === 'development') {
+    console.log(`[GenericHandler] Public access mode: skipping userId filter for ${entityConfig.slug} (status=published)`)
+  }
+
+  // Anonymous requests to a public entity have no userId to gate on (the
+  // filter above only ever applies `if (userId && ...)`), so requestingPublishedOnly
+  // was never actually enforced server-side — it only decided whether to skip
+  // an ownership filter that already didn't apply. An unauthenticated caller
+  // could omit `status=published` entirely (or ask for `status=draft`) and see
+  // every row regardless of status, team, or owner (#171). Force the
+  // constraint here instead of trusting the caller's own filter intent.
+  const forcePublishedOnly = isPublicEntity
+    && userId === null
+    && entityConfig.fields.some((f: EntityField) => f.name === 'status')
+  // ...and, for an entity that schedules its items, only those whose publishedAt has come (#542)
+  const publishedAtRule = forcePublishedOnly ? publishedAtClause(entityConfig, 't.') : ''
+
+  // Get table name (uses tableName if specified, otherwise slug)
+  const tableName = getTableName(entityConfig)
+
+  // Parse taxonomy filter early so it's available for all query branches
+  const taxonomyFilter = parseTaxonomyFilterParams(url, entityConfig)
+
+  // Resolve ownership filter early so it's available for all query branches.
+  // Only applies when userId and teamId are both present (authenticated, non-bypass).
+  let ownershipFilter: OwnershipFilterResult = { applies: false }
+  if (userId && teamId) {
+    ownershipFilter = await resolveOwnershipFilter(
+      entityConfig,
+      userId,
+      teamId,
+      isBypass
+    )
+  }
+
+  // If ownership filter applies but no linked record exists, return empty list immediately
+  // to avoid leaking records that belong to other linked entities.
+  if (ownershipFilter.applies && ownershipFilter.value === null) {
+    return { data: [], meta: createPaginationMeta(pagination.page, pagination.limit, 0) }
+  }
+
+  if (specificIds && specificIds.length > 0) {
+    // Query specific IDs - for getting details of selected items
+    const idPlaceholders = specificIds.map(() => `$${paramIndex++}`).join(', ')
+    query = `SELECT ${fields} FROM "${tableName}" t WHERE t.id IN (${idPlaceholders})`
+    queryParams = [...specificIds]
+
+    // Add team filter if team context provided (Phase 2)
+    // Skip for public entities requesting published content (allows cross-team public access)
+    if (teamId) {
+      query += ` AND t."teamId" = $${paramIndex++}`
+      queryParams.push(teamId)
+    }
+
+    // Anonymous public access: force published-only regardless of caller's filters (#171)
+    if (forcePublishedOnly) {
+      query += ` AND t."status" = 'published'${publishedAtRule}`
+    }
+
+    // Add user filter if authenticated and not shared (CASE 1 only)
+    // Skip for public entities requesting published content (e.g., viewing blog posts)
+    // Skip when admin bypass is active (allows cross-team/cross-user access)
+    if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
+      query += ` AND t."userId" = $${paramIndex++}`
+      queryParams.push(userId)
+    }
+
+    // Apply role-based ownership filter if configured
+    if (ownershipFilter.applies && ownershipFilter.value !== null) {
+      query += ` AND t."${ownershipFilter.field}" = $${paramIndex++}`
+      queryParams.push(ownershipFilter.value)
+    }
+
+    // Soft delete filter: hide deleted rows for non-bypass users
+    if (entityConfig.table?.softDelete && !isBypass) {
+      query += ` AND t."deletedAt" IS NULL`
+    }
+  } else if (fieldsParam && distinctParam) {
+    // Distinct field values query
+    const fieldName = fieldsParam
+    const parentId = url.searchParams.get('parentId')
+
+    query = `SELECT ${fields} FROM "${tableName}" t WHERE 1=1`
+    queryParams = []
+
+    // Add team filter if team context provided (Phase 2)
+    // Skip for public entities requesting published content
+    if (teamId) {
+      query += ` AND t."teamId" = $${paramIndex++}`
+      queryParams.push(teamId)
+    }
+
+    // Add parent filter if provided (for child entities)
+    // Convention: child entities use "parentId" column as FK to parent
+    if (parentId) {
+      query += ` AND t."parentId" = $${paramIndex++}`
+      queryParams.push(parentId)
+    }
+
+    // Add user filter if authenticated and not shared (CASE 1 only)
+    // Skip for public entities requesting published content (e.g., viewing blog posts)
+    // Skip when admin bypass is active (allows cross-team/cross-user access)
+    if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
+      query += ` AND t."userId" = $${paramIndex++}`
+      queryParams.push(userId)
+    }
+
+    // Apply role-based ownership filter if configured
+    if (ownershipFilter.applies && ownershipFilter.value !== null) {
+      query += ` AND t."${ownershipFilter.field}" = $${paramIndex++}`
+      queryParams.push(ownershipFilter.value)
+    }
+
+    // Soft delete filter: hide deleted rows for non-bypass users
+    if (entityConfig.table?.softDelete && !isBypass) {
+      query += ` AND t."deletedAt" IS NULL`
+    }
+
+    // Anonymous public access: force published-only regardless of caller's filters (#171)
+    if (forcePublishedOnly) {
+      query += ` AND t."status" = 'published'${publishedAtRule}`
+    }
+
+    query += ` ORDER BY "${fieldName}" ASC LIMIT $${paramIndex++}`
+    queryParams.push(pagination.limit)
+  } else {
+    // Regular list query - combine both logics
+    const whereConditions: string[] = []
+    queryParams = []
+    paramIndex = 1
+
+    // Add team filter if team context provided (Phase 2 - Team Isolation)
+    // This is the PRIMARY isolation mechanism - all entities are isolated by team
+    // Skip for public entities requesting published content (allows cross-team public access)
+    if (teamId) {
+      whereConditions.push(`t."teamId" = $${paramIndex++}`)
+      queryParams.push(teamId)
+    }
+
+    // Add user filter if authenticated AND not shared (secondary filter)
+    // Exception: For public entities with status=published filter, allow cross-user access
+    // This enables blog-style public viewing where anyone can read published posts
+    // Skip when admin bypass is active (allows cross-team/cross-user access)
+    if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
+      // CASE 1: Private data - filter by user within team
+      whereConditions.push(`t."userId" = $${paramIndex++}`)
+      queryParams.push(userId)
+    }
+    // else: CASE 2/3 - Public or shared, no user filter (but still team-filtered)
+    // else: CASE 4 - Admin bypass active, no user filter (see all records)
+
+    // Apply role-based ownership filter if configured
+    if (ownershipFilter.applies && ownershipFilter.value !== null) {
+      whereConditions.push(`t."${ownershipFilter.field}" = $${paramIndex++}`)
+      queryParams.push(ownershipFilter.value)
+    }
+
+    // Soft delete filter: hide deleted rows for non-bypass users
+    if (entityConfig.table?.softDelete && !isBypass) {
+      whereConditions.push(`t."deletedAt" IS NULL`)
+    }
+
+    // Anonymous public access: force published-only regardless of caller's filters (#171)
+    if (forcePublishedOnly) {
+      whereConditions.push(`t."status" = 'published'${publishedAtRule}`)
+    }
+
+    // Add search filter (name, title, slug and content, and the validated `searchField`).
+    // Support for the entity was validated above (SEARCH_NOT_SUPPORTED, INVALID_SEARCH_FIELD): every name here is a field of the entity.
+    if (searchParam && searchParam.trim() !== '' && searchableFields.length > 0) {
+      const searchTerm = searchParam.trim()
+      const searchConditions = searchableFields.map(name => `t."${name.replace(/"/g, '""')}" ILIKE $${paramIndex} ${LIKE_ESCAPE_CLAUSE}`)
+      whereConditions.push(`(${searchConditions.join(' OR ')})`)
+      queryParams.push(containsPattern(searchTerm))
+      paramIndex++
+    }
+
+    // Add date range filters (from/to) for specified date field
+    if (dateFieldName && !hiddenFields.has(dateFieldName) && (fromDate || toDate)) {
+      const field = entityConfig.fields.find((f: EntityField) => f.name === dateFieldName)
+
+      // Validate field exists and is a date/datetime type
+      if (field && (field.type === 'datetime' || field.type === 'date')) {
+        if (fromDate) {
+          whereConditions.push(`t."${dateFieldName}" >= $${paramIndex++}`)
+          queryParams.push(fromDate)
+        }
+        if (toDate) {
+          whereConditions.push(`t."${dateFieldName}" <= $${paramIndex++}`)
+          queryParams.push(toDate)
+        }
+      }
+    }
+
+    // Add custom filters (keys were validated against entityConfig.fields
+    // above; taxonomy params are not fields and are handled separately)
+    Object.entries(customFilters).forEach(([key, values]) => {
+      const field = entityConfig.fields.find((f: EntityField) => f.name === key)
+      if (field && values.length > 0) {
+        // Use quoted column name for camelCase fields
+        const columnName = `"${key}"`
+
+        // Special handling for JSONB array fields (e.g., socialPlatformId)
+        if (field.type === 'relation-multi' || key === 'socialPlatformId') {
+          // Multiple values = OR logic: platform = A OR platform = B
+          const orConditions = values.map(() => {
+            const condition = `t.${columnName}::jsonb @> $${paramIndex++}::jsonb`
+            return condition
+          })
+          values.forEach(value => {
+            queryParams.push(JSON.stringify([value]))
+          })
+          whereConditions.push(`(${orConditions.join(' OR ')})`)
+        } else if (field.type === 'date' || field.type === 'datetime') {
+          // #97: a bare calendar day compared with `=` against a
+          // timestamp(tz) column never matches (the column carries a
+          // time-of-day). Treat `?field=YYYY-MM-DD` as the whole day:
+          // `>= day AND < day + 1`. Values with a time component keep
+          // exact equality — the caller asked for a precise instant.
+          const orConditions = values.map(value => {
+            if (BARE_DATE_RE.test(value)) {
+              const lower = paramIndex++
+              const upper = paramIndex++
+              queryParams.push(value, value)
+              return `(t.${columnName} >= $${lower}::date AND t.${columnName} < $${upper}::date + 1)`
+            }
+            queryParams.push(value)
+            return `t.${columnName} = $${paramIndex++}`
+          })
+          whereConditions.push(`(${orConditions.join(' OR ')})`)
+        } else {
+          // Multiple values = OR logic: field = A OR field = B
+          const orConditions = values.map(() => {
+            const condition = `t.${columnName} = $${paramIndex++}`
+            return condition
+          })
+          values.forEach(value => {
+            queryParams.push(value)
+          })
+          whereConditions.push(`(${orConditions.join(' OR ')})`)
+        }
+      }
+    })
+
+    // Add taxonomy filter if applicable (e.g., ?categoryId=xxx or ?taxonomyId=xxx)
+    if (taxonomyFilter?.taxonomyId) {
+      whereConditions.push(`EXISTS (
+        SELECT 1 FROM entity_taxonomy_relations etr
+        WHERE etr."entityId" = t.id::text
+          AND etr."entityType" = '${entityConfig.slug}'
+          AND etr."taxonomyId" = $${paramIndex++}
+      )`)
+      queryParams.push(taxonomyFilter.taxonomyId)
+    }
+
+    const whereClause = whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(' AND ')}`
+        : ''
+
+    // Add LEFT JOIN for patterns entity to include usageCount
+    let joinClause = ''
+    if (entityConfig.slug === 'patterns') {
+      joinClause = `
+        LEFT JOIN (
+          SELECT "patternId", COUNT(*) as usage_count
+          FROM pattern_usages
+          GROUP BY "patternId"
+        ) pu ON t.id = pu."patternId"
+      `
+    }
+
+    // sortBy was validated against entity fields / base columns above
+    // (INVALID_SORT_FIELD) — that check is what makes this interpolation safe.
+    const sortOrderRaw = url.searchParams.get('sortOrder') || url.searchParams.get('order')
+    const sortOrderParam = sortOrderRaw?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+    const orderByClause = sortByParam
+      ? `t."${sortByParam}" ${sortOrderParam}${nullsLast(sortByParam)}`
+      : 't."createdAt" DESC'
+
+    // Use COUNT(*) OVER() window function to get total count in single query
+    // This eliminates a separate COUNT query, saving ~230ms per request
+    query = `
+      SELECT ${fields}, COUNT(*) OVER() as total_count
+      FROM "${tableName}" t
+      ${joinClause}
+      ${whereClause}
+      ORDER BY ${orderByClause}
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+    `
+    queryParams.push(pagination.limit, pagination.offset)
+  }
+
+  const rawData = await queryWithRLS(query, queryParams, userId)
+
+  // Extract total count from first row (window function includes it in every row)
+  // If no results, total is 0
+  const total = rawData.length > 0 ? Number((rawData[0] as Record<string, unknown>).total_count) || 0 : 0
+
+  // Remove total_count from data (it was only needed for pagination)
+  const data = (rawData as Record<string, unknown>[]).map((row) => {
+    const { total_count, ...rest } = row
+    return rest
+  })
+  const paginationMeta = createPaginationMeta(pagination.page, pagination.limit, total)
+
+  // Handle metadata inclusion (only for authenticated users)
+  let dataWithMeta = data
+  if (metaParams.includeMetadata && userId) {
+    dataWithMeta = await includeEntityMetadata(
+        entityName,
+        data as Array<{ id: string }>,
+        metaParams,
+        userId
+    )
+  }
+
+  // Handle child entities inclusion (only for authenticated users)
+  const childParams = parseChildParams(params)
+  let dataWithChild = dataWithMeta
+  if (childParams.includeChildren && userId) {
+    dataWithChild = await includeEntityChildren(
+        entityName,
+        dataWithMeta as Array<{ id: string }>,
+        childParams,
+        userId,
+        entityConfig
+    )
+  }
+
+  // Handle taxonomy inclusion (for entities with taxonomies.enabled)
+  let dataWithTaxonomies = dataWithChild
+  if (entityConfig.taxonomies?.enabled) {
+    dataWithTaxonomies = await includeTaxonomiesInData(
+      entityConfig,
+      dataWithChild as Array<{ id: string }>,
+      userId
+    )
+  }
+
+  // Filter public fields for unauthenticated requests
+  const finalData = filterPublicFields(dataWithTaxonomies, entityConfig, userId)
+
+  // #114: let plugins / declared EntityConfig.hooks shape or redact the
+  // final result set before it's returned.
+  const shapedData = await afterEntityRead(entityConfig.slug, finalData, { ...customFilters }, userId ?? undefined)
+
+  return { data: omitHiddenFields(shapedData, hiddenFields), meta: paginationMeta }
 }
 
 /**
