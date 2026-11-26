@@ -37,5 +37,7 @@ test('the teams heading and description are there while the teams load, with the
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('teams.title')
   expect(screen.getByText('teams.description')).not.toBeNull()
   expect(container.querySelector('[role="status"]')).not.toBeNull()
-  expect(screen.queryByText('teams.yourTeamsDescription')).toBeNull()
+  // the card header (the largest text of the page) is there too; only the team rows wait
+  expect(screen.getByText('teams.yourTeamsDescription')).not.toBeNull()
+  expect(screen.queryByText('teams.noTeams')).toBeNull()
 })

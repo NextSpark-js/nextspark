@@ -73,6 +73,19 @@ function TeamsSettingsPage() {
     </header>
   )
 
+  const loading = (
+    <div
+      className="flex flex-col items-center justify-center py-12 gap-3"
+      role="status"
+      data-cy={sel('settings.teams.loading')}
+    >
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="text-sm text-muted-foreground">
+        {tTeams('messages.loading')}
+      </div>
+    </div>
+  )
+
   return (
     <>
       <div
@@ -81,18 +94,7 @@ function TeamsSettingsPage() {
       >
         {header}
 
-        {isLoading && (
-          <div
-            className="flex flex-col items-center justify-center py-12 gap-3"
-            role="status"
-            data-cy={sel('settings.teams.loading')}
-          >
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <div className="text-sm text-muted-foreground">
-              {tTeams('messages.loading')}
-            </div>
-          </div>
-        )}
+        {isLoading && isSingleUserMode && loading}
 
         {/* Single-user mode: show simplified view */}
         {isSingleUserMode && currentTeam && (
@@ -124,7 +126,7 @@ function TeamsSettingsPage() {
         )}
 
         {/* Teams List Card - only show if not single-user mode */}
-        {!isSingleUserMode && !isLoading && (
+        {!isSingleUserMode && (
         <Card data-cy={sel('settings.teams.list.container')}>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -150,7 +152,7 @@ function TeamsSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {userTeams.length === 0 ? (
+              {isLoading ? loading : userTeams.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {t('teams.noTeams')}
                 </div>
