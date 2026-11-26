@@ -393,7 +393,8 @@ export class SettingsPOM extends BasePOM {
    * Assert password settings is visible
    */
   assertPasswordVisible() {
-    cy.get(this.selectors.passwordContainer).should('be.visible')
+    // The container renders with the heading while the profile loads; the form means it has
+    cy.get(this.selectors.passwordForm).should('be.visible')
     return this
   }
 
@@ -433,7 +434,9 @@ export class SettingsPOM extends BasePOM {
    * Assert teams settings is visible
    */
   assertTeamsVisible() {
+    // The container renders with the heading while the teams load; the loading status gone means they have
     cy.get(this.selectors.teamsContainer).should('be.visible')
+    cy.get(this.selectors.teamsLoading).should('not.exist')
     return this
   }
 
@@ -490,7 +493,8 @@ export class SettingsPOM extends BasePOM {
    */
   waitForPassword() {
     cy.url().should('include', '/settings/password')
-    cy.get(this.selectors.passwordContainer, { timeout: 15000 }).should('be.visible')
+    // The container renders with the heading while the profile loads; the form means it has
+    cy.get(this.selectors.passwordForm, { timeout: 15000 }).should('be.visible')
     return this
   }
 
@@ -535,7 +539,9 @@ export class SettingsPOM extends BasePOM {
    */
   waitForTeams() {
     cy.url().should('include', '/settings/teams')
+    // The container renders with the heading while the teams load; the loading status gone means they have
     cy.get(this.selectors.teamsContainer, { timeout: 15000 }).should('be.visible')
+    cy.get(this.selectors.teamsLoading, { timeout: 15000 }).should('not.exist')
     return this
   }
 

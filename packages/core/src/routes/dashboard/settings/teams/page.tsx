@@ -59,21 +59,19 @@ function TeamsSettingsPage() {
   // Name and description: team.edit, the permission PATCH /api/v1/teams/:teamId checks, by the usePermission rule (#458)
   const canEditSelectedTeam = hasTeamPermission(appRole, selectedMembership?.role, 'team.edit' as Permission)
 
-  if (isLoading) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center py-12 gap-3"
-        role="status"
-        aria-label={tTeams('messages.loading')}
-        data-cy={sel('settings.teams.loading')}
+  // Static text: it paints with the page, not once the teams have loaded
+  const header = (
+    <header data-cy={sel('settings.teams.header')}>
+      <h1
+        className="text-2xl font-bold"
       >
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <div className="text-sm text-muted-foreground">
-          {tTeams('messages.loading')}
-        </div>
-      </div>
-    )
-  }
+        {t('teams.title')}
+      </h1>
+      <p className="text-muted-foreground mt-1">
+        {t('teams.description')}
+      </p>
+    </header>
+  )
 
   return (
     <>
@@ -81,18 +79,20 @@ function TeamsSettingsPage() {
         className="max-w-4xl space-y-6"
         data-cy={sel('settings.teams.container')}
       >
-        {/* Header */}
-        <header data-cy={sel('settings.teams.header')}>
-          <h1
-            className="text-2xl font-bold"
-            id="teams-settings-heading"
+        {header}
+
+        {isLoading && (
+          <div
+            className="flex flex-col items-center justify-center py-12 gap-3"
+            role="status"
+            data-cy={sel('settings.teams.loading')}
           >
-            {t('teams.title')}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('teams.description')}
-          </p>
-        </header>
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="text-sm text-muted-foreground">
+              {tTeams('messages.loading')}
+            </div>
+          </div>
+        )}
 
         {/* Single-user mode: show simplified view */}
         {isSingleUserMode && currentTeam && (
@@ -124,7 +124,7 @@ function TeamsSettingsPage() {
         )}
 
         {/* Teams List Card - only show if not single-user mode */}
-        {!isSingleUserMode && (
+        {!isSingleUserMode && !isLoading && (
         <Card data-cy={sel('settings.teams.list.container')}>
           <CardHeader>
             <div className="flex items-center justify-between">

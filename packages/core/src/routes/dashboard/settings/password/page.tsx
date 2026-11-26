@@ -92,17 +92,24 @@ function UpdatePasswordPage() {
     if (mustRedirectToProfile) router.push('/dashboard/settings/profile');
   }, [mustRedirectToProfile, router]);
 
-  // useUserProfile().isLoading includes the session loading
-  if (profileLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="sr-only">{t('password.loading.verifying')}</span>
-      </div>
-    );
-  }
+  // Static text: it paints with the page, not once the profile has loaded
+  const header = (
+    <header>
+      <h1
+        className="text-2xl font-bold"
+      >
+        {t('password.title')}
+      </h1>
+      <p
+        className="text-muted-foreground mt-1"
+      >
+        {t('password.description')}
+      </p>
+    </header>
+  );
 
-  if (!user || mustRedirectToProfile) return null;
+  // useUserProfile().isLoading includes the session loading: the header and the spinner render meanwhile
+  if (!profileLoading && !(user && hasPassword)) return null;
 
   if (success) {
     return (
@@ -124,7 +131,6 @@ function UpdatePasswordPage() {
             <div
               className="text-center space-y-4"
               role="status"
-              aria-live="polite"
             >
               <div
                 className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto"
@@ -164,25 +170,17 @@ function UpdatePasswordPage() {
       </div>
 
       <div
-        className="max-w-4xl"
+        className="max-w-4xl space-y-6"
         data-cy={sel('settings.password.container')}
       >
-        <div className="space-y-6">
-          {/* Header */}
-          <header>
-            <h1
-              className="text-2xl font-bold"
-              id="password-heading"
-            >
-              {t('password.title')}
-            </h1>
-            <p
-              className="text-muted-foreground mt-1"
-            >
-              {t('password.description')}
-            </p>
-          </header>
+        {header}
 
+        {profileLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <span className="sr-only">{t('password.loading.verifying')}</span>
+          </div>
+        ) : (
           <Card
             data-cy={sel('settings.password.form')}
           >
@@ -222,8 +220,7 @@ function UpdatePasswordPage() {
                     autoComplete="current-password"
                     placeholder={t('password.form.currentPasswordPlaceholder')}
                     aria-required="true"
-                    aria-describedby={errors.currentPassword ? "currentPassword-error" : undefined}
-                    data-cy={sel('settings.password.currentPassword')}
+                      data-cy={sel('settings.password.currentPassword')}
                   />
                 {errors.currentPassword && (
                   <p className="text-sm text-destructive">{errors.currentPassword.message}</p>
@@ -296,7 +293,7 @@ function UpdatePasswordPage() {
             </form>
           </CardContent>
           </Card>
-        </div>
+        )}
       </div>
     </>
   );
