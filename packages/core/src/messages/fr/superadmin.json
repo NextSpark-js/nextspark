@@ -388,11 +388,11 @@
     "entityActions": {
       "create": {
         "label": "Créer {entity}",
-        "description": "Peut créer {entity}"
+        "description": "Peut créer des {entity}"
       },
       "read": {
         "label": "Voir {entity}",
-        "description": "Peut voir {entity}"
+        "description": "Peut voir les {entity}"
       },
       "list": {
         "label": "Lister {entity}",
@@ -400,23 +400,23 @@
       },
       "update": {
         "label": "Modifier {entity}",
-        "description": "Peut modifier {entity}"
+        "description": "Peut modifier les {entity}"
       },
       "delete": {
         "label": "Supprimer {entity}",
-        "description": "Peut supprimer {entity}"
+        "description": "Peut supprimer les {entity}"
       },
       "publish": {
         "label": "Publier {entity}",
-        "description": "Peut publier {entity}"
+        "description": "Peut publier les {entity}"
       },
       "unpublish": {
         "label": "Dépublier {entity}",
-        "description": "Peut dépublier {entity}"
+        "description": "Peut dépublier les {entity}"
       },
       "assign": {
         "label": "Assigner {entity}",
-        "description": "Peut assigner {entity} aux membres de l’équipe"
+        "description": "Peut assigner des {entity} aux membres de l’équipe"
       }
     },
     "generatedCategories": {
