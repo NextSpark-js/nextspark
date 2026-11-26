@@ -23,7 +23,9 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
  * does not wait for them.
  */
 async function ArchiveGrid({ config, searchParams }: { config: EntityConfig; searchParams: SearchParams }) {
-  return <PublicEntityGrid entityType={config.slug} entitySlug={config.slug} searchParams={await searchParams} />
+  const base = config.access?.basePath ?? config.builder?.public?.basePath
+  const basePath = base === '/' ? '' : base // the item's URL is `${basePath}/<slug>`
+  return <PublicEntityGrid entityType={config.slug} entitySlug={config.slug} basePath={basePath} searchParams={await searchParams} />
 }
 
 /** The line under the title of an archive page; async, so the route itself keeps its synchronous guards. */

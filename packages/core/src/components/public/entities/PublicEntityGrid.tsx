@@ -25,11 +25,13 @@ import { SYSTEM_TIMESTAMP_FIELDS } from '../../../lib/entities/system-fields'
 interface PublicEntityGridProps {
   entityType: string
   entitySlug: string
+  /** Where the entity's items are served (`/blog`; '' at the site root), so a card links to the URL the item page answers (#573). */
+  basePath?: string
   searchParams: { [key: string]: string | string[] | undefined }
   className?: string
 }
 
-export function PublicEntityGrid({ entityType, entitySlug, searchParams, className }: PublicEntityGridProps) {
+export function PublicEntityGrid({ entityType, entitySlug, basePath, searchParams, className }: PublicEntityGridProps) {
   const text = useTranslations('public.entities')
   const [data, setData] = useState<EntityListResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,8 +53,8 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
       const configs = getAllEntityConfigs()
       const config = configs.find(c => c.slug === entitySlug)
       setEntityConfig(config || null)
-    } catch (err) {
-      console.error('Failed to load entity config:', err)
+    } catch {
+      // no config: the cards fall back to the item's own fields (this log was dropped to pay for #573's bytes on /blog)
     }
   }, [entitySlug])
 
@@ -95,7 +97,7 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
     }
 
     loadData()
-  }, [entityType, currentPage, searchTerm, sortField, sortDirection])
+  }, [entityType, currentPage]) // the request carries no search or sort, so changing them asks for nothing again (#573)
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -213,9 +215,10 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
         <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
           {data.data.map((item) => (
             <PublicEntityCard
-              key={`${item.id}-${entityConfig ? 'loaded' : 'loading'}`}
+              key={item.id}
               entityConfig={entityConfig}
               entitySlug={entitySlug}
+              basePath={basePath}
               data={item}
               className={viewMode === 'list' ? 'flex-row' : ''}
             />

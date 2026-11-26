@@ -18,11 +18,13 @@ import type { EntityConfig, EntityField } from '../../../lib/entities/types'
 interface PublicEntityCardProps {
   entityConfig: EntityConfig | null
   entitySlug: string
+  /** Where the entity's items are served (`/blog`; '' at the site root); `/<entity>` when not given (#573). */
+  basePath?: string
   data: Record<string, unknown>
   className?: string
 }
 
-export function PublicEntityCard({ entityConfig, entitySlug, data, className }: PublicEntityCardProps) {
+export function PublicEntityCard({ entityConfig, entitySlug, basePath, data, className }: PublicEntityCardProps) {
   const text = useTranslations('public.entities')
   const locale = useLocale()
   const entityId = data.id as string
@@ -102,7 +104,7 @@ export function PublicEntityCard({ entityConfig, entitySlug, data, className }: 
 
   return (
     <Card className={`group hover:shadow-lg transition-all duration-200 ${className}`}>
-      <Link href={`/${entitySlug}/${entityId}`} className="block">
+      <Link href={`${basePath ?? `/${entitySlug}`}/${data.slug || entityId}`} className="block">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">

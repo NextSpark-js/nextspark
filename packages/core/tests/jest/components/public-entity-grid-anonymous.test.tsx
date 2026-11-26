@@ -4,7 +4,7 @@
  */
 import { render, waitFor } from '@testing-library/react'
 
-jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }))
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }))
 jest.mock('@/core/lib/entities/registry.client', () => ({ getAllEntityConfigs: () => [] }))
 jest.mock('@/core/lib/entities/client-entity-meta', () => ({ getClientEntityApiPath: () => 'posts', getClientEntityConfigs: () => [] }))
 
@@ -22,4 +22,13 @@ test('the grid requests the list without the session cookie and without a team',
   expect(url).toContain('/api/v1/posts')
   expect(init.credentials).toBe('omit')
   expect(Object.keys((init.headers ?? {}) as object).map(h => h.toLowerCase())).not.toContain('x-team-id')
+})
+
+test('the grid passes the base path to its cards (#573)', async () => {
+  const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ success: true, data: [{ id: 'p1', slug: 'a-post', title: 'A post' }], info: { total: 1, totalPages: 1 } }) }))
+  ;(globalThis as { fetch: unknown }).fetch = fetchMock
+
+  const { container } = render(<PublicEntityGrid entityType="posts" entitySlug="posts" basePath="/blog" searchParams={{}} />)
+
+  await waitFor(() => expect(container.querySelector('a')?.getAttribute('href')).toBe('/blog/a-post'))
 })
