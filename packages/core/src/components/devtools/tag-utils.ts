@@ -11,7 +11,7 @@ export interface DocTreeNode {
 export function docPaths(tree: readonly DocTreeNode[]): Set<string> {
   const paths = new Set<string>();
   const walk = (nodes: readonly DocTreeNode[]) =>
-    nodes.forEach((n) => (n.type === "file" ? paths.add(n.path) : walk(n.children ?? [])));
+    nodes.forEach((n) => (n.type === "file" ? paths.add(n.path.replace(/\\/g, "/")) : walk(n.children ?? [])));
   walk(tree);
   return paths;
 }
@@ -22,6 +22,7 @@ export function docPaths(tree: readonly DocTreeNode[]): Set<string> {
  * (`docs`: the documentation files that exist; many Cypress files have none).
  */
 export function testDocPath(file: string, docs: ReadonlySet<string>): string | null {
+  file = file.replace(/\\/g, "/"); // a Windows path
   const i = file.indexOf(E2E_DIR);
   if (i === -1) return null;
   const rest = file.slice(i + E2E_DIR.length).replace(/\.cy\.[jt]sx?$/, ".bdd.md");

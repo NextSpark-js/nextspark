@@ -5,6 +5,7 @@ import { readdir, stat } from "fs/promises";
 import { join } from "path";
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { corsPreflight } from '@nextsparkjs/core/lib/api/cors-response';
+import { posixRelative } from '@nextsparkjs/core/lib/devtools/posix-path';
 
 /**
  * File tree node structure
@@ -25,7 +26,7 @@ async function buildFileTree(dirPath: string, basePath: string): Promise<FileTre
 
   for (const entry of entries) {
     const fullPath = join(dirPath, entry.name);
-    const relativePath = fullPath.replace(basePath + "/", "");
+    const relativePath = posixRelative(basePath, fullPath);
 
     if (entry.isDirectory()) {
       // Recursively process subdirectories
