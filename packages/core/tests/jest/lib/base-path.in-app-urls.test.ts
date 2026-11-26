@@ -201,6 +201,16 @@ const ALLOWED = [
     why: 'preconnect and dns-prefetch name the billing provider’s origin, not a path this app serves',
   },
   {
+    file: 'packages/core/src/routes/layout.tsx',
+    text: 'GEIST_',
+    why: 'the font preloads take the URL the bundler emits for the file (new URL), which already has the base path (#560)',
+  },
+  {
+    file: 'packages/core/src/routes/layout.ppr.tsx',
+    text: 'GEIST_',
+    why: 'the font preloads take the URL the bundler emits for the file (new URL), which already has the base path (#560)',
+  },
+  {
     file: 'packages/core/src/providers/theme-provider.tsx',
     text: 'script.toString()',
     why: 'the inline script that applies the stored theme before paint, which carries no URL',
