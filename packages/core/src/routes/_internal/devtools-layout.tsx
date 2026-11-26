@@ -54,7 +54,7 @@ function DevLayoutBody({ children, serverChecked }: GuardedProps) {
           {/* Main content area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Mobile header for DevTools - Only visible on mobile */}
-            <DevtoolsMobileHeader />
+            <DevtoolsMobileHeader pluginItems={pluginNavItems} />
 
             {/* Content area with scrolling */}
             {/* `relative` so a full-bleed child route (the API Explorer) can fill this area
@@ -65,9 +65,6 @@ function DevLayoutBody({ children, serverChecked }: GuardedProps) {
               </div>
             </main>
           </div>
-
-          {/* Mobile sidebar overlay (future enhancement) */}
-          {/* Could add a mobile drawer/overlay sidebar here if needed */}
           </div>
         </DeveloperGuard>
       </DashboardProviders>
