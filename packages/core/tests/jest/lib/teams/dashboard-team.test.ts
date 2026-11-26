@@ -18,7 +18,7 @@ jest.mock('react', () => ({
 }))
 
 import { queryOne } from '@/core/lib/db'
-import { getDashboardTeamId } from '@/core/lib/teams/dashboard-team'
+import { getDashboardTeamId, getDashboardMembership } from '@/core/lib/teams/dashboard-team'
 
 const mockQueryOne = queryOne as unknown as jest.Mock
 
@@ -68,5 +68,14 @@ describe('getDashboardTeamId', () => {
     await getDashboardTeamId('user-6', 'team-default')
 
     expect(mockQueryOne).toHaveBeenCalledTimes(1)
+  })
+
+  test('the same row gives the team and both roles: the team role and users.role of that membership', async () => {
+    mockQueryOne.mockResolvedValue({ teamId: 'team-7', teamRole: 'admin', appRole: 'developer' })
+
+    expect(await getDashboardMembership('user-7', null)).toEqual({ teamId: 'team-7', teamRole: 'admin', appRole: 'developer' })
+    expect(await getDashboardTeamId('user-7', null)).toBe('team-7')
+    expect(mockQueryOne).toHaveBeenCalledTimes(1)
+    expect(mockQueryOne.mock.calls[0][0]).toMatch(/tm\.role AS "teamRole", u\.role AS "appRole"/)
   })
 })

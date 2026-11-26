@@ -11,14 +11,13 @@
  * 2. The user comes from the verified session and the team from the activeTeamId
  *    cookie only when this session wrote it (getDashboardPermissionContext; never
  *    from the proxy's identity headers); without one, the user's default team
- * 3. This layout checks permission in that team via checkPermission()
+ * 3. This layout checks permission in that team with the roles that lookup returned (contextHasPermission, the rule checkPermission applies)
  * 4. If denied, redirects to /dashboard/permission-denied
  * 5. If allowed, renders the page (children)
  */
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
-import { getDashboardPermissionContext } from '@nextsparkjs/core/lib/auth/request-session'
+import { getDashboardPermissionContext, contextHasPermission } from '@nextsparkjs/core/lib/auth/request-session'
 import { isValidPermission } from '@nextsparkjs/core/lib/permissions/init'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
@@ -70,7 +69,8 @@ export async function EntityPermissionLayout({
   const pathname = headersList.get('x-pathname') || ''
 
   // The verified session's user, and the team it chose (or the user's default team until it has one)
-  const { userId, teamId } = await getDashboardPermissionContext()
+  const context = await getDashboardPermissionContext()
+  const { userId, teamId } = context
 
   // Skip validation if missing required data
   // - No session: nothing to check permissions for (the proxy sends it to login; the data APIs refuse it)
@@ -95,8 +95,8 @@ export async function EntityPermissionLayout({
   const action = detectActionFromPathname(pathname, entity)
   const permission = `${entity}.${action}` as Permission
 
-  // Check permission using existing core function
-  const hasPermission = await checkPermission(userId, teamId, permission)
+  // Decide with the roles the team lookup already read (hasTeamPermission, the rule checkPermission applies)
+  const hasPermission = contextHasPermission(context, permission)
 
   if (!hasPermission) {
     console.log('[EntityPermissionLayout] Permission denied, redirecting')

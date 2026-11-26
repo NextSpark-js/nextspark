@@ -12,7 +12,10 @@ import { cookies, headers } from 'next/headers'
 import { getTypedSession, type TypedSession } from '../auth'
 import { getAuthorizationSession } from './authorization-session'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../teams/active-team-cookie'
-import { getDashboardTeamId } from '../teams/dashboard-team'
+import { getDashboardMembership } from '../teams/dashboard-team'
+import { ensureEntityPermissionsLoaded } from '../permissions/init'
+import { hasTeamPermission } from '../permissions/app-role-bypass'
+import type { Permission } from '../permissions/types'
 
 /** The request's verified session, or null; one lookup per request however many callers ask. */
 export const getRequestSession = cache(async (): Promise<TypedSession | null> => getTypedSession(await headers()))
@@ -30,12 +33,30 @@ export async function getSessionActiveTeamId(session: TypedSession): Promise<str
 
 /**
  * The user and team a dashboard request's permissions are checked for: the verified session's user, and the team
- * its session chose while the user still belongs to it, else their default team (getDashboardTeamId). No session,
- * no user; a user in no team, no team.
+ * its session chose while the user still belongs to it, else their default team (getDashboardMembership). No session,
+ * no user; a user in no team, no team. `teamRole` and `appRole` come from the same query that resolved the team
+ * (the role of that team, and users.role read from the database in this request), so deciding costs no second
+ * membership read.
  */
-export async function getDashboardPermissionContext(): Promise<{ userId: string | null; teamId: string | null }> {
+export async function getDashboardPermissionContext(): Promise<{
+  userId: string | null
+  teamId: string | null
+  teamRole: string | null
+  appRole: string | null
+}> {
+  const none = { userId: null, teamId: null, teamRole: null, appRole: null }
   const session = await getRequestSession()
   const userId = session?.user?.id ?? null
-  if (!session || !userId) return { userId: null, teamId: null }
-  return { userId, teamId: await getDashboardTeamId(userId, await getSessionActiveTeamId(session)) }
+  if (!session || !userId) return none
+  const membership = await getDashboardMembership(userId, await getSessionActiveTeamId(session))
+  return { userId, teamId: membership?.teamId ?? null, teamRole: membership?.teamRole ?? null, appRole: membership?.appRole ?? null }
+}
+
+/** checkPermission's decision (hasTeamPermission) for a context getDashboardPermissionContext returned, with no query. */
+export function contextHasPermission(
+  context: { teamRole: string | null; appRole: string | null },
+  permission: Permission
+): boolean {
+  ensureEntityPermissionsLoaded()
+  return hasTeamPermission(context.appRole, context.teamRole, permission)
 }

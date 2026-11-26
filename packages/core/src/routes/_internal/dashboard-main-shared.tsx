@@ -8,8 +8,7 @@ import { DashboardShell } from '@nextsparkjs/core/components/dashboard/layouts/D
 import { serializeEntityConfig, type SerializableEntityConfig } from '@nextsparkjs/core/lib/entities/serialization'
 import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import type { EntityConfig, ChildEntityDefinition } from '@nextsparkjs/core/lib/entities/types'
-import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
-import { getDashboardPermissionContext } from '@nextsparkjs/core/lib/auth/request-session'
+import { getDashboardPermissionContext, contextHasPermission } from '@nextsparkjs/core/lib/auth/request-session'
 import { isValidPermission } from '@nextsparkjs/core/lib/permissions/init'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
@@ -60,7 +59,8 @@ export async function enforceEntityPermission(): Promise<void> {
 
   // A routing hint from the proxy; who the user is and which team they act in come from the verified session
   const pathname = headersList.get('x-pathname') || ''
-  const { userId, teamId } = await getDashboardPermissionContext()
+  const context = await getDashboardPermissionContext()
+  const { userId, teamId } = context
 
   if (userId && teamId && pathname) {
     const parsed = parseEntityFromPathname(pathname)
@@ -70,7 +70,7 @@ export async function enforceEntityPermission(): Promise<void> {
       const permission = `${entity}.${action}` as Permission
 
       if (isValidPermission(`${entity}.list` as Permission)) {
-        const hasPermission = await checkPermission(userId, teamId, permission)
+        const hasPermission = contextHasPermission(context, permission)
 
         if (!hasPermission) {
           redirect(`/dashboard/permission-denied?entity=${entity}&action=${action}`)

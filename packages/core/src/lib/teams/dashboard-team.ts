@@ -32,22 +32,38 @@ export async function getUserDefaultTeamId(userId: string): Promise<string | und
   }
 }
 
+/** A user's place in the team a dashboard request is checked in. */
+export interface DashboardMembership {
+  teamId: string
+  /** team_members.role in that team. */
+  teamRole: string
+  /** users.role (the platform role), read from the database in this request, never from a cookie. */
+  appRole: string | null
+}
+
 /**
  * One lookup per request for a user and the team their session chose: the
  * dashboard layout and the entity layout under it both ask. The arguments are
- * strings so React's request cache matches them across callers.
+ * strings so React's request cache matches them across callers. It returns the
+ * team and both roles, so the permission check needs no second membership read.
  */
-const findDashboardTeamId = cache(async (userId: string, chosenTeamId: string | null): Promise<string | null> => {
-  const result = await queryOne<{ teamId: string }>(
-    `SELECT tm."teamId" FROM "team_members" tm
+const findDashboardMembership = cache(async (userId: string, chosenTeamId: string | null): Promise<DashboardMembership | null> => {
+  const result = await queryOne<{ teamId: string; teamRole: string; appRole: string | null }>(
+    `SELECT tm."teamId", tm.role AS "teamRole", u.role AS "appRole" FROM "team_members" tm
      INNER JOIN "teams" t ON t.id = tm."teamId"
+     LEFT JOIN "users" u ON u.id = tm."userId"
      WHERE tm."userId" = $1 AND t."deletedAt" IS NULL
      ORDER BY (tm."teamId" = $2) IS TRUE DESC, tm."joinedAt" ASC
      LIMIT 1`,
     [userId, chosenTeamId]
   )
-  return result?.teamId ?? null
+  return result?.teamId ? { teamId: result.teamId, teamRole: result.teamRole, appRole: result.appRole ?? null } : null
 })
+
+/** The membership to check a dashboard request's permissions with (see getDashboardTeamId), or null in no team. */
+export function getDashboardMembership(userId: string, chosenTeamId: string | null): Promise<DashboardMembership | null> {
+  return findDashboardMembership(userId, chosenTeamId)
+}
 
 /**
  * The team to check a dashboard request's permissions in, or null when the user
@@ -60,6 +76,6 @@ const findDashboardTeamId = cache(async (userId: string, chosenTeamId: string | 
  * permission check for a user in no team, so an error read as "no team" would
  * let the request through unchecked.
  */
-export function getDashboardTeamId(userId: string, chosenTeamId: string | null): Promise<string | null> {
-  return findDashboardTeamId(userId, chosenTeamId)
+export async function getDashboardTeamId(userId: string, chosenTeamId: string | null): Promise<string | null> {
+  return (await findDashboardMembership(userId, chosenTeamId))?.teamId ?? null
 }

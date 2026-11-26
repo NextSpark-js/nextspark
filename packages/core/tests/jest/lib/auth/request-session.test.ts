@@ -4,7 +4,7 @@
  * `x-active-team-id`): a project's own proxy may pass them through as the client sent them.
  */
 const getTypedSession = jest.fn()
-const getDashboardTeamId = jest.fn()
+const getDashboardMembership = jest.fn()
 let requestHeaders = new Headers()
 let cookieValue: string | undefined
 
@@ -13,7 +13,7 @@ jest.mock('next/headers', () => ({
   cookies: async () => ({ get: (name: string) => (name === 'activeTeamId' && cookieValue !== undefined ? { name, value: cookieValue } : undefined) }),
 }))
 jest.mock('@nextsparkjs/core/lib/auth', () => ({ getTypedSession: (h: Headers) => getTypedSession(h) }))
-jest.mock('@nextsparkjs/core/lib/teams/dashboard-team', () => ({ getDashboardTeamId: (...args: unknown[]) => getDashboardTeamId(...args) }))
+jest.mock('@nextsparkjs/core/lib/teams/dashboard-team', () => ({ getDashboardMembership: (...args: unknown[]) => getDashboardMembership(...args) }))
 
 import { getDashboardPermissionContext } from '@nextsparkjs/core/lib/auth/request-session'
 
@@ -21,22 +21,22 @@ const FORGED = { 'x-user-id': 'victim-user', 'x-user-email': 'victim@example.tes
 
 beforeEach(() => {
   getTypedSession.mockReset()
-  getDashboardTeamId.mockReset().mockImplementation(async (_userId: string, chosen: string | null) => chosen ?? 'default-team')
+  getDashboardMembership.mockReset().mockImplementation(async (_userId: string, chosen: string | null) => ({ teamId: chosen ?? 'default-team', teamRole: 'member', appRole: 'member' }))
   requestHeaders = new Headers(FORGED)
   cookieValue = undefined
 })
 
 it('ignores forged identity headers when there is no session: no user, no team, nothing looked up', async () => {
   getTypedSession.mockResolvedValue(null)
-  expect(await getDashboardPermissionContext()).toEqual({ userId: null, teamId: null })
-  expect(getDashboardTeamId).not.toHaveBeenCalled()
+  expect(await getDashboardPermissionContext()).toEqual({ userId: null, teamId: null, teamRole: null, appRole: null })
+  expect(getDashboardMembership).not.toHaveBeenCalled()
 })
 
 it("checks the session's own user, whatever x-user-id says", async () => {
   getTypedSession.mockResolvedValue({ session: { id: 'sess-1' }, user: { id: 'real-user', role: 'member' } })
-  expect(await getDashboardPermissionContext()).toEqual({ userId: 'real-user', teamId: 'default-team' })
+  expect(await getDashboardPermissionContext()).toEqual({ userId: 'real-user', teamId: 'default-team', teamRole: 'member', appRole: 'member' })
   expect(getTypedSession).toHaveBeenCalledWith(requestHeaders)
-  expect(getDashboardTeamId).toHaveBeenCalledWith('real-user', null)
+  expect(getDashboardMembership).toHaveBeenCalledWith('real-user', null)
 })
 
 it('takes the chosen team from the cookie only when this session wrote it, never from x-active-team-id', async () => {
@@ -45,5 +45,5 @@ it('takes the chosen team from the cookie only when this session wrote it, never
   expect((await getDashboardPermissionContext()).teamId).toBe('team-a')
   cookieValue = 'other-session:team-b'
   expect((await getDashboardPermissionContext()).teamId).toBe('default-team')
-  expect(getDashboardTeamId).not.toHaveBeenCalledWith(expect.anything(), 'victim-team')
+  expect(getDashboardMembership).not.toHaveBeenCalledWith(expect.anything(), 'victim-team')
 })
