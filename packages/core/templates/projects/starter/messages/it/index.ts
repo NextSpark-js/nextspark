@@ -4,6 +4,7 @@ import dev from './dev.json'
 import features from './features.json'
 import home from './home.json'
 import navigation from './navigation.json'
+import permissionTexts from './permissionTexts.json'
 import public_ from './public.json'
 
 export default {
@@ -13,5 +14,6 @@ export default {
   features,
   home,
   navigation,
+  permissionTexts,
   public: public_
 } as const

@@ -555,5 +555,119 @@
         }
       }
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Visualizza team",
+        "description": "Può vedere i dettagli del team"
+      },
+      "members": {
+        "view": {
+          "label": "Visualizza membri",
+          "description": "Può vedere l’elenco dei membri del team"
+        },
+        "invite": {
+          "label": "Invita membri",
+          "description": "Invita nuovi membri del team nel CRM"
+        },
+        "remove": {
+          "label": "Rimuovi membri",
+          "description": "Può rimuovere membri dal team"
+        },
+        "update_role": {
+          "label": "Modifica ruoli",
+          "description": "Solo gli amministratori del CRM possono cambiare i ruoli degli utenti"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Visualizza impostazioni",
+          "description": "Può vedere le impostazioni del team"
+        },
+        "edit": {
+          "label": "Modifica impostazioni",
+          "description": "Può modificare le impostazioni del team"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Visualizza fatturazione",
+          "description": "Può vedere le informazioni di fatturazione"
+        },
+        "manage": {
+          "label": "Gestisci fatturazione",
+          "description": "Può gestire abbonamenti e pagamenti"
+        }
+      },
+      "edit": {
+        "label": "Modifica team",
+        "description": "Può modificare nome e dettagli del team"
+      },
+      "delete": {
+        "label": "Elimina team",
+        "description": "Non è possibile eliminare l’organizzazione in modalità single-tenant"
+      }
+    },
+    "reports": {
+      "sales": {
+        "label": "Report di vendita",
+        "description": "Accesso ai report e alle analisi sulle prestazioni di vendita"
+      },
+      "marketing": {
+        "label": "Report di marketing",
+        "description": "Accesso ai report delle campagne di marketing e all’analisi del ROI"
+      },
+      "pipeline": {
+        "label": "Report della pipeline",
+        "description": "Accesso all’analisi della pipeline e ai report di previsione"
+      },
+      "export": {
+        "label": "Esporta report",
+        "description": "Può esportare i report in PDF, Excel o CSV"
+      }
+    },
+    "dashboard": {
+      "forecasting": {
+        "label": "Previsioni di vendita",
+        "description": "Accesso alle previsioni e alle proiezioni di vendita"
+      },
+      "team_metrics": {
+        "label": "Metriche del team",
+        "description": "Può vedere le metriche di prestazione e i KPI del team"
+      }
+    },
+    "bulk": {
+      "import": {
+        "label": "Importazione di massa",
+        "description": "Può importare dati da file CSV o Excel"
+      },
+      "export": {
+        "label": "Esportazione di massa",
+        "description": "Può esportare dati in file CSV o Excel"
+      }
+    },
+    "leads": {
+      "convert": {
+        "label": "Converti lead",
+        "description": "Può convertire i lead in contatti e aziende"
+      }
+    },
+    "settings": {
+      "pipelines": {
+        "label": "Configurazione delle pipeline",
+        "description": "Può creare e modificare le pipeline di vendita"
+      },
+      "products": {
+        "label": "Catalogo prodotti",
+        "description": "Può gestire il catalogo prodotti"
+      }
+    },
+    "categories": {
+      "Reports": "Report",
+      "Dashboard": "Dashboard",
+      "Bulk Operations": "Operazioni di massa",
+      "Configuration": "Configurazione"
+    }
   }
 }

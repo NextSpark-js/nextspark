@@ -1,0 +1,54 @@
+{
+  "team": {
+    "view": {
+      "label": "View Team",
+      "description": "Can view team details"
+    },
+    "members": {
+      "view": {
+        "label": "View Members",
+        "description": "Can see team member list"
+      },
+      "invite": {
+        "label": "Invite Members",
+        "description": "Can invite new team members"
+      },
+      "remove": {
+        "label": "Remove Members",
+        "description": "Can remove team members"
+      },
+      "update_role": {
+        "label": "Update Roles",
+        "description": "Can change member roles"
+      }
+    },
+    "settings": {
+      "view": {
+        "label": "View Settings",
+        "description": "Can view team settings"
+      },
+      "edit": {
+        "label": "Edit Settings",
+        "description": "Can modify team settings"
+      }
+    },
+    "billing": {
+      "view": {
+        "label": "View Billing",
+        "description": "Can view billing information"
+      },
+      "manage": {
+        "label": "Manage Billing",
+        "description": "Can manage subscriptions and payments"
+      }
+    },
+    "edit": {
+      "label": "Edit Team",
+      "description": "Can modify team name and details"
+    },
+    "delete": {
+      "label": "Delete Team",
+      "description": "Can permanently delete the team"
+    }
+  }
+}

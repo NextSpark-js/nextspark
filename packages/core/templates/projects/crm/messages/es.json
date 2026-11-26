@@ -564,5 +564,119 @@
         }
       }
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Ver equipo",
+        "description": "Puede ver los detalles del equipo"
+      },
+      "members": {
+        "view": {
+          "label": "Ver miembros",
+          "description": "Puede ver la lista de miembros del equipo"
+        },
+        "invite": {
+          "label": "Invitar miembros",
+          "description": "Invita a nuevos miembros del equipo al CRM"
+        },
+        "remove": {
+          "label": "Quitar miembros",
+          "description": "Puede quitar miembros del equipo"
+        },
+        "update_role": {
+          "label": "Cambiar roles",
+          "description": "Solo los administradores del CRM pueden cambiar los roles de los usuarios"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Ver configuración",
+          "description": "Puede ver la configuración del equipo"
+        },
+        "edit": {
+          "label": "Editar configuración",
+          "description": "Puede modificar la configuración del equipo"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Ver facturación",
+          "description": "Puede ver la información de facturación"
+        },
+        "manage": {
+          "label": "Gestionar facturación",
+          "description": "Puede gestionar las suscripciones y los pagos"
+        }
+      },
+      "edit": {
+        "label": "Editar equipo",
+        "description": "Puede modificar el nombre y los detalles del equipo"
+      },
+      "delete": {
+        "label": "Eliminar equipo",
+        "description": "No se puede eliminar la organización en modo de un solo inquilino"
+      }
+    },
+    "reports": {
+      "sales": {
+        "label": "Informes de ventas",
+        "description": "Acceso a los informes y análisis de rendimiento de ventas"
+      },
+      "marketing": {
+        "label": "Informes de marketing",
+        "description": "Acceso a los informes de campañas de marketing y al análisis de ROI"
+      },
+      "pipeline": {
+        "label": "Informes del embudo",
+        "description": "Acceso al análisis del embudo y a los informes de previsión"
+      },
+      "export": {
+        "label": "Exportar informes",
+        "description": "Puede exportar informes a PDF, Excel o CSV"
+      }
+    },
+    "dashboard": {
+      "forecasting": {
+        "label": "Previsión de ventas",
+        "description": "Acceso a la previsión y a las proyecciones de ventas"
+      },
+      "team_metrics": {
+        "label": "Métricas del equipo",
+        "description": "Puede ver las métricas de rendimiento y los KPI del equipo"
+      }
+    },
+    "bulk": {
+      "import": {
+        "label": "Importación masiva",
+        "description": "Puede importar datos desde archivos CSV o Excel"
+      },
+      "export": {
+        "label": "Exportación masiva",
+        "description": "Puede exportar datos a archivos CSV o Excel"
+      }
+    },
+    "leads": {
+      "convert": {
+        "label": "Convertir leads",
+        "description": "Puede convertir leads en contactos y empresas"
+      }
+    },
+    "settings": {
+      "pipelines": {
+        "label": "Configuración de embudos",
+        "description": "Puede crear y modificar embudos de ventas"
+      },
+      "products": {
+        "label": "Catálogo de productos",
+        "description": "Puede gestionar el catálogo de productos"
+      }
+    },
+    "categories": {
+      "Reports": "Informes",
+      "Dashboard": "Panel",
+      "Bulk Operations": "Operaciones masivas",
+      "Configuration": "Configuración"
+    }
   }
 }

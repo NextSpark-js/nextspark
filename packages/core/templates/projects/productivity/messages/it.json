@@ -67,5 +67,90 @@
       "nextList": "Lista successiva",
       "previousList": "Lista precedente"
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Visualizza team",
+        "description": "Può vedere i dettagli del team"
+      },
+      "members": {
+        "view": {
+          "label": "Visualizza membri",
+          "description": "Può vedere l’elenco dei membri del team"
+        },
+        "invite": {
+          "label": "Invita membri",
+          "description": "Invita i membri del team a collaborare"
+        },
+        "remove": {
+          "label": "Rimuovi membri",
+          "description": "Può rimuovere membri dal team"
+        },
+        "update_role": {
+          "label": "Modifica ruoli",
+          "description": "Può cambiare i ruoli dei membri"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Visualizza impostazioni",
+          "description": "Può vedere le impostazioni del team"
+        },
+        "edit": {
+          "label": "Modifica impostazioni",
+          "description": "Può modificare le impostazioni del team"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Visualizza fatturazione",
+          "description": "Può vedere le informazioni di fatturazione"
+        },
+        "manage": {
+          "label": "Gestisci fatturazione",
+          "description": "Può gestire abbonamenti e pagamenti"
+        }
+      },
+      "edit": {
+        "label": "Modifica team",
+        "description": "Può modificare nome e dettagli del team"
+      },
+      "delete": {
+        "label": "Elimina team",
+        "description": "Può eliminare definitivamente il team"
+      }
+    },
+    "boards": {
+      "archive": {
+        "label": "Archivia bacheche",
+        "description": "Può archiviare le bacheche per nasconderle dalla vista principale"
+      },
+      "settings": {
+        "label": "Impostazioni della bacheca",
+        "description": "Può modificare le impostazioni della bacheca, come nome, descrizione e colore"
+      }
+    },
+    "lists": {
+      "reorder": {
+        "label": "Riordina elenchi",
+        "description": "Può cambiare l’ordine degli elenchi all’interno di una bacheca"
+      }
+    },
+    "cards": {
+      "move": {
+        "label": "Sposta schede",
+        "description": "Può spostare le schede tra gli elenchi"
+      },
+      "assign": {
+        "label": "Assegna schede",
+        "description": "Può assegnare le schede ai membri del team"
+      }
+    },
+    "categories": {
+      "Boards": "Bacheche",
+      "Lists": "Elenchi",
+      "Cards": "Schede"
+    }
   }
 }

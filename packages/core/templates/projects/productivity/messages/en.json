@@ -74,6 +74,91 @@
       "nextList": "Next List",
       "previousList": "Previous List"
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "View Team",
+        "description": "Can view team details"
+      },
+      "members": {
+        "view": {
+          "label": "View Members",
+          "description": "Can see team member list"
+        },
+        "invite": {
+          "label": "Invite Members",
+          "description": "Invite team members to collaborate"
+        },
+        "remove": {
+          "label": "Remove Members",
+          "description": "Can remove team members"
+        },
+        "update_role": {
+          "label": "Update Roles",
+          "description": "Can change member roles"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "View Settings",
+          "description": "Can view team settings"
+        },
+        "edit": {
+          "label": "Edit Settings",
+          "description": "Can modify team settings"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "View Billing",
+          "description": "Can view billing information"
+        },
+        "manage": {
+          "label": "Manage Billing",
+          "description": "Can manage subscriptions and payments"
+        }
+      },
+      "edit": {
+        "label": "Edit Team",
+        "description": "Can modify team name and details"
+      },
+      "delete": {
+        "label": "Delete Team",
+        "description": "Can permanently delete the team"
+      }
+    },
+    "boards": {
+      "archive": {
+        "label": "Archive boards",
+        "description": "Can archive boards to hide them from the main view"
+      },
+      "settings": {
+        "label": "Board settings",
+        "description": "Can modify board settings like name, description, and color"
+      }
+    },
+    "lists": {
+      "reorder": {
+        "label": "Reorder lists",
+        "description": "Can change the order of lists within a board"
+      }
+    },
+    "cards": {
+      "move": {
+        "label": "Move cards",
+        "description": "Can move cards between lists"
+      },
+      "assign": {
+        "label": "Assign cards",
+        "description": "Can assign cards to team members"
+      }
+    },
+    "categories": {
+      "Boards": "Boards",
+      "Lists": "Lists",
+      "Cards": "Cards"
+    }
   }
 }
 

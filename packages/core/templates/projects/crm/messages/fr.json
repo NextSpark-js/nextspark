@@ -555,5 +555,119 @@
         }
       }
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Voir l’équipe",
+        "description": "Peut voir les détails de l’équipe"
+      },
+      "members": {
+        "view": {
+          "label": "Voir les membres",
+          "description": "Peut voir la liste des membres de l’équipe"
+        },
+        "invite": {
+          "label": "Inviter des membres",
+          "description": "Invite de nouveaux membres de l’équipe dans le CRM"
+        },
+        "remove": {
+          "label": "Retirer des membres",
+          "description": "Peut retirer des membres de l’équipe"
+        },
+        "update_role": {
+          "label": "Modifier les rôles",
+          "description": "Seuls les administrateurs du CRM peuvent modifier les rôles des utilisateurs"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Voir les paramètres",
+          "description": "Peut voir les paramètres de l’équipe"
+        },
+        "edit": {
+          "label": "Modifier les paramètres",
+          "description": "Peut modifier les paramètres de l’équipe"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Voir la facturation",
+          "description": "Peut voir les informations de facturation"
+        },
+        "manage": {
+          "label": "Gérer la facturation",
+          "description": "Peut gérer les abonnements et les paiements"
+        }
+      },
+      "edit": {
+        "label": "Modifier l’équipe",
+        "description": "Peut modifier le nom et les détails de l’équipe"
+      },
+      "delete": {
+        "label": "Supprimer l’équipe",
+        "description": "L’organisation ne peut pas être supprimée en mode mono-locataire"
+      }
+    },
+    "reports": {
+      "sales": {
+        "label": "Rapports de ventes",
+        "description": "Accès aux rapports et analyses de performance des ventes"
+      },
+      "marketing": {
+        "label": "Rapports marketing",
+        "description": "Accès aux rapports de campagnes marketing et à l’analyse du ROI"
+      },
+      "pipeline": {
+        "label": "Rapports du pipeline",
+        "description": "Accès à l’analyse du pipeline et aux rapports de prévision"
+      },
+      "export": {
+        "label": "Exporter les rapports",
+        "description": "Peut exporter les rapports en PDF, Excel ou CSV"
+      }
+    },
+    "dashboard": {
+      "forecasting": {
+        "label": "Prévisions de ventes",
+        "description": "Accès aux prévisions et aux projections de ventes"
+      },
+      "team_metrics": {
+        "label": "Indicateurs de l’équipe",
+        "description": "Peut voir les indicateurs de performance et les KPI de l’équipe"
+      }
+    },
+    "bulk": {
+      "import": {
+        "label": "Import en masse",
+        "description": "Peut importer des données depuis des fichiers CSV ou Excel"
+      },
+      "export": {
+        "label": "Export en masse",
+        "description": "Peut exporter des données vers des fichiers CSV ou Excel"
+      }
+    },
+    "leads": {
+      "convert": {
+        "label": "Convertir les leads",
+        "description": "Peut convertir des leads en contacts et en entreprises"
+      }
+    },
+    "settings": {
+      "pipelines": {
+        "label": "Configuration des pipelines",
+        "description": "Peut créer et modifier des pipelines de vente"
+      },
+      "products": {
+        "label": "Catalogue de produits",
+        "description": "Peut gérer le catalogue de produits"
+      }
+    },
+    "categories": {
+      "Reports": "Rapports",
+      "Dashboard": "Tableau de bord",
+      "Bulk Operations": "Opérations en masse",
+      "Configuration": "Configuration"
+    }
   }
 }

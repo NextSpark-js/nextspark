@@ -384,6 +384,44 @@
       "Team": "Team",
       "Settings": "Settings",
       "Media": "Media"
+    },
+    "entityActions": {
+      "create": {
+        "label": "Create {entity}",
+        "description": "Can create {entity}"
+      },
+      "read": {
+        "label": "View {entity}",
+        "description": "Can view {entity}"
+      },
+      "list": {
+        "label": "List {entity}",
+        "description": "Can see the list of {entity}"
+      },
+      "update": {
+        "label": "Edit {entity}",
+        "description": "Can edit {entity}"
+      },
+      "delete": {
+        "label": "Delete {entity}",
+        "description": "Can delete {entity}"
+      },
+      "publish": {
+        "label": "Publish {entity}",
+        "description": "Can publish {entity}"
+      },
+      "unpublish": {
+        "label": "Unpublish {entity}",
+        "description": "Can unpublish {entity}"
+      },
+      "assign": {
+        "label": "Assign {entity}",
+        "description": "Can assign {entity} to team members"
+      }
+    },
+    "generatedCategories": {
+      "Teams": "Teams",
+      "Features": "Features"
     }
   },
   "planMatrix": {

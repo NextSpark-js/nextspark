@@ -67,5 +67,90 @@
       "nextList": "Nächste Liste",
       "previousList": "Vorherige Liste"
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Team ansehen",
+        "description": "Kann die Teamdetails ansehen"
+      },
+      "members": {
+        "view": {
+          "label": "Mitglieder ansehen",
+          "description": "Kann die Liste der Teammitglieder sehen"
+        },
+        "invite": {
+          "label": "Mitglieder einladen",
+          "description": "Teammitglieder zur Zusammenarbeit einladen"
+        },
+        "remove": {
+          "label": "Mitglieder entfernen",
+          "description": "Kann Teammitglieder entfernen"
+        },
+        "update_role": {
+          "label": "Rollen ändern",
+          "description": "Kann die Rollen der Mitglieder ändern"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Einstellungen ansehen",
+          "description": "Kann die Teameinstellungen ansehen"
+        },
+        "edit": {
+          "label": "Einstellungen bearbeiten",
+          "description": "Kann die Teameinstellungen ändern"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Abrechnung ansehen",
+          "description": "Kann die Abrechnungsinformationen ansehen"
+        },
+        "manage": {
+          "label": "Abrechnung verwalten",
+          "description": "Kann Abonnements und Zahlungen verwalten"
+        }
+      },
+      "edit": {
+        "label": "Team bearbeiten",
+        "description": "Kann Teamnamen und Details ändern"
+      },
+      "delete": {
+        "label": "Team löschen",
+        "description": "Kann das Team dauerhaft löschen"
+      }
+    },
+    "boards": {
+      "archive": {
+        "label": "Boards archivieren",
+        "description": "Kann Boards archivieren, um sie in der Hauptansicht auszublenden"
+      },
+      "settings": {
+        "label": "Board-Einstellungen",
+        "description": "Kann Board-Einstellungen wie Name, Beschreibung und Farbe ändern"
+      }
+    },
+    "lists": {
+      "reorder": {
+        "label": "Listen neu anordnen",
+        "description": "Kann die Reihenfolge der Listen innerhalb eines Boards ändern"
+      }
+    },
+    "cards": {
+      "move": {
+        "label": "Karten verschieben",
+        "description": "Kann Karten zwischen Listen verschieben"
+      },
+      "assign": {
+        "label": "Karten zuweisen",
+        "description": "Kann Karten Teammitgliedern zuweisen"
+      }
+    },
+    "categories": {
+      "Boards": "Boards",
+      "Lists": "Listen",
+      "Cards": "Karten"
+    }
   }
 }

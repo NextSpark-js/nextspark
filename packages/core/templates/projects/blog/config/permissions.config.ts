@@ -27,35 +27,35 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
     // POSTS
     // ------------------------------------------
     posts: [
-      { action: 'create', label: 'Create posts', description: 'Can create new blog posts', roles: ['owner'] },
-      { action: 'read', label: 'View posts', description: 'Can view post details', roles: ['owner'] },
-      { action: 'list', label: 'List posts', description: 'Can see the posts list', roles: ['owner'] },
-      { action: 'update', label: 'Edit posts', description: 'Can modify post content', roles: ['owner'] },
-      { action: 'delete', label: 'Delete posts', description: 'Can delete posts', roles: ['owner'], dangerous: true },
-      { action: 'publish', label: 'Publish posts', description: 'Can publish posts to make them public', roles: ['owner'] },
-      { action: 'unpublish', label: 'Unpublish posts', description: 'Can unpublish posts to hide them', roles: ['owner'] },
+      { action: 'create', roles: ['owner'] },
+      { action: 'read', roles: ['owner'] },
+      { action: 'list', roles: ['owner'] },
+      { action: 'update', roles: ['owner'] },
+      { action: 'delete', roles: ['owner'], dangerous: true },
+      { action: 'publish', roles: ['owner'] },
+      { action: 'unpublish', roles: ['owner'] },
     ],
 
     // ------------------------------------------
     // CATEGORIES
     // ------------------------------------------
     categories: [
-      { action: 'create', label: 'Create categories', description: 'Can create new categories', roles: ['owner'] },
-      { action: 'read', label: 'View categories', description: 'Can view category details', roles: ['owner'] },
-      { action: 'list', label: 'List categories', description: 'Can see the categories list', roles: ['owner'] },
-      { action: 'update', label: 'Edit categories', description: 'Can modify category information', roles: ['owner'] },
-      { action: 'delete', label: 'Delete categories', description: 'Can delete categories', roles: ['owner'], dangerous: true },
+      { action: 'create', roles: ['owner'] },
+      { action: 'read', roles: ['owner'] },
+      { action: 'list', roles: ['owner'] },
+      { action: 'update', roles: ['owner'] },
+      { action: 'delete', roles: ['owner'], dangerous: true },
     ],
 
     // ------------------------------------------
     // PATTERNS
     // ------------------------------------------
     patterns: [
-      { action: 'create', label: 'Create Patterns', description: 'Can create reusable patterns', roles: ['owner'] },
-      { action: 'read', label: 'View Patterns', description: 'Can view pattern details', roles: ['owner'] },
-      { action: 'list', label: 'List Patterns', description: 'Can see the patterns list', roles: ['owner'] },
-      { action: 'update', label: 'Edit Patterns', description: 'Can modify patterns', roles: ['owner'] },
-      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner'], dangerous: true },
+      { action: 'create', roles: ['owner'] },
+      { action: 'read', roles: ['owner'] },
+      { action: 'list', roles: ['owner'] },
+      { action: 'update', roles: ['owner'] },
+      { action: 'delete', roles: ['owner'], dangerous: true },
     ],
   },
 

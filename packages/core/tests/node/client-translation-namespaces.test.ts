@@ -46,6 +46,8 @@ function renderedGroups(file: string): TranslationGroup[] {
   if (relative.includes('/components/auth/')) return ['auth']
   // the layout of the superadmin area (its mobile header reads the namespace on the server)
   if (relative.endsWith('/_internal/superadmin-layout.tsx')) return ['superadmin']
+  // the Team Roles screen, which its route page renders after resolving the permission texts on the server (#553)
+  if (relative.endsWith('/_internal/team-roles-view.tsx')) return ['superadmin']
   if (relative.includes('/components/devtools/')) return ['devtools']
   // the style galleries are rendered by the devtools style page, the rest of components/superadmin by the superadmin area
   if (/\/components\/superadmin\/misc\/(ComponentGallery|FieldTypesGallery|ThemePreview)/.test(relative)) return ['devtools']

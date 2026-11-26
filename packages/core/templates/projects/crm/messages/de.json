@@ -555,5 +555,119 @@
         }
       }
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Team ansehen",
+        "description": "Kann die Teamdetails ansehen"
+      },
+      "members": {
+        "view": {
+          "label": "Mitglieder ansehen",
+          "description": "Kann die Liste der Teammitglieder sehen"
+        },
+        "invite": {
+          "label": "Mitglieder einladen",
+          "description": "Neue Teammitglieder zum CRM einladen"
+        },
+        "remove": {
+          "label": "Mitglieder entfernen",
+          "description": "Kann Teammitglieder entfernen"
+        },
+        "update_role": {
+          "label": "Rollen ändern",
+          "description": "Nur CRM-Administratoren können die Rollen der Benutzer ändern"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Einstellungen ansehen",
+          "description": "Kann die Teameinstellungen ansehen"
+        },
+        "edit": {
+          "label": "Einstellungen bearbeiten",
+          "description": "Kann die Teameinstellungen ändern"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Abrechnung ansehen",
+          "description": "Kann die Abrechnungsinformationen ansehen"
+        },
+        "manage": {
+          "label": "Abrechnung verwalten",
+          "description": "Kann Abonnements und Zahlungen verwalten"
+        }
+      },
+      "edit": {
+        "label": "Team bearbeiten",
+        "description": "Kann Teamnamen und Details ändern"
+      },
+      "delete": {
+        "label": "Team löschen",
+        "description": "Die Organisation kann im Einzelmandantenmodus nicht gelöscht werden"
+      }
+    },
+    "reports": {
+      "sales": {
+        "label": "Verkaufsberichte",
+        "description": "Zugriff auf Berichte und Analysen zur Verkaufsleistung"
+      },
+      "marketing": {
+        "label": "Marketingberichte",
+        "description": "Zugriff auf Berichte zu Marketingkampagnen und ROI-Analysen"
+      },
+      "pipeline": {
+        "label": "Pipeline-Berichte",
+        "description": "Zugriff auf Pipeline-Analysen und Prognoseberichte"
+      },
+      "export": {
+        "label": "Berichte exportieren",
+        "description": "Kann Berichte als PDF, Excel oder CSV exportieren"
+      }
+    },
+    "dashboard": {
+      "forecasting": {
+        "label": "Verkaufsprognose",
+        "description": "Zugriff auf Verkaufsprognosen und Hochrechnungen"
+      },
+      "team_metrics": {
+        "label": "Team-Kennzahlen",
+        "description": "Kann Leistungskennzahlen und KPIs des Teams ansehen"
+      }
+    },
+    "bulk": {
+      "import": {
+        "label": "Massenimport",
+        "description": "Kann Daten aus CSV- oder Excel-Dateien importieren"
+      },
+      "export": {
+        "label": "Massenexport",
+        "description": "Kann Daten in CSV- oder Excel-Dateien exportieren"
+      }
+    },
+    "leads": {
+      "convert": {
+        "label": "Leads konvertieren",
+        "description": "Kann Leads in Kontakte und Unternehmen umwandeln"
+      }
+    },
+    "settings": {
+      "pipelines": {
+        "label": "Pipeline-Konfiguration",
+        "description": "Kann Verkaufspipelines erstellen und ändern"
+      },
+      "products": {
+        "label": "Produktkatalog",
+        "description": "Kann den Produktkatalog verwalten"
+      }
+    },
+    "categories": {
+      "Reports": "Berichte",
+      "Dashboard": "Dashboard",
+      "Bulk Operations": "Massenvorgänge",
+      "Configuration": "Konfiguration"
+    }
   }
 }

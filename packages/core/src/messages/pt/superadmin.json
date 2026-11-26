@@ -384,6 +384,44 @@
       "Team": "Equipe",
       "Settings": "Configurações",
       "Media": "Mídia"
+    },
+    "entityActions": {
+      "create": {
+        "label": "Criar {entity}",
+        "description": "Pode criar {entity}"
+      },
+      "read": {
+        "label": "Ver {entity}",
+        "description": "Pode ver {entity}"
+      },
+      "list": {
+        "label": "Listar {entity}",
+        "description": "Pode ver a lista de {entity}"
+      },
+      "update": {
+        "label": "Editar {entity}",
+        "description": "Pode editar {entity}"
+      },
+      "delete": {
+        "label": "Excluir {entity}",
+        "description": "Pode excluir {entity}"
+      },
+      "publish": {
+        "label": "Publicar {entity}",
+        "description": "Pode publicar {entity}"
+      },
+      "unpublish": {
+        "label": "Cancelar a publicação de {entity}",
+        "description": "Pode cancelar a publicação de {entity}"
+      },
+      "assign": {
+        "label": "Atribuir {entity}",
+        "description": "Pode atribuir {entity} aos membros da equipe"
+      }
+    },
+    "generatedCategories": {
+      "Teams": "Equipes",
+      "Features": "Recursos"
     }
   },
   "planMatrix": {

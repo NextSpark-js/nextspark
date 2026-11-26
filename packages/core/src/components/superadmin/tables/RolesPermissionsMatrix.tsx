@@ -17,6 +17,7 @@ import {
 import { cn } from '../../../lib/utils';
 import { sel } from '../../../lib/test';
 import { CORE_PERMISSION_TEXTS } from './core-permission-texts';
+import type { LocalizedPermissionTexts } from '../../../lib/permissions/permission-texts';
 
 interface PermissionData {
   id: string;
@@ -33,6 +34,8 @@ interface RolesPermissionsMatrixProps {
   allPermissions: string[];
   /** Full permission data with categories for grouping */
   permissionsData?: PermissionData[];
+  /** The texts of the project's permissions in the interface language, resolved on the server (#553); what it lacks is shown as written. */
+  permissionTexts?: LocalizedPermissionTexts;
   /** The search text and the "differences only" switch, when the page keeps them (in the URL); alone, the matrix keeps its own. */
   query?: string;
   onQueryChange?: (query: string) => void;
@@ -97,6 +100,7 @@ export function RolesPermissionsMatrix({
   permissions,
   allPermissions,
   permissionsData,
+  permissionTexts,
   query: queryProp,
   onQueryChange,
   differencesOnly: differencesOnlyProp,
@@ -135,7 +139,10 @@ export function RolesPermissionsMatrix({
       .filter(p => CORE_PERMISSIONS.get(p.id)?.category === p.category)
       .map(p => p.category)
   );
-  const localizedData = permissionsData?.map(p => ({ ...p, description: localizedPermissionDescription(t, p.id, p.description) }));
+  const localizedData = permissionsData?.map(p => {
+    const own = permissionTexts?.texts[p.id];
+    return { ...p, label: own?.label ?? p.label, description: own?.description ?? localizedPermissionDescription(t, p.id, p.description) };
+  });
 
   // Build category map from permissionsData
   const permissionCategoryMap = new Map<string, string>();
@@ -198,6 +205,7 @@ export function RolesPermissionsMatrix({
   // Format category label for display
   const formatCategoryLabel = (category: string): string => {
     if (coreCategories.has(category) && t.has(`coreCategories.${category}`)) return t(`coreCategories.${category}`);
+    if (permissionTexts?.categories[category]) return permissionTexts.categories[category];
     // Already formatted categories
     if (category.includes(" ") || category.includes("-")) {
       return category

@@ -564,5 +564,119 @@
         }
       }
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "View Team",
+        "description": "Can view team details"
+      },
+      "members": {
+        "view": {
+          "label": "View Members",
+          "description": "Can see team member list"
+        },
+        "invite": {
+          "label": "Invite Members",
+          "description": "Invite new team members to the CRM"
+        },
+        "remove": {
+          "label": "Remove Members",
+          "description": "Can remove team members"
+        },
+        "update_role": {
+          "label": "Update Roles",
+          "description": "Only CRM admins can change user roles"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "View Settings",
+          "description": "Can view team settings"
+        },
+        "edit": {
+          "label": "Edit Settings",
+          "description": "Can modify team settings"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "View Billing",
+          "description": "Can view billing information"
+        },
+        "manage": {
+          "label": "Manage Billing",
+          "description": "Can manage subscriptions and payments"
+        }
+      },
+      "edit": {
+        "label": "Edit Team",
+        "description": "Can modify team name and details"
+      },
+      "delete": {
+        "label": "Delete Team",
+        "description": "Cannot delete organization in single-tenant mode"
+      }
+    },
+    "reports": {
+      "sales": {
+        "label": "Sales Reports",
+        "description": "Access to sales performance reports and analytics"
+      },
+      "marketing": {
+        "label": "Marketing Reports",
+        "description": "Access to marketing campaign reports and ROI analysis"
+      },
+      "pipeline": {
+        "label": "Pipeline Reports",
+        "description": "Access to pipeline analysis and forecasting reports"
+      },
+      "export": {
+        "label": "Export Reports",
+        "description": "Can export reports to PDF, Excel, or CSV"
+      }
+    },
+    "dashboard": {
+      "forecasting": {
+        "label": "Sales Forecasting",
+        "description": "Access to sales forecasting and projections"
+      },
+      "team_metrics": {
+        "label": "Team Metrics",
+        "description": "View team performance metrics and KPIs"
+      }
+    },
+    "bulk": {
+      "import": {
+        "label": "Bulk Import",
+        "description": "Can import data from CSV/Excel files"
+      },
+      "export": {
+        "label": "Bulk Export",
+        "description": "Can export data to CSV/Excel files"
+      }
+    },
+    "leads": {
+      "convert": {
+        "label": "Convert Leads",
+        "description": "Can convert leads to contacts and companies"
+      }
+    },
+    "settings": {
+      "pipelines": {
+        "label": "Pipeline Configuration",
+        "description": "Can create and modify sales pipelines"
+      },
+      "products": {
+        "label": "Product Catalog",
+        "description": "Can manage the product catalog"
+      }
+    },
+    "categories": {
+      "Reports": "Reports",
+      "Dashboard": "Dashboard",
+      "Bulk Operations": "Bulk Operations",
+      "Configuration": "Configuration"
+    }
   }
 }

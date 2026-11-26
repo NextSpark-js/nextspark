@@ -54,44 +54,44 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
     // BOARDS
     // ------------------------------------------
     boards: [
-      { action: 'create', label: 'Create boards', description: 'Can create new boards', roles: ['owner', 'admin'] },
-      { action: 'read', label: 'View boards', description: 'Can view board details', roles: ['owner', 'admin', 'member'] },
-      { action: 'list', label: 'List boards', description: 'Can see the boards list', roles: ['owner', 'admin', 'member'] },
-      { action: 'update', label: 'Edit boards', description: 'Can modify board information', roles: ['owner', 'admin'] },
-      { action: 'delete', label: 'Delete boards', description: 'Can delete boards', roles: ['owner'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'read', roles: ['owner', 'admin', 'member'] },
+      { action: 'list', roles: ['owner', 'admin', 'member'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner'], dangerous: true },
     ],
 
     // ------------------------------------------
     // LISTS
     // ------------------------------------------
     lists: [
-      { action: 'create', label: 'Create lists', description: 'Can create new lists in boards', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View lists', description: 'Can view list details', roles: ['owner', 'admin', 'member'] },
-      { action: 'list', label: 'List lists', description: 'Can see the lists in a board', roles: ['owner', 'admin', 'member'] },
-      { action: 'update', label: 'Edit lists', description: 'Can modify list information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete lists', description: 'Can delete lists', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member'] },
+      { action: 'list', roles: ['owner', 'admin', 'member'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
     ],
 
     // ------------------------------------------
     // CARDS
     // ------------------------------------------
     cards: [
-      { action: 'create', label: 'Create cards', description: 'Can create new cards in lists', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View cards', description: 'Can view card details', roles: ['owner', 'admin', 'member'] },
-      { action: 'list', label: 'List cards', description: 'Can see the cards in a list', roles: ['owner', 'admin', 'member'] },
-      { action: 'update', label: 'Edit cards', description: 'Can modify card information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete cards', description: 'Can delete cards', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member'] },
+      { action: 'list', roles: ['owner', 'admin', 'member'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
     ],
 
     // ------------------------------------------
     // PATTERNS
     // ------------------------------------------
     patterns: [
-      { action: 'create', label: 'Create Patterns', description: 'Can create reusable patterns', roles: ['owner', 'admin'] },
-      { action: 'read', label: 'View Patterns', description: 'Can view pattern details', roles: ['owner', 'admin', 'member'] },
-      { action: 'list', label: 'List Patterns', description: 'Can see the patterns list', roles: ['owner', 'admin', 'member'] },
-      { action: 'update', label: 'Edit Patterns', description: 'Can modify patterns', roles: ['owner', 'admin'] },
-      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'read', roles: ['owner', 'admin', 'member'] },
+      { action: 'list', roles: ['owner', 'admin', 'member'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
     ],
   },
 

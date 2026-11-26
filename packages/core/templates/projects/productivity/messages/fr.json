@@ -67,5 +67,90 @@
       "nextList": "Liste suivante",
       "previousList": "Liste précédente"
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Voir l’équipe",
+        "description": "Peut voir les détails de l’équipe"
+      },
+      "members": {
+        "view": {
+          "label": "Voir les membres",
+          "description": "Peut voir la liste des membres de l’équipe"
+        },
+        "invite": {
+          "label": "Inviter des membres",
+          "description": "Invite des membres de l’équipe à collaborer"
+        },
+        "remove": {
+          "label": "Retirer des membres",
+          "description": "Peut retirer des membres de l’équipe"
+        },
+        "update_role": {
+          "label": "Modifier les rôles",
+          "description": "Peut modifier les rôles des membres"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Voir les paramètres",
+          "description": "Peut voir les paramètres de l’équipe"
+        },
+        "edit": {
+          "label": "Modifier les paramètres",
+          "description": "Peut modifier les paramètres de l’équipe"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Voir la facturation",
+          "description": "Peut voir les informations de facturation"
+        },
+        "manage": {
+          "label": "Gérer la facturation",
+          "description": "Peut gérer les abonnements et les paiements"
+        }
+      },
+      "edit": {
+        "label": "Modifier l’équipe",
+        "description": "Peut modifier le nom et les détails de l’équipe"
+      },
+      "delete": {
+        "label": "Supprimer l’équipe",
+        "description": "Peut supprimer définitivement l’équipe"
+      }
+    },
+    "boards": {
+      "archive": {
+        "label": "Archiver les tableaux",
+        "description": "Peut archiver des tableaux pour les masquer de la vue principale"
+      },
+      "settings": {
+        "label": "Paramètres du tableau",
+        "description": "Peut modifier les paramètres du tableau, comme le nom, la description et la couleur"
+      }
+    },
+    "lists": {
+      "reorder": {
+        "label": "Réorganiser les listes",
+        "description": "Peut changer l’ordre des listes dans un tableau"
+      }
+    },
+    "cards": {
+      "move": {
+        "label": "Déplacer les cartes",
+        "description": "Peut déplacer des cartes entre les listes"
+      },
+      "assign": {
+        "label": "Assigner les cartes",
+        "description": "Peut assigner des cartes aux membres de l’équipe"
+      }
+    },
+    "categories": {
+      "Boards": "Tableaux",
+      "Lists": "Listes",
+      "Cards": "Cartes"
+    }
   }
 }

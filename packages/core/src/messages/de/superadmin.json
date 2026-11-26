@@ -384,6 +384,44 @@
       "Team": "Team",
       "Settings": "Einstellungen",
       "Media": "Medien"
+    },
+    "entityActions": {
+      "create": {
+        "label": "{entity} erstellen",
+        "description": "Kann {entity} erstellen"
+      },
+      "read": {
+        "label": "{entity} ansehen",
+        "description": "Kann {entity} ansehen"
+      },
+      "list": {
+        "label": "{entity} auflisten",
+        "description": "Kann die Liste von {entity} sehen"
+      },
+      "update": {
+        "label": "{entity} bearbeiten",
+        "description": "Kann {entity} bearbeiten"
+      },
+      "delete": {
+        "label": "{entity} löschen",
+        "description": "Kann {entity} löschen"
+      },
+      "publish": {
+        "label": "{entity} veröffentlichen",
+        "description": "Kann {entity} veröffentlichen"
+      },
+      "unpublish": {
+        "label": "Veröffentlichung von {entity} aufheben",
+        "description": "Kann die Veröffentlichung von {entity} aufheben"
+      },
+      "assign": {
+        "label": "{entity} zuweisen",
+        "description": "Kann {entity} Teammitgliedern zuweisen"
+      }
+    },
+    "generatedCategories": {
+      "Teams": "Teams",
+      "Features": "Funktionen"
     }
   },
   "planMatrix": {

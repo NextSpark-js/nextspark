@@ -161,10 +161,10 @@ export interface EntityPermissionAction {
   /** Action identifier (e.g., 'create', 'read', 'publish', 'archive') */
   action: EntityAction | string
 
-  /** Human-readable label for the permission */
-  label: string
+  /** Human-readable label. Without it the registry generates one ("Create Tasks"), which the Team Roles matrix translates (#553) */
+  label?: string
 
-  /** Detailed description of what this permission allows */
+  /** Detailed description of what this permission allows; generated like the label when missing */
   description?: string
 
   /**

@@ -40,7 +40,7 @@ jest.mock('@nextsparkjs/core/components/ui/tabs', () => {
   return { Tabs: Pass, TabsContent: Pass, TabsList: Pass, TabsTrigger: Pass }
 })
 
-import TeamRolesPage from '../../../src/routes/superadmin/team-roles/page'
+import { TeamRolesView as TeamRolesPage } from '../../../src/routes/_internal/team-roles-view'
 
 test('a plan with no trial days shows no trial text and no stray 0', () => {
   render(<TeamRolesPage />)

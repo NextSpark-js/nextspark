@@ -91,6 +91,21 @@ export function computeTeamRoleConfig({ rolesConfig = null, teamRolesConfig = nu
 }
 
 /**
+ * The English text of an entity permission whose config gives none (#553). The Team Roles matrix recognizes this text
+ * and writes it in the interface language from the catalog, so a test keeps its copy
+ * (`lib/permissions/permission-texts.ts`) equal to this one.
+ *
+ * @param {string} action
+ * @param {string} displayName
+ */
+export function defaultEntityPermissionTexts(action, displayName) {
+  return {
+    label: `${action.charAt(0).toUpperCase() + action.slice(1)} ${displayName}`,
+    description: `Can ${action} ${displayName.toLowerCase()}`,
+  }
+}
+
+/**
  * Generate pre-computed permissions registry
  * Merges core permissions + theme permissions + entity permissions at build time
  *
@@ -194,10 +209,11 @@ export async function generatePermissionsRegistry(permissionsConfig, entities, c
       const displayName = matchingEntity?.displayName || entitySlug.charAt(0).toUpperCase() + entitySlug.slice(1)
 
       for (const action of actions) {
+        const defaults = defaultEntityPermissionTexts(action.action, displayName)
         entityPermissions.push({
           id: `${entitySlug}.${action.action}`,
-          label: action.label || `${action.action.charAt(0).toUpperCase() + action.action.slice(1)} ${displayName}`,
-          description: action.description || `${action.action} permission for ${displayName}`,
+          label: action.label || defaults.label,
+          description: action.description || defaults.description,
           category: displayName,
           roles: action.roles || ['owner', 'admin'],
           dangerous: action.dangerous || false,

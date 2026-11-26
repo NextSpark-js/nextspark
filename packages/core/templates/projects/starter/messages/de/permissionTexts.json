@@ -1,0 +1,54 @@
+{
+  "team": {
+    "view": {
+      "label": "Team ansehen",
+      "description": "Kann die Teamdetails ansehen"
+    },
+    "members": {
+      "view": {
+        "label": "Mitglieder ansehen",
+        "description": "Kann die Liste der Teammitglieder sehen"
+      },
+      "invite": {
+        "label": "Mitglieder einladen",
+        "description": "Kann neue Teammitglieder einladen"
+      },
+      "remove": {
+        "label": "Mitglieder entfernen",
+        "description": "Kann Teammitglieder entfernen"
+      },
+      "update_role": {
+        "label": "Rollen ändern",
+        "description": "Kann die Rollen der Mitglieder ändern"
+      }
+    },
+    "settings": {
+      "view": {
+        "label": "Einstellungen ansehen",
+        "description": "Kann die Teameinstellungen ansehen"
+      },
+      "edit": {
+        "label": "Einstellungen bearbeiten",
+        "description": "Kann die Teameinstellungen ändern"
+      }
+    },
+    "billing": {
+      "view": {
+        "label": "Abrechnung ansehen",
+        "description": "Kann die Abrechnungsinformationen ansehen"
+      },
+      "manage": {
+        "label": "Abrechnung verwalten",
+        "description": "Kann Abonnements und Zahlungen verwalten"
+      }
+    },
+    "edit": {
+      "label": "Team bearbeiten",
+      "description": "Kann Teamnamen und Details ändern"
+    },
+    "delete": {
+      "label": "Team löschen",
+      "description": "Kann das Team dauerhaft löschen"
+    }
+  }
+}

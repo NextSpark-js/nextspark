@@ -55,112 +55,112 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
     // LEADS
     // ------------------------------------------
     leads: [
-      { action: 'create', label: 'Create leads', description: 'Can create new leads', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View leads', description: 'Can view lead details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List leads', description: 'Can see the leads list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit leads', description: 'Can modify lead information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete leads', description: 'Can delete leads', roles: ['owner', 'admin'], dangerous: true },
-      { action: 'assign', label: 'Assign leads', description: 'Can assign leads to team members', roles: ['owner', 'admin'] },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'assign', roles: ['owner', 'admin'] },
     ],
 
     // ------------------------------------------
     // CONTACTS
     // ------------------------------------------
     contacts: [
-      { action: 'create', label: 'Create contacts', description: 'Can create new contacts', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View contacts', description: 'Can view contact details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List contacts', description: 'Can see the contacts list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit contacts', description: 'Can modify contact information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete contacts', description: 'Can delete contacts', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
     ],
 
     // ------------------------------------------
     // COMPANIES
     // ------------------------------------------
     companies: [
-      { action: 'create', label: 'Create companies', description: 'Can create new companies', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View companies', description: 'Can view company details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List companies', description: 'Can see the companies list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit companies', description: 'Can modify company information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete companies', description: 'Can delete companies', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
     ],
 
     // ------------------------------------------
     // OPPORTUNITIES
     // ------------------------------------------
     opportunities: [
-      { action: 'create', label: 'Create opportunities', description: 'Can create new opportunities', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View opportunities', description: 'Can view opportunity details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List opportunities', description: 'Can see the opportunities list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit opportunities', description: 'Can modify opportunity information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete opportunities', description: 'Can delete opportunities', roles: ['owner', 'admin'], dangerous: true },
-      { action: 'assign', label: 'Assign opportunities', description: 'Can assign opportunities to team members', roles: ['owner', 'admin'] },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'assign', roles: ['owner', 'admin'] },
     ],
 
     // ------------------------------------------
     // ACTIVITIES
     // ------------------------------------------
     activities: [
-      { action: 'create', label: 'Create activities', description: 'Can schedule activities', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View activities', description: 'Can view activity details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List activities', description: 'Can see the activities list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit activities', description: 'Can modify activity information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete activities', description: 'Can delete activities', roles: ['owner', 'admin', 'member'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin', 'member'], dangerous: true },
     ],
 
     // ------------------------------------------
     // NOTES
     // ------------------------------------------
     notes: [
-      { action: 'create', label: 'Create notes', description: 'Can create notes', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View notes', description: 'Can view notes', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List notes', description: 'Can see notes list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit notes', description: 'Can modify notes', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete notes', description: 'Can delete notes', roles: ['owner', 'admin', 'member'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin', 'member'], dangerous: true },
     ],
 
     // ------------------------------------------
     // CAMPAIGNS
     // ------------------------------------------
     campaigns: [
-      { action: 'create', label: 'Create campaigns', description: 'Can create marketing campaigns', roles: ['owner', 'admin'] },
-      { action: 'read', label: 'View campaigns', description: 'Can view campaign details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List campaigns', description: 'Can see the campaigns list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit campaigns', description: 'Can modify campaign information', roles: ['owner', 'admin'] },
-      { action: 'delete', label: 'Delete campaigns', description: 'Can delete campaigns', roles: ['owner'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner'], dangerous: true },
     ],
 
     // ------------------------------------------
     // PRODUCTS
     // ------------------------------------------
     products: [
-      { action: 'create', label: 'Create products', description: 'Can add products to catalog', roles: ['owner'] },
-      { action: 'read', label: 'View products', description: 'Can view product details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List products', description: 'Can see the products catalog', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit products', description: 'Can modify product information', roles: ['owner'] },
-      { action: 'delete', label: 'Delete products', description: 'Can delete products', roles: ['owner'], dangerous: true },
+      { action: 'create', roles: ['owner'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner'] },
+      { action: 'delete', roles: ['owner'], dangerous: true },
     ],
 
     // ------------------------------------------
     // PIPELINES
     // ------------------------------------------
     pipelines: [
-      { action: 'create', label: 'Create pipelines', description: 'Can create sales pipelines', roles: ['owner'] },
-      { action: 'read', label: 'View pipelines', description: 'Can view pipeline details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List pipelines', description: 'Can see the pipelines list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit pipelines', description: 'Can modify pipeline stages', roles: ['owner'] },
-      { action: 'delete', label: 'Delete pipelines', description: 'Can delete pipelines', roles: ['owner'], dangerous: true },
+      { action: 'create', roles: ['owner'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner'] },
+      { action: 'delete', roles: ['owner'], dangerous: true },
     ],
 
     // ------------------------------------------
     // PATTERNS
     // ------------------------------------------
     patterns: [
-      { action: 'create', label: 'Create Patterns', description: 'Can create reusable patterns', roles: ['owner', 'admin'] },
-      { action: 'read', label: 'View Patterns', description: 'Can view pattern details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List Patterns', description: 'Can see the patterns list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit Patterns', description: 'Can modify patterns', roles: ['owner', 'admin'] },
-      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
     ],
   },
 

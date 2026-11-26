@@ -74,6 +74,91 @@
       "nextList": "Lista Siguiente",
       "previousList": "Lista Anterior"
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Ver equipo",
+        "description": "Puede ver los detalles del equipo"
+      },
+      "members": {
+        "view": {
+          "label": "Ver miembros",
+          "description": "Puede ver la lista de miembros del equipo"
+        },
+        "invite": {
+          "label": "Invitar miembros",
+          "description": "Invita a miembros del equipo a colaborar"
+        },
+        "remove": {
+          "label": "Quitar miembros",
+          "description": "Puede quitar miembros del equipo"
+        },
+        "update_role": {
+          "label": "Cambiar roles",
+          "description": "Puede cambiar los roles de los miembros"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Ver configuración",
+          "description": "Puede ver la configuración del equipo"
+        },
+        "edit": {
+          "label": "Editar configuración",
+          "description": "Puede modificar la configuración del equipo"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Ver facturación",
+          "description": "Puede ver la información de facturación"
+        },
+        "manage": {
+          "label": "Gestionar facturación",
+          "description": "Puede gestionar las suscripciones y los pagos"
+        }
+      },
+      "edit": {
+        "label": "Editar equipo",
+        "description": "Puede modificar el nombre y los detalles del equipo"
+      },
+      "delete": {
+        "label": "Eliminar equipo",
+        "description": "Puede eliminar el equipo de forma permanente"
+      }
+    },
+    "boards": {
+      "archive": {
+        "label": "Archivar tableros",
+        "description": "Puede archivar tableros para ocultarlos de la vista principal"
+      },
+      "settings": {
+        "label": "Configuración del tablero",
+        "description": "Puede modificar la configuración del tablero, como el nombre, la descripción y el color"
+      }
+    },
+    "lists": {
+      "reorder": {
+        "label": "Reordenar listas",
+        "description": "Puede cambiar el orden de las listas dentro de un tablero"
+      }
+    },
+    "cards": {
+      "move": {
+        "label": "Mover tarjetas",
+        "description": "Puede mover tarjetas entre listas"
+      },
+      "assign": {
+        "label": "Asignar tarjetas",
+        "description": "Puede asignar tarjetas a miembros del equipo"
+      }
+    },
+    "categories": {
+      "Boards": "Tableros",
+      "Lists": "Listas",
+      "Cards": "Tarjetas"
+    }
   }
 }
 

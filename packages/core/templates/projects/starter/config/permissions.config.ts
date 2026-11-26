@@ -51,47 +51,47 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
     // PATTERNS ENTITY (Core entity - reusable block compositions)
     // ------------------------------------------
     patterns: [
-      { action: 'create', label: 'Create Patterns', description: 'Can create reusable patterns', roles: ['owner', 'admin'] },
-      { action: 'read', label: 'View Patterns', description: 'Can view pattern details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List Patterns', description: 'Can see the patterns list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit Patterns', description: 'Can modify patterns', roles: ['owner', 'admin'] },
-      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
     ],
 
     // ------------------------------------------
     // TASKS ENTITY
     // ------------------------------------------
     tasks: [
-      { action: 'create', label: 'Create tasks', description: 'Can create new tasks', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View tasks', description: 'Can view task details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List tasks', description: 'Can see the tasks list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit tasks', description: 'Can modify task information', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete tasks', description: 'Can delete tasks', roles: ['owner', 'admin'], dangerous: true },
-      { action: 'assign', label: 'Assign tasks', description: 'Can assign tasks to team members', roles: ['owner', 'admin'] },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'assign', roles: ['owner', 'admin'] },
     ],
 
     // ------------------------------------------
     // PAGES ENTITY (bundled with the starter theme by default)
     // ------------------------------------------
     pages: [
-      { action: 'create', label: 'Create Pages', description: 'Can create new pages', roles: ['owner', 'admin'] },
-      { action: 'read', label: 'View Pages', description: 'Can view page details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List Pages', description: 'Can see the pages list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit Pages', description: 'Can modify page content', roles: ['owner', 'admin'] },
-      { action: 'delete', label: 'Delete Pages', description: 'Can delete pages', roles: ['owner', 'admin'], dangerous: true },
-      { action: 'publish', label: 'Publish Pages', description: 'Can publish pages to make them public', roles: ['owner', 'admin'] },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'publish', roles: ['owner', 'admin'] },
     ],
 
     // ------------------------------------------
     // POSTS ENTITY (bundled with the starter theme by default)
     // ------------------------------------------
     posts: [
-      { action: 'create', label: 'Create Posts', description: 'Can create new blog posts', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View Posts', description: 'Can view post details', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'list', label: 'List Posts', description: 'Can see the posts list', roles: ['owner', 'admin', 'member', 'viewer'] },
-      { action: 'update', label: 'Edit Posts', description: 'Can modify post content', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete Posts', description: 'Can delete posts', roles: ['owner', 'admin'], dangerous: true },
-      { action: 'publish', label: 'Publish Posts', description: 'Can publish posts to make them public', roles: ['owner', 'admin'] },
+      { action: 'create', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'publish', roles: ['owner', 'admin'] },
     ],
   },
 }

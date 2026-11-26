@@ -1,0 +1,54 @@
+{
+  "team": {
+    "view": {
+      "label": "Voir l’équipe",
+      "description": "Peut voir les détails de l’équipe"
+    },
+    "members": {
+      "view": {
+        "label": "Voir les membres",
+        "description": "Peut voir la liste des membres de l’équipe"
+      },
+      "invite": {
+        "label": "Inviter des membres",
+        "description": "Peut inviter de nouveaux membres dans l’équipe"
+      },
+      "remove": {
+        "label": "Retirer des membres",
+        "description": "Peut retirer des membres de l’équipe"
+      },
+      "update_role": {
+        "label": "Modifier les rôles",
+        "description": "Peut modifier les rôles des membres"
+      }
+    },
+    "settings": {
+      "view": {
+        "label": "Voir les paramètres",
+        "description": "Peut voir les paramètres de l’équipe"
+      },
+      "edit": {
+        "label": "Modifier les paramètres",
+        "description": "Peut modifier les paramètres de l’équipe"
+      }
+    },
+    "billing": {
+      "view": {
+        "label": "Voir la facturation",
+        "description": "Peut voir les informations de facturation"
+      },
+      "manage": {
+        "label": "Gérer la facturation",
+        "description": "Peut gérer les abonnements et les paiements"
+      }
+    },
+    "edit": {
+      "label": "Modifier l’équipe",
+      "description": "Peut modifier le nom et les détails de l’équipe"
+    },
+    "delete": {
+      "label": "Supprimer l’équipe",
+      "description": "Peut supprimer définitivement l’équipe"
+    }
+  }
+}

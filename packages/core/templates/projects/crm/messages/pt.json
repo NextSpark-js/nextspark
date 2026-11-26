@@ -555,5 +555,119 @@
         }
       }
     }
+  },
+  "permissionTexts": {
+    "team": {
+      "view": {
+        "label": "Ver equipe",
+        "description": "Pode ver os detalhes da equipe"
+      },
+      "members": {
+        "view": {
+          "label": "Ver membros",
+          "description": "Pode ver a lista de membros da equipe"
+        },
+        "invite": {
+          "label": "Convidar membros",
+          "description": "Convida novos membros da equipe para o CRM"
+        },
+        "remove": {
+          "label": "Remover membros",
+          "description": "Pode remover membros da equipe"
+        },
+        "update_role": {
+          "label": "Alterar funções",
+          "description": "Somente os administradores do CRM podem alterar as funções dos usuários"
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "Ver configurações",
+          "description": "Pode ver as configurações da equipe"
+        },
+        "edit": {
+          "label": "Editar configurações",
+          "description": "Pode alterar as configurações da equipe"
+        }
+      },
+      "billing": {
+        "view": {
+          "label": "Ver cobrança",
+          "description": "Pode ver as informações de cobrança"
+        },
+        "manage": {
+          "label": "Gerenciar cobrança",
+          "description": "Pode gerenciar assinaturas e pagamentos"
+        }
+      },
+      "edit": {
+        "label": "Editar equipe",
+        "description": "Pode alterar o nome e os detalhes da equipe"
+      },
+      "delete": {
+        "label": "Excluir equipe",
+        "description": "Não é possível excluir a organização no modo de inquilino único"
+      }
+    },
+    "reports": {
+      "sales": {
+        "label": "Relatórios de vendas",
+        "description": "Acesso aos relatórios e análises de desempenho de vendas"
+      },
+      "marketing": {
+        "label": "Relatórios de marketing",
+        "description": "Acesso aos relatórios de campanhas de marketing e à análise de ROI"
+      },
+      "pipeline": {
+        "label": "Relatórios do funil",
+        "description": "Acesso à análise do funil e aos relatórios de previsão"
+      },
+      "export": {
+        "label": "Exportar relatórios",
+        "description": "Pode exportar relatórios para PDF, Excel ou CSV"
+      }
+    },
+    "dashboard": {
+      "forecasting": {
+        "label": "Previsão de vendas",
+        "description": "Acesso à previsão e às projeções de vendas"
+      },
+      "team_metrics": {
+        "label": "Métricas da equipe",
+        "description": "Pode ver as métricas de desempenho e os KPIs da equipe"
+      }
+    },
+    "bulk": {
+      "import": {
+        "label": "Importação em massa",
+        "description": "Pode importar dados de arquivos CSV ou Excel"
+      },
+      "export": {
+        "label": "Exportação em massa",
+        "description": "Pode exportar dados para arquivos CSV ou Excel"
+      }
+    },
+    "leads": {
+      "convert": {
+        "label": "Converter leads",
+        "description": "Pode converter leads em contatos e empresas"
+      }
+    },
+    "settings": {
+      "pipelines": {
+        "label": "Configuração de funis",
+        "description": "Pode criar e alterar funis de vendas"
+      },
+      "products": {
+        "label": "Catálogo de produtos",
+        "description": "Pode gerenciar o catálogo de produtos"
+      }
+    },
+    "categories": {
+      "Reports": "Relatórios",
+      "Dashboard": "Painel",
+      "Bulk Operations": "Operações em massa",
+      "Configuration": "Configuração"
+    }
   }
 }
