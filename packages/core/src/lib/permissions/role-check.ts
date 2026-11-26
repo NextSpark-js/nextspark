@@ -2,8 +2,8 @@
  * The team-permission decision for a caller that already holds the roles (#571).
  *
  * `checkPermission(userId, teamId, permission)` reads the team role and the app role from the database before it
- * decides. A server layout that has verified the session of this request already has both: decide here with no
- * query. These are the same rules as `checkPermission` (including `teams.appRoleBypass`), and, as there,
+ * decides. A server layout that already loads the session and the membership of this request (example below) has both,
+ * and decides each check with them, with no further query. These are the same rules as `checkPermission` (including `teams.appRoleBypass`), and, as there,
  * `ensureEntityPermissionsLoaded()` runs before the decision.
  *
  * Contract for the caller:

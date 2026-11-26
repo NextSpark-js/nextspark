@@ -139,8 +139,8 @@ checkTeamPermission('developer', null, 'team.delete')      // false
 ### hasTeamPermission (roles already in hand)
 
 `checkPermission(userId, teamId, permission)` reads the team role and the app role from the database. A server layout
-that has already verified the session of this request has both, and can decide with no query, by the same rule
-(including `teams.appRoleBypass`):
+that already loads the session and the membership of this request (below) has both, and decides each check with them,
+with no further query, by the same rule (including `teams.appRoleBypass`):
 
 ```typescript
 // app/dashboard/[entity]/layout.tsx (server component)
