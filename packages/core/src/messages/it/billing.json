@@ -100,7 +100,8 @@
     "contacts": "Contatti",
     "deals": "Affari",
     "pipelines": "Pipeline",
-    "workspaces": "Workspace"
+    "workspaces": "Workspace",
+    "projects": "Progetti"
   },
 
   "usage": {

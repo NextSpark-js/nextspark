@@ -100,7 +100,8 @@
     "contacts": "Contacts",
     "deals": "Affaires",
     "pipelines": "Pipelines",
-    "workspaces": "Espaces de travail"
+    "workspaces": "Espaces de travail",
+    "projects": "Projets"
   },
 
   "usage": {
