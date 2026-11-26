@@ -144,12 +144,16 @@ that has already verified the session of this request has both, and can decide w
 
 ```typescript
 // app/dashboard/[entity]/layout.tsx (server component)
+import { headers } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { hasTeamPermission } from '@nextsparkjs/core/lib/permissions/role-check'
 import { getAuthorizationSession } from '@nextsparkjs/core/lib/auth/authorization-session'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services'
 
+// teamId: the team of the route (a param), or the session's active team, as the screen defines it
 const session = await getAuthorizationSession(await headers())
-// The team_members row of session.user.id for this teamId, read in this request
-const membership = await getMembership(session?.user.id, teamId)
+// The user's team_members row for this team, read in this request (it skips deleted teams)
+const membership = session ? await TeamMemberService.getByTeamAndUser(teamId, session.user.id) : null
 
 if (!hasTeamPermission(session?.user.role, membership?.role, 'customers.read')) notFound()
 ```
