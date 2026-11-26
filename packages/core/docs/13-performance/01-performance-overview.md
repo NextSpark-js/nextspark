@@ -325,7 +325,7 @@ Our architecture provides these performance benefits **out of the box**:
 ✅ **App Router**: Automatic code splitting per route
 ✅ **Server Components**: Zero client JS for static content
 ✅ **Image Optimization**: Automatic WebP/AVIF conversion
-✅ **Font Optimization**: Self-hosted, preloaded fonts
+✅ **Font Optimization**: Self-hosted fonts, downloaded only when a page uses them
 ✅ **TanStack Query**: Intelligent client-side caching
 ✅ **Database Indexes**: Optimized queries with RLS
 
