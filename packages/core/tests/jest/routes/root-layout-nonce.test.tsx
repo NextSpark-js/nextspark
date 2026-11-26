@@ -25,7 +25,6 @@ jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({
 jest.mock('next/headers', () => ({
   headers: () => mockHeaders(),
 }))
-jest.mock('../../../src/routes/_internal/geist-font-urls', () => ({ GEIST_SANS_URL: '/geist-sans.woff2', GEIST_MONO_URL: '/geist-mono.woff2' }))
 jest.mock('next-intl', () => ({
   NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))

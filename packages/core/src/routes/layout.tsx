@@ -11,7 +11,6 @@ import { getMessages } from 'next-intl/server'
 import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
 import { readCommonText } from '@nextsparkjs/core/lib/i18n/common-text'
 
-import { GEIST_MONO_URL, GEIST_SANS_URL } from "./_internal/geist-font-urls"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
@@ -25,7 +24,7 @@ import { PluginService } from '@nextsparkjs/core/lib/services/plugin.service'
 import { APP_CONFIG_MERGED } from "@nextsparkjs/core/lib/config/config-client"
 import { getThemeSettings, themeProviderProps } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
-// Geist ships as files: the build makes no request to Google Fonts (#419). Its @font-face rules are in styles/fonts.css, inside the project's main stylesheet, and the two files are preloaded below (#560)
+// Geist ships as files: the build makes no request to Google Fonts (#419). Its @font-face rules are in styles/fonts.css, inside the project's main stylesheet; the files are not preloaded, so a page downloads one only if its CSS uses the face (#560, #575)
 const defaultMetadata: Metadata = {
   title: "NextSpark App",
   description: "Built with NextSpark",
@@ -77,8 +76,6 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <link rel="preload" href={GEIST_SANS_URL} as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href={GEIST_MONO_URL} as="font" type="font/woff2" crossOrigin="anonymous" />
         {billingHints.preconnect.map((domain) => (
           <link key={`pre-${domain}`} rel="preconnect" href={domain} />
         ))}

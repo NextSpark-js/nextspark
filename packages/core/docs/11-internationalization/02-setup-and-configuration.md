@@ -565,7 +565,7 @@ The root layout loads Geist and Geist Mono from files shipped in core
 (`styles/fonts/`, declared in `styles/fonts.css`, which `styles/utilities.css`
 imports), so `next build` makes no request to Google Fonts and works offline,
 and the `@font-face` rules sit in the project's main stylesheet instead of a
-second one from `next/font` (#560). The CSS variables are `--font-geist-sans` and `--font-geist-mono`. The
+second one from `next/font` (#560). The layout does not preload the two files (#575): a page downloads one only when its CSS uses the face. The CSS variables are `--font-geist-sans` and `--font-geist-mono`. The
 layout has no option to turn the fonts off: a project that wants its own
 typeface sets its own `font-family` (or overrides the variables) in its
 `globals.css`, and the Geist files are then simply not used by the page.

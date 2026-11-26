@@ -3,8 +3,9 @@
  *
  * `next/font` (the `geist` package is `next/font/local`) writes its `@font-face` rules into a CSS file of its own,
  * which the HTML links as a second render-blocking stylesheet after the project's. So the layouts do not import it:
- * the rules are in styles/fonts.css, which styles/utilities.css imports (one stylesheet), and the layouts preload the
- * two files that CSS references.
+ * the rules are in styles/fonts.css, which styles/utilities.css imports (one stylesheet), and the layouts do not
+ * preload the two files (#575): no project template uses the variables, so a preload costs ~140 KB on every first visit
+ * for a font nothing applies, and the browser downloads a face on its own when a page's CSS does use it.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -25,9 +26,10 @@ describe.each(['layout.tsx', 'layout.ppr.tsx'])('root %s fonts', (file) => {
     expect(src).toMatch(/<body\s+className="geist-fonts /)
   })
 
-  it('preloads the sans and mono files', () => {
-    expect(src).toMatch(/<link rel="preload" href=\{GEIST_SANS_URL\} as="font" type="font\/woff2" crossOrigin="anonymous" \/>/)
-    expect(src).toMatch(/<link rel="preload" href=\{GEIST_MONO_URL\} as="font" type="font\/woff2" crossOrigin="anonymous" \/>/)
+  it('does not preload the Geist files, a font no template applies (#575)', () => {
+    expect(src).not.toMatch(/rel="preload"[^>]*as="font"/)
+    expect(src).not.toMatch(/GEIST_/)
+    expect(src).not.toMatch(/geist-font-urls/)
   })
 })
 
@@ -60,14 +62,5 @@ describe('styles/fonts.css', () => {
 
   it('swaps instead of hiding the text while the file loads', () => {
     expect(css.match(/font-display: swap;/g)).toHaveLength(2)
-  })
-})
-
-describe('geist-font-urls', () => {
-  const src = read('src/routes/_internal/geist-font-urls.ts')
-
-  it.each(['Geist-Variable.woff2', 'GeistMono-Variable.woff2'])('points at styles/fonts/%s, the file the CSS references', (file) => {
-    expect(src).toContain(`new URL('../../../styles/fonts/${file}', import.meta.url)`)
-    expect(existsSync(join(CORE, 'src/routes/_internal', '../../../styles/fonts', file))).toBe(true)
   })
 })

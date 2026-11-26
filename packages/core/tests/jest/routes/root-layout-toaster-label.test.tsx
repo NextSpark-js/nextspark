@@ -16,7 +16,6 @@ jest.mock('@nextsparkjs/core/lib/theme/get-default-theme-mode', () => ({
 }))
 jest.mock('@nextsparkjs/core/lib/config/config-client', () => ({ APP_CONFIG_MERGED: { security: {} } }))
 jest.mock('next/headers', () => ({ headers: async () => new Headers() }))
-jest.mock('../../../src/routes/_internal/geist-font-urls', () => ({ GEIST_SANS_URL: '/geist-sans.woff2', GEIST_MONO_URL: '/geist-mono.woff2' }))
 jest.mock('next-intl', () => ({ NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children }))
 jest.mock('next-intl/server', () => ({ getMessages: async () => catalog }))
 jest.mock('@nextsparkjs/core/lib/i18n/client-messages', () => ({ selectMessages: () => ({}), OPTIONAL_ROOT_NAMESPACES: [] }))
