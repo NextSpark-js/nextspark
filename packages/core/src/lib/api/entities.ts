@@ -9,6 +9,14 @@ import { withBasePath, withBasePathIfInApp } from '../base-path'
 import { resolveAppUrl } from '../utils/base-url'
 import { BUILDER_SOURCE_HEADER, TEAM_ID_HEADER } from './client-headers'
 
+/**
+ * Entity mutations that succeeded in this tab (create, update, delete, bulk operation, and any other write through
+ * `fetchWithTeam`). A dashboard list keeps its rows in state and loads them once, and Cache Components keeps the list
+ * the user left in a hidden `<Activity>`: coming back shows the same state. The list compares this count with the one
+ * it loaded at (its effects run again when it is shown) and loads only if an entity changed meanwhile.
+ */
+export let entityMutations = 0
+
 export interface EntityData {
   id?: string
   [key: string]: unknown
@@ -297,6 +305,7 @@ export class EntityApiClient {
       throw new Error(userMessage)
     }
 
+    entityMutations++
     const result = await response.json()
     return result.data
   }
@@ -336,6 +345,7 @@ export class EntityApiClient {
       throw new Error(userMessage)
     }
 
+    entityMutations++
     const result = await response.json()
     return result.data
   }
@@ -372,6 +382,7 @@ export class EntityApiClient {
       throw new Error(userMessage)
     }
 
+    entityMutations++
     const result = await response.json()
     return result.data
   }
@@ -549,6 +560,7 @@ export class EntityApiClient {
       throw new Error(errorData.message || `Error executing operation ${operationId}`)
     }
 
+    entityMutations++
     const result = await response.json()
     return result.data
   }
@@ -706,9 +718,12 @@ export async function fetchWithTeam(
     headers.set(TEAM_ID_HEADER, activeTeamId)
   }
 
-  return fetch(withBasePathIfInApp(url), {
+  const response = await fetch(withBasePathIfInApp(url), {
     ...options,
     headers,
     credentials: 'include',
   })
+  // The transport of the typed entity clients' child rows and of useEntityMutations: a write that succeeded counts too
+  if (response.ok && options.method && options.method !== 'GET') entityMutations++
+  return response
 }

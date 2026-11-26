@@ -23,7 +23,7 @@ import { MultiSelectFilter } from '../../shared/MultiSelectFilter'
 import { PatternDeleteDialog } from '../PatternDeleteDialog'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { useUrlFilters, type FilterSchema, type EntityFiltersReturn } from '../../../hooks/useUrlFilters'
-import { listEntityData, deleteEntityData } from '../../../lib/api/entities'
+import { listEntityData, deleteEntityData, entityMutations } from '../../../lib/api/entities'
 import { useTeam } from '../../../hooks/useTeam'
 import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
@@ -119,6 +119,7 @@ export default function PatternsListPage() {
       return
     }
 
+    loadedAtMutationRef.current = entityMutations
     try {
       if (isInitial) {
         setIsInitialLoad(true)
@@ -150,6 +151,8 @@ export default function PatternsListPage() {
   const filtersKey = JSON.stringify(filters)
   const prevFiltersKeyRef = useRef<string>('')
   const hasLoadedRef = useRef(false)
+  // Entity mutations seen at the last request: a list Next keeps hidden loads again when shown only if one happened
+  const loadedAtMutationRef = useRef(0)
   const schemaKeysForSync = useMemo(
     () => Object.keys(filterSchema).sort().join(','),
     [filterSchema]
@@ -186,7 +189,7 @@ export default function PatternsListPage() {
     const isInitial = !hasLoadedRef.current
     const filtersChanged = prevFiltersKeyRef.current !== filtersKey
 
-    if (isInitial || filtersChanged) {
+    if (isInitial || filtersChanged || loadedAtMutationRef.current !== entityMutations) {
       prevFiltersKeyRef.current = filtersKey
       hasLoadedRef.current = true
       loadData(isInitial)

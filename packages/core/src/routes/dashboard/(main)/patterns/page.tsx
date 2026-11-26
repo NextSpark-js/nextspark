@@ -23,7 +23,7 @@ import { MultiSelectFilter } from '@nextsparkjs/core/components/shared/MultiSele
 import { PatternDeleteDialog } from '@nextsparkjs/core/components/patterns'
 import { useEntityConfig } from '@nextsparkjs/core/hooks/useEntityConfig'
 import { useUrlFilters, type FilterSchema, type EntityFiltersReturn } from '@nextsparkjs/core/hooks/useUrlFilters'
-import { listEntityData, deleteEntityData } from '@nextsparkjs/core/lib/api/entities'
+import { listEntityData, deleteEntityData, entityMutations } from '@nextsparkjs/core/lib/api/entities'
 import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
@@ -119,6 +119,7 @@ function PatternsListPage() {
       return
     }
 
+    loadedAtMutationRef.current = entityMutations
     try {
       if (isInitial) {
         setIsInitialLoad(true)
@@ -150,6 +151,8 @@ function PatternsListPage() {
   const filtersKey = JSON.stringify(filters)
   const prevFiltersKeyRef = useRef<string>('')
   const hasLoadedRef = useRef(false)
+  // Entity mutations seen at the last request: a list Next keeps hidden loads again when shown only if one happened
+  const loadedAtMutationRef = useRef(0)
   const schemaKeysForSync = useMemo(
     () => Object.keys(filterSchema).sort().join(','),
     [filterSchema]
@@ -186,7 +189,7 @@ function PatternsListPage() {
     const isInitial = !hasLoadedRef.current
     const filtersChanged = prevFiltersKeyRef.current !== filtersKey
 
-    if (isInitial || filtersChanged) {
+    if (isInitial || filtersChanged || loadedAtMutationRef.current !== entityMutations) {
       prevFiltersKeyRef.current = filtersKey
       hasLoadedRef.current = true
       loadData(isInitial)

@@ -33,7 +33,7 @@ import { MultiSelectFilter } from '../../shared/MultiSelectFilter'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { useAuth } from '../../../hooks/useAuth'
 import { useUrlFilters, type FilterSchema, type EntityFiltersReturn } from '../../../hooks/useUrlFilters'
-import { listEntityData, deleteEntityData, duplicateEntityData } from '../../../lib/api/entities'
+import { listEntityData, deleteEntityData, duplicateEntityData, entityMutations } from '../../../lib/api/entities'
 import { useTeam } from '../../../hooks/useTeam'
 import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
@@ -142,6 +142,10 @@ export function EntityListWrapper({
     return apiFilters
   }, [filters, entityConfig?.ui.dashboard.filters])
 
+  // Entity mutations seen when the rows were requested: the list Next keeps hidden is not unmounted, and when it is
+  // shown again (this effect runs again) it loads only if something was created, edited or deleted meanwhile
+  const loadedAtMutationRef = useRef(0)
+
   // Load entity data function
   const loadData = useCallback(async (isInitial = false) => {
     if (!entityConfig) return
@@ -150,6 +154,7 @@ export function EntityListWrapper({
       return
     }
 
+    loadedAtMutationRef.current = entityMutations
     try {
       // Only show skeleton on initial load, not on filter changes
       if (isInitial) {
@@ -230,12 +235,17 @@ export function EntityListWrapper({
     const isInitial = !hasLoadedRef.current
     const filtersChanged = prevFiltersKeyRef.current !== filtersKey
 
-    // Load on initial render or when filters change
-    if (isInitial || filtersChanged) {
+    const changedMeanwhile = loadedAtMutationRef.current !== entityMutations
+
+    // Load on initial render, when filters change, or when an entity changed while the list was away
+    if (isInitial || filtersChanged || changedMeanwhile) {
       prevFiltersKeyRef.current = filtersKey
       hasLoadedRef.current = true
       // The server's first page is this load when it was read in the team this page acts in; another team's is not shown
-      if (isInitial && firstPage && firstPage.teamId === teamId) return
+      if (isInitial && firstPage && firstPage.teamId === teamId) {
+        loadedAtMutationRef.current = entityMutations
+        return
+      }
       loadData(isInitial)
     }
   }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, signedIn, teamReady, firstPage, teamId, placeholder])
