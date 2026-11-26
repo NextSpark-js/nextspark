@@ -67,6 +67,7 @@
     },
     "./globals.css": "./globals.css",
     "./styles/utilities.css": "./styles/utilities.css",
+    "./styles/fonts.css": "./styles/fonts.css",
     "./styles/docs.css": "./styles/docs.css",
     "./lib/middleware": {
       "types": "./dist/lib/middleware/index.d.ts",

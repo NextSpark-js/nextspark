@@ -187,6 +187,7 @@ The reason in each row is one of `template-import` (a stable template imports it
 | Subpath | Why it is public |
 | --- | --- |
 | `./styles/utilities.css` | template-import — Imported by the starter globals.css. |
+| `./styles/fonts.css` | documented — The Geist @font-face rules and --font-geist-* variables. styles/utilities.css imports it; import it alone to get only the faces (#560). |
 | `./styles/docs.css` | template-import — Imported by the starter globals.css. |
 
 ### Testing selectors

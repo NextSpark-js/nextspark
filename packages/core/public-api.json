@@ -383,6 +383,12 @@
       "note": "Imported by the starter globals.css."
     },
     {
+      "subpath": "./styles/fonts.css",
+      "reason": "documented",
+      "area": "Styles",
+      "note": "The Geist @font-face rules and --font-geist-* variables. styles/utilities.css imports it; import it alone to get only the faces (#560)."
+    },
+    {
       "subpath": "./styles/docs.css",
       "reason": "template-import",
       "area": "Styles",

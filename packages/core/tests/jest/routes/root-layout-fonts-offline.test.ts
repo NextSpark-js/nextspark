@@ -53,6 +53,11 @@ describe('styles/fonts.css', () => {
     expect(css).toContain('--font-geist-sans: "GeistSans", "GeistSans Fallback";')
   })
 
+  it('is an export of the package (a project can import it alone) and listed in public-api.json', () => {
+    expect(JSON.parse(read('package.json')).exports['./styles/fonts.css']).toBe('./styles/fonts.css')
+    expect(read('public-api.json')).toContain('"subpath": "./styles/fonts.css"')
+  })
+
   it('swaps instead of hiding the text while the file loads', () => {
     expect(css.match(/font-display: swap;/g)).toHaveLength(2)
   })
