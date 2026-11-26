@@ -66,6 +66,21 @@ describe('DevtoolsMobileHeader (#505)', () => {
     expect(header.querySelector('svg.lucide-code')).not.toBeNull()
   })
 
+  test('the menu closes when the window grows to the desktop layout', () => {
+    let listener: (() => void) | undefined
+    const query = { matches: false, addEventListener: (_: string, fn: () => void) => { listener = fn }, removeEventListener: jest.fn() }
+    window.matchMedia = jest.fn(() => query) as never
+    render(<DevtoolsMobileHeader pluginItems={[]} />)
+    fireEvent.click(screen.getByLabelText(en.common.a11y.openNavigationMenu))
+    expect(menu().open).toBe(true)
+
+    listener?.() // still below lg
+    expect(menu().open).toBe(true)
+    query.matches = true
+    listener?.()
+    expect(menu().open).toBe(false)
+  })
+
   test('the menu closes when the page changes, and with its close button', () => {
     const { rerender } = render(<DevtoolsMobileHeader pluginItems={[]} />)
     fireEvent.click(screen.getByLabelText(en.common.a11y.openNavigationMenu))

@@ -31,6 +31,16 @@ export function DevtoolsMobileHeader({ pluginItems: pluginItemsProp }: { pluginI
   // a link of the menu navigates: the drawer closes with it
   useEffect(() => drawer.current?.close(), [pathname]);
 
+  // the header is `lg:hidden`: a modal dialog left open when the window grows to `lg` (a rotated tablet) would measure
+  // 0x0 and still make the page inert, so it closes there
+  useEffect(() => {
+    const query = window.matchMedia?.('(min-width: 1024px)'); // jsdom has no matchMedia
+    if (!query) return;
+    const close = () => { if (query.matches) drawer.current?.close() };
+    query.addEventListener('change', close);
+    return () => query.removeEventListener('change', close);
+  }, []);
+
   return (
     <div className="lg:hidden bg-card border-b border-border p-4" data-cy="devtools-mobile-header">
       <div className="flex items-center gap-2">
