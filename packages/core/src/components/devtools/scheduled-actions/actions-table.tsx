@@ -71,6 +71,9 @@ async function runAction(actionId: string, fallbackError: string): Promise<{ suc
   return data.data
 }
 
+/** Below `lg` the table scrolls sideways: its actions column stays at the right edge, in reach of the buttons (#509). */
+const STICKY_ACTIONS = 'max-lg:sticky max-lg:right-0 max-lg:shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.2)]'
+
 export function ActionsTable({ actions, focusId, onViewRelated }: ActionsTableProps) {
   const t = useTranslations('devtools.scheduledActions')
   const locale = useLocale()
@@ -167,7 +170,10 @@ export function ActionsTable({ actions, focusId, onViewRelated }: ActionsTablePr
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden" data-cy={sel('devtools.scheduledActions.table')}>
+    <div
+      className="border rounded-lg overflow-hidden [&>div::-webkit-scrollbar]:h-2 [&>div::-webkit-scrollbar-thumb]:rounded [&>div::-webkit-scrollbar-thumb]:bg-border"
+      data-cy={sel('devtools.scheduledActions.table')}
+    >
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
@@ -193,7 +199,7 @@ export function ActionsTable({ actions, focusId, onViewRelated }: ActionsTablePr
             <TableHead className="font-semibold" data-cy={sel('devtools.scheduledActions.cellTeam')}>
               {t('table.team')}
             </TableHead>
-            <TableHead className="font-semibold text-right" data-cy={sel('devtools.scheduledActions.cellActions')}>
+            <TableHead className={cn('font-semibold text-right', STICKY_ACTIONS, 'max-lg:bg-muted')} data-cy={sel('devtools.scheduledActions.cellActions')}>
               {t('table.actions')}
             </TableHead>
           </TableRow>
@@ -316,7 +322,7 @@ export function ActionsTable({ actions, focusId, onViewRelated }: ActionsTablePr
                       <span className="text-muted-foreground">{t('table.noTeam')}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right py-4">
+                  <TableCell className={cn('text-right py-4', STICKY_ACTIONS, 'max-lg:bg-card')}>
                     <div className="flex items-center justify-end gap-2">
                       {action.status === 'failed' && action.retriedBy && (
                         <Button
