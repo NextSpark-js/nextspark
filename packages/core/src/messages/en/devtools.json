@@ -186,6 +186,7 @@
   },
   "api": {
     "title": "API Explorer",
+    "requestPanel": "Request",
     "endpointsAvailable": "endpoints available",
     "endpointsInCategory": "endpoints in this category",
     "noRoutesInCategory": "No routes in this category",

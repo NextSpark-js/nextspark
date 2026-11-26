@@ -191,18 +191,18 @@ export function ApiRequestPanel({
   }
 
   return (
-    <div className="flex flex-col h-full" data-cy={sel('devtools.apiExplorer.request.panel')}>
+    <div className="flex flex-col h-full max-lg:h-auto max-lg:min-h-full" data-cy={sel('devtools.apiExplorer.request.panel')}>
       {/* Header: Method + URL */}
       <div className="p-4 border-b space-y-3 bg-muted/30">
         {/* Method Badge + Endpoint Path + Send Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Badge
             variant="outline"
             className={cn('font-mono text-sm px-2 py-1 border', methodColors[method])}
           >
             {method}
           </Badge>
-          <code className="font-mono text-sm font-medium flex-1 truncate" title={basePath}>{basePath}</code>
+          <code className="font-mono text-sm font-medium flex-1 min-w-0 truncate max-sm:order-last max-sm:basis-full max-sm:whitespace-normal max-sm:break-all" title={basePath}>{basePath}</code>
           {route.source && (
             <Badge variant="secondary" className="text-xs shrink-0">
               {route.source}
@@ -215,7 +215,7 @@ export function ApiRequestPanel({
           )}
 
           {/* Send Button */}
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 max-sm:ml-auto">
             <Button
               onClick={onSend}
               disabled={!canSend || status === 'loading'}
@@ -305,7 +305,7 @@ export function ApiRequestPanel({
       </div>
 
       {/* Tabs for params/headers/body */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 max-lg:min-h-80 flex flex-col">
         {/* An endpoint that opens with a body (a preset's or its required fields) opens on the Body tab, so the payload is
             seen before it is sent. Remounted per method and path: defaultValue is read once, and each endpoint decides again. */}
         <Tabs

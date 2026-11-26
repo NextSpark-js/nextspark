@@ -105,6 +105,7 @@
   },
   "api": {
     "title": "Explorador API",
+    "requestPanel": "Solicitud",
     "endpointsAvailable": "endpoints disponibles",
     "endpointsInCategory": "endpoints en esta categoría",
     "noRoutesInCategory": "Sin rutas en esta categoría",

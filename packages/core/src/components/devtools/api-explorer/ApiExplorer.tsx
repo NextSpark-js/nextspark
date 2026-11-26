@@ -84,6 +84,9 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
   // Sidebar state (collapse persisted)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Below `lg` the request and the response are two views of the area, one at a time, each with its own scroll (#507)
+  const [mobileView, setMobileView] = useState<'request' | 'response'>('request')
+  const tTester = useTranslations('devtools.apiTester')
 
   // Selected endpoint
   const [selectedEndpoint, setSelectedEndpoint] = useState<SelectedEndpoint | null>(null)
@@ -250,6 +253,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
 
       // Close mobile sidebar after selection
       setMobileOpen(false)
+      setMobileView('request')
     },
     [reset, navigateToEndpoint, applyEndpointState]
   )
@@ -260,6 +264,8 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
 
     const url = buildUrl(selectedEndpoint.path, pathParams, queryParams)
     const fullUrl = (typeof window !== 'undefined' ? window.location.origin : '') + withBasePath(url)
+
+    setMobileView('response')
 
     // Team context is only complained about here, once a request goes out without one.
     setTeamErrorShown(!bypassMode && !selectedTeamId)
@@ -537,13 +543,15 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
   const totalRoutes = Object.values(routes).reduce((sum, arr) => sum + arr.length, 0)
 
   return (
-    <div className="flex h-full w-full overflow-hidden" data-cy={sel('devtools.apiExplorer.container')}>
+    <div className="relative flex h-full w-full overflow-hidden" data-cy={sel('devtools.apiExplorer.container')}>
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b flex items-center px-4 gap-3">
+      <div className="lg:hidden absolute top-0 left-0 right-0 z-50 h-14 bg-background border-b flex items-center px-4 gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label={t('title')}
+          aria-expanded={mobileOpen}
           data-cy={sel('devtools.apiExplorer.mobileToggle')}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -562,7 +570,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="lg:hidden absolute inset-0 top-14 z-40 bg-black/50"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -570,7 +578,7 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed lg:relative z-50 lg:z-auto h-full transition-transform duration-300',
+          'absolute max-lg:top-14 max-lg:h-[calc(100%-3.5rem)] lg:relative z-40 lg:z-auto h-full transition-transform duration-300',
           'lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -590,9 +598,32 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
       <div ref={splitRowRef} className="flex-1 flex flex-col lg:flex-row min-w-0 pt-14 lg:pt-0">
         {selectedEndpoint ? (
           <>
-            {/* Request Panel - Top on mobile, Left on desktop */}
+            {/* Request or Response, one at a time on mobile (#507) */}
+            <div className="lg:hidden flex shrink-0 border-b bg-background" role="tablist" data-cy="devtools-api-mobile-panels">
+              {(['request', 'response'] as const).map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  role="tab"
+                  aria-selected={mobileView === view}
+                  onClick={() => setMobileView(view)}
+                  className={cn(
+                    'flex-1 px-4 py-2 text-sm font-medium border-b-2',
+                    mobileView === view ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
+                  )}
+                  data-cy={`devtools-api-mobile-panel-${view}`}
+                >
+                  {view === 'request' ? t('requestPanel') : tTester('response')}
+                </button>
+              ))}
+            </div>
+
+            {/* Request Panel - Left on desktop */}
             <div
-              className="flex-1 min-h-0 min-w-0 border-b lg:border-b-0 overflow-hidden"
+              className={cn(
+                'flex-1 min-h-0 min-w-0 border-b lg:border-b-0 overflow-hidden max-lg:overflow-y-auto',
+                mobileView !== 'request' && 'max-lg:hidden'
+              )}
               style={isSideBySide ? { flex: `0 0 ${splitPercent}%` } : undefined}
               data-split-panel="request"
             >
@@ -650,8 +681,8 @@ export function ApiExplorer({ routes, initialEndpoint, bodySkeletons, actAsEnabl
               label={t('resizePanels')}
             />
 
-            {/* Response Panel - Bottom on mobile, Right on desktop */}
-            <div className="h-[40vh] lg:h-auto lg:flex-1 min-h-[200px] min-w-0 overflow-hidden">
+            {/* Response Panel - Right on desktop */}
+            <div className={cn('flex-1 min-h-0 min-w-0 overflow-hidden', mobileView !== 'response' && 'max-lg:hidden')}>
               <ApiResponsePanel
                 status={status}
                 response={response}
