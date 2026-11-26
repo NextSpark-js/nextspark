@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **An entity screen reads the team membership once, no longer twice, before it decides the permission (#572).** `EntityPermissionLayout` and `enforceEntityPermission` resolved the team of the request and then called `checkPermission`, which read the membership again (the team role and the app role, in a transaction of its own). The query that resolves the team now returns both roles with it, and the layouts decide with `hasTeamPermission` on them, the rule `checkPermission` applies. Who can open what does not change: `teams.appRoleBypass`, deleted teams, non-members, a session without a team and the redirect to `/dashboard/permission-denied` behave as before, and the app role is read from the database in the same request, never from the session cookie cache. `getDashboardPermissionContext()` also returns `teamRole` and `appRole`; `getDashboardTeamId` is unchanged.
+### Fixed
+
+- **The archive of a public entity (`/blog`) lists the published items for a visitor with a session too (#570).** Its grid asked `GET /api/v1/<entity>` with the session cookie and the stored team, so a signed-in visitor without an active team got `400 TEAM_CONTEXT_REQUIRED` in the network panel and an empty list; the grid now asks as a visitor (no cookie, no team header), the request an anonymous visitor already makes, and it no longer loads the generic entity client, so `/blog` sends about 8 kB less JavaScript. The API rule for authenticated requests without a team is unchanged, and the page sends no extra JavaScript.
 
 ## [0.1.0-beta.206] - 2026-11-25
 

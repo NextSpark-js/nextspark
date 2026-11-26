@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Skeleton } from '../../ui/skeleton'
 import { Alert, AlertDescription } from '../../ui/alert'
 import { Search, SortAsc, SortDesc, Grid, List } from 'lucide-react'
-import { entityApi } from '../../../lib/api/entities'
+import { withBasePath } from '../../../lib/base-path'
 import { getAllEntityConfigs } from '../../../lib/entities/registry.client'
 import type { EntityConfig } from '../../../lib/entities/types'
 import type { EntityListResponse } from '../../../lib/api/entities'
@@ -77,23 +77,14 @@ export function PublicEntityGrid({ entityType, entitySlug, searchParams, classNa
         setLoading(true)
         setError(null)
 
-        const params: Record<string, unknown> = {
-          page: currentPage,
-          limit: pageSize,
-        }
-
-        // Add search if provided
-        if (searchTerm.trim()) {
-          params.search = searchTerm.trim()
-        }
-
-        // Add sorting
-        if (sortField) {
-          params.sort = sortField
-          params.order = sortDirection
-        }
-
-        const result = await entityApi.list(entityType, params)
+        // A public page reads what a visitor reads, signed in or not: no session cookie and no team, because with a
+        // session the API asks for a team and answers 400 TEAM_CONTEXT_REQUIRED (#570)
+        const response = await fetch(
+          withBasePath(`/api/v1/${entityType}?page=${currentPage}&limit=${pageSize}`),
+          { credentials: 'omit' }
+        )
+        if (!response.ok) throw new Error(text('loadFailed'))
+        const result: EntityListResponse = await response.json()
         setData(result)
       } catch (err) {
         console.error('Error loading public entities:', err)
