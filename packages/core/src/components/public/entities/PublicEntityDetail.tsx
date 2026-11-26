@@ -17,11 +17,10 @@ import { Separator } from '../../ui/separator'
 import { Skeleton } from '../../ui/skeleton'
 import { Alert, AlertDescription } from '../../ui/alert'
 import { ArrowLeft, CalendarDays, Clock } from 'lucide-react'
-import { entityApi } from '../../../lib/api/entities'
 import { getAllEntityConfigs } from '../../../lib/entities/registry.client'
 import type { EntityConfig, EntityField } from '../../../lib/entities/types'
 import { SYSTEM_TIMESTAMP_FIELDS } from '../../../lib/entities/system-fields'
-import { withBasePathIfInApp } from '../../../lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '../../../lib/base-path'
 
 interface PublicEntityDetailProps {
   entityType: string
@@ -55,8 +54,11 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
       try {
         setLoading(true)
         setError(null)
-        const result = await entityApi.get(entityType, id)
-        setData(result)
+        // As a visitor, like the grid: with a session the API asks for a team and answers 400 TEAM_CONTEXT_REQUIRED (#573)
+        const response = await fetch(withBasePath(`/api/v1/${entityType}/${encodeURIComponent(id)}`), { credentials: 'omit' })
+        if (!response.ok) throw new Error(text('loadFailed'))
+        const result = await response.json()
+        setData(result.data)
       } catch (err) {
         console.error('Error loading public entity:', err)
         setError(err instanceof Error ? err.message : text('loadFailed'))
