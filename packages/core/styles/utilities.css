@@ -8,6 +8,9 @@
    (dialog, popover, sheet, dropdown, tooltip, ...): pure CSS, no client JavaScript. */
 @import "tw-animate-css";
 
+/* Geist and Geist Mono: @font-face, fallback metrics and the --font-geist-* variables, in this same stylesheet (#560) */
+@import "./fonts.css";
+
 /* /login holds the height of the form it will show while the sign-in methods load (#557): routes/_internal/login-reserve.ts sets --r (--r-sm from 640px) */
 .lr:has([data-cy=login-readiness-loading]){min-height:var(--r)}
 @media (min-width:40rem){.lr:has([data-cy=login-readiness-loading]){min-height:var(--r-sm,var(--r))}}

@@ -21,9 +21,8 @@
 
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
 
+import { GEIST_MONO_URL, GEIST_SANS_URL } from "./_internal/geist-font-urls"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
 import { OPTIONAL_ROOT_NAMESPACES, selectMessages } from '@nextsparkjs/core/lib/i18n/client-messages'
@@ -37,7 +36,7 @@ import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/them
 import { getThemeSettings, themeProviderProps } from "@nextsparkjs/core/lib/theme/get-default-theme-mode"
 import { DEFAULT_LOCALE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
 
-// Geist ships as files (next/font/local): the build makes no request to Google Fonts (#419)
+// Geist ships as files: the build makes no request to Google Fonts (#419). Its @font-face rules are in styles/fonts.css, inside the project's main stylesheet, and the two files are preloaded below (#560)
 const defaultMetadata: Metadata = {
   title: "NextSpark App",
   description: "Built with NextSpark",
@@ -70,6 +69,8 @@ export default async function RootLayout({
   return (
     <html lang={DEFAULT_LOCALE} suppressHydrationWarning>
       <head>
+        <link rel="preload" href={GEIST_SANS_URL} as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href={GEIST_MONO_URL} as="font" type="font/woff2" crossOrigin="anonymous" />
         {billingHints.preconnect.map((domain) => (
           <link key={`pre-${domain}`} rel="preconnect" href={domain} />
         ))}
@@ -78,7 +79,7 @@ export default async function RootLayout({
         ))}
       </head>
       <body
-        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
+        className="geist-fonts antialiased"
       >
         <StaticIntlProvider locale={DEFAULT_LOCALE} messages={selectMessages(STATIC_MESSAGES, 'root', CONSENT_CONFIG.enabled ? OPTIONAL_ROOT_NAMESPACES : [])}>
           <NextThemeProvider

@@ -561,9 +561,11 @@ production build does not warn.
 route-to-group lookup, but layouts do not inspect headers or a pathname to
 choose messages. That keeps routes prerenderable.
 
-The root layout loads Geist and Geist Mono from the `geist` package with
-`next/font/local`, so `next build` makes no request to Google Fonts and works
-offline. The CSS variables are `--font-geist-sans` and `--font-geist-mono`. The
+The root layout loads Geist and Geist Mono from files shipped in core
+(`styles/fonts/`, declared in `styles/fonts.css`, which `styles/utilities.css`
+imports), so `next build` makes no request to Google Fonts and works offline,
+and the `@font-face` rules sit in the project's main stylesheet instead of a
+second one from `next/font` (#560). The CSS variables are `--font-geist-sans` and `--font-geist-mono`. The
 layout has no option to turn the fonts off: a project that wants its own
 typeface sets its own `font-family` (or overrides the variables) in its
 `globals.css`, and the Geist files are then simply not used by the page.

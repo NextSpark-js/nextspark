@@ -1,0 +1,31 @@
+/* Geist and Geist Mono (SIL OFL, see fonts/OFL.txt), declared inside the stylesheet every route already loads: styles/utilities.css
+   imports this file, so the build writes these rules into the project's main CSS and there is no second render-blocking
+   stylesheet for the fonts (#560). The root layouts preload the same two files (routes/_internal/geist-font-urls.ts).
+   The rules are what next/font/local wrote for them: the sans face gets a metric-compatible fallback (size-adjust and
+   the ascent/descent overrides of Arial) so the swap does not move the text. */
+@font-face {
+  font-family: "GeistSans";
+  src: url("./fonts/Geist-Variable.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: "GeistSans Fallback";
+  src: local("Arial");
+  ascent-override: 94.56%;
+  descent-override: 27.76%;
+  line-gap-override: 0%;
+  size-adjust: 106.28%;
+}
+@font-face {
+  font-family: "GeistMono";
+  src: url("./fonts/GeistMono-Variable.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+}
+
+/* The class of <body> in the root layouts: --font-geist-sans and --font-geist-mono, as before */
+.geist-fonts {
+  --font-geist-sans: "GeistSans", "GeistSans Fallback";
+  --font-geist-mono: "GeistMono", ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Monaco, "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
+}
