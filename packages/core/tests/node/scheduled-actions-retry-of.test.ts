@@ -152,7 +152,20 @@ test('scheduled action retries', { skip: (!HAS_POSTGRES || !HAS_HOOKS) && 'initd
     assert.deepEqual(await findPendingTwin({ ...failedRow, actionType: 'test:other' }), [], 'another type is not a twin')
   })
 
-  await t.test('a global action (no team) matches only global twins', { timeout: 30000 }, async () => {
+  await t.test('containment must hold both ways: a pending action whose payload is a superset or a subset is not a twin (#544)', { timeout: 30000 }, async () => {
+    const failed = { actionType: 'test:twin-both', payload: { k: 1, extra: 2 }, teamId: 'team-a' }
+    const superset = await scheduler.scheduleAction('test:twin-both', { k: 1, extra: 2, more: 3 }, { teamId: 'team-a' })
+    assert.deepEqual(await findPendingTwin(failed), [], 'a pending payload that contains the failed one is not a twin')
+    await scheduler.scheduleAction('test:twin-both', { k: 1 }, { teamId: 'team-a' })
+    assert.deepEqual(await findPendingTwin(failed), [], 'a pending payload that the failed one contains is not a twin')
+    const exact = await scheduler.scheduleAction('test:twin-both', { extra: 2, k: 1 }, { teamId: 'team-a' }) // key order is ignored
+    const found = await findPendingTwin(failed)
+    assert.equal(found.length, 1)
+    assert.notEqual(found[0].id, superset)
+    assert.equal(found[0].id, exact)
+  })
+
+  await t.test('a global action (no team) matches only global twins',{ timeout: 30000 }, async () => {
     await scheduler.scheduleAction('test:global-twin', {})
     assert.equal((await findPendingTwin({ actionType: 'test:global-twin', payload: {}, teamId: null })).length, 1)
     assert.equal((await findPendingTwin({ actionType: 'test:global-twin', payload: {}, teamId: 'team-a' })).length, 0)

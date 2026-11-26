@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -108,18 +108,19 @@ export function TagsOverview() {
     () => new Set(CATEGORY_DISPLAY_ORDER.filter((c) => !COLLAPSED_BY_DEFAULT.includes(c) || expandedTag?.startsWith(`${c}-`)))
   );
 
-  // The documentation files that exist, asked for the first time a tag is opened: a test file links to its page
-  // only when it has one (until the tree arrives, or if it fails, files show as plain text).
+  // The documentation files that exist, asked for once per mount, the first time a tag is opened: a test file links to
+  // its page only when it has one (until the tree arrives, or if it fails, files show as plain text). The ref keeps a
+  // second tag opened before the answer, or after a failure, from asking again.
   const [docs, setDocs] = useState<Set<string> | null>(null);
+  const treeRequested = useRef(false);
   useEffect(() => {
-    if (!expandedTag || docs) return;
-    let cancelled = false;
+    if (!expandedTag || treeRequested.current) return;
+    treeRequested.current = true;
     fetch(withBasePath("/api/devtools/tests"))
       .then((r) => (r.ok ? r.json() : null))
-      .then((json) => { if (!cancelled && json?.data?.tree) setDocs(docPaths(json.data.tree)); })
+      .then((json) => { if (json?.data?.tree) setDocs(docPaths(json.data.tree)); })
       .catch(() => {});
-    return () => { cancelled = true; };
-  }, [expandedTag, docs]);
+  }, [expandedTag]);
 
   // Count total tags
   const totalTags = useMemo(() => {

@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **The projects limit of the productivity template has a translated name (#543).** The template names its limit `billing.limits.projects`, which core's billing catalog did not have, so the billing page and the superadmin team detail showed the raw slug. `billing.limits.projects` is now in the six languages, and a test fails when a limit a template names is missing from any of them.
+- **The devtools Tags page asks for the test tree once per mount (#544).** A second tag opened before the answer, or after a failed request, fetched it again. Tests now cover that, the absence of links before the tree arrives, and both directions of the JSONB containment of the scheduled actions "pending twin" check (a pending action whose payload is a superset or a subset of the failed one is not a twin).
 
 ## [0.1.0-beta.206] - 2026-11-25
 

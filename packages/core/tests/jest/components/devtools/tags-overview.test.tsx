@@ -98,3 +98,40 @@ describe('TagsOverview', () => {
     expect(screen.getByText('nodoc.cy.ts').closest('a')).toBeNull()
   })
 })
+
+describe('TagsOverview tree fetch (#544)', () => {
+  const TREE = { data: { tree: [{ path: 'blocks', type: 'folder', children: [{ path: 'blocks/b.bdd.md', type: 'file' }] }] } }
+  const fileLink = () => screen.getByText('b.cy.ts').closest('a')
+
+  test('a second tag opened before the answer does not fetch again, and no file links before the tree arrives', async () => {
+    let resolve!: (v: unknown) => void
+    const fetchMock = jest.fn(() => new Promise((r) => { resolve = r }))
+    global.fetch = fetchMock as unknown as typeof fetch
+    render(<TagsOverview />)
+    fireEvent.click(screen.getByText('@b-billing'))
+    fireEvent.click(screen.getByText('@feat-billing'))
+    fireEvent.click(screen.getByText('@b-billing'))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fileLink()).toBeNull()
+    resolve({ ok: true, json: async () => TREE })
+    await waitFor(() => expect(fileLink()).not.toBeNull())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  test.each([
+    ['a response that is not ok', async () => ({ ok: false, json: async () => ({}) })],
+    ['a request that rejects', async () => { throw new Error('offline') }],
+  ])('%s is not asked again when another tag is opened, and files stay plain text', async (_name, answer) => {
+    const fetchMock = jest.fn(answer)
+    global.fetch = fetchMock as unknown as typeof fetch
+    render(<TagsOverview />)
+    fireEvent.click(screen.getByText('@b-billing'))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await new Promise((r) => setTimeout(r, 0))
+    fireEvent.click(screen.getByText('@feat-billing'))
+    fireEvent.click(screen.getByText('@b-billing'))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fileLink()).toBeNull()
+  })
+})
