@@ -31,7 +31,7 @@ jest.mock('@/core/components/ui/image-upload', () => ({ ImageUpload: () => null 
 jest.mock('@/core/components/ui/rich-text-editor', () => ({ RichTextEditor: () => null }))
 jest.mock('@/core/components/media/MediaLibrary', () => ({ MediaLibrary: () => null }))
 jest.mock('@/core/components/dashboard/block-editor/array-field', () => ({ ArrayField: () => null }))
-jest.mock('@/core/lib/api/entities', () => ({ fetchWithTeam: jest.fn() }))
+jest.mock('@/core/lib/api/entities', () => ({ fetchWithTeam: (url: string, init?: RequestInit) => global.fetch(url, init) }))
 // A button to select the stored block, and the real form inside a stand-in for the settings panel
 jest.mock('@/core/components/dashboard/block-editor/block-preview-canvas', () => ({
   BlockPreviewCanvas: ({ blocks, onSelectBlock }: { blocks: { id: string }[]; onSelectBlock: (id: string) => void }) => (

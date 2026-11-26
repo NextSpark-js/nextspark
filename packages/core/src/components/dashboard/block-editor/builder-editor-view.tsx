@@ -48,6 +48,7 @@ import type { BlockInstance } from '../../../types/blocks'
 import { isPatternReference, type PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import { withBasePath } from '../../../lib/base-path'
+import { fetchWithTeam } from '../../../lib/api/entities'
 import { validatePublicSlug, type SlugScope } from '../../../lib/entities/public-slug'
 import { BUILDER_SOURCE_HEADER, TEAM_ID_HEADER } from '../../../lib/api/client-headers'
 
@@ -298,7 +299,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
         ? `/api/v1/${entitySlug}`
         : `/api/v1/${entitySlug}/${id}`
 
-      const response = await fetch(withBasePath(url), {
+      const response = await fetchWithTeam(url, {
         method: mode === 'create' ? 'POST' : 'PATCH',
         headers: buildApiHeaders(true),
         body: JSON.stringify(data),

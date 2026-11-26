@@ -152,7 +152,7 @@ export default function PatternsListPage() {
   const prevFiltersKeyRef = useRef<string>('')
   const hasLoadedRef = useRef(false)
   // Entity mutations seen at the last request: a list Next keeps hidden loads again when shown only if one happened
-  const loadedAtMutationRef = useRef(0)
+  const loadedAtMutationRef = useRef(entityMutations)
   const schemaKeysForSync = useMemo(
     () => Object.keys(filterSchema).sort().join(','),
     [filterSchema]

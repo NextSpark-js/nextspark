@@ -144,7 +144,7 @@ export function EntityListWrapper({
 
   // Entity mutations seen when the rows were requested: the list Next keeps hidden is not unmounted, and when it is
   // shown again (this effect runs again) it loads only if something was created, edited or deleted meanwhile
-  const loadedAtMutationRef = useRef(0)
+  const loadedAtMutationRef = useRef(entityMutations)
 
   // Load entity data function
   const loadData = useCallback(async (isInitial = false) => {
@@ -242,10 +242,7 @@ export function EntityListWrapper({
       prevFiltersKeyRef.current = filtersKey
       hasLoadedRef.current = true
       // The server's first page is this load when it was read in the team this page acts in; another team's is not shown
-      if (isInitial && firstPage && firstPage.teamId === teamId) {
-        loadedAtMutationRef.current = entityMutations
-        return
-      }
+      if (isInitial && firstPage && firstPage.teamId === teamId) return
       loadData(isInitial)
     }
   }, [entityConfig?.slug, filtersKey, filtersMatchUrl, loadData, signedIn, teamReady, firstPage, teamId, placeholder])

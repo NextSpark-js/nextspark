@@ -8,6 +8,7 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { entityMutations } from '@/core/lib/api/entities'
 import { BuilderEditorView } from '@/core/components/dashboard/block-editor/builder-editor-view'
 
 jest.mock('uuid', () => ({ v4: () => 'uuid' }))
@@ -89,6 +90,34 @@ describe('builder slug input', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ slug: 'about-us' })
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  // #576: the lists of pages, posts and patterns come back to a kept-hidden state; a save must count as a mutation
+  test('a create counts as an entity mutation, a refused one does not', async () => {
+    const before = entityMutations
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'no' }), { status: 500 }))
+    const failed = renderBuilder()
+    failed.save()
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled())
+    expect(entityMutations).toBe(before)
+
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: true, data: { id: 'p1' } }), { status: 201 }))
+    failed.save()
+    await waitFor(() => expect(entityMutations).toBe(before + 1))
+  })
+
+  test('an edit counts as an entity mutation', async () => {
+    fetchMock.mockImplementation(async (_url, init) => init?.method === 'PATCH'
+      ? new Response(JSON.stringify({ success: true, data: { id: 'p1' } }), { status: 200 })
+      : new Response(JSON.stringify({ success: true, data: { id: 'p1', title: 'Old', slug: 'old', status: 'draft', blocks: [] } }), { status: 200 }))
+    const before = entityMutations
+    renderBuilder({ slug: 'old' })
+    await waitFor(() => expect((document.getElementById('builder-slug') as HTMLInputElement).value).toBe('old'))
+    fireEvent.change(screen.getByPlaceholderText('placeholders.title'), { target: { value: 'New' } })
+    fireEvent.click(document.querySelector('[data-cy="publishButton"]') as HTMLElement)
+    await waitFor(() => expect(entityMutations).toBe(before + 1))
   })
 
   test('the slug field error of the API is shown next to the input', async () => {
