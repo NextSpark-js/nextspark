@@ -107,7 +107,6 @@ export interface ThemeProviderProps extends React.PropsWithChildren {
 
 const COLOR_SCHEMES = ["light", "dark"]
 const MEDIA = "(prefers-color-scheme: dark)"
-const DEFAULT_THEMES = ["light", "dark"]
 const isServer = typeof window === "undefined"
 /**
  * Whether this render writes the code of the inline script: on the server, and outside a Next.js build (tests). Next
@@ -127,8 +126,6 @@ export const useTheme = (): UseThemeProps => React.useContext(ThemeContext) ?? d
 
 /** The areas with a session, where the visitor's theme applies; the blocking script holds the same pattern (#510) */
 const inArea = (path: string) => RegExp("^" + withBasePath("") + "/(dashboard|devtools|superadmin)(/|$)").test(path)
-/** The theme of every other page: the default when it is dark, light otherwise */
-const publicThemeOf = (defaultTheme: string) => (defaultTheme === "dark" ? "dark" : "light")
 
 const getSystemTheme = (media?: MediaQueryList | MediaQueryListEvent): "dark" | "light" =>
   (media ?? window.matchMedia(MEDIA)).matches ? "dark" : "light"
@@ -203,16 +200,16 @@ const script = (
 type ThemeScriptProps = Required<Pick<ThemeProviderProps, "attribute" | "storageKey" | "defaultTheme" | "themes" | "enableSystem" | "enableColorScheme">> &
   Pick<ThemeProviderProps, "forcedTheme" | "value" | "nonce" | "scriptProps">
 
-const ThemeScript = React.memo(function ThemeScript({ forcedTheme, storageKey, attribute, enableSystem, enableColorScheme, defaultTheme, value, themes, nonce, scriptProps }: ThemeScriptProps) {
+const ThemeScript = React.memo(function ThemeScript(p: ThemeScriptProps) {
   return (
     <script
-      {...scriptProps}
+      {...p.scriptProps}
       suppressHydrationWarning
       // The browser hides a nonce from the DOM after load, so the client renders it empty, as next-themes does
-      nonce={isServer ? nonce : ""}
+      nonce={isServer ? p.nonce : ""}
       dangerouslySetInnerHTML={{
         __html: inlineScriptCode
-          ? `(${script.toString()})(${JSON.stringify([attribute, storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme, withBasePath("")]).slice(1, -1)})`
+          ? `(${script.toString()})(${JSON.stringify([p.attribute, p.storageKey, p.defaultTheme, p.forcedTheme, p.themes, p.value, p.enableSystem, p.enableColorScheme, withBasePath("")]).slice(1, -1)})`
           : "",
       }}
     />
@@ -225,7 +222,7 @@ function ColorModeProvider({
   enableSystem = true,
   enableColorScheme = true,
   storageKey = "theme",
-  themes = DEFAULT_THEMES,
+  themes = COLOR_SCHEMES,
   defaultTheme = enableSystem ? "system" : "light",
   attribute = "data-theme",
   value,
@@ -238,7 +235,8 @@ function ColorModeProvider({
   // script decided, then ThemeArea on client navigations. It changes only what is applied, never what is rendered,
   // so the server (which reads no pathname) and the hydration render agree.
   const [area, setArea] = React.useState(() => !isServer && inArea(location.pathname))
-  const publicTheme = publicThemeOf(defaultTheme)
+  // The theme of every other page: the default when it is dark, light otherwise
+  const publicTheme = defaultTheme === "dark" ? "dark" : "light"
   const forcedTheme = forcedThemeProp ?? (area ? undefined : publicTheme)
   // Read at the first render in the browser, not first in the mount effect: the effect below then sets the same
   // value, React bails out, and the context does not change after hydration (#371). The server has no preference.
@@ -320,7 +318,9 @@ function ColorModeProvider({
     resolvedTheme: theme === "system" ? systemTheme : theme,
     themes: enableSystem ? [...themes, "system"] : themes,
     systemTheme: enableSystem ? systemTheme : undefined,
-    area: [forcedThemeProp, setArea],
+    // Leaving an area waits for the commit to end and asks the location: the next area can mount later (it streams), and
+    // the page must not fall back to the public theme in between (#554)
+    area: [forcedThemeProp, (on) => (on ? setArea(true) : queueMicrotask(() => setArea(inArea(location.pathname))))],
   }), [theme, setTheme, forcedThemeProp, publicTheme, systemTheme, enableSystem, themes])
 
   return (
