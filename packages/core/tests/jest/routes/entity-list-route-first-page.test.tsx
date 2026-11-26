@@ -12,7 +12,7 @@ jest.mock('next/headers', () => ({ headers: async () => mockHeaders() }))
 jest.mock('@nextsparkjs/core/components/entities/wrappers/EntityListWrapper', () => ({ EntityListWrapper: () => null }))
 jest.mock('@nextsparkjs/core/lib/api/entity/list-first-page', () => ({ readEntityListFirstPage: (...args: unknown[]) => mockRead(...args) }))
 
-import { createEntityListRoute } from '../../../src/routes/_internal/entity-list-route'
+import { createEntityListRoute, createClientReadEntityListRoute } from '../../../src/routes/_internal/entity-list-route'
 import { EntityListWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityListWrapper'
 
 const CONFIG = { slug: 'tasks', enabled: true, ui: { dashboard: { showInMenu: true } } } as never
@@ -51,5 +51,13 @@ test.each([
 test('a client navigation or a prefetch (a fetch for the browser) reads nothing: the list requests as before', async () => {
   mockRead.mockReset()
   expect((await content({ 'sec-fetch-mode': 'cors' })).props.initialPage).toBeNull()
+  expect(mockRead).not.toHaveBeenCalled()
+})
+
+test('an entity whose collection API the project replaces: the plain list, no boundary and no read (the list asks that API)', async () => {
+  mockRead.mockReset()
+  const element = await createClientReadEntityListRoute(CONFIG)({ searchParams: Promise.resolve({}) }) as React.ReactElement<{ entityType: string }>
+  expect(element.type).toBe(EntityListWrapper)
+  expect(element.props).toEqual({ entityType: 'tasks' })
   expect(mockRead).not.toHaveBeenCalled()
 })

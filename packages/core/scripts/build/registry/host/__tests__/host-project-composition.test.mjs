@@ -127,6 +127,28 @@ test('with cacheComponents on, core\'s Cache Components variants replace the rou
   }
 })
 
+test('an entity whose collection API the project replaces gets the list page that requests its rows from that API (#574)', async () => {
+  const list = async extra => {
+    const { root, cleanup } = project(extra)
+    try {
+      const { appFiles } = await renderHostFiles(projectHostConfig({ projectRoot: root }))
+      return appFiles.find(file => file.path === 'src/app/dashboard/(main)/posts/page.tsx').content
+    } finally {
+      cleanup()
+    }
+  }
+  // No override: the list reads its first page on the server
+  const plain = await list()
+  assert.match(plain, /export default createEntityListRoute\(postsEntityConfig\)/)
+  assert.doesNotMatch(plain, /createClientReadEntityListRoute/)
+  // templates/api/v1/posts/route.ts replaces GET /api/v1/posts: the server read (generic rules) is off for posts only
+  const overridden = await list({ 'templates/api/v1/posts/route.ts': ROUTE })
+  assert.match(overridden, /import \{ createClientReadEntityListRoute \} from "@nextsparkjs\/core\/routes\/_internal\/entity-list-route"/)
+  assert.match(overridden, /export default createClientReadEntityListRoute\(postsEntityConfig\)/)
+  // Overriding only the item route ([id]) keeps the collection API generic, and so the server read
+  assert.match(await list({ 'templates/api/v1/posts/[id]/route.ts': ROUTE }), /export default createEntityListRoute\(postsEntityConfig\)/)
+})
+
 test('a project that puts a route in a namespace it does not own, or a webhook module that is not there, cannot be generated', async () => {
   const { root, cleanup } = project({
     'api/v1/mine/route.ts': ROUTE,

@@ -31,10 +31,11 @@ export interface EntityListTemplateProps {
  * @param Template - the project's list page for this entity, when it has one: it replaces the
  *   generic list after the same checks, and gets Next's `searchParams` promise unawaited (the template decides when to read it)
  */
-export function createEntityListRoute(config: EntityConfig, Template?: ComponentType<EntityListTemplateProps>) {
+export function createEntityListRoute(config: EntityConfig, Template?: ComponentType<EntityListTemplateProps>, { serverFirstPage = true }: { serverFirstPage?: boolean } = {}) {
   return async function EntityListRoute({ searchParams }: { searchParams: EntityListTemplateProps['searchParams'] }) {
     if (!isDashboardEntity(config)) notFound()
     if (Template) return <Template params={Promise.resolve({ entity: config.slug })} searchParams={searchParams} />
+    if (!serverFirstPage) return <EntityListWrapper entityType={config.slug} />
     // The first page is read on the server with the list API's rules (#574). Behind a boundary of its own, whose fallback is
     // the list's heading and table skeleton (requesting nothing): the page does not wait for the read, so the entity's
     // loading skeleton is not shown any longer than before
@@ -44,6 +45,15 @@ export function createEntityListRoute(config: EntityConfig, Template?: Component
       </Suspense>
     )
   }
+}
+
+/**
+ * The list page of an entity whose `GET /api/v1/<slug>` the project replaces (`templates/api/v1/<slug>/route.ts`): the
+ * server read applies the generic handler's rules, not the project's, so this list requests its rows from the API as
+ * before. The generated host writes it for such an entity (entity-routes.mjs).
+ */
+export function createClientReadEntityListRoute(config: EntityConfig, Template?: ComponentType<EntityListTemplateProps>) {
+  return createEntityListRoute(config, Template, { serverFirstPage: false })
 }
 
 async function EntityListWithFirstPage({ slug, searchParams }: { slug: string; searchParams: EntityListTemplateProps['searchParams'] }) {

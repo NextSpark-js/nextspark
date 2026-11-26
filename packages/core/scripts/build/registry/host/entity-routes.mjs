@@ -33,7 +33,7 @@ import { join } from 'node:path'
 
 import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { CORE_ROUTES_SPECIFIER } from './core-routes.mjs'
-import { coreApiNamespaces } from './plan.mjs'
+import { DEFAULT_EXTENSIONS, coreApiNamespaces } from './plan.mjs'
 
 export const ENTITY_DIAGNOSTICS = Object.freeze({
   CONFIG_UNREADABLE: 'NS_HOST_ENTITY_CONFIG_UNREADABLE',
@@ -183,6 +183,18 @@ const hasValue = (fact, value) => fact?.state === 'value' && fact.value === valu
 const BASE_PATH = /^\/(?:[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*)?$/
 
 /**
+ * The entities whose collection API (`GET /api/v1/<entity>`) the project replaces with `templates/api/v1/<entity>/route.<ext>`
+ * (planHost serves it before core's `[entity]` route): their list page must not read its first page with the generic rules.
+ *
+ * @param {string} projectRoot
+ * @param {string[]} names - the entity names
+ * @returns {Set<string>}
+ */
+export function collectionApiOverrides(projectRoot, names) {
+  return new Set(names.filter(name => DEFAULT_EXTENSIONS.some(ext => existsSync(join(projectRoot, 'templates', 'api', 'v1', name, `route.${ext}`)))))
+}
+
+/**
  * Entities the host serves: top-level entity configs of the project and of enabled plugins. Core's own
  * entities are served by core's own routes (a `dashboard/(main)/<entity>/` directory in its manifest).
  */
@@ -210,10 +222,12 @@ const arg = {
  * @param {boolean} [input.cacheComponents] - the host's setting (public item pages revalidate only without it)
  * @param {string[]} [input.modes] - cache modes the host serves (a host that builds both omits `revalidate`)
  * @param {Record<string, string>} [input.modules] - the specifiers of the modules the routes import (`ENTITY_MODULES`)
+ * @param {Set<string>} [input.apiOverrides] - the entities whose `GET /api/v1/<entity>` the project replaces (`collectionApiOverrides`): their
+ *   list page requests its rows from that API instead of reading the first page on the server with the generic rules (#574)
  * @returns {{ routes: object[], diagnostics: object[], notices: object[], withheld: object[], entities: string[] }} `entities`: the names of the entities the host serves (the ones a project may override the API of);
  *   `withheld`: `{ source, basePath }` per builder entity whose public routes were not written (planHost serves nothing at its item URLs)
  */
-export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cacheComponents, modes = [], modules = ENTITY_MODULES }) {
+export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cacheComponents, modes = [], modules = ENTITY_MODULES, apiOverrides = new Set() }) {
   const routes = []
   const diagnostics = []
   const notices = []
@@ -291,7 +305,7 @@ export function planEntityRoutes({ entities, facts, coreRoutes, resolveFile, cac
         { ...composed('layout', `${base}/layout.tsx`, 'createEntityLayoutRoute', modules.layout, [config]), protected: true },
         coreFacade('error', `${base}/error.tsx`, modules.error),
         coreFacade('loading', `${base}/loading.tsx`, modules.loading),
-        composed('page', `${base}/page.tsx`, 'createEntityListRoute', modules.list, [config, arg.template()], { acceptsTemplate: true, reexport: [{ names: ['generateMetadata'], specifier: modules.listMetadata }] }),
+        composed('page', `${base}/page.tsx`, apiOverrides.has(entity.name) ? 'createClientReadEntityListRoute' : 'createEntityListRoute', modules.list, [config, arg.template()], { acceptsTemplate: true, reexport: [{ names: ['generateMetadata'], specifier: modules.listMetadata }] }),
         composed('page', `${base}/create/page.tsx`, 'createEntityCreateRoute', modules.create, [config, arg.template()], { acceptsTemplate: true }),
         composed('page', `${base}/[id]/page.tsx`, 'createEntityDetailRoute', detailModule, [config, arg.literal(children), arg.template()], { acceptsTemplate: true, reexport: [{ names: ['generateMetadata'], specifier: modules.detailMetadata }] }),
         composed('page', `${base}/[id]/edit/page.tsx`, 'createEntityEditRoute', editModule, [config, arg.template()], { acceptsTemplate: true })

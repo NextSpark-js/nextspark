@@ -83,7 +83,7 @@ export const CORE_COMPOSITION_WRAPPERS = Object.freeze({
   // The same, for a Cache Components host (each segment checks inside its own Suspense boundary).
   [`${INTERNAL}area-access.cc`]: ['withSuperadminAccess', 'withDevtoolsAccess', 'withSuperadminMetadata', 'withDevtoolsMetadata', 'withSuperadminRouteAccess', 'withDevtoolsRouteAccess'],
   [`${INTERNAL}entity-layout-route`]: ['createEntityLayoutRoute'],
-  [`${INTERNAL}entity-list-route`]: ['createEntityListRoute'],
+  [`${INTERNAL}entity-list-route`]: ['createEntityListRoute', 'createClientReadEntityListRoute'],
   [`${INTERNAL}entity-detail-route`]: ['createEntityDetailRoute'],
   [`${INTERNAL}entity-create-route`]: ['createEntityCreateRoute'],
   [`${INTERNAL}entity-edit-route`]: ['createEntityEditRoute'],

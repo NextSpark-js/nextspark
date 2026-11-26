@@ -46,7 +46,7 @@ import { discoverAllEntities } from '../discovery/all-entities.mjs'
 import { PluginCapabilityError, withDeclaredCapabilities } from '../discovery/plugin-capabilities.mjs'
 import { ContractsPublishError, checkContractsPlan, preflightContractsPlan, projectContracts, publishContractsPlan } from '../contracts/index.mjs'
 import { CLIENT_DIR, planClient } from '../client/index.mjs'
-import { planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
+import { collectionApiOverrides, planEntityRoutes, readAllEntityFacts } from './entity-routes.mjs'
 import { sitemapPlan } from './sitemap.mjs'
 import { webhookRoutes } from './webhooks.mjs'
 import { featureConfigDiagnostics } from './features.mjs'
@@ -604,6 +604,8 @@ export function projectHostConfig({ projectRoot = process.cwd(), env = process.e
       return planEntityRoutes({
         entities,
         facts,
+        // An entity whose collection API the project replaces keeps requesting its list from that API (#574)
+        apiOverrides: collectionApiOverrides(config.projectRoot, entities.map(entity => entity.name)),
         coreRoutes: manifest.routes,
         resolveFile: specifier => resolveCoreRouteFile(coreRoot, specifier),
         cacheComponents: readCacheComponents(config.projectRoot),
