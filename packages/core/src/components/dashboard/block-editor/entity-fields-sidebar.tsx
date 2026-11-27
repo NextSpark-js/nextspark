@@ -62,12 +62,12 @@ export function EntityFieldsSidebar({
 
   // Fetch first taxonomy type (usually 'post_category')
   const firstTaxonomy = taxonomyTypes[0]
-  const taxonomyApiPath = firstTaxonomy?.type ? firstTaxonomy.type.replace('_', '-') + 's' : undefined // post_category -> post-categories
+  // post_category -> post-categories (the route's name), tag -> tags
+  const taxonomyApiPath = firstTaxonomy?.type.replace('_', '-').replace(/y?$/, m => (m ? 'ies' : 's'))
 
   const { data: taxonomyData, isLoading: taxonomyLoading } = useQuery({
     queryKey: ['taxonomies', taxonomyApiPath],
     queryFn: async () => {
-      if (!taxonomyApiPath) return { data: [] }
       const response = await fetchWithTeam(`/api/v1/${taxonomyApiPath}`)
       if (!response.ok) return { data: [] }
       return response.json()

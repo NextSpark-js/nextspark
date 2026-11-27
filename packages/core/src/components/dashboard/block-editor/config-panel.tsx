@@ -84,13 +84,13 @@ export function ConfigPanel({
   const taxonomyTypes = entityConfig.taxonomies?.types || []
   const taxonomiesEnabled = entityConfig.taxonomies?.enabled && taxonomyTypes.length > 0
   const firstTaxonomy = taxonomyTypes[0]
-  const taxonomyApiPath = firstTaxonomy?.type ? firstTaxonomy.type.replace('_', '-') + 's' : undefined
+  // post_category -> post-categories (the route's name), tag -> tags
+  const taxonomyApiPath = firstTaxonomy?.type.replace('_', '-').replace(/y?$/, m => (m ? 'ies' : 's'))
 
   // Fetch taxonomies
   const { data: taxonomyData, isLoading: taxonomyLoading } = useQuery({
     queryKey: ['taxonomies', taxonomyApiPath],
     queryFn: async () => {
-      if (!taxonomyApiPath) return { data: [] }
       const response = await fetchWithTeam(`/api/v1/${taxonomyApiPath}`)
       if (!response.ok) return { data: [] }
       return response.json()
