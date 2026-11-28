@@ -111,6 +111,12 @@ export interface BuilderEditorViewProps {
   hooks?: EditorHooks
 }
 
+/** The form fields that carry the terms of the entity's taxonomies (`categories`). */
+function taxonomyFieldsOf(config: ClientEntityConfig): string[] {
+  if (!config.taxonomies?.enabled) return []
+  return ((config.taxonomies.types ?? []) as unknown as Array<{ field: string }>).map(t => t.field)
+}
+
 /**
  * What the sidebar shows of a stored entity: its sidebar fields as stored, and each taxonomy field
  * (`categories`) as the list of term ids the sidebar's checkboxes and the save carry. The API returns
@@ -121,11 +127,9 @@ function sidebarValuesOf(entity: Record<string, unknown>, config: ClientEntityCo
   config.builder?.sidebarFields?.forEach(field => {
     if (entity[field] !== undefined) values[field] = entity[field]
   })
-  if (config.taxonomies?.enabled) {
-    for (const { field } of (config.taxonomies.types ?? []) as unknown as Array<{ field: string }>) {
-      const terms = entity[field]
-      if (Array.isArray(terms)) values[field] = terms.map(t => (t && typeof t === 'object' ? (t as { id: string }).id : t))
-    }
+  for (const field of taxonomyFieldsOf(config)) {
+    const terms = entity[field]
+    if (Array.isArray(terms)) values[field] = terms.map(t => (t && typeof t === 'object' ? (t as { id: string }).id : t))
   }
   return values
 }
@@ -413,14 +417,23 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     }
   }, [hooks, saveMutation, mode, entitySlug, id, t])
 
+  // A taxonomy field is sent only when it differs from what was loaded: the API replaces every relation of the type
+  // with what it receives, and the form holds only the active terms it was given, so an untouched field would unlink the rest
+  const sentFields = useCallback(() => {
+    const loaded = entityData?.data ? sidebarValuesOf(entityData.data, entityConfig) : {}
+    const terms = new Set(taxonomyFieldsOf(entityConfig))
+    return Object.fromEntries(Object.entries(entityFields).filter(([field, value]) =>
+      !terms.has(field) || !(field in loaded) || JSON.stringify(value) !== JSON.stringify(loaded[field])))
+  }, [entityData, entityConfig, entityFields])
+
   const buildPayload = useCallback((nextStatus: string): BuilderSavePayload => ({
     title,
     ...(slugChanged ? { slug } : {}),
     blocks: latestBlocks(),
     status: nextStatus,
     settings: pageSettings,
-    ...entityFields,
-  }), [title, slug, slugChanged, latestBlocks, pageSettings, entityFields])
+    ...sentFields(),
+  }), [title, slug, slugChanged, latestBlocks, pageSettings, sentFields])
 
   // Update of a page that is already published
   const handleSave = useCallback(() => {

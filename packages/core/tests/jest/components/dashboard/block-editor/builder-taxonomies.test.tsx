@@ -3,7 +3,7 @@
  */
 
 // #583: opening a stored entity fills the form with its taxonomy terms (as ids), so the category list shows them,
-// a change adds to them and a save keeps the others.
+// a change adds to them, and a save that leaves them alone does not send them.
 
 import { describe, test, expect, jest, beforeEach } from '@jest/globals'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
@@ -79,12 +79,13 @@ describe('builder edit mode: taxonomy terms', () => {
     expect(patchBody().categories).toEqual(['c1', 'c2', 'c3'])
   })
 
-  test('a save that changes only the title keeps the categories', async () => {
+  test('a save that changes only the title does not send the categories', async () => {
     renderEdit()
     await waitFor(() => expect(screen.getByTestId('categories')).toHaveTextContent('["c1","c2"]'))
     fireEvent.change(screen.getByPlaceholderText('placeholders.title'), { target: { value: 'New' } })
     save()
     await waitFor(() => expect(patched()).toBe(true))
-    expect(patchBody()).toMatchObject({ title: 'New', categories: ['c1', 'c2'], excerpt: 'x' })
+    expect(patchBody()).toMatchObject({ title: 'New', excerpt: 'x' })
+    expect(patchBody()).not.toHaveProperty('categories')
   })
 })
