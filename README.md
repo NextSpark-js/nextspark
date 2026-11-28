@@ -101,6 +101,7 @@ This monorepo publishes 13 packages to npm.
 | [`@nextsparkjs/plugin-marketplace-payments`](./plugins/marketplace-payments) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-marketplace-payments.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-marketplace-payments) | Split payments between the platform and connected sellers |
 | [`@nextsparkjs/plugin-social-media-publisher`](./plugins/social-media-publisher) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-social-media-publisher.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-social-media-publisher) | Publish to Instagram Business and Facebook Pages |
 | [`@nextsparkjs/plugin-walkme`](./plugins/walkme) *(experimental)* | [![npm](https://img.shields.io/npm/v/@nextsparkjs/plugin-walkme.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/plugin-walkme) | Guided tours and onboarding |
+[![NextSpark on StartupScores](https://startupscores.com/badge/nextspark.svg?style=shield&v=combo&theme=dark)](https://startupscores.com/open-source/nextspark)
 
 ## Documentation
 
