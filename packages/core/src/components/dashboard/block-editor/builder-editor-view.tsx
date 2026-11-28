@@ -111,6 +111,25 @@ export interface BuilderEditorViewProps {
   hooks?: EditorHooks
 }
 
+/**
+ * What the sidebar shows of a stored entity: its sidebar fields as stored, and each taxonomy field
+ * (`categories`) as the list of term ids the sidebar's checkboxes and the save carry. The API returns
+ * the terms as objects, and the sidebar's fields are not the only ones the form holds.
+ */
+function sidebarValuesOf(entity: Record<string, unknown>, config: ClientEntityConfig): Record<string, unknown> {
+  const values: Record<string, unknown> = {}
+  config.builder?.sidebarFields?.forEach(field => {
+    if (entity[field] !== undefined) values[field] = entity[field]
+  })
+  if (config.taxonomies?.enabled) {
+    for (const { field } of (config.taxonomies.types ?? []) as unknown as Array<{ field: string }>) {
+      const terms = entity[field]
+      if (Array.isArray(terms)) values[field] = terms.map(t => (t && typeof t === 'object' ? (t as { id: string }).id : t))
+    }
+  }
+  return values
+}
+
 export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntityFieldChange: onEntityFieldChangeProp, components, hooks: hooksProp }: BuilderEditorViewProps) {
   const { TreeView, BlockPicker = DefaultBlockPicker, ConfigPanel = DefaultConfigPanel } = resolveEditorComponents(components)
   const router = useRouter()
@@ -210,12 +229,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   useEffect(() => {
     if (mode === 'edit' && entityData?.data) {
       const entity = entityData.data
-      const fields: Record<string, unknown> = {}
-      entityConfig.builder?.sidebarFields?.forEach(field => {
-        if (entity[field] !== undefined) {
-          fields[field] = entity[field]
-        }
-      })
+      const fields = sidebarValuesOf(entity, entityConfig)
       const values = {
         title: entity.title ?? '',
         slug: entity.slug ?? '',
@@ -258,12 +272,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
       status !== (entity.status || 'draft') ||
       JSON.stringify(blocks) !== JSON.stringify(entity.blocks || []) ||
       JSON.stringify(pageSettings) !== JSON.stringify(entity.settings || { seo: {}, customFields: [] }) ||
-      JSON.stringify(entityFields) !== JSON.stringify(
-        entityConfig.builder?.sidebarFields?.reduce((acc, field) => {
-          if (entity[field] !== undefined) acc[field] = entity[field]
-          return acc
-        }, {} as Record<string, unknown>) || {}
-      )
+      JSON.stringify(entityFields) !== JSON.stringify(sidebarValuesOf(entity, entityConfig))
     setHasUnsavedChanges(hasChanges)
   }, [title, slug, status, blocks, pageSettings, entityFields, entityData, entityConfig, mode])
 
